@@ -1,0 +1,14 @@
+package com.dustvalve.next.android.domain.model
+
+data class SearchResult(
+    val type: SearchResultType,
+    val name: String,
+    val url: String,
+    val imageUrl: String?,
+    val artist: String?,
+    val album: String?,
+    val genre: String?,
+    val releaseDate: String?,
+)
+
+enum class SearchResultType { ARTIST, ALBUM, TRACK }
