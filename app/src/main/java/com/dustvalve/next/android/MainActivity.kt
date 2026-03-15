@@ -47,9 +47,8 @@ import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleStartEffect
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.CoroutineScope
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -106,7 +105,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun triggerLocalMusicRescanIfNeeded() {
-        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 if (settingsDataStore.getLocalMusicEnabledSync() &&
                     settingsDataStore.getLocalMusicFolderUriSync() != null

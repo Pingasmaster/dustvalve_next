@@ -55,8 +55,16 @@ class LocalMusicScanner @Inject constructor(
             }
         }
 
-        // Remove tracks whose files no longer exist
-        val removedIds = existingIds - scannedIds
+        // Remove tracks whose files no longer exist.
+        // Guard: if the scan found zero files but the DB had tracks, the scan likely
+        // failed (e.g. revoked SAF permission, unmounted storage). Skip deletion to
+        // avoid silently wiping the user's entire local music library.
+        val removedIds = if (scannedIds.isEmpty() && existingIds.isNotEmpty()) {
+            android.util.Log.w("LocalMusicScanner", "Scan returned 0 files but DB has ${existingIds.size} tracks — skipping deletion (possible scan failure)")
+            emptySet()
+        } else {
+            existingIds - scannedIds
+        }
         if (removedIds.isNotEmpty()) {
             trackDao.deleteByIds(removedIds)
             // Clean up orphaned cover art
@@ -147,7 +155,7 @@ class LocalMusicScanner @Inject constructor(
             // Extract and cache cover art
             val artUrl = extractCoverArt(mmr, trackId) ?: ""
 
-            val albumId = "local_album_" + md5Hash(albumTitle.lowercase()).take(12)
+            val albumId = "local_album_" + md5Hash("${artist.lowercase()}|${albumTitle.lowercase()}").take(12)
 
             TrackEntity(
                 id = trackId,

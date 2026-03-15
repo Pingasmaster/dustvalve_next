@@ -105,8 +105,9 @@ class CookieStore @Inject constructor(
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         if (!isDustvalveHost(url.host)) return
-        if (!initLatch.await(500, TimeUnit.MILLISECONDS)) {
-            android.util.Log.w("CookieStore", "Cookie initialization timed out in saveFromResponse")
+        if (!initLatch.await(3, TimeUnit.SECONDS)) {
+            android.util.Log.w("CookieStore", "Cookie initialization timed out in saveFromResponse, skipping save")
+            return
         }
 
         val newCookies = cookies.map { cookie ->
