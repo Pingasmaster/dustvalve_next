@@ -33,6 +33,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.repository.AccountRepository
+import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.ui.navigation.AppNavigation
 import com.dustvalve.next.android.ui.navigation.BottomNavBar
 import com.dustvalve.next.android.ui.navigation.BottomNavItem
@@ -43,8 +44,14 @@ import com.dustvalve.next.android.ui.screens.player.FullPlayer
 import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleStartEffect
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -56,6 +63,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var settingsDataStore: SettingsDataStore
 
+    @Inject
+    lateinit var localMusicRepository: LocalMusicRepository
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* Result not needed — media session works without it, just no notification */ }
@@ -64,6 +74,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         requestNotificationPermissionIfNeeded()
+        triggerLocalMusicRescanIfNeeded()
         setContent {
             // Combine theme flows into a single emission to avoid theme flash on cold start
             val themeConfig by remember {
@@ -90,6 +101,20 @@ class MainActivity : ComponentActivity() {
                 oledBlack = config.third,
             ) {
                 MainContent(accountRepository = accountRepository)
+            }
+        }
+    }
+
+    private fun triggerLocalMusicRescanIfNeeded() {
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                if (settingsDataStore.getLocalMusicEnabledSync() &&
+                    settingsDataStore.getLocalMusicFolderUriSync() != null
+                ) {
+                    localMusicRepository.scan()
+                }
+            } catch (_: Exception) {
+                // Best-effort foreground rescan
             }
         }
     }

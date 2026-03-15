@@ -12,4 +12,5 @@ data class Track(
     val artUrl: String,
     val albumTitle: String,
     val isFavorite: Boolean = false,
+    val isLocal: Boolean = false,
 )

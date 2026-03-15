@@ -38,6 +38,9 @@ class SettingsDataStore @Inject constructor(
         val PROGRESSIVE_DOWNLOAD = booleanPreferencesKey("progressive_download")
         val OLED_BLACK = booleanPreferencesKey("oled_black")
         val WAVY_PROGRESS_BAR = booleanPreferencesKey("wavy_progress_bar")
+        val LOCAL_MUSIC_ENABLED = booleanPreferencesKey("local_music_enabled")
+        val LOCAL_MUSIC_FOLDER_URI = stringPreferencesKey("local_music_folder_uri")
+        val LOCAL_MUSIC_SEARCH_ENABLED = booleanPreferencesKey("local_music_search_enabled")
     }
 
     companion object {
@@ -251,5 +254,51 @@ class SettingsDataStore @Inject constructor(
             prefs.remove(Keys.AUTH_COOKIES)
             prefs.remove(Keys.ACCOUNT_FAN_ID)
         }
+    }
+
+    val localMusicEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.LOCAL_MUSIC_ENABLED] ?: false
+    }
+
+    val localMusicFolderUri: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.LOCAL_MUSIC_FOLDER_URI]
+    }
+
+    val localMusicSearchEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.LOCAL_MUSIC_SEARCH_ENABLED] ?: true
+    }
+
+    suspend fun setLocalMusicEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.LOCAL_MUSIC_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setLocalMusicFolderUri(uri: String?) {
+        context.dataStore.edit { prefs ->
+            if (uri != null) {
+                prefs[Keys.LOCAL_MUSIC_FOLDER_URI] = uri
+            } else {
+                prefs.remove(Keys.LOCAL_MUSIC_FOLDER_URI)
+            }
+        }
+    }
+
+    suspend fun setLocalMusicSearchEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.LOCAL_MUSIC_SEARCH_ENABLED] = enabled
+        }
+    }
+
+    suspend fun getLocalMusicEnabledSync(): Boolean {
+        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
+    }
+
+    suspend fun getLocalMusicFolderUriSync(): String? {
+        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URI)
+    }
+
+    suspend fun getLocalMusicSearchEnabledSync(): Boolean {
+        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_SEARCH_ENABLED) ?: true
     }
 }

@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -89,6 +90,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -121,12 +123,14 @@ private val discoverCategories = listOf(
 fun HomeScreen(
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
+    playerViewModel: PlayerViewModel,
     viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
     val recentSearches by searchViewModel.recentSearches.collectAsStateWithLifecycle()
+    val localSearchEnabled by searchViewModel.localSearchEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedCategoryColor by remember { mutableStateOf(Color.Unspecified) }
 
@@ -441,6 +445,13 @@ fun HomeScreen(
                         onClick = { searchViewModel.onTypeSelected(SearchResultType.TRACK) },
                         label = { Text("Tracks") },
                     )
+                    if (localSearchEnabled) {
+                        FilterChip(
+                            selected = searchState.selectedType == SearchResultType.LOCAL_TRACK,
+                            onClick = { searchViewModel.onTypeSelected(SearchResultType.LOCAL_TRACK) },
+                            label = { Text("Local") },
+                        )
+                    }
                 }
 
                 // Results area
@@ -572,6 +583,10 @@ fun HomeScreen(
                                                 SearchResultType.ALBUM -> onAlbumClick(result.url)
                                                 SearchResultType.ARTIST -> onArtistClick(result.url)
                                                 SearchResultType.TRACK -> onAlbumClick(result.url)
+                                                SearchResultType.LOCAL_TRACK -> {
+                                                    val trackId = result.url.removePrefix("local://")
+                                                    searchViewModel.playLocalTrack(trackId, playerViewModel)
+                                                }
                                             }
                                         },
                                         interactionSource = interactionSource,
@@ -634,6 +649,7 @@ private fun SearchResultItem(
         SearchResultType.ARTIST -> AppShapes.SearchResultArtist
         SearchResultType.ALBUM -> AppShapes.SearchResultAlbum
         SearchResultType.TRACK -> AppShapes.SearchResultTrack
+        SearchResultType.LOCAL_TRACK -> AppShapes.SearchResultTrack
     }
 
     ListItem(
@@ -655,6 +671,18 @@ private fun SearchResultItem(
                         result.artist?.let { append(it) }
                         result.album?.let {
                             if (isNotEmpty()) append(" - ")
+                            append(it)
+                        }
+                    }
+                    SearchResultType.LOCAL_TRACK -> {
+                        append("Local")
+                        result.artist?.let {
+                            append(" \u00B7 ")
+                            append(it)
+                        }
+                        result.album?.let {
+                            if (result.artist != null) append(" - ")
+                            else append(" \u00B7 ")
                             append(it)
                         }
                     }
@@ -686,6 +714,7 @@ private fun SearchResultItem(
                     SearchResultType.ARTIST -> Icons.Rounded.Person
                     SearchResultType.ALBUM -> Icons.Rounded.Album
                     SearchResultType.TRACK -> Icons.Rounded.MusicNote
+                    SearchResultType.LOCAL_TRACK -> Icons.Rounded.PhoneAndroid
                 }
                 Icon(
                     imageVector = icon,

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,6 +61,7 @@ fun PlaylistListItem(
         Playlist.SystemPlaylistType.DOWNLOADS -> AppShapes.PlaylistDownloads
         Playlist.SystemPlaylistType.RECENT -> AppShapes.PlaylistRecent
         Playlist.SystemPlaylistType.COLLECTION -> AppShapes.PlaylistCollection
+        Playlist.SystemPlaylistType.LOCAL -> AppShapes.PlaylistLocal
         else -> resolvePlaylistShape(playlist.shapeKey)
     }
 
@@ -183,6 +185,7 @@ fun getPlaylistIcon(playlist: Playlist): ImageVector {
         Playlist.SystemPlaylistType.DOWNLOADS -> Icons.Rounded.CloudDownload
         Playlist.SystemPlaylistType.RECENT -> Icons.Rounded.History
         Playlist.SystemPlaylistType.COLLECTION -> Icons.Rounded.LibraryMusic
+        Playlist.SystemPlaylistType.LOCAL -> Icons.Rounded.PhoneAndroid
         else -> Icons.Rounded.MusicNote
     }
 }

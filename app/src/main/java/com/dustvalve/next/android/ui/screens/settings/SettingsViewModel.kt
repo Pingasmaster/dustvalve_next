@@ -7,6 +7,7 @@ import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.CacheRepository
+import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.usecase.ManageCacheUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,11 @@ data class SettingsUiState(
     val progressiveDownload: Boolean = true,
     val oledBlack: Boolean = false,
     val wavyProgressBar: Boolean = true,
+    val localMusicEnabled: Boolean = false,
+    val localMusicFolderUri: String? = null,
+    val localMusicSearchEnabled: Boolean = true,
+    val isScanning: Boolean = false,
+    val scanMessage: String? = null,
 )
 
 @HiltViewModel
@@ -40,6 +46,7 @@ class SettingsViewModel @Inject constructor(
     private val cacheRepository: CacheRepository,
     private val settingsDataStore: SettingsDataStore,
     private val manageCacheUseCase: ManageCacheUseCase,
+    private val localMusicRepository: LocalMusicRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -58,6 +65,9 @@ class SettingsViewModel @Inject constructor(
         collectProgressiveDownload()
         collectOledBlack()
         collectWavyProgressBar()
+        collectLocalMusicEnabled()
+        collectLocalMusicFolderUri()
+        collectLocalMusicSearchEnabled()
     }
 
     fun setThemeMode(mode: String) {
@@ -301,6 +311,114 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore collection errors */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(wavyProgressBar = enabled) }
+                }
+        }
+    }
+
+    fun setLocalMusicEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setLocalMusicEnabled(enabled)
+                if (!enabled) {
+                    localMusicRepository.cancelSyncWork()
+                    localMusicRepository.clearAll()
+                    _uiState.update { it.copy(localMusicFolderUri = null) }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setLocalMusicFolderUri(uri: String) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setLocalMusicFolderUri(uri)
+                // Trigger initial scan
+                _uiState.update { it.copy(isScanning = true) }
+                val result = localMusicRepository.scan()
+                _uiState.update {
+                    it.copy(
+                        isScanning = false,
+                        scanMessage = "Found ${result.total} songs",
+                    )
+                }
+                localMusicRepository.scheduleSyncWork()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        isScanning = false,
+                        scanMessage = "Scan failed: ${e.message}",
+                    )
+                }
+            }
+        }
+    }
+
+    fun rescanLocalMusic() {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isScanning = true) }
+                val result = localMusicRepository.scan()
+                _uiState.update {
+                    it.copy(
+                        isScanning = false,
+                        scanMessage = "Found ${result.total} songs (${result.added} new, ${result.removed} removed)",
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        isScanning = false,
+                        scanMessage = "Scan failed: ${e.message}",
+                    )
+                }
+            }
+        }
+    }
+
+    fun setLocalMusicSearchEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setLocalMusicSearchEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun clearScanMessage() {
+        _uiState.update { it.copy(scanMessage = null) }
+    }
+
+    private fun collectLocalMusicEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.localMusicEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(localMusicEnabled = enabled) }
+                }
+        }
+    }
+
+    private fun collectLocalMusicFolderUri() {
+        viewModelScope.launch {
+            settingsDataStore.localMusicFolderUri
+                .catch { /* ignore */ }
+                .collect { uri ->
+                    _uiState.update { it.copy(localMusicFolderUri = uri) }
+                }
+        }
+    }
+
+    private fun collectLocalMusicSearchEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.localMusicSearchEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(localMusicSearchEnabled = enabled) }
                 }
         }
     }

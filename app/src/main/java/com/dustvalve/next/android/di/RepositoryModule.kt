@@ -7,6 +7,7 @@ import com.dustvalve.next.android.data.repository.CacheRepositoryImpl
 import com.dustvalve.next.android.data.repository.DiscoverRepositoryImpl
 import com.dustvalve.next.android.data.repository.DownloadRepositoryImpl
 import com.dustvalve.next.android.data.repository.LibraryRepositoryImpl
+import com.dustvalve.next.android.data.repository.LocalMusicRepositoryImpl
 import com.dustvalve.next.android.data.repository.PlaylistRepositoryImpl
 import com.dustvalve.next.android.data.repository.SearchRepositoryImpl
 import com.dustvalve.next.android.domain.repository.AccountRepository
@@ -16,6 +17,7 @@ import com.dustvalve.next.android.domain.repository.CacheRepository
 import com.dustvalve.next.android.domain.repository.DiscoverRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
+import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SearchRepository
 import dagger.Binds
@@ -53,4 +55,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindPlaylistRepository(impl: PlaylistRepositoryImpl): PlaylistRepository
+
+    @Binds
+    abstract fun bindLocalMusicRepository(impl: LocalMusicRepositoryImpl): LocalMusicRepository
 }

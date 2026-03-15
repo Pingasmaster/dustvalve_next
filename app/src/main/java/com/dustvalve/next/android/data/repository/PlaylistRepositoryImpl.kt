@@ -41,12 +41,14 @@ class PlaylistRepositoryImpl @Inject constructor(
             trackDao.getFavorites().map { it.size },
             trackDao.getDownloaded().map { it.size },
             trackDao.getRecent().map { it.size },
-        ) { entities, favCount, dlCount, recentCount ->
+            trackDao.getLocalTracks().map { it.size },
+        ) { entities, favCount, dlCount, recentCount, localCount ->
             entities.map { entity ->
                 val liveCount = when (entity.id) {
                     Playlist.ID_FAVORITES -> favCount
                     Playlist.ID_DOWNLOADS -> dlCount
                     Playlist.ID_RECENT -> recentCount
+                    Playlist.ID_LOCAL -> localCount
                     else -> entity.trackCount
                 }
                 entity.toDomain().copy(trackCount = liveCount)
@@ -115,6 +117,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                     Playlist.SystemPlaylistType.RECENT -> Playlist.ID_RECENT
                     Playlist.SystemPlaylistType.COLLECTION -> Playlist.ID_COLLECTION
                     Playlist.SystemPlaylistType.FAVORITES -> Playlist.ID_FAVORITES
+                    Playlist.SystemPlaylistType.LOCAL -> Playlist.ID_LOCAL
                 },
                 name = type.defaultName,
                 isSystem = true,
@@ -125,6 +128,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                     Playlist.SystemPlaylistType.COLLECTION -> 1
                     Playlist.SystemPlaylistType.DOWNLOADS -> 2
                     Playlist.SystemPlaylistType.RECENT -> 3
+                    Playlist.SystemPlaylistType.LOCAL -> 4
                 },
             )
             playlistDao.insertPlaylist(entity)
@@ -165,6 +169,15 @@ class PlaylistRepositoryImpl @Inject constructor(
                 }
                 tracks.map { it.toDomain(it.id in favoriteIds) }
             }
+            Playlist.ID_LOCAL -> trackDao.getLocalTracks().map { tracks ->
+                val trackIds = tracks.map { it.id }
+                val favoriteIds = if (trackIds.isNotEmpty()) {
+                    favoriteDao.getFavoriteIds(trackIds).toSet()
+                } else {
+                    emptySet()
+                }
+                tracks.map { it.toDomain(it.id in favoriteIds) }
+            }
             else -> playlistDao.getTracksInPlaylist(playlistId).map { trackEntities ->
                 val trackIds = trackEntities.map { it.id }
                 val favoriteIds = if (trackIds.isNotEmpty()) {
@@ -182,6 +195,7 @@ class PlaylistRepositoryImpl @Inject constructor(
             Playlist.ID_FAVORITES -> trackDao.getFavorites().first()
             Playlist.ID_DOWNLOADS -> trackDao.getDownloaded().first()
             Playlist.ID_RECENT -> trackDao.getRecent().first()
+            Playlist.ID_LOCAL -> trackDao.getLocalTracks().first()
             else -> playlistDao.getTracksInPlaylistSync(playlistId)
         }
         if (playlistId == Playlist.ID_FAVORITES) {
