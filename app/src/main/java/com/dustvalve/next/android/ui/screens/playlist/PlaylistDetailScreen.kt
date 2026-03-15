@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.ui.screens.playlist
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -57,7 +58,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.toMutableStateList
@@ -81,6 +84,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import kotlinx.coroutines.launch
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
 import com.dustvalve.next.android.util.TimeUtils
@@ -232,6 +236,10 @@ private fun PlaylistContent(
     var dragStartIndex by remember { mutableIntStateOf(-1) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val itemHeights = remember { mutableMapOf<Int, Float>() }
+    var droppingItemKey by remember { mutableStateOf<String?>(null) }
+    val dropAnimOffset = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val dropSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     // Only update from Flow when not actively dragging to prevent state corruption
     val reorderableTracks = remember { tracks.toMutableStateList() }
     LaunchedEffect(tracks) {
@@ -318,15 +326,18 @@ private fun PlaylistContent(
                         .animateItem(
                             fadeInSpec = null,
                             fadeOutSpec = null,
-                            placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                            placementSpec = if (isDragging || track.id == droppingItemKey) null
+                                else MaterialTheme.motionScheme.defaultSpatialSpec(),
                         )
-                        .zIndex(if (isDragging) 1f else 0f)
+                        .zIndex(if (isDragging || track.id == droppingItemKey) 1f else 0f)
                         .graphicsLayer {
                             scaleX = pressScale
                             scaleY = pressScale
                             if (isDragging) {
                                 translationY = dragOffset
                                 shadowElevation = elevation.toPx()
+                            } else if (track.id == droppingItemKey) {
+                                translationY = dropAnimOffset.value
                             }
                         }
                         .onGloballyPositioned { coords ->
@@ -341,6 +352,8 @@ private fun PlaylistContent(
                         isPlaying = isTrackPlaying,
                         isCurrentTrack = isCurrentTrack,
                         onDragStart = {
+                            droppingItemKey = null
+                            scope.launch { dropAnimOffset.snapTo(0f) }
                             draggedIndex = index
                             dragStartIndex = index
                             dragOffset = 0f
@@ -368,11 +381,24 @@ private fun PlaylistContent(
                         onDragEnd = {
                             val from = dragStartIndex
                             val to = draggedIndex
+                            val finalOffset = dragOffset
+                            val droppedKey = if (to in reorderableTracks.indices) reorderableTracks[to].id else null
+
                             draggedIndex = -1
                             dragStartIndex = -1
                             dragOffset = 0f
+
                             if (from >= 0 && to >= 0 && from != to) {
                                 onMoveTrack(from, to)
+                            }
+
+                            if (droppedKey != null && kotlin.math.abs(finalOffset) > 1f) {
+                                droppingItemKey = droppedKey
+                                scope.launch {
+                                    dropAnimOffset.snapTo(finalOffset)
+                                    dropAnimOffset.animateTo(0f, dropSpec)
+                                    droppingItemKey = null
+                                }
                             }
                         },
                     )
@@ -394,16 +420,19 @@ private fun PlaylistHeader(
     onDownloadAll: () -> Unit,
 ) {
     val trackCount = tracks.size
+    val allTracksLocal = tracks.isNotEmpty() && tracks.all { it.isLocal }
     val allTracksDownloaded = tracks.isNotEmpty() &&
-        tracks.all { it.id in downloadedTrackIds }
+        tracks.all { it.id in downloadedTrackIds || it.isLocal }
     val showDownloadButton = playlist.systemType != Playlist.SystemPlaylistType.DOWNLOADS &&
-        playlist.systemType != Playlist.SystemPlaylistType.RECENT
+        playlist.systemType != Playlist.SystemPlaylistType.RECENT &&
+        playlist.systemType != Playlist.SystemPlaylistType.LOCAL
 
     val thumbnailShape = when (playlist.systemType) {
         Playlist.SystemPlaylistType.FAVORITES -> AppShapes.PlaylistFavorites
         Playlist.SystemPlaylistType.DOWNLOADS -> AppShapes.PlaylistDownloads
         Playlist.SystemPlaylistType.RECENT -> AppShapes.PlaylistRecent
         Playlist.SystemPlaylistType.COLLECTION -> AppShapes.PlaylistCollection
+        Playlist.SystemPlaylistType.LOCAL -> AppShapes.PlaylistLocal
         else -> resolvePlaylistShape(playlist.shapeKey)
     }
 

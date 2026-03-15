@@ -61,6 +61,7 @@ fun AppNavigation(
             is NavDestination.Home -> HomeScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                 onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
+                playerViewModel = playerViewModel,
             )
             is NavDestination.Library -> LibraryScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },

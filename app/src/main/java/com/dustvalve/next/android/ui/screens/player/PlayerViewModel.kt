@@ -92,6 +92,17 @@ class PlayerViewModel @Inject constructor(
      * Also triggers a progressive background download if enabled.
      */
     private suspend fun resolveTrackForPlayback(track: Track): Track {
+        // Local tracks already have a content:// URI — use as-is
+        if (track.isLocal) {
+            _extraState.update {
+                it.copy(
+                    currentPlaybackFormat = null,
+                    currentSourcePath = track.streamUrl,
+                )
+            }
+            return track
+        }
+
         // Check for existing local download
         val downloadInfo = downloadRepository.getDownloadInfo(track.id)
         if (downloadInfo != null && downloadInfo.format.qualityRank >= AudioFormat.MP3_128.qualityRank) {
@@ -120,6 +131,7 @@ class PlayerViewModel @Inject constructor(
      * The next time this track is played, the local HQ file will be used.
      */
     private fun triggerProgressiveDownload(track: Track) {
+        if (track.isLocal) return // Local tracks don't need downloading
         progressiveDownloadJob?.cancel()
         progressiveDownloadJob = viewModelScope.launch {
             try {
@@ -385,6 +397,7 @@ class PlayerViewModel @Inject constructor(
 
     fun onDownloadTrack() {
         val track = uiState.value.currentTrack ?: return
+        if (track.isLocal) return // Local tracks are already on-device
         if (_extraState.value.downloadingTrackId != null) return
         _extraState.update { it.copy(downloadingTrackId = track.id) }
         downloadJob = viewModelScope.launch {
@@ -450,6 +463,30 @@ class PlayerViewModel @Inject constructor(
                 _extraState.update {
                     it.copy(
                         snackbarMessage = e.message ?: "Failed to add to playlist",
+                        isSnackbarError = true,
+                    )
+                }
+            }
+        }
+    }
+
+    fun createPlaylistAndAddTrack(name: String, shapeKey: String?, iconUrl: String?) {
+        val track = uiState.value.currentTrack ?: return
+        viewModelScope.launch {
+            try {
+                val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
+                playlistRepository.addTrackToPlaylist(playlist.id, track.id)
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = "Added to ${playlist.name}",
+                        isSnackbarError = false,
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = e.message ?: "Failed to create playlist",
                         isSnackbarError = true,
                     )
                 }

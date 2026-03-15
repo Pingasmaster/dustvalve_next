@@ -125,6 +125,11 @@ object AppShapes {
         @Composable
         get() = MaterialShapes.Pentagon.toShape()
 
+    /** Flower shape for local music playlist thumbnail */
+    val PlaylistLocal: Shape
+        @Composable
+        get() = MaterialShapes.Flower.toShape()
+
     /** Clover shape for user-created playlist thumbnails */
     val PlaylistUser: Shape
         @Composable

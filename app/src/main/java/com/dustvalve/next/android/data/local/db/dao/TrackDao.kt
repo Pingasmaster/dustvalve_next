@@ -57,6 +57,34 @@ interface TrackDao {
         """
     )
     fun getDownloaded(): Flow<List<TrackEntity>>
+
+    @Query("SELECT * FROM tracks WHERE isLocal = 1 ORDER BY title ASC")
+    fun getLocalTracks(): Flow<List<TrackEntity>>
+
+    @Query("SELECT id FROM tracks WHERE isLocal = 1")
+    suspend fun getLocalTrackIdsSync(): List<String>
+
+    @Query("DELETE FROM tracks WHERE isLocal = 1")
+    suspend fun deleteAllLocalTracks()
+
+    @Query("DELETE FROM tracks WHERE id IN (:ids)")
+    suspend fun deleteByIdsChunk(ids: List<String>)
+
+    @Query(
+        """
+        SELECT * FROM tracks WHERE isLocal = 1
+        AND (title LIKE '%' || :query || '%'
+          OR artist LIKE '%' || :query || '%'
+          OR albumTitle LIKE '%' || :query || '%')
+        ORDER BY title ASC LIMIT 50
+        """
+    )
+    suspend fun searchLocalTracks(query: String): List<TrackEntity>
+}
+
+suspend fun TrackDao.deleteByIds(ids: Collection<String>) {
+    if (ids.isEmpty()) return
+    ids.chunked(SQLITE_MAX_BIND_PARAMS).forEach { chunk -> deleteByIdsChunk(chunk) }
 }
 
 suspend fun TrackDao.getByIds(ids: List<String>): List<TrackEntity> {

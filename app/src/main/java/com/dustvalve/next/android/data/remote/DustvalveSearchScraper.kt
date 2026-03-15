@@ -30,6 +30,7 @@ class DustvalveSearchScraper @Inject constructor(
             SearchResultType.ARTIST -> "b"
             SearchResultType.ALBUM -> "a"
             SearchResultType.TRACK -> "t"
+            SearchResultType.LOCAL_TRACK -> return@withContext emptyList()
             null -> null
         }
 
@@ -96,7 +97,7 @@ class DustvalveSearchScraper @Inject constructor(
                         album = null
                     }
                 }
-                SearchResultType.ARTIST -> {
+                SearchResultType.ARTIST, SearchResultType.LOCAL_TRACK -> {
                     artist = null
                     album = null
                 }

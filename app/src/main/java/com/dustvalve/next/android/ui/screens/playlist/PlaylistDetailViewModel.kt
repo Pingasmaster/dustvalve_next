@@ -97,7 +97,7 @@ class PlaylistDetailViewModel @Inject constructor(
 
     fun downloadAll() {
         if (downloadJob?.isActive == true) return
-        val tracks = _uiState.value.tracks
+        val tracks = _uiState.value.tracks.filter { !it.isLocal }
         val playlist = _uiState.value.playlist
         if (tracks.isEmpty()) return
 

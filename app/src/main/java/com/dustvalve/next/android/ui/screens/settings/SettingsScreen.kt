@@ -64,9 +64,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.content.Intent
+import android.net.Uri
+import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.PhoneAndroid
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material3.CircularWavyProgressIndicator
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.AudioFormat
+import androidx.compose.ui.platform.LocalContext
 import com.dustvalve.next.android.ui.components.StorageIndicator
 import com.dustvalve.next.android.ui.theme.AppShapes
 
@@ -446,6 +456,151 @@ fun SettingsScreen(
                     }
                 }
             }
+
+        // Local Music section
+        item {
+            val localContext = LocalContext.current
+            val folderPickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocumentTree(),
+            ) { uri: Uri? ->
+                if (uri != null) {
+                    // Take persistable permission so access survives reboots
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    try {
+                        localContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                    } catch (_: Exception) {
+                        // Best effort
+                    }
+                    viewModel.setLocalMusicFolderUri(uri.toString())
+                }
+            }
+
+            LaunchedEffect(state.scanMessage) {
+                val message = state.scanMessage
+                if (message != null) {
+                    snackbarHostState.showSnackbar(message)
+                    viewModel.clearScanMessage()
+                }
+            }
+
+            SettingsSection(
+                title = "Local Music",
+                icon = Icons.Rounded.PhoneAndroid,
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Enable Local Music",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Play music files from your device",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.localMusicEnabled,
+                                onCheckedChange = { viewModel.setLocalMusicEnabled(it) },
+                            )
+                        }
+
+                        if (state.localMusicEnabled) {
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            val folderUri = state.localMusicFolderUri
+                            if (folderUri != null) {
+                                val folderName = try {
+                                    folderUri.toUri().lastPathSegment
+                                        ?.substringAfterLast(':')
+                                        ?: "Selected folder"
+                                } catch (_: Exception) {
+                                    "Selected folder"
+                                }
+                                Text(
+                                    text = folderName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                FilledTonalButton(
+                                    onClick = { folderPickerLauncher.launch(null) },
+                                    shapes = ButtonDefaults.shapes(),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.FolderOpen,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(if (state.localMusicFolderUri != null) "Change Folder" else "Choose Folder")
+                                }
+
+                                if (state.localMusicFolderUri != null) {
+                                    FilledTonalButton(
+                                        onClick = { viewModel.rescanLocalMusic() },
+                                        shapes = ButtonDefaults.shapes(),
+                                        enabled = !state.isScanning,
+                                    ) {
+                                        if (state.isScanning) {
+                                            CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Refresh,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Rescan")
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Include in search",
+                                        style = MaterialTheme.typography.titleSmall,
+                                    )
+                                    Text(
+                                        text = "Show local songs in search results",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.localMusicSearchEnabled,
+                                    onCheckedChange = { viewModel.setLocalMusicSearchEnabled(it) },
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         // Appearance section
         item {

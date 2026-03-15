@@ -66,6 +66,7 @@ fun TrackEntity.toDomain(isFavorite: Boolean): Track = Track(
     artUrl = artUrl,
     albumTitle = albumTitle,
     isFavorite = isFavorite,
+    isLocal = isLocal,
 )
 
 fun Track.toEntity(): TrackEntity = TrackEntity(
@@ -79,6 +80,7 @@ fun Track.toEntity(): TrackEntity = TrackEntity(
     streamUrl = streamUrl,
     artUrl = artUrl,
     albumTitle = albumTitle,
+    isLocal = isLocal,
 )
 
 fun ArtistEntity.toDomain(albums: List<Album>, isFavorite: Boolean = false): Artist = Artist(

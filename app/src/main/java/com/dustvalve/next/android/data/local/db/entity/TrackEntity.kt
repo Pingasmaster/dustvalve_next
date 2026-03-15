@@ -15,5 +15,6 @@ data class TrackEntity(
     val duration: Float,
     val streamUrl: String?,
     val artUrl: String,
-    val albumTitle: String
+    val albumTitle: String,
+    val isLocal: Boolean = false
 )

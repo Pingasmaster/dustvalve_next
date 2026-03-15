@@ -31,7 +31,9 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -53,6 +55,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TwoRowsTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialShapes
@@ -105,6 +108,8 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
+import androidx.compose.foundation.background
+import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -154,6 +159,7 @@ fun FullPlayer(
     // Dialog and sheet state
     var showDeleteDownloadDialog by remember { mutableStateOf(false) }
     var showPlaylistSheet by remember { mutableStateOf(false) }
+    var showCreatePlaylistSheet by remember { mutableStateOf(false) }
     var showDebugSheet by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -352,16 +358,18 @@ fun FullPlayer(
                         // Download toggle button
                         val isTrackDownloaded = track.id in state.downloadedTrackIds
                         val isDownloading = state.downloadingTrackId == track.id
+                        val isLocalTrack = track.isLocal
                         TonalToggleButton(
-                            checked = isTrackDownloaded,
+                            checked = isTrackDownloaded || isLocalTrack,
                             onCheckedChange = {
+                                if (isLocalTrack) return@TonalToggleButton
                                 if (isTrackDownloaded) {
                                     showDeleteDownloadDialog = true
                                 } else if (!isDownloading) {
                                     playerViewModel.onDownloadTrack()
                                 }
                             },
-                            enabled = !isDownloading,
+                            enabled = !isDownloading && !isLocalTrack,
                             colors = ToggleButtonDefaults.tonalToggleButtonColors(
                                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -375,10 +383,13 @@ fun FullPlayer(
                                 )
                             } else {
                                 Icon(
-                                    imageVector = if (isTrackDownloaded) Icons.Rounded.DownloadDone
+                                    imageVector = if (isTrackDownloaded || isLocalTrack) Icons.Rounded.DownloadDone
                                         else Icons.Rounded.Download,
-                                    contentDescription = if (isTrackDownloaded) "Delete download"
-                                        else "Download track",
+                                    contentDescription = when {
+                                        isLocalTrack -> "Local file"
+                                        isTrackDownloaded -> "Delete download"
+                                        else -> "Download track"
+                                    },
                                 )
                             }
                         }
@@ -635,7 +646,7 @@ fun FullPlayer(
                                     animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
                                     label = "upNextPressScale",
                                 )
-                                val isDownloaded = queueTrack.id in state.downloadedTrackIds
+                                val isDownloaded = queueTrack.id in state.downloadedTrackIds || queueTrack.isLocal
 
                                 Surface(
                                     onClick = {
@@ -740,19 +751,21 @@ fun FullPlayer(
                 verticalArrangement = Arrangement.spacedBy(2.dp),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             ) {
+                val isLocalTrackDebug = track.isLocal
                 val isLocal = state.currentSourcePath != null
                 val isTrackDownloaded = track.id in state.downloadedTrackIds
                 val isDownloading = state.downloadingTrackId == track.id
 
                 val downloadStatus = when {
+                    isLocalTrackDebug -> "Local file"
                     isDownloading -> "Downloading..."
                     isTrackDownloaded -> "Downloaded"
                     isLocal -> "Cached"
                     else -> "Not downloaded"
                 }
 
-                val formatDisplay = state.currentPlaybackFormat?.displayName ?: "Unknown"
-                val sourceDisplay = if (isLocal) "Local file" else "Streaming"
+                val formatDisplay = if (isLocalTrackDebug) "Local" else (state.currentPlaybackFormat?.displayName ?: "Unknown")
+                val sourceDisplay = if (isLocalTrackDebug || isLocal) "Local file" else "Streaming"
 
                 Surface(
                     shape = segmentedItemShape(0, 6),
@@ -856,33 +869,104 @@ fun FullPlayer(
         ModalBottomSheet(
             onDismissRequest = { showPlaylistSheet = false },
         ) {
-            Text(
-                text = "Add to playlist",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-            Column(
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                val userPlaylists = state.playlists.filter { !it.isSystem }
-                userPlaylists.forEachIndexed { index, playlist ->
-                    Surface(
-                        shape = segmentedItemShape(index, userPlaylists.size),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ) {
-                        PlaylistListItem(
-                            playlist = playlist,
-                            onClick = {
-                                showPlaylistSheet = false
-                                playerViewModel.addToPlaylist(playlist.id)
-                            },
-                        )
+            val userPlaylists = state.playlists.filter { !it.isSystem }
+            Box {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Add to playlist",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                    if (userPlaylists.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(horizontal = 32.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(96.dp)
+                                        .clip(AppShapes.EmptyStateIcon)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.QueueMusic,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "No playlists yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Create one to get started",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        ) {
+                            userPlaylists.forEachIndexed { index, playlist ->
+                                Surface(
+                                    shape = segmentedItemShape(index, userPlaylists.size),
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ) {
+                                    PlaylistListItem(
+                                        playlist = playlist,
+                                        onClick = {
+                                            showPlaylistSheet = false
+                                            playerViewModel.addToPlaylist(playlist.id)
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
+                    Spacer(modifier = Modifier.height(72.dp))
+                }
+                FloatingActionButton(
+                    onClick = { showCreatePlaylistSheet = true },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 16.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = "Create playlist",
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(28.dp))
         }
+    }
+
+    // Create playlist sheet (from add-to-playlist context)
+    if (showCreatePlaylistSheet) {
+        PlaylistEditSheet(
+            onDismiss = { showCreatePlaylistSheet = false },
+            onConfirm = { name, shapeKey, iconUrl ->
+                showCreatePlaylistSheet = false
+                showPlaylistSheet = false
+                playerViewModel.createPlaylistAndAddTrack(name, shapeKey, iconUrl)
+            },
+            isCreate = true,
+        )
     }
 }
 
