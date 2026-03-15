@@ -236,7 +236,7 @@ class DownloadRepositoryImpl @Inject constructor(
             }
             call.execute().use { response ->
                 if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                val body = response.body ?: throw IOException("Response body is empty")
+                val body = response.body
                 val expectedLength = response.header("Content-Length")?.toLongOrNull()
 
                 tempFile.outputStream().use { output ->

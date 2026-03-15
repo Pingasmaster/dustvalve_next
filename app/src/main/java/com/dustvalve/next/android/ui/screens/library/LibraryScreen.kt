@@ -23,16 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PushPin
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.ShapePickerSheet
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -61,6 +51,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -122,7 +114,7 @@ fun LibraryScreen(
                 onClick = { viewModel.showCreateDialog() },
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Add,
+                    painter = painterResource(R.drawable.ic_add),
                     contentDescription = "Create playlist",
                 )
             }
@@ -230,7 +222,6 @@ fun LibraryScreen(
         val defaultShapeKey = when (item) {
             is LibraryItem.AlbumItem -> "sunny"
             is LibraryItem.ArtistItem -> "arch"
-            else -> null
         }
         ShapePickerSheet(
             onDismiss = { viewModel.dismissShapeDialog() },
@@ -329,7 +320,7 @@ private fun LibraryList(
                 headlineContent = { Text(if (item.isPinned) "Unpin" else "Pin") },
                 leadingContent = {
                     Icon(
-                        imageVector = Icons.Rounded.PushPin,
+                        painter = painterResource(R.drawable.ic_push_pin),
                         contentDescription = null,
                     )
                 },
@@ -351,7 +342,7 @@ private fun LibraryList(
                             headlineContent = { Text("Modify") },
                             leadingContent = {
                                 Icon(
-                                    imageVector = Icons.Rounded.Edit,
+                                    painter = painterResource(R.drawable.ic_edit),
                                     contentDescription = null,
                                 )
                             },
@@ -372,7 +363,7 @@ private fun LibraryList(
                             },
                             leadingContent = {
                                 Icon(
-                                    imageVector = Icons.Rounded.Delete,
+                                    painter = painterResource(R.drawable.ic_delete),
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.error,
                                 )
@@ -390,7 +381,7 @@ private fun LibraryList(
                         headlineContent = { Text("Change Shape") },
                         leadingContent = {
                             Icon(
-                                imageVector = Icons.Rounded.Palette,
+                                painter = painterResource(R.drawable.ic_palette),
                                 contentDescription = null,
                             )
                         },
@@ -409,7 +400,7 @@ private fun LibraryList(
                         },
                         leadingContent = {
                             Icon(
-                                imageVector = Icons.Rounded.Delete,
+                                painter = painterResource(R.drawable.ic_delete),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
                             )
@@ -486,7 +477,7 @@ private fun LibraryAlbumListItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (item.isPinned) {
                     Icon(
-                        imageVector = Icons.Rounded.PushPin,
+                        painter = painterResource(R.drawable.ic_push_pin),
                         contentDescription = "Pinned",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -494,7 +485,7 @@ private fun LibraryAlbumListItem(
                     Spacer(modifier = Modifier.width(4.dp))
                 }
                 Icon(
-                    imageVector = Icons.Rounded.Album,
+                    painter = painterResource(R.drawable.ic_album),
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -512,7 +503,7 @@ private fun LibraryAlbumListItem(
         trailingContent = {
             IconButton(onClick = onMoreClick) {
                 Icon(
-                    imageVector = Icons.Rounded.MoreVert,
+                    painter = painterResource(R.drawable.ic_more_vert),
                     contentDescription = "More options",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -569,7 +560,7 @@ private fun LibraryArtistListItem(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Rounded.Person,
+                        painter = painterResource(R.drawable.ic_person),
                         contentDescription = null,
                         modifier = Modifier.size(28.dp),
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -589,7 +580,7 @@ private fun LibraryArtistListItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (item.isPinned) {
                     Icon(
-                        imageVector = Icons.Rounded.PushPin,
+                        painter = painterResource(R.drawable.ic_push_pin),
                         contentDescription = "Pinned",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -597,7 +588,7 @@ private fun LibraryArtistListItem(
                     Spacer(modifier = Modifier.width(4.dp))
                 }
                 Icon(
-                    imageVector = Icons.Rounded.Person,
+                    painter = painterResource(R.drawable.ic_person),
                     contentDescription = null,
                     modifier = Modifier.size(14.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -614,7 +605,7 @@ private fun LibraryArtistListItem(
         trailingContent = {
             IconButton(onClick = onMoreClick) {
                 Icon(
-                    imageVector = Icons.Rounded.MoreVert,
+                    painter = painterResource(R.drawable.ic_more_vert),
                     contentDescription = "More options",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -672,7 +663,7 @@ private fun EmptyState(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.MusicNote,
+                    painter = painterResource(R.drawable.ic_music_note),
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),

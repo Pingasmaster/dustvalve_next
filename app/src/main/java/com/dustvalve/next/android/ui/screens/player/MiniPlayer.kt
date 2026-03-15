@@ -19,11 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
@@ -50,7 +45,9 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.dustvalve.next.android.R
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -178,21 +175,21 @@ fun MiniPlayer(
 
                     IconButton(onClick = { playerViewModel.onPrevious() }) {
                         Icon(
-                            imageVector = Icons.Rounded.SkipPrevious,
+                            painter = painterResource(R.drawable.ic_skip_previous),
                             contentDescription = "Previous",
                         )
                     }
 
                     IconButton(onClick = { playerViewModel.onPlayPause() }) {
                         Icon(
-                            imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
                             contentDescription = if (state.isPlaying) "Pause" else "Play",
                         )
                     }
 
                     IconButton(onClick = { playerViewModel.onNext() }) {
                         Icon(
-                            imageVector = Icons.Rounded.SkipNext,
+                            painter = painterResource(R.drawable.ic_skip_next),
                             contentDescription = "Next",
                         )
                     }

@@ -30,16 +30,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Clear
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PhoneAndroid
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -271,7 +263,7 @@ fun HomeScreen(
             placeholder = { Text("Search Dustvalve...") },
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Rounded.Search,
+                    painter = painterResource(R.drawable.ic_search),
                     contentDescription = "Search",
                 )
             },
@@ -281,7 +273,7 @@ fun HomeScreen(
                         textFieldState.setTextAndPlaceCursorAtEnd("")
                     }) {
                         Icon(
-                            imageVector = Icons.Rounded.Clear,
+                            painter = painterResource(R.drawable.ic_clear),
                             contentDescription = "Clear",
                         )
                     }
@@ -399,7 +391,7 @@ fun HomeScreen(
                                             .padding(horizontal = 20.dp),
                                     )
                                     Icon(
-                                        imageVector = Icons.Rounded.ChevronRight,
+                                        painter = painterResource(R.drawable.ic_chevron_right),
                                         contentDescription = null,
                                         modifier = Modifier
                                             .align(Alignment.CenterEnd)
@@ -498,7 +490,7 @@ fun HomeScreen(
                                             },
                                             leadingContent = {
                                                 Icon(
-                                                    imageVector = Icons.Rounded.History,
+                                                    painter = painterResource(R.drawable.ic_history),
                                                     contentDescription = null,
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
@@ -508,7 +500,7 @@ fun HomeScreen(
                                                     onClick = { searchViewModel.removeRecentSearch(query) },
                                                 ) {
                                                     Icon(
-                                                        imageVector = Icons.Rounded.Close,
+                                                        painter = painterResource(R.drawable.ic_close),
                                                         contentDescription = "Remove",
                                                     )
                                                 }
@@ -710,14 +702,14 @@ private fun SearchResultItem(
                         .clip(thumbnailShape),
                 )
             } else {
-                val icon = when (result.type) {
-                    SearchResultType.ARTIST -> Icons.Rounded.Person
-                    SearchResultType.ALBUM -> Icons.Rounded.Album
-                    SearchResultType.TRACK -> Icons.Rounded.MusicNote
-                    SearchResultType.LOCAL_TRACK -> Icons.Rounded.PhoneAndroid
+                val iconRes = when (result.type) {
+                    SearchResultType.ARTIST -> R.drawable.ic_person
+                    SearchResultType.ALBUM -> R.drawable.ic_album
+                    SearchResultType.TRACK -> R.drawable.ic_music_note
+                    SearchResultType.LOCAL_TRACK -> R.drawable.ic_phone_android
                 }
                 Icon(
-                    imageVector = icon,
+                    painter = painterResource(iconRes),
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,

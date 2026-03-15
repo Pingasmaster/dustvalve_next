@@ -18,8 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -113,7 +113,7 @@ fun ShapePickerSheet(
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.MusicNote,
+                                painter = painterResource(R.drawable.ic_music_note),
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
                                 tint = if (isSelected)

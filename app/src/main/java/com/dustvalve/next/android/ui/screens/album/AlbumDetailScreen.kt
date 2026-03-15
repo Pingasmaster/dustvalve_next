@@ -20,14 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -165,7 +159,7 @@ fun AlbumDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = "Back",
                         )
                     }
@@ -333,7 +327,7 @@ fun AlbumDetailScreen(
                                     modifier = Modifier.weight(1f),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.PlayArrow,
+                                        painter = painterResource(R.drawable.ic_play_arrow),
                                         contentDescription = null,
                                         modifier = Modifier.size(ButtonDefaults.IconSize),
                                     )
@@ -350,7 +344,7 @@ fun AlbumDetailScreen(
                                     },
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.Shuffle,
+                                        painter = painterResource(R.drawable.ic_shuffle),
                                         contentDescription = "Shuffle play",
                                     )
                                 }
@@ -369,8 +363,8 @@ fun AlbumDetailScreen(
                                     ),
                                 ) {
                                     Icon(
-                                        imageVector = if (album.isFavorite) Icons.Rounded.Favorite
-                                            else Icons.Rounded.FavoriteBorder,
+                                        painter = painterResource(if (album.isFavorite) R.drawable.ic_favorite
+                                            else R.drawable.ic_favorite_border),
                                         contentDescription = if (album.isFavorite) "Remove from favorites"
                                             else "Add to favorites",
                                     )
@@ -395,8 +389,8 @@ fun AlbumDetailScreen(
                                         )
                                     } else {
                                         Icon(
-                                            imageVector = if (allTracksDownloaded) Icons.Rounded.DownloadDone
-                                                else Icons.Rounded.Download,
+                                            painter = painterResource(if (allTracksDownloaded) R.drawable.ic_download_done
+                                                else R.drawable.ic_download),
                                             contentDescription = if (allTracksDownloaded) "Delete album downloads"
                                                 else "Download album",
                                         )

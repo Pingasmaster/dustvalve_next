@@ -20,14 +20,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -141,7 +135,7 @@ fun ArtistDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = "Back",
                         )
                     }
@@ -308,7 +302,7 @@ fun ArtistDetailScreen(
                                         Text("Loading...")
                                     } else {
                                         Icon(
-                                            imageVector = Icons.Rounded.Shuffle,
+                                            painter = painterResource(R.drawable.ic_shuffle),
                                             contentDescription = null,
                                             modifier = Modifier.size(ButtonDefaults.IconSize),
                                         )
@@ -330,8 +324,8 @@ fun ArtistDetailScreen(
                                     ),
                                 ) {
                                     Icon(
-                                        imageVector = if (artist.isFavorite) Icons.Rounded.Favorite
-                                            else Icons.Rounded.FavoriteBorder,
+                                        painter = painterResource(if (artist.isFavorite) R.drawable.ic_favorite
+                                            else R.drawable.ic_favorite_border),
                                         contentDescription = if (artist.isFavorite) "Remove from favorites"
                                             else "Add to favorites",
                                     )
@@ -355,8 +349,8 @@ fun ArtistDetailScreen(
                                         )
                                     } else {
                                         Icon(
-                                            imageVector = if (allAlbumsDownloaded) Icons.Rounded.DownloadDone
-                                                else Icons.Rounded.Download,
+                                            painter = painterResource(if (allAlbumsDownloaded) R.drawable.ic_download_done
+                                                else R.drawable.ic_download),
                                             contentDescription = if (allAlbumsDownloaded) "Delete all downloads"
                                                 else "Download all",
                                         )
@@ -422,7 +416,7 @@ fun ArtistDetailScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.Album,
+                                        painter = painterResource(R.drawable.ic_album),
                                         contentDescription = null,
                                         modifier = Modifier.size(48.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),

@@ -12,15 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.HighQuality
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
@@ -70,9 +63,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
-import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.PhoneAndroid
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.CircularWavyProgressIndicator
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.AudioFormat
@@ -139,7 +129,7 @@ fun SettingsScreen(
                     trailingContent = {
                         if (isSelected) {
                             Icon(
-                                imageVector = Icons.Rounded.Check,
+                                painter = painterResource(R.drawable.ic_check),
                                 contentDescription = "Selected",
                                 tint = MaterialTheme.colorScheme.primary,
                             )
@@ -190,7 +180,7 @@ fun SettingsScreen(
         item {
             SettingsSection(
                 title = "Account",
-                icon = Icons.Rounded.AccountCircle,
+                icon = R.drawable.ic_account_circle,
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -257,7 +247,7 @@ fun SettingsScreen(
         item {
             SettingsSection(
                 title = "Storage",
-                icon = Icons.Rounded.Storage,
+                icon = R.drawable.ic_storage,
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -303,7 +293,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.CloudDownload,
+                                painter = painterResource(R.drawable.ic_cloud_download),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp),
                             )
@@ -317,7 +307,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(
-                                imageVector = Icons.Rounded.DeleteSweep,
+                                painter = painterResource(R.drawable.ic_delete_sweep),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp),
                             )
@@ -379,7 +369,7 @@ fun SettingsScreen(
         item {
                 SettingsSection(
                     title = "Audio Quality",
-                    icon = Icons.Rounded.HighQuality,
+                    icon = R.drawable.ic_high_quality,
                 ) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -485,7 +475,7 @@ fun SettingsScreen(
 
             SettingsSection(
                 title = "Local Music",
-                icon = Icons.Rounded.PhoneAndroid,
+                icon = R.drawable.ic_phone_android,
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -545,7 +535,7 @@ fun SettingsScreen(
                                     modifier = Modifier.weight(1f),
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.FolderOpen,
+                                        painter = painterResource(R.drawable.ic_folder_open),
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp),
                                     )
@@ -563,7 +553,7 @@ fun SettingsScreen(
                                             CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
                                         } else {
                                             Icon(
-                                                imageVector = Icons.Rounded.Refresh,
+                                                painter = painterResource(R.drawable.ic_refresh),
                                                 contentDescription = null,
                                                 modifier = Modifier.size(18.dp),
                                             )
@@ -606,7 +596,7 @@ fun SettingsScreen(
         item {
             SettingsSection(
                 title = "Appearance",
-                icon = Icons.Rounded.Palette,
+                icon = R.drawable.ic_palette,
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -727,7 +717,7 @@ fun SettingsScreen(
         item {
             SettingsSection(
                 title = "About",
-                icon = Icons.Rounded.Info,
+                icon = R.drawable.ic_info,
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -771,7 +761,7 @@ fun SettingsScreen(
 @Composable
 private fun SettingsSection(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: Int,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -789,7 +779,7 @@ private fun SettingsSection(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = icon,
+                    painter = painterResource(icon),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(18.dp),

@@ -16,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 37
-        versionName = "0.0.37"
+        versionCode = 41
+        versionName = "0.0.41"
     }
 
     signingConfigs {
@@ -64,18 +64,17 @@ android {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.03.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.compose.animation:animation")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
-    // Material 3 Expressive (pinned outside BOM)
+    // Material 3 Expressive + compatible foundation/animation (pinned outside BOM)
     implementation("androidx.compose.material3:material3:1.5.0-alpha15")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation("androidx.compose.foundation:foundation:1.11.0-beta01")
+    implementation("androidx.compose.animation:animation:1.11.0-beta01")
 
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
