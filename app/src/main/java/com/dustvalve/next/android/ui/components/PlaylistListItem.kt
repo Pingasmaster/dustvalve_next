@@ -11,16 +11,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.PhoneAndroid
-import androidx.compose.material.icons.rounded.PushPin
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -37,11 +27,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
@@ -110,7 +101,7 @@ fun PlaylistListItem(
                     )
                 } else {
                     Icon(
-                        imageVector = getPlaylistIcon(playlist),
+                        painter = painterResource(getPlaylistIconRes(playlist)),
                         contentDescription = null,
                         modifier = Modifier.size(28.dp),
                         tint = when {
@@ -138,7 +129,7 @@ fun PlaylistListItem(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (playlist.isPinned) {
                     Icon(
-                        imageVector = Icons.Rounded.PushPin,
+                        painter = painterResource(R.drawable.ic_push_pin),
                         contentDescription = "Pinned",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -147,7 +138,7 @@ fun PlaylistListItem(
                 }
                 if (isFullyDownloaded) {
                     Icon(
-                        imageVector = Icons.Rounded.DownloadDone,
+                        painter = painterResource(R.drawable.ic_download_done),
                         contentDescription = "All tracks downloaded",
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -166,7 +157,7 @@ fun PlaylistListItem(
             {
                 IconButton(onClick = onMoreClick) {
                     Icon(
-                        imageVector = Icons.Rounded.MoreVert,
+                        painter = painterResource(R.drawable.ic_more_vert),
                         contentDescription = "More options",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -178,14 +169,13 @@ fun PlaylistListItem(
     )
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-fun getPlaylistIcon(playlist: Playlist): ImageVector {
+fun getPlaylistIconRes(playlist: Playlist): Int {
     return when (playlist.systemType) {
-        Playlist.SystemPlaylistType.FAVORITES -> Icons.Rounded.Favorite
-        Playlist.SystemPlaylistType.DOWNLOADS -> Icons.Rounded.CloudDownload
-        Playlist.SystemPlaylistType.RECENT -> Icons.Rounded.History
-        Playlist.SystemPlaylistType.COLLECTION -> Icons.Rounded.LibraryMusic
-        Playlist.SystemPlaylistType.LOCAL -> Icons.Rounded.PhoneAndroid
-        else -> Icons.Rounded.MusicNote
+        Playlist.SystemPlaylistType.FAVORITES -> R.drawable.ic_favorite
+        Playlist.SystemPlaylistType.DOWNLOADS -> R.drawable.ic_cloud_download
+        Playlist.SystemPlaylistType.RECENT -> R.drawable.ic_history
+        Playlist.SystemPlaylistType.COLLECTION -> R.drawable.ic_library_music
+        Playlist.SystemPlaylistType.LOCAL -> R.drawable.ic_phone_android
+        else -> R.drawable.ic_music_note
     }
 }

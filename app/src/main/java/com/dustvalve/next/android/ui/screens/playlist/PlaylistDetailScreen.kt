@@ -23,17 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.dustvalve.next.android.ui.components.getPlaylistIcon
+import com.dustvalve.next.android.ui.components.getPlaylistIconRes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -75,8 +66,10 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.dustvalve.next.android.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.layout.ContentScale
@@ -149,7 +142,7 @@ fun PlaylistDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = "Back",
                         )
                     }
@@ -464,7 +457,7 @@ private fun PlaylistHeader(
                 )
             } else {
                 Icon(
-                    imageVector = getPlaylistIcon(playlist),
+                    painter = painterResource(getPlaylistIconRes(playlist)),
                     contentDescription = null,
                     modifier = Modifier.size(56.dp),
                     tint = when {
@@ -511,7 +504,7 @@ private fun PlaylistHeader(
                 enabled = trackCount > 0,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.PlayArrow,
+                    painter = painterResource(R.drawable.ic_play_arrow),
                     contentDescription = "Play all",
                 )
             }
@@ -522,7 +515,7 @@ private fun PlaylistHeader(
                 enabled = trackCount > 0,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.Shuffle,
+                    painter = painterResource(R.drawable.ic_shuffle),
                     contentDescription = "Shuffle play",
                 )
             }
@@ -539,8 +532,8 @@ private fun PlaylistHeader(
                         )
                     } else {
                         Icon(
-                            imageVector = if (allTracksDownloaded) Icons.Rounded.DownloadDone
-                                else Icons.Rounded.Download,
+                            painter = painterResource(if (allTracksDownloaded) R.drawable.ic_download_done
+                                else R.drawable.ic_download),
                             contentDescription = if (allTracksDownloaded) "All downloaded"
                                 else "Download all",
                         )
@@ -592,7 +585,7 @@ private fun TrackListItem(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.GraphicEq,
+                            painter = painterResource(R.drawable.ic_graphic_eq),
                             contentDescription = "Now playing",
                             modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.primary,
@@ -645,7 +638,7 @@ private fun TrackListItem(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.DragHandle,
+                    painter = painterResource(R.drawable.ic_drag_handle),
                     contentDescription = "Reorder",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
@@ -677,7 +670,7 @@ private fun EmptyPlaylistState(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.MusicNote,
+                    painter = painterResource(R.drawable.ic_music_note),
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),

@@ -22,27 +22,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AudioFile
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.FavoriteBorder
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.QueueMusic
-import androidx.compose.material.icons.rounded.Storage
-import androidx.compose.material.icons.rounded.Pause
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.Repeat
-import androidx.compose.material.icons.rounded.RepeatOne
-import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material.icons.rounded.SkipNext
-import androidx.compose.material.icons.rounded.SkipPrevious
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -107,6 +87,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Playlist
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.RepeatMode
 import androidx.compose.foundation.background
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
@@ -194,7 +175,7 @@ fun FullPlayer(
                     navigationIcon = {
                         IconButton(onClick = onCollapse) {
                             Icon(
-                                imageVector = Icons.Rounded.KeyboardArrowDown,
+                                painter = painterResource(R.drawable.ic_keyboard_arrow_down),
                                 contentDescription = "Collapse",
                             )
                         }
@@ -292,7 +273,7 @@ fun FullPlayer(
                     // Play/pause tap feedback overlay
                     if (showPlayPauseFeedback) {
                         Icon(
-                            imageVector = if (!feedbackIsPlaying) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                            painter = painterResource(if (!feedbackIsPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause),
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                             modifier = Modifier
@@ -350,7 +331,7 @@ fun FullPlayer(
                             ),
                         ) {
                             Icon(
-                                imageVector = if (track.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                painter = painterResource(if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border),
                                 contentDescription = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
                             )
                         }
@@ -383,8 +364,8 @@ fun FullPlayer(
                                 )
                             } else {
                                 Icon(
-                                    imageVector = if (isTrackDownloaded || isLocalTrack) Icons.Rounded.DownloadDone
-                                        else Icons.Rounded.Download,
+                                    painter = painterResource(if (isTrackDownloaded || isLocalTrack) R.drawable.ic_download_done
+                                        else R.drawable.ic_download),
                                     contentDescription = when {
                                         isLocalTrack -> "Local file"
                                         isTrackDownloaded -> "Delete download"
@@ -516,7 +497,7 @@ fun FullPlayer(
                         contentPadding = PaddingValues(0.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.SkipPrevious,
+                            painter = painterResource(R.drawable.ic_skip_previous),
                             contentDescription = "Previous",
                             modifier = Modifier.size(28.dp),
                         )
@@ -537,7 +518,7 @@ fun FullPlayer(
                         ),
                     ) {
                         Icon(
-                            imageVector = if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
                             contentDescription = if (state.isPlaying) "Pause" else "Play",
                             modifier = Modifier.size(36.dp),
                         )
@@ -553,7 +534,7 @@ fun FullPlayer(
                         contentPadding = PaddingValues(0.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.SkipNext,
+                            painter = painterResource(R.drawable.ic_skip_next),
                             contentDescription = "Next",
                             modifier = Modifier.size(28.dp),
                         )
@@ -577,7 +558,7 @@ fun FullPlayer(
                         ),
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Shuffle,
+                            painter = painterResource(R.drawable.ic_shuffle),
                             contentDescription = "Shuffle",
                         )
                     }
@@ -593,7 +574,7 @@ fun FullPlayer(
                         ),
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.PlaylistAdd,
+                            painter = painterResource(R.drawable.ic_playlist_add),
                             contentDescription = "Add to playlist",
                         )
                     }
@@ -609,10 +590,10 @@ fun FullPlayer(
                         ),
                     ) {
                         Icon(
-                            imageVector = when (state.repeatMode) {
-                                RepeatMode.ONE -> Icons.Rounded.RepeatOne
-                                else -> Icons.Rounded.Repeat
-                            },
+                            painter = painterResource(when (state.repeatMode) {
+                                RepeatMode.ONE -> R.drawable.ic_repeat_one
+                                else -> R.drawable.ic_repeat
+                            }),
                             contentDescription = "Repeat",
                         )
                     }
@@ -693,7 +674,7 @@ fun FullPlayer(
                                         trailingContent = if (isDownloaded) {
                                             {
                                                 Icon(
-                                                    imageVector = Icons.Rounded.DownloadDone,
+                                                    painter = painterResource(R.drawable.ic_download_done),
                                                     contentDescription = "Downloaded",
                                                     modifier = Modifier.size(18.dp),
                                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -775,7 +756,7 @@ fun FullPlayer(
                         headlineContent = { Text(formatDisplay) },
                         supportingContent = { Text("Audio format") },
                         leadingContent = {
-                            Icon(Icons.Rounded.AudioFile, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_audio_file), contentDescription = null)
                         },
                     )
                 }
@@ -787,7 +768,7 @@ fun FullPlayer(
                         headlineContent = { Text(sourceDisplay) },
                         supportingContent = { Text("Source") },
                         leadingContent = {
-                            Icon(Icons.Rounded.Cloud, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_cloud), contentDescription = null)
                         },
                     )
                 }
@@ -799,7 +780,7 @@ fun FullPlayer(
                         headlineContent = { Text(downloadStatus) },
                         supportingContent = { Text("Download status") },
                         leadingContent = {
-                            Icon(Icons.Rounded.Download, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_download), contentDescription = null)
                         },
                     )
                 }
@@ -819,7 +800,7 @@ fun FullPlayer(
                         },
                         supportingContent = { Text("File path") },
                         leadingContent = {
-                            Icon(Icons.Rounded.Storage, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_storage), contentDescription = null)
                         },
                     )
                 }
@@ -837,7 +818,7 @@ fun FullPlayer(
                         },
                         supportingContent = { Text("Track ID") },
                         leadingContent = {
-                            Icon(Icons.Rounded.Info, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
                     )
                 }
@@ -855,7 +836,7 @@ fun FullPlayer(
                         },
                         supportingContent = { Text("Album ID") },
                         leadingContent = {
-                            Icon(Icons.Rounded.Info, contentDescription = null)
+                            Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
                     )
                 }
@@ -896,7 +877,7 @@ fun FullPlayer(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.QueueMusic,
+                                        painter = painterResource(R.drawable.ic_queue_music),
                                         contentDescription = null,
                                         modifier = Modifier.size(48.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
@@ -948,7 +929,7 @@ fun FullPlayer(
                         .padding(end = 16.dp, bottom = 16.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.Add,
+                        painter = painterResource(R.drawable.ic_add),
                         contentDescription = "Create playlist",
                     )
                 }

@@ -6,12 +6,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.DownloadDone
-import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
@@ -74,7 +70,7 @@ fun TrackRow(
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.GraphicEq,
+                            painter = painterResource(R.drawable.ic_graphic_eq),
                             contentDescription = "Now playing",
                             modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.primary,
@@ -109,7 +105,7 @@ fun TrackRow(
                     if (onFavoriteClick != null) {
                         IconButton(onClick = onFavoriteClick) {
                             Icon(
-                                imageVector = if (track.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                painter = painterResource(if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border),
                                 contentDescription = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
                                 tint = if (track.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
@@ -128,7 +124,7 @@ fun TrackRow(
                                 )
                             } else {
                                 Icon(
-                                    imageVector = if (isDownloaded) Icons.Rounded.DownloadDone else Icons.Rounded.Download,
+                                    painter = painterResource(if (isDownloaded) R.drawable.ic_download_done else R.drawable.ic_download),
                                     contentDescription = if (isDownloaded) "Delete download" else "Download track",
                                     modifier = Modifier.size(18.dp),
                                 )

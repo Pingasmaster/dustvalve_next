@@ -1,9 +1,7 @@
 package com.dustvalve.next.android.ui.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.ui.res.painterResource
+import com.dustvalve.next.android.R
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -12,7 +10,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
 
 @Composable
 fun BottomNavBar(
@@ -28,7 +26,7 @@ fun BottomNavBar(
                 onClick = { onItemSelected(item.destination) },
                 icon = {
                     Icon(
-                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                        painter = painterResource(if (selected) item.selectedIcon else item.unselectedIcon),
                         contentDescription = item.label,
                     )
                 },
@@ -52,7 +50,7 @@ fun SideNavRail(
                 onClick = { onItemSelected(item.destination) },
                 icon = {
                     Icon(
-                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                        painter = painterResource(if (selected) item.selectedIcon else item.unselectedIcon),
                         contentDescription = item.label,
                     )
                 },
@@ -62,16 +60,16 @@ fun SideNavRail(
     }
 }
 
-private val BottomNavItem.selectedIcon: ImageVector
-    get() = when (this) {
-        BottomNavItem.HOME -> Icons.Rounded.Home
-        BottomNavItem.LIBRARY -> Icons.Rounded.LibraryMusic
-        BottomNavItem.SETTINGS -> Icons.Rounded.Settings
+private val BottomNavItem.selectedIcon: Int
+    @DrawableRes get() = when (this) {
+        BottomNavItem.HOME -> R.drawable.ic_home
+        BottomNavItem.LIBRARY -> R.drawable.ic_library_music
+        BottomNavItem.SETTINGS -> R.drawable.ic_settings
     }
 
-private val BottomNavItem.unselectedIcon: ImageVector
-    get() = when (this) {
-        BottomNavItem.HOME -> Icons.Rounded.Home
-        BottomNavItem.LIBRARY -> Icons.Rounded.LibraryMusic
-        BottomNavItem.SETTINGS -> Icons.Rounded.Settings
+private val BottomNavItem.unselectedIcon: Int
+    @DrawableRes get() = when (this) {
+        BottomNavItem.HOME -> R.drawable.ic_home
+        BottomNavItem.LIBRARY -> R.drawable.ic_library_music
+        BottomNavItem.SETTINGS -> R.drawable.ic_settings
     }
