@@ -34,6 +34,6 @@ interface PlaylistRepository {
     // Auto-sync for system playlists
     suspend fun syncDownloadsPlaylist()
     suspend fun syncRecentPlaylist()
-    suspend fun syncCollectionPlaylist()
+    suspend fun syncCollectionPlaylist(collectionAlbumIds: List<String>)
     suspend fun syncFavoritesPlaylist()
 }

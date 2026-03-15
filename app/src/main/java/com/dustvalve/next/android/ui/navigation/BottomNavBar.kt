@@ -1,12 +1,9 @@
 package com.dustvalve.next.android.ui.navigation
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.LibraryMusic
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -67,14 +64,14 @@ fun SideNavRail(
 
 private val BottomNavItem.selectedIcon: ImageVector
     get() = when (this) {
-        BottomNavItem.HOME -> Icons.Filled.Home
-        BottomNavItem.LIBRARY -> Icons.Filled.LibraryMusic
-        BottomNavItem.SETTINGS -> Icons.Filled.Settings
+        BottomNavItem.HOME -> Icons.Rounded.Home
+        BottomNavItem.LIBRARY -> Icons.Rounded.LibraryMusic
+        BottomNavItem.SETTINGS -> Icons.Rounded.Settings
     }
 
 private val BottomNavItem.unselectedIcon: ImageVector
     get() = when (this) {
-        BottomNavItem.HOME -> Icons.Outlined.Home
-        BottomNavItem.LIBRARY -> Icons.Outlined.LibraryMusic
-        BottomNavItem.SETTINGS -> Icons.Outlined.Settings
+        BottomNavItem.HOME -> Icons.Rounded.Home
+        BottomNavItem.LIBRARY -> Icons.Rounded.LibraryMusic
+        BottomNavItem.SETTINGS -> Icons.Rounded.Settings
     }

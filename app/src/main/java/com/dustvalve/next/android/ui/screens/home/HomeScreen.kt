@@ -839,7 +839,7 @@ private fun CarouselAlbumItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp)
+                .height(96.dp)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
@@ -847,11 +847,11 @@ private fun CarouselAlbumItem(
                     )
                 ),
         )
-        // Text overlay
+        // Text overlay — extra bottom padding to clear rounded corner clip
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(12.dp),
+                .padding(start = 16.dp, end = 16.dp, bottom = 20.dp, top = 12.dp),
         ) {
             Text(
                 text = album.title,

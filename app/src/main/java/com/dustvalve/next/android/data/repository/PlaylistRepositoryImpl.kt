@@ -5,6 +5,7 @@ import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.getByAlbumIds
 import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.PlaylistEntity
 import com.dustvalve.next.android.data.local.db.entity.PlaylistTrackEntity
@@ -295,9 +296,24 @@ class PlaylistRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncCollectionPlaylist() {
-        // Collection is loaded from scraper; tracks are stored in album_tracks relationship.
-        // Placeholder for collection sync logic.
+    override suspend fun syncCollectionPlaylist(collectionAlbumIds: List<String>) {
+        val playlist = getSystemPlaylistSync(Playlist.SystemPlaylistType.COLLECTION) ?: return
+        val collectionTracks = trackDao.getByAlbumIds(collectionAlbumIds)
+
+        database.withTransaction {
+            playlistDao.clearPlaylistTracks(playlist.id)
+            val playlistTracks = collectionTracks.mapIndexed { index, trackEntity ->
+                PlaylistTrackEntity(
+                    playlistId = playlist.id,
+                    trackId = trackEntity.id,
+                    position = index,
+                )
+            }
+            if (playlistTracks.isNotEmpty()) {
+                playlistDao.insertPlaylistTracks(playlistTracks)
+            }
+            playlistDao.updateTrackCount(playlist.id, collectionTracks.size)
+        }
     }
 
     override suspend fun syncFavoritesPlaylist() {
