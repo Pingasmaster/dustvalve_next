@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -533,6 +534,10 @@ private fun TrackListItem(
     onDrag: (Float) -> Unit,
     onDragEnd: () -> Unit,
 ) {
+    val currentOnDragStart by rememberUpdatedState(onDragStart)
+    val currentOnDrag by rememberUpdatedState(onDrag)
+    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
+
     ListItem(
         modifier = Modifier
             .fillMaxWidth(),
@@ -599,13 +604,13 @@ private fun TrackListItem(
                     .size(48.dp)
                     .pointerInput(Unit) {
                         detectDragGesturesAfterLongPress(
-                            onDragStart = { onDragStart() },
+                            onDragStart = { currentOnDragStart() },
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                onDrag(dragAmount.y)
+                                currentOnDrag(dragAmount.y)
                             },
-                            onDragEnd = { onDragEnd() },
-                            onDragCancel = { onDragEnd() },
+                            onDragEnd = { currentOnDragEnd() },
+                            onDragCancel = { currentOnDragEnd() },
                         )
                     },
                 contentAlignment = Alignment.Center,

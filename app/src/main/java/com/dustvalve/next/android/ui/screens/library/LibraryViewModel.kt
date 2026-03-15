@@ -294,7 +294,7 @@ class LibraryViewModel @Inject constructor(
                         albumRepository.updatePurchaseInfo(albumId, info)
                     } catch (_: Exception) { /* best-effort */ }
                 }
-                playlistRepository.syncCollectionPlaylist()
+                playlistRepository.syncCollectionPlaylist(result.albums.map { it.id })
                 autoDownloadCollection(result.albums)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
