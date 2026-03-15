@@ -131,7 +131,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                     Playlist.SystemPlaylistType.LOCAL -> 4
                 },
             )
-            playlistDao.insertPlaylist(entity)
+            playlistDao.insertPlaylistIfAbsent(entity)
         }
     }
 

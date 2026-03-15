@@ -36,7 +36,7 @@ fun AppNavigation(
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val isForward by navViewModel.lastNavigationForward.collectAsStateWithLifecycle()
-    val currentDestination = backStack.last()
+    val currentDestination = backStack.lastOrNull() ?: NavDestination.Home
     val coroutineScope = rememberCoroutineScope()
 
     // Full-screen transitions use slow specs for a grander, more cinematic feel

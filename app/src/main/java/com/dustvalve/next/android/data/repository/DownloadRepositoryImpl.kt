@@ -145,12 +145,16 @@ class DownloadRepositoryImpl @Inject constructor(
         if (!tempFile.renameTo(targetFile)) {
             try {
                 tempFile.copyTo(targetFile, overwrite = true)
-            } finally {
                 tempFile.delete()
+            } catch (e: Exception) {
+                // Clean up partial target file on copy failure
+                targetFile.delete()
+                tempFile.delete()
+                throw IOException("Failed to copy download to target: ${e.message}")
             }
         }
 
-        if (!targetFile.exists()) {
+        if (!targetFile.exists() || targetFile.length() == 0L) {
             throw IOException("Failed to write download file: ${targetFile.absolutePath}")
         }
 

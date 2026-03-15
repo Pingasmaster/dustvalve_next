@@ -31,6 +31,9 @@ interface PlaylistDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: PlaylistEntity)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPlaylistIfAbsent(playlist: PlaylistEntity)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylists(playlists: List<PlaylistEntity>)
 
@@ -108,6 +111,8 @@ interface PlaylistDao {
 
     @Transaction
     suspend fun addTrackToPlaylist(playlistId: String, trackId: String) {
+        // Skip if track is already in the playlist to avoid silently repositioning it
+        if (isTrackInPlaylist(playlistId, trackId)) return
         val maxPosition = getMaxPosition(playlistId) ?: -1
         insertPlaylistTrack(PlaylistTrackEntity(playlistId, trackId, maxPosition + 1))
         updateTrackCount(playlistId, getPlaylistTrackCount(playlistId))

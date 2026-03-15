@@ -273,42 +273,41 @@ private fun LibraryList(
                 modifier = Modifier.padding(top = 16.dp, bottom = 12.dp),
             )
         }
-        item(key = "library_container") {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+        items(
+            count = items.size,
+            key = { items[it].id },
+        ) { index ->
+            val item = items[index]
+            Surface(
+                shape = segmentedItemShape(index, items.size),
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier.padding(bottom = 2.dp),
             ) {
-                items.forEachIndexed { index, item ->
-                    Surface(
-                        shape = segmentedItemShape(index, items.size),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ) {
-                        when (item) {
-                            is LibraryItem.PlaylistItem -> {
-                                PlaylistListItem(
-                                    playlist = item.playlist,
-                                    onClick = { onPlaylistClick(item.playlist.id) },
-                                    isFullyDownloaded = item.playlist.id in fullyDownloadedPlaylistIds,
-                                    onLongClick = { menuItem = item },
-                                    onMoreClick = { menuItem = item },
-                                )
-                            }
-                            is LibraryItem.AlbumItem -> {
-                                LibraryAlbumListItem(
-                                    item = item,
-                                    onClick = { onAlbumClick(item.albumUrl) },
-                                    onLongClick = { menuItem = item },
-                                    onMoreClick = { menuItem = item },
-                                )
-                            }
-                            is LibraryItem.ArtistItem -> {
-                                LibraryArtistListItem(
-                                    item = item,
-                                    onClick = { onArtistClick(item.artistUrl) },
-                                    onLongClick = { menuItem = item },
-                                    onMoreClick = { menuItem = item },
-                                )
-                            }
-                        }
+                when (item) {
+                    is LibraryItem.PlaylistItem -> {
+                        PlaylistListItem(
+                            playlist = item.playlist,
+                            onClick = { onPlaylistClick(item.playlist.id) },
+                            isFullyDownloaded = item.playlist.id in fullyDownloadedPlaylistIds,
+                            onLongClick = { menuItem = item },
+                            onMoreClick = { menuItem = item },
+                        )
+                    }
+                    is LibraryItem.AlbumItem -> {
+                        LibraryAlbumListItem(
+                            item = item,
+                            onClick = { onAlbumClick(item.albumUrl) },
+                            onLongClick = { menuItem = item },
+                            onMoreClick = { menuItem = item },
+                        )
+                    }
+                    is LibraryItem.ArtistItem -> {
+                        LibraryArtistListItem(
+                            item = item,
+                            onClick = { onArtistClick(item.artistUrl) },
+                            onLongClick = { menuItem = item },
+                            onMoreClick = { menuItem = item },
+                        )
                     }
                 }
             }

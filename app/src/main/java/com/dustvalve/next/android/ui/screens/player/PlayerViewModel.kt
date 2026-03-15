@@ -332,28 +332,46 @@ class PlayerViewModel @Inject constructor(
 
     fun playTrackInList(tracks: List<Track>, index: Int) {
         viewModelScope.launch {
-            val resolvedTracks = tracks.map { resolveTrackForPlayback(it) }
-            playbackManager.playQueue(resolvedTracks, index)
-            resolvedTracks.getOrNull(index)?.let { triggerProgressiveDownload(tracks[index]) }
+            // Resolve the target track first for immediate playback, then resolve the rest
+            val mutableTracks = tracks.toMutableList()
+            mutableTracks[index] = resolveTrackForPlayback(tracks[index])
+            playbackManager.playQueue(mutableTracks, index)
+            triggerProgressiveDownload(tracks[index])
             try {
-                tracks.getOrNull(index)?.let { libraryRepository.addToRecent(it) }
+                libraryRepository.addToRecent(tracks[index])
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
+            // Resolve remaining tracks in background for seamless queue transitions
+            resolveRemainingTracks(mutableTracks, index)
         }
     }
 
     fun playAlbum(tracks: List<Track>, startIndex: Int) {
         viewModelScope.launch {
-            val resolvedTracks = tracks.map { resolveTrackForPlayback(it) }
-            playbackManager.playQueue(resolvedTracks, startIndex)
-            resolvedTracks.getOrNull(startIndex)?.let { triggerProgressiveDownload(tracks[startIndex]) }
+            // Resolve the target track first for immediate playback, then resolve the rest
+            val mutableTracks = tracks.toMutableList()
+            mutableTracks[startIndex] = resolveTrackForPlayback(tracks[startIndex])
+            playbackManager.playQueue(mutableTracks, startIndex)
+            triggerProgressiveDownload(tracks[startIndex])
             try {
-                tracks.getOrNull(startIndex)?.let { libraryRepository.addToRecent(it) }
+                libraryRepository.addToRecent(tracks[startIndex])
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
+            // Resolve remaining tracks in background for seamless queue transitions
+            resolveRemainingTracks(mutableTracks, startIndex)
         }
+    }
+
+    private suspend fun resolveRemainingTracks(tracks: MutableList<Track>, skipIndex: Int) {
+        for (i in tracks.indices) {
+            if (i == skipIndex) continue
+            tracks[i] = resolveTrackForPlayback(tracks[i])
+        }
+        // Update the queue with fully resolved tracks
+        val currentIndex = queueManager.currentIndex.value
+        queueManager.setQueue(tracks, currentIndex)
     }
 
     fun skipToQueueIndex(index: Int) {

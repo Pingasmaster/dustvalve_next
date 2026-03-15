@@ -71,17 +71,10 @@ class AlbumRepositoryImpl @Inject constructor(
         }
 
         // No cache, stub, or stale: scrape and emit
-        val cachedTrackIds = if (cachedAlbum != null) {
-            trackDao.getByAlbumId(cachedAlbum.id).map { it.id }.toSet()
-        } else {
-            emptySet()
-        }
         val fresh = scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
-        // Only re-emit if no cached data was emitted, or content changed
-        val freshTrackIds = fresh.tracks.map { it.id }.toSet()
-        if (cachedAlbum == null || cachedTrackIds.isEmpty() || cachedTrackIds != freshTrackIds) {
-            emit(fresh)
-        }
+        // Always emit fresh data after a scrape — metadata (title, art, tags)
+        // may have changed even if track IDs are identical
+        emit(fresh)
     }.flowOn(Dispatchers.IO)
 
     private suspend fun findCachedAlbum(

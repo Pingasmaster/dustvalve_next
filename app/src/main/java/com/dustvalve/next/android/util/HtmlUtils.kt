@@ -208,22 +208,34 @@ object HtmlUtils {
      *   <meta name="description" content="Some description">
      */
     fun extractMetaContent(html: String, property: String): String? {
-        // Match meta tags with property or name attribute
-        val pattern = Regex(
-            """<meta\s+[^>]*(?:property|name)\s*=\s*["']${Regex.escape(property)}["'][^>]*content\s*=\s*["']([^"']*)["'][^>]*/?>""",
+        val escapedProp = Regex.escape(property)
+        // Try double-quoted content first, then single-quoted.
+        // Each pattern only excludes its own delimiter, so the other quote type is allowed.
+        val dqPattern = Regex(
+            """<meta\s+[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*content\s*=\s*"([^"]*)"[^>]*/?>""",
             RegexOption.IGNORE_CASE
         )
-        val match = pattern.find(html)
-        if (match != null) {
-            return match.groupValues[1]
-        }
+        dqPattern.find(html)?.let { return it.groupValues[1] }
+
+        val sqPattern = Regex(
+            """<meta\s+[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*content\s*=\s*'([^']*)'[^>]*/?>""",
+            RegexOption.IGNORE_CASE
+        )
+        sqPattern.find(html)?.let { return it.groupValues[1] }
 
         // Also try reversed attribute order: content before property/name
-        val reversedPattern = Regex(
-            """<meta\s+[^>]*content\s*=\s*["']([^"']*)["'][^>]*(?:property|name)\s*=\s*["']${Regex.escape(property)}["'][^>]*/?>""",
+        val dqReversed = Regex(
+            """<meta\s+[^>]*content\s*=\s*"([^"]*)"[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*/?>""",
             RegexOption.IGNORE_CASE
         )
-        val reversedMatch = reversedPattern.find(html)
-        return reversedMatch?.groupValues?.get(1)
+        dqReversed.find(html)?.let { return it.groupValues[1] }
+
+        val sqReversed = Regex(
+            """<meta\s+[^>]*content\s*=\s*'([^']*)'[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*/?>""",
+            RegexOption.IGNORE_CASE
+        )
+        sqReversed.find(html)?.let { return it.groupValues[1] }
+
+        return null
     }
 }

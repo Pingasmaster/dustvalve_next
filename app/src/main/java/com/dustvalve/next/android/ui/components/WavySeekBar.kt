@@ -61,7 +61,7 @@ fun WavySeekBar(
         while (true) {
             val ms = withInfiniteAnimationFrameMillis { it }
             val delta = ms - prevMs
-            wavePhase += delta * 0.005f
+            wavePhase = (wavePhase + delta * 0.005f) % (2f * PI.toFloat())
             prevMs = ms
         }
     }
