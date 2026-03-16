@@ -137,15 +137,16 @@ private fun MainContent(accountRepository: AccountRepository) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
+    val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
 
     // Adaptive layout: use NavigationRail on screens >= 600dp wide
     val windowInfo = LocalWindowInfo.current
     val useNavRail = windowInfo.containerDpSize.width >= 600.dp
 
     // BackHandlers: later in composition = higher priority
-    // Lowest priority: at root of non-HOME tab, switch to HOME instead of exiting
-    BackHandler(enabled = !showFullPlayer && backStack.size <= 1 && currentTab != BottomNavItem.HOME) {
-        navViewModel.navigateTo(NavDestination.Home)
+    // Lowest priority: at root of non-LOCAL tab, switch to LOCAL instead of exiting
+    BackHandler(enabled = !showFullPlayer && backStack.size <= 1 && currentTab != BottomNavItem.LOCAL) {
+        navViewModel.navigateTo(NavDestination.LocalHome)
     }
     BackHandler(enabled = !showFullPlayer && backStack.size > 1) {
         navViewModel.navigateBack()
@@ -161,6 +162,7 @@ private fun MainContent(accountRepository: AccountRepository) {
             Row(modifier = Modifier.fillMaxSize()) {
                 SideNavRail(
                     currentTab = currentTab,
+                    visibleTabs = visibleTabs,
                     onItemSelected = { dest -> navViewModel.navigateTo(dest) },
                 )
                 Scaffold(
@@ -192,6 +194,7 @@ private fun MainContent(accountRepository: AccountRepository) {
                         )
                         BottomNavBar(
                             currentTab = currentTab,
+                            visibleTabs = visibleTabs,
                             onItemSelected = { dest -> navViewModel.navigateTo(dest) },
                         )
                     }

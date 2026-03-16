@@ -11,4 +11,7 @@ data class SearchResult(
     val releaseDate: String?,
 )
 
-enum class SearchResultType { ARTIST, ALBUM, TRACK, LOCAL_TRACK }
+enum class SearchResultType {
+    ARTIST, ALBUM, TRACK, LOCAL_TRACK,
+    YOUTUBE_TRACK, YOUTUBE_ALBUM, YOUTUBE_ARTIST, YOUTUBE_PLAYLIST,
+}

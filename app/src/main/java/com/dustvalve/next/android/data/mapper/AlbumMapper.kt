@@ -7,6 +7,7 @@ import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -66,7 +67,7 @@ fun TrackEntity.toDomain(isFavorite: Boolean): Track = Track(
     artUrl = artUrl,
     albumTitle = albumTitle,
     isFavorite = isFavorite,
-    isLocal = isLocal,
+    source = TrackSource.fromKey(source),
 )
 
 fun Track.toEntity(): TrackEntity = TrackEntity(
@@ -80,7 +81,7 @@ fun Track.toEntity(): TrackEntity = TrackEntity(
     streamUrl = streamUrl,
     artUrl = artUrl,
     albumTitle = albumTitle,
-    isLocal = isLocal,
+    source = source.key,
 )
 
 fun ArtistEntity.toDomain(albums: List<Album>, isFavorite: Boolean = false): Artist = Artist(

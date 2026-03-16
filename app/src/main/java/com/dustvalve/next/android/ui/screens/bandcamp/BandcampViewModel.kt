@@ -1,4 +1,4 @@
-package com.dustvalve.next.android.ui.screens.home
+package com.dustvalve.next.android.ui.screens.bandcamp
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,7 +17,7 @@ import android.util.Log
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-data class HomeUiState(
+data class BandcampUiState(
     /** Preview thumbnails per genre tag (loaded on init) */
     val categoryPreviews: Map<String, List<Album>> = emptyMap(),
 
@@ -33,12 +33,12 @@ data class HomeUiState(
 )
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
+class BandcampViewModel @Inject constructor(
     private val discoverDustvalveUseCase: DiscoverDustvalveUseCase,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(BandcampUiState())
+    val uiState: StateFlow<BandcampUiState> = _uiState.asStateFlow()
 
     private var loadCategoryJob: Job? = null
 
@@ -146,7 +146,7 @@ class HomeViewModel @Inject constructor(
     }
 
     companion object {
-        private const val TAG = "HomeViewModel"
+        private const val TAG = "BandcampViewModel"
         val GENRE_TAGS = listOf(
             "", "rock", "hip-hop-rap", "alternative", "electronic", "metal",
             "experimental", "pop", "jazz", "blues", "punk", "r-b-soul",

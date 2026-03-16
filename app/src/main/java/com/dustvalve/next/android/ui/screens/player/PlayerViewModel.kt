@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.screens.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
+import android.media.AudioManager
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Playlist
@@ -49,6 +50,10 @@ data class PlayerUiState(
     val currentSourcePath: String? = null,
     val wavyProgressBar: Boolean = true,
     val userPlaylistTrackIds: Set<String> = emptySet(),
+    val volumeLevel: Float = 1f,
+    val maxVolumeLevel: Int = 15,
+    val showInlineVolumeSlider: Boolean = false,
+    val showVolumeButton: Boolean = false,
 )
 
 @HiltViewModel
@@ -280,11 +285,33 @@ class PlayerViewModel @Inject constructor(
         )
     }.combine(settingsDataStore.wavyProgressBar) { state, wavy ->
         state.copy(wavyProgressBar = wavy)
+    }.combine(
+        combine(
+            settingsDataStore.showInlineVolumeSlider,
+            settingsDataStore.showVolumeButton,
+        ) { inline, button -> inline to button }
+    ) { state, (inline, button) ->
+        val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val curVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        state.copy(
+            showInlineVolumeSlider = inline,
+            showVolumeButton = button,
+            maxVolumeLevel = maxVol,
+            volumeLevel = if (maxVol > 0) curVol.toFloat() / maxVol else 1f,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = PlayerUiState(),
     )
+
+    fun setVolume(level: Float) {
+        val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val newVol = (level * maxVol).toInt().coerceIn(0, maxVol)
+        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+    }
 
     fun onPlayPause() {
         playbackManager.togglePlayPause()

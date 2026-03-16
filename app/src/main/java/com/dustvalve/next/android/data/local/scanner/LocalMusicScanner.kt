@@ -168,7 +168,7 @@ class LocalMusicScanner @Inject constructor(
                 streamUrl = fileInfo.contentUri.toString(),
                 artUrl = artUrl,
                 albumTitle = albumTitle,
-                isLocal = true,
+                source = "local",
             )
         } catch (_: Exception) {
             // Skip files that can't be read

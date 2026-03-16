@@ -58,13 +58,13 @@ interface TrackDao {
     )
     fun getDownloaded(): Flow<List<TrackEntity>>
 
-    @Query("SELECT * FROM tracks WHERE isLocal = 1 ORDER BY title ASC")
+    @Query("SELECT * FROM tracks WHERE source = 'local' ORDER BY title ASC")
     fun getLocalTracks(): Flow<List<TrackEntity>>
 
-    @Query("SELECT id FROM tracks WHERE isLocal = 1")
+    @Query("SELECT id FROM tracks WHERE source = 'local'")
     suspend fun getLocalTrackIdsSync(): List<String>
 
-    @Query("DELETE FROM tracks WHERE isLocal = 1")
+    @Query("DELETE FROM tracks WHERE source = 'local'")
     suspend fun deleteAllLocalTracks()
 
     @Query("DELETE FROM tracks WHERE id IN (:ids)")
@@ -72,7 +72,7 @@ interface TrackDao {
 
     @Query(
         """
-        SELECT * FROM tracks WHERE isLocal = 1
+        SELECT * FROM tracks WHERE source = 'local'
         AND (title LIKE '%' || :query || '%'
           OR artist LIKE '%' || :query || '%'
           OR albumTitle LIKE '%' || :query || '%')

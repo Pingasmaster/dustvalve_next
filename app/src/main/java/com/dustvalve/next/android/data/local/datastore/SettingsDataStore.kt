@@ -41,6 +41,11 @@ class SettingsDataStore @Inject constructor(
         val LOCAL_MUSIC_ENABLED = booleanPreferencesKey("local_music_enabled")
         val LOCAL_MUSIC_FOLDER_URI = stringPreferencesKey("local_music_folder_uri")
         val LOCAL_MUSIC_SEARCH_ENABLED = booleanPreferencesKey("local_music_search_enabled")
+        val BANDCAMP_ENABLED = booleanPreferencesKey("bandcamp_enabled")
+        val YOUTUBE_ENABLED = booleanPreferencesKey("youtube_enabled")
+        val SHOW_INLINE_VOLUME_SLIDER = booleanPreferencesKey("show_inline_volume_slider")
+        val SHOW_VOLUME_BUTTON = booleanPreferencesKey("show_volume_button")
+        val LAST_YOUTUBE_VIDEO_ID = stringPreferencesKey("last_youtube_video_id")
     }
 
     companion object {
@@ -300,5 +305,59 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun getLocalMusicSearchEnabledSync(): Boolean {
         return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_SEARCH_ENABLED) ?: true
+    }
+
+    val bandcampEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.BANDCAMP_ENABLED] ?: false
+    }
+
+    val youtubeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.YOUTUBE_ENABLED] ?: false
+    }
+
+    val showInlineVolumeSlider: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SHOW_INLINE_VOLUME_SLIDER] ?: false
+    }
+
+    val showVolumeButton: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SHOW_VOLUME_BUTTON] ?: false
+    }
+
+    val lastYoutubeVideoId: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[Keys.LAST_YOUTUBE_VIDEO_ID]
+    }
+
+    suspend fun setBandcampEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.BANDCAMP_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setYoutubeEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.YOUTUBE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setShowInlineVolumeSlider(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SHOW_INLINE_VOLUME_SLIDER] = enabled
+        }
+    }
+
+    suspend fun setShowVolumeButton(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SHOW_VOLUME_BUTTON] = enabled
+        }
+    }
+
+    suspend fun setLastYoutubeVideoId(videoId: String?) {
+        context.dataStore.edit { prefs ->
+            if (videoId != null) {
+                prefs[Keys.LAST_YOUTUBE_VIDEO_ID] = videoId
+            } else {
+                prefs.remove(Keys.LAST_YOUTUBE_VIDEO_ID)
+            }
+        }
     }
 }

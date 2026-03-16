@@ -18,12 +18,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.artist.ArtistDetailScreen
-import com.dustvalve.next.android.ui.screens.home.HomeScreen
+import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
 import com.dustvalve.next.android.ui.screens.library.LibraryScreen
+import com.dustvalve.next.android.ui.screens.local.LocalScreen
 import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -36,7 +38,7 @@ fun AppNavigation(
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val isForward by navViewModel.lastNavigationForward.collectAsStateWithLifecycle()
-    val currentDestination = backStack.lastOrNull() ?: NavDestination.Home
+    val currentDestination = backStack.lastOrNull() ?: NavDestination.LocalHome
     val coroutineScope = rememberCoroutineScope()
 
     // Full-screen transitions use slow specs for a grander, more cinematic feel
@@ -58,9 +60,15 @@ fun AppNavigation(
         label = "NavContent",
     ) { destination ->
         when (destination) {
-            is NavDestination.Home -> HomeScreen(
+            is NavDestination.LocalHome -> LocalScreen(
+                playerViewModel = playerViewModel,
+            )
+            is NavDestination.BandcampHome -> BandcampScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                 onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
+                playerViewModel = playerViewModel,
+            )
+            is NavDestination.YouTubeHome -> YouTubeScreen(
                 playerViewModel = playerViewModel,
             )
             is NavDestination.Library -> LibraryScreen(
