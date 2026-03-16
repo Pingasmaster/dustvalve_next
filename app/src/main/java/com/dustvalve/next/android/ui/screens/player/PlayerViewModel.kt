@@ -9,8 +9,10 @@ import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
+import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.player.PlaybackManager
@@ -65,6 +67,7 @@ class PlayerViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val playlistRepository: PlaylistRepository,
     private val settingsDataStore: SettingsDataStore,
+    private val youtubeRepository: YouTubeRepository,
     @param:ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -108,6 +111,30 @@ class PlayerViewModel @Inject constructor(
             return track
         }
 
+        // YouTube tracks: check download first, then resolve stream URL live
+        if (track.source == TrackSource.YOUTUBE) {
+            val ytDownloadInfo = downloadRepository.getDownloadInfo(track.id)
+            if (ytDownloadInfo != null) {
+                _extraState.update {
+                    it.copy(
+                        currentPlaybackFormat = ytDownloadInfo.format,
+                        currentSourcePath = ytDownloadInfo.filePath,
+                    )
+                }
+                return track.copy(streamUrl = android.net.Uri.fromFile(File(ytDownloadInfo.filePath)).toString())
+            }
+            // Resolve stream URL from YouTube
+            return try {
+                val streamUrl = youtubeRepository.getStreamUrl(track.streamUrl ?: return track)
+                _extraState.update {
+                    it.copy(currentPlaybackFormat = null, currentSourcePath = null)
+                }
+                track.copy(streamUrl = streamUrl)
+            } catch (_: Exception) {
+                track // Fall back to original URL
+            }
+        }
+
         // Check for existing local download
         val downloadInfo = downloadRepository.getDownloadInfo(track.id)
         if (downloadInfo != null && downloadInfo.format.qualityRank >= AudioFormat.MP3_128.qualityRank) {
@@ -137,6 +164,7 @@ class PlayerViewModel @Inject constructor(
      */
     private fun triggerProgressiveDownload(track: Track) {
         if (track.isLocal) return // Local tracks don't need downloading
+        if (track.source == TrackSource.YOUTUBE) return // YouTube tracks use a different download path
         progressiveDownloadJob?.cancel()
         progressiveDownloadJob = viewModelScope.launch {
             try {
@@ -351,6 +379,9 @@ class PlayerViewModel @Inject constructor(
             triggerProgressiveDownload(track)
             try {
                 libraryRepository.addToRecent(track)
+                if (track.source == TrackSource.YOUTUBE) {
+                    settingsDataStore.setLastYoutubeVideoId(track.id.removePrefix("yt_"))
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
