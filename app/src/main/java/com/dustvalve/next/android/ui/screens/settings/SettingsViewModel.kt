@@ -7,6 +7,7 @@ import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.CacheRepository
+import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.usecase.ManageCacheUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -38,6 +40,10 @@ data class SettingsUiState(
     val localMusicSearchEnabled: Boolean = true,
     val isScanning: Boolean = false,
     val scanMessage: String? = null,
+    val bandcampEnabled: Boolean = false,
+    val youtubeEnabled: Boolean = false,
+    val showInlineVolumeSlider: Boolean = false,
+    val showVolumeButton: Boolean = false,
 )
 
 @HiltViewModel
@@ -47,6 +53,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val manageCacheUseCase: ManageCacheUseCase,
     private val localMusicRepository: LocalMusicRepository,
+    private val downloadRepository: DownloadRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -68,6 +75,10 @@ class SettingsViewModel @Inject constructor(
         collectLocalMusicEnabled()
         collectLocalMusicFolderUri()
         collectLocalMusicSearchEnabled()
+        collectBandcampEnabled()
+        collectYoutubeEnabled()
+        collectShowInlineVolumeSlider()
+        collectShowVolumeButton()
     }
 
     fun setThemeMode(mode: String) {
@@ -419,6 +430,99 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(localMusicSearchEnabled = enabled) }
+                }
+        }
+    }
+
+    fun setBandcampEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setBandcampEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setYoutubeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setYoutubeEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setShowInlineVolumeSlider(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setShowInlineVolumeSlider(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setShowVolumeButton(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setShowVolumeButton(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun removeAllDownloads() {
+        viewModelScope.launch {
+            try {
+                val tracks = downloadRepository.getDownloadedTracks().first()
+                for (track in tracks) {
+                    downloadRepository.deleteDownload(track.id)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    private fun collectBandcampEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.bandcampEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(bandcampEnabled = enabled) }
+                }
+        }
+    }
+
+    private fun collectYoutubeEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.youtubeEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(youtubeEnabled = enabled) }
+                }
+        }
+    }
+
+    private fun collectShowInlineVolumeSlider() {
+        viewModelScope.launch {
+            settingsDataStore.showInlineVolumeSlider
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(showInlineVolumeSlider = enabled) }
+                }
+        }
+    }
+
+    private fun collectShowVolumeButton() {
+        viewModelScope.launch {
+            settingsDataStore.showVolumeButton
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(showVolumeButton = enabled) }
                 }
         }
     }

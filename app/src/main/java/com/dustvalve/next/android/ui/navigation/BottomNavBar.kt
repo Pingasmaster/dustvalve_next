@@ -15,11 +15,12 @@ import androidx.annotation.DrawableRes
 @Composable
 fun BottomNavBar(
     currentTab: BottomNavItem,
+    visibleTabs: List<BottomNavItem>,
     onItemSelected: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavigationBar(modifier = modifier) {
-        BottomNavItem.entries.forEach { item ->
+        visibleTabs.forEach { item ->
             val selected = item == currentTab
             NavigationBarItem(
                 selected = selected,
@@ -39,11 +40,12 @@ fun BottomNavBar(
 @Composable
 fun SideNavRail(
     currentTab: BottomNavItem,
+    visibleTabs: List<BottomNavItem>,
     onItemSelected: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavigationRail(modifier = modifier) {
-        BottomNavItem.entries.forEach { item ->
+        visibleTabs.forEach { item ->
             val selected = item == currentTab
             NavigationRailItem(
                 selected = selected,
@@ -62,14 +64,18 @@ fun SideNavRail(
 
 private val BottomNavItem.selectedIcon: Int
     @DrawableRes get() = when (this) {
-        BottomNavItem.HOME -> R.drawable.ic_home
+        BottomNavItem.LOCAL -> R.drawable.ic_phone_android
+        BottomNavItem.BANDCAMP -> R.drawable.ic_cloud
+        BottomNavItem.YOUTUBE -> R.drawable.ic_play_circle
         BottomNavItem.LIBRARY -> R.drawable.ic_library_music
         BottomNavItem.SETTINGS -> R.drawable.ic_settings
     }
 
 private val BottomNavItem.unselectedIcon: Int
     @DrawableRes get() = when (this) {
-        BottomNavItem.HOME -> R.drawable.ic_home
+        BottomNavItem.LOCAL -> R.drawable.ic_phone_android
+        BottomNavItem.BANDCAMP -> R.drawable.ic_cloud
+        BottomNavItem.YOUTUBE -> R.drawable.ic_play_circle
         BottomNavItem.LIBRARY -> R.drawable.ic_library_music
         BottomNavItem.SETTINGS -> R.drawable.ic_settings
     }

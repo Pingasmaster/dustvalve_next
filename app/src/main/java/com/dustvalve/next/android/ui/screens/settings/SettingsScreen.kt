@@ -79,6 +79,7 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showClearCacheDialog by rememberSaveable { mutableStateOf(false) }
+    var showRemoveDownloadsDialog by rememberSaveable { mutableStateOf(false) }
     var showFormatSheet by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -106,6 +107,29 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showClearCacheDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+
+    if (showRemoveDownloadsDialog) {
+        AlertDialog(
+            onDismissRequest = { showRemoveDownloadsDialog = false },
+            title = { Text("Remove All Downloads") },
+            text = { Text("This will remove all downloaded tracks. Cached audio and images will not be affected.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.removeAllDownloads()
+                        showRemoveDownloadsDialog = false
+                    },
+                ) {
+                    Text("Remove")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveDownloadsDialog = false }) {
                     Text("Cancel")
                 }
             },
@@ -174,6 +198,100 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.headlineMediumEmphasized,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
             )
+        }
+
+        // Sources section
+        item {
+            SettingsSection(
+                title = "Sources",
+                icon = R.drawable.ic_tune,
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        // Local — always on
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_phone_android),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Local",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                            Text(
+                                text = "Always on",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Bandcamp
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_cloud),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Bandcamp",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                            Switch(
+                                checked = state.bandcampEnabled,
+                                onCheckedChange = { viewModel.setBandcampEnabled(it) },
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // YouTube
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_play_circle),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "YouTube",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                            Switch(
+                                checked = state.youtubeEnabled,
+                                onCheckedChange = { viewModel.setYoutubeEnabled(it) },
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // Account section
@@ -299,6 +417,20 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Manage Downloads")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = { showRemoveDownloadsDialog = true },
+                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Remove All Downloads")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         FilledTonalButton(
@@ -706,6 +838,67 @@ fun SettingsScreen(
                             Switch(
                                 checked = state.wavyProgressBar,
                                 onCheckedChange = { viewModel.setWavyProgressBar(it) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Player section
+        item {
+            SettingsSection(
+                title = "Player",
+                icon = R.drawable.ic_volume_up,
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Volume slider",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Show a volume slider next to album art in the music player",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.showInlineVolumeSlider,
+                                onCheckedChange = { viewModel.setShowInlineVolumeSlider(it) },
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Volume button",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Show a volume button that opens a full-screen volume control",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.showVolumeButton,
+                                onCheckedChange = { viewModel.setShowVolumeButton(it) },
                             )
                         }
                     }

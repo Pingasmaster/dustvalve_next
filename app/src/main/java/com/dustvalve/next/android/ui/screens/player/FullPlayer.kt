@@ -142,7 +142,60 @@ fun FullPlayer(
     var showPlaylistSheet by remember { mutableStateOf(false) }
     var showCreatePlaylistSheet by remember { mutableStateOf(false) }
     var showDebugSheet by remember { mutableStateOf(false) }
+    var showVolumeSheet by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
+
+    // Full-screen volume control sheet
+    if (showVolumeSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showVolumeSheet = false },
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(500.dp)
+                    .padding(horizontal = 32.dp, vertical = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    text = "Volume",
+                    style = MaterialTheme.typography.headlineMedium,
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Icon(
+                    painter = painterResource(R.drawable.ic_volume_up),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                // XL vertical slider
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .width(64.dp)
+                        .graphicsLayer { rotationZ = -90f },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    androidx.compose.material3.Slider(
+                        value = state.volumeLevel,
+                        onValueChange = { playerViewModel.setVolume(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Icon(
+                    painter = painterResource(R.drawable.ic_volume_off),
+                    contentDescription = null,
+                    modifier = Modifier.size(32.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -178,6 +231,16 @@ fun FullPlayer(
                                 painter = painterResource(R.drawable.ic_keyboard_arrow_down),
                                 contentDescription = "Collapse",
                             )
+                        }
+                    },
+                    actions = {
+                        if (state.showVolumeButton) {
+                            IconButton(onClick = { showVolumeSheet = true }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_volume_up),
+                                    contentDescription = "Volume",
+                                )
+                            }
                         }
                     },
                     titleHorizontalAlignment = Alignment.CenterHorizontally,
@@ -221,9 +284,13 @@ fun FullPlayer(
                 } else {
                     PlaybackMorphShape(heartMorph, 0f)
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .weight(1f)
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -285,7 +352,45 @@ fun FullPlayer(
                                 },
                         )
                     }
+                } // end album art Box
+
+                // Inline volume slider (to the right of album art)
+                if (state.showInlineVolumeSlider) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.height(240.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_volume_up),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        // Vertical slider via rotated horizontal slider
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .width(48.dp)
+                                .graphicsLayer { rotationZ = -90f },
+                        ) {
+                            androidx.compose.material3.Slider(
+                                value = state.volumeLevel,
+                                onValueChange = { playerViewModel.setVolume(it) },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.ic_volume_down),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
+                } // end Row
 
                 // Track title, artist, favorite, and download
                 Column(

@@ -12,5 +12,7 @@ data class Track(
     val artUrl: String,
     val albumTitle: String,
     val isFavorite: Boolean = false,
-    val isLocal: Boolean = false,
-)
+    val source: TrackSource = TrackSource.BANDCAMP,
+) {
+    val isLocal: Boolean get() = source == TrackSource.LOCAL
+}

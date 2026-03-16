@@ -1,4 +1,4 @@
-package com.dustvalve.next.android.ui.screens.home
+package com.dustvalve.next.android.ui.screens.bandcamp
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -112,17 +112,16 @@ private val discoverCategories = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun HomeScreen(
+fun BandcampScreen(
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
     playerViewModel: PlayerViewModel,
-    viewModel: HomeViewModel = hiltViewModel(),
+    viewModel: BandcampViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
     val recentSearches by searchViewModel.recentSearches.collectAsStateWithLifecycle()
-    val localSearchEnabled by searchViewModel.localSearchEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedCategoryColor by remember { mutableStateOf(Color.Unspecified) }
 
@@ -260,7 +259,7 @@ fun HomeScreen(
             searchBarState = searchBarState,
             textFieldState = textFieldState,
             onSearch = { searchViewModel.onSearch() },
-            placeholder = { Text("Search Dustvalve...") },
+            placeholder = { Text("Search Bandcamp...") },
             leadingIcon = {
                 Icon(
                     painter = painterResource(R.drawable.ic_search),
@@ -437,13 +436,6 @@ fun HomeScreen(
                         onClick = { searchViewModel.onTypeSelected(SearchResultType.TRACK) },
                         label = { Text("Tracks") },
                     )
-                    if (localSearchEnabled) {
-                        FilterChip(
-                            selected = searchState.selectedType == SearchResultType.LOCAL_TRACK,
-                            onClick = { searchViewModel.onTypeSelected(SearchResultType.LOCAL_TRACK) },
-                            label = { Text("Local") },
-                        )
-                    }
                 }
 
                 // Results area
@@ -579,6 +571,8 @@ fun HomeScreen(
                                                     val trackId = result.url.removePrefix("local://")
                                                     searchViewModel.playLocalTrack(trackId, playerViewModel)
                                                 }
+                                                SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
+                                                SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> { /* not applicable */ }
                                             }
                                         },
                                         interactionSource = interactionSource,
@@ -642,6 +636,8 @@ private fun SearchResultItem(
         SearchResultType.ALBUM -> AppShapes.SearchResultAlbum
         SearchResultType.TRACK -> AppShapes.SearchResultTrack
         SearchResultType.LOCAL_TRACK -> AppShapes.SearchResultTrack
+        SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
+        SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> AppShapes.SearchResultTrack
     }
 
     ListItem(
@@ -678,6 +674,10 @@ private fun SearchResultItem(
                             append(it)
                         }
                     }
+                    SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
+                    SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> {
+                        result.artist?.let { append(it) }
+                    }
                 }
                 result.genre?.let {
                     if (isNotEmpty()) append(" \u00B7 ")
@@ -707,6 +707,8 @@ private fun SearchResultItem(
                     SearchResultType.ALBUM -> R.drawable.ic_album
                     SearchResultType.TRACK -> R.drawable.ic_music_note
                     SearchResultType.LOCAL_TRACK -> R.drawable.ic_phone_android
+                    SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
+                    SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_play_circle
                 }
                 Icon(
                     painter = painterResource(iconRes),
@@ -868,7 +870,7 @@ private fun CarouselAlbumItem(
                     )
                 ),
         )
-        // Text overlay — extra bottom padding to clear rounded corner clip
+        // Text overlay -- extra bottom padding to clear rounded corner clip
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
