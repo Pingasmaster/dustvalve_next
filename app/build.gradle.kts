@@ -16,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 44
-        versionName = "0.0.44"
+        versionCode = 45
+        versionName = "0.0.45"
     }
 
     signingConfigs {
@@ -46,6 +46,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
@@ -138,4 +139,10 @@ dependencies {
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.18.0")
+
+    // NewPipe Extractor (YouTube scraping)
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.0")
+
+    // Desugaring (required for NewPipe Extractor on minSdk < 33)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.4")
 }
