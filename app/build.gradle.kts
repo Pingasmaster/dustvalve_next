@@ -16,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 45
-        versionName = "0.0.45"
+        versionCode = 46
+        versionName = "0.0.46"
     }
 
     signingConfigs {
@@ -124,9 +124,9 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     // Media3
-    implementation("androidx.media3:media3-exoplayer:1.10.0-rc01")
-    implementation("androidx.media3:media3-session:1.10.0-rc01")
-    implementation("androidx.media3:media3-datasource-okhttp:1.10.0-rc01")
+    implementation("androidx.media3:media3-exoplayer:1.10.0-rc02")
+    implementation("androidx.media3:media3-session:1.10.0-rc02")
+    implementation("androidx.media3:media3-datasource-okhttp:1.10.0-rc02")
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
@@ -144,5 +144,5 @@ dependencies {
     implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.0")
 
     // Desugaring (required for NewPipe Extractor on minSdk < 33)
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
 }
