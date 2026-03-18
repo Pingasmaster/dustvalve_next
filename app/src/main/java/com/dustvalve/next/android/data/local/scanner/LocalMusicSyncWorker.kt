@@ -19,7 +19,8 @@ class LocalMusicSyncWorker @AssistedInject constructor(
         return try {
             localMusicRepository.scan()
             Result.success()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
             Result.retry()
         }
     }

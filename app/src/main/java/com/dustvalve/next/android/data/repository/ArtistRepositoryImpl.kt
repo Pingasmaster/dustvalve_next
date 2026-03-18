@@ -150,7 +150,8 @@ class ArtistRepositoryImpl @Inject constructor(
                 try {
                     val fullAlbum = albumRepository.getAlbumDetail(albumStub.url)
                     downloadRepository.downloadAlbum(fullAlbum)
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     // Best-effort auto-download
                 }
             }

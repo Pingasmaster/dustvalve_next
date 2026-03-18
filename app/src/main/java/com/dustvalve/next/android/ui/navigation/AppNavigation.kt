@@ -133,7 +133,13 @@ fun AppNavigation(
             is NavDestination.AccountLogin -> AccountLoginScreen(
                 onLoginSuccess = { cookies ->
                     coroutineScope.launch {
-                        accountRepository.saveCookies(cookies)
+                        try {
+                            accountRepository.saveCookies(cookies)
+                        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // Cookie save failed — still navigate back
+                        }
                         navViewModel.navigateBack()
                     }
                 },

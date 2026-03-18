@@ -159,7 +159,8 @@ class AlbumRepositoryImpl @Inject constructor(
             for (track in newTracks) {
                 try {
                     downloadRepository.downloadTrack(track)
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     // Best-effort auto-download
                 }
             }
