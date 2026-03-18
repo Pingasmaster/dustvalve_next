@@ -250,7 +250,9 @@ fun SettingsScreen(
                     Column(modifier = Modifier.padding(16.dp)) {
                         // Local
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
@@ -279,11 +281,10 @@ fun SettingsScreen(
 
                         if (state.localMusicEnabled) {
                             // "Scan all audio" toggle
-                            Spacer(modifier = Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(start = 36.dp),
+                                    .padding(start = 36.dp, top = 4.dp, bottom = 4.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
@@ -429,11 +430,10 @@ fun SettingsScreen(
                             }
 
                             if (state.localMusicUseMediaStore || state.localMusicFolderUris.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 36.dp),
+                                        .padding(start = 36.dp, top = 4.dp, bottom = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
@@ -450,11 +450,13 @@ fun SettingsScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         // Bandcamp
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
@@ -476,11 +478,13 @@ fun SettingsScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         // YouTube
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(
@@ -630,7 +634,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Manage Downloads")
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         FilledTonalButton(
                             onClick = { showRemoveDownloadsDialog = true },
                             shapes = ButtonDefaults.shapes(),
@@ -644,7 +648,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Remove All Downloads")
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         FilledTonalButton(
                             onClick = { showClearCacheDialog = true },
                             shapes = ButtonDefaults.shapes(),
@@ -660,9 +664,11 @@ fun SettingsScreen(
                         }
 
                         if (state.accountState.isLoggedIn) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
@@ -683,9 +689,11 @@ fun SettingsScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -731,7 +739,7 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             val currentFormat = AudioFormat.fromKey(state.downloadFormat)
                             FilledTonalButton(
                                 onClick = { showFormatSheet = true },
@@ -743,31 +751,44 @@ fun SettingsScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Row(
+                            Text(
+                                text = "Download quality on mobile data",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                text = "Controls format when downloading on metered networks",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            val qualityOptions = listOf("best", "economical")
+                            val qualityLabels = listOf("Best quality", "Economical")
+                            val selectedQualityIndex = qualityOptions.indexOf(state.downloadQualityMode).coerceAtLeast(0)
+
+                            SingleChoiceSegmentedButtonRow(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "MP3 only on metered",
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = "Download MP3 instead of lossless on mobile data",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                qualityOptions.forEachIndexed { index, option ->
+                                    SegmentedButton(
+                                        selected = index == selectedQualityIndex,
+                                        onClick = { viewModel.setDownloadQualityMode(option) },
+                                        shape = SegmentedButtonDefaults.itemShape(
+                                            index = index,
+                                            count = qualityOptions.size,
+                                        ),
+                                    ) {
+                                        Text(qualityLabels[index])
+                                    }
                                 }
-                                Switch(
-                                    checked = state.saveDataOnMetered,
-                                    onCheckedChange = { viewModel.setSaveDataOnMetered(it) },
-                                )
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
@@ -831,10 +852,12 @@ fun SettingsScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -854,10 +877,12 @@ fun SettingsScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -884,10 +909,12 @@ fun SettingsScreen(
                         }
 
                         if (isDarkEffective) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
 
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
@@ -908,10 +935,12 @@ fun SettingsScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -949,7 +978,9 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
@@ -969,10 +1000,12 @@ fun SettingsScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Column(modifier = Modifier.weight(1f)) {

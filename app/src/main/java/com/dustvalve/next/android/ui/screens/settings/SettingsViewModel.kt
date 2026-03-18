@@ -32,7 +32,7 @@ data class SettingsUiState(
     val autoDownloadFutureContent: Boolean = false,
     val signOutSuccess: Boolean = false,
     val downloadFormat: String = "flac",
-    val saveDataOnMetered: Boolean = true,
+    val downloadQualityMode: String = "best",
     val progressiveDownload: Boolean = true,
     val oledBlack: Boolean = false,
     val albumArtTheme: Boolean = false,
@@ -73,7 +73,7 @@ class SettingsViewModel @Inject constructor(
         collectAutoDownloadCollection()
         collectAutoDownloadFutureContent()
         collectDownloadFormat()
-        collectSaveDataOnMetered()
+        collectDownloadQualityMode()
         collectProgressiveDownload()
         collectOledBlack()
         collectAlbumArtTheme()
@@ -182,10 +182,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setSaveDataOnMetered(enabled: Boolean) {
+    fun setDownloadQualityMode(mode: String) {
         viewModelScope.launch {
             try {
-                settingsDataStore.setSaveDataOnMetered(enabled)
+                settingsDataStore.setDownloadQualityMode(mode)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -303,12 +303,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun collectSaveDataOnMetered() {
+    private fun collectDownloadQualityMode() {
         viewModelScope.launch {
-            settingsDataStore.saveDataOnMetered
+            settingsDataStore.downloadQualityMode
                 .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(saveDataOnMetered = enabled) }
+                .collect { mode ->
+                    _uiState.update { it.copy(downloadQualityMode = mode) }
                 }
         }
     }
