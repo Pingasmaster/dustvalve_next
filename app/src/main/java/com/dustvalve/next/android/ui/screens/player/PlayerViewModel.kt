@@ -130,8 +130,15 @@ class PlayerViewModel @Inject constructor(
                     it.copy(currentPlaybackFormat = null, currentSourcePath = null)
                 }
                 track.copy(streamUrl = streamUrl)
-            } catch (_: Exception) {
-                track // Fall back to original URL
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = "Couldn't load audio stream",
+                        isSnackbarError = true,
+                    )
+                }
+                track // Fall back, ExoPlayer will handle gracefully
             }
         }
 
@@ -423,13 +430,17 @@ class PlayerViewModel @Inject constructor(
     }
 
     private suspend fun resolveRemainingTracks(tracks: MutableList<Track>, skipIndex: Int) {
+        val originalTrackId = tracks.getOrNull(skipIndex)?.id
         for (i in tracks.indices) {
             if (i == skipIndex) continue
             tracks[i] = resolveTrackForPlayback(tracks[i])
         }
-        // Update the queue with fully resolved tracks
-        val currentIndex = queueManager.currentIndex.value
-        queueManager.setQueue(tracks, currentIndex)
+        // Only update the queue if the user hasn't switched to different content
+        val currentTrack = queueManager.currentTrack.value
+        if (currentTrack != null && currentTrack.id == originalTrackId) {
+            val currentIndex = queueManager.currentIndex.value
+            queueManager.setQueue(tracks, currentIndex)
+        }
     }
 
     fun skipToQueueIndex(index: Int) {

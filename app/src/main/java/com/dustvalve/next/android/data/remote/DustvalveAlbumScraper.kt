@@ -159,7 +159,7 @@ class DustvalveAlbumScraper @Inject constructor(
     }
 
     private fun extractTags(html: String): List<String> {
-        val regex = Regex("""<a[^>]*\bclass="tag"[^>]*>([^<]+)</a>""")
+        val regex = Regex("""<a[^>]*\bclass="[^"]*\btag\b[^"]*"[^>]*>([^<]+)</a>""")
         return regex.findAll(html).map { HtmlUtils.decodeHtmlEntities(it.groupValues[1].trim()) }.toList()
     }
 
