@@ -359,6 +359,7 @@ fun BandcampScreen(
                                                         .graphicsLayer { rotationZ = tilts[i] }
                                                         .clip(MaterialTheme.shapes.small),
                                                     contentScale = ContentScale.Crop,
+                                                    error = painterResource(R.drawable.ic_album),
                                                 )
                                             }
                                         }
@@ -694,6 +695,15 @@ private fun SearchResultItem(
             }
         },
         leadingContent = {
+            val iconRes = when (result.type) {
+                SearchResultType.ARTIST -> R.drawable.ic_person
+                SearchResultType.ALBUM -> R.drawable.ic_album
+                SearchResultType.TRACK -> R.drawable.ic_music_note
+                SearchResultType.LOCAL_TRACK -> R.drawable.ic_phone_android
+                SearchResultType.YOUTUBE_TRACK -> R.drawable.ic_music_note
+                SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_album
+                SearchResultType.YOUTUBE_ARTIST -> R.drawable.ic_person
+            }
             if (result.imageUrl != null) {
                 AsyncImage(
                     model = result.imageUrl,
@@ -701,17 +711,9 @@ private fun SearchResultItem(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(thumbnailShape),
+                    error = painterResource(iconRes),
                 )
             } else {
-                val iconRes = when (result.type) {
-                    SearchResultType.ARTIST -> R.drawable.ic_person
-                    SearchResultType.ALBUM -> R.drawable.ic_album
-                    SearchResultType.TRACK -> R.drawable.ic_music_note
-                    SearchResultType.LOCAL_TRACK -> R.drawable.ic_phone_android
-                    SearchResultType.YOUTUBE_TRACK -> R.drawable.ic_music_note
-                    SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_album
-                    SearchResultType.YOUTUBE_ARTIST -> R.drawable.ic_person
-                }
                 Icon(
                     painter = painterResource(iconRes),
                     contentDescription = null,
@@ -834,6 +836,7 @@ private fun CategorySheetContent(
                                 .size(48.dp)
                                 .clip(AppShapes.SearchResultAlbum),
                             contentScale = ContentScale.Crop,
+                            error = painterResource(R.drawable.ic_album),
                         )
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -859,6 +862,7 @@ private fun CarouselAlbumItem(
             contentDescription = album.title,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
+            error = painterResource(R.drawable.ic_album),
         )
         // Gradient scrim at bottom
         Box(

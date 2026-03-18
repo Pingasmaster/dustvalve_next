@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -58,10 +57,7 @@ class SearchViewModel @Inject constructor(
         .map { entities -> entities.map { it.query } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val localSearchEnabled: StateFlow<Boolean> = combine(
-        settingsDataStore.localMusicEnabled,
-        settingsDataStore.localMusicSearchEnabled,
-    ) { enabled, searchEnabled -> enabled && searchEnabled }
+    val localSearchEnabled: StateFlow<Boolean> = settingsDataStore.localMusicEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private var searchJob: Job? = null
