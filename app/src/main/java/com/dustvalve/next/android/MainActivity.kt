@@ -43,7 +43,9 @@ import com.dustvalve.next.android.ui.navigation.SideNavRail
 import com.dustvalve.next.android.ui.screens.player.FullPlayer
 import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleStartEffect
 import dagger.hilt.android.AndroidEntryPoint
@@ -65,6 +67,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var localMusicRepository: LocalMusicRepository
 
+    @Inject
+    lateinit var albumThemeManager: AlbumThemeManager
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* Result not needed — media session works without it, just no notification */ }
@@ -81,23 +86,25 @@ class MainActivity : ComponentActivity() {
                     settingsDataStore.themeMode,
                     settingsDataStore.dynamicColor,
                     settingsDataStore.oledBlack,
-                ) { mode, dynamic, oled ->
-                    Triple(mode, dynamic, oled)
+                    albumThemeManager.albumSeedColor,
+                ) { mode, dynamic, oled, seedColor ->
+                    ThemeConfig(mode, dynamic, oled, seedColor)
                 }
             }.collectAsStateWithLifecycle(initialValue = null)
 
             val config = themeConfig
             if (config == null) return@setContent // Brief blank while DataStore loads (avoids theme flash)
 
-            val darkTheme = when (config.first) {
+            val darkTheme = when (config.themeMode) {
                 "dark" -> true
                 "light" -> false
                 else -> isSystemInDarkTheme()
             }
             DustvalveNextTheme(
                 darkTheme = darkTheme,
-                dynamicColor = config.second,
-                oledBlack = config.third,
+                dynamicColor = config.dynamicColor,
+                oledBlack = config.oledBlack,
+                albumSeedColor = config.albumSeedColor,
             ) {
                 MainContent(accountRepository = accountRepository)
             }
@@ -129,6 +136,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
+private data class ThemeConfig(
+    val themeMode: String,
+    val dynamicColor: Boolean,
+    val oledBlack: Boolean,
+    val albumSeedColor: Color?,
+)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

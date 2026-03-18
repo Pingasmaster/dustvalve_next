@@ -35,6 +35,7 @@ data class SettingsUiState(
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
     val oledBlack: Boolean = false,
+    val albumArtTheme: Boolean = false,
     val wavyProgressBar: Boolean = true,
     val localMusicEnabled: Boolean = false,
     val localMusicFolderUris: List<String> = emptyList(),
@@ -75,6 +76,7 @@ class SettingsViewModel @Inject constructor(
         collectSaveDataOnMetered()
         collectProgressiveDownload()
         collectOledBlack()
+        collectAlbumArtTheme()
         collectWavyProgressBar()
         collectLocalMusicEnabled()
         collectLocalMusicFolderUris()
@@ -110,6 +112,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 settingsDataStore.setOledBlack(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setAlbumArtTheme(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setAlbumArtTheme(enabled)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -317,6 +329,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore collection errors */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(oledBlack = enabled) }
+                }
+        }
+    }
+
+    private fun collectAlbumArtTheme() {
+        viewModelScope.launch {
+            settingsDataStore.albumArtTheme
+                .catch { /* ignore collection errors */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(albumArtTheme = enabled) }
                 }
         }
     }

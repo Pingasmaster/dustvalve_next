@@ -39,6 +39,7 @@ class SettingsDataStore @Inject constructor(
         val SAVE_DATA_ON_METERED = booleanPreferencesKey("save_data_on_metered")
         val PROGRESSIVE_DOWNLOAD = booleanPreferencesKey("progressive_download")
         val OLED_BLACK = booleanPreferencesKey("oled_black")
+        val ALBUM_ART_THEME = booleanPreferencesKey("album_art_theme")
         val WAVY_PROGRESS_BAR = booleanPreferencesKey("wavy_progress_bar")
         val LOCAL_MUSIC_ENABLED = booleanPreferencesKey("local_music_enabled")
         val LOCAL_MUSIC_FOLDER_URIS = stringPreferencesKey("local_music_folder_uris")
@@ -113,6 +114,10 @@ class SettingsDataStore @Inject constructor(
 
     val oledBlack: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.OLED_BLACK] ?: false
+    }
+
+    val albumArtTheme: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.ALBUM_ART_THEME] ?: false
     }
 
     val wavyProgressBar: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -234,6 +239,12 @@ class SettingsDataStore @Inject constructor(
     suspend fun setOledBlack(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.OLED_BLACK] = enabled
+        }
+    }
+
+    suspend fun setAlbumArtTheme(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.ALBUM_ART_THEME] = enabled
         }
     }
 
