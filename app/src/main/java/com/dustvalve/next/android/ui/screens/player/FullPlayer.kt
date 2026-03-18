@@ -165,10 +165,9 @@ fun FullPlayer(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(500.dp)
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 32.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
             ) {
                 Text(
                     text = "Volume",
@@ -184,20 +183,20 @@ fun FullPlayer(
                 Spacer(modifier = Modifier.height(16.dp))
                 androidx.compose.material3.VerticalSlider(
                     state = sheetVolumeState,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.height(360.dp),
                     reverseDirection = true,
                     thumb = { sliderState ->
                         androidx.compose.material3.SliderDefaults.Thumb(
                             interactionSource = remember { MutableInteractionSource() },
                             sliderState = sliderState,
-                            thumbSize = androidx.compose.ui.unit.DpSize(36.dp, 36.dp),
+                            thumbSize = androidx.compose.ui.unit.DpSize(108.dp, 4.dp),
                         )
                     },
                     track = { sliderState ->
                         androidx.compose.material3.SliderDefaults.Track(
                             sliderState = sliderState,
-                            modifier = Modifier.width(20.dp),
-                            trackCornerSize = 10.dp,
+                            modifier = Modifier.width(96.dp),
+                            trackCornerSize = 28.dp,
                         )
                     },
                 )
@@ -208,6 +207,55 @@ fun FullPlayer(
                     modifier = Modifier.size(32.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(modifier = Modifier.height(24.dp))
+                androidx.compose.material3.HorizontalDivider()
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Output",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                // System default option
+                ListItem(
+                    headlineContent = { Text("Automatic") },
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_speaker),
+                            contentDescription = null,
+                        )
+                    },
+                    trailingContent = if (state.activeAudioDevice == null) {
+                        { Icon(painter = painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                    } else null,
+                    colors = ListItemDefaults.colors(
+                        containerColor = if (state.activeAudioDevice == null) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                    ),
+                    modifier = Modifier
+                        .clickable { playerViewModel.setAudioOutputDevice(null) }
+                        .fillMaxWidth(),
+                )
+                state.audioOutputDevices.forEach { device ->
+                    val isActive = state.activeAudioDevice?.id == device.id
+                    ListItem(
+                        headlineContent = { Text(audioDeviceDisplayName(device)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(audioDeviceIcon(device)),
+                                contentDescription = null,
+                            )
+                        },
+                        trailingContent = if (isActive) {
+                            { Icon(painter = painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                        } else null,
+                        colors = ListItemDefaults.colors(
+                            containerColor = if (isActive) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                        ),
+                        modifier = Modifier
+                            .clickable { playerViewModel.setAudioOutputDevice(device) }
+                            .fillMaxWidth(),
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -397,7 +445,7 @@ fun FullPlayer(
                         Icon(
                             painter = painterResource(R.drawable.ic_volume_up),
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -409,14 +457,14 @@ fun FullPlayer(
                                 androidx.compose.material3.SliderDefaults.Thumb(
                                     interactionSource = remember { MutableInteractionSource() },
                                     sliderState = sliderState,
-                                    thumbSize = androidx.compose.ui.unit.DpSize(28.dp, 28.dp),
+                                    thumbSize = androidx.compose.ui.unit.DpSize(44.dp, 4.dp),
                                 )
                             },
                             track = { sliderState ->
                                 androidx.compose.material3.SliderDefaults.Track(
                                     sliderState = sliderState,
-                                    modifier = Modifier.width(12.dp),
-                                    trackCornerSize = 6.dp,
+                                    modifier = Modifier.width(40.dp),
+                                    trackCornerSize = 12.dp,
                                 )
                             },
                         )
@@ -424,7 +472,7 @@ fun FullPlayer(
                         Icon(
                             painter = painterResource(R.drawable.ic_volume_down),
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -1138,4 +1186,37 @@ private fun formatTime(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format(Locale.US, "%d:%02d", minutes, seconds)
+}
+
+private fun audioDeviceDisplayName(device: android.media.AudioDeviceInfo): String {
+    val productName = device.productName?.toString()?.takeIf { it.isNotBlank() }
+    return productName ?: when (device.type) {
+        android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Speaker"
+        android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "Earpiece"
+        android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Wired headset"
+        android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "Wired headphones"
+        android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "Bluetooth"
+        android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "Bluetooth SCO"
+        android.media.AudioDeviceInfo.TYPE_USB_DEVICE -> "USB audio"
+        android.media.AudioDeviceInfo.TYPE_USB_ACCESSORY -> "USB accessory"
+        android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> "USB headset"
+        android.media.AudioDeviceInfo.TYPE_HDMI -> "HDMI"
+        android.media.AudioDeviceInfo.TYPE_DOCK -> "Dock"
+        android.media.AudioDeviceInfo.TYPE_AUX_LINE -> "Aux"
+        android.media.AudioDeviceInfo.TYPE_BLE_HEADSET -> "BLE headset"
+        android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER -> "BLE speaker"
+        else -> "Audio device"
+    }
+}
+
+@androidx.annotation.DrawableRes
+private fun audioDeviceIcon(device: android.media.AudioDeviceInfo): Int = when (device.type) {
+    android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+    android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+    android.media.AudioDeviceInfo.TYPE_BLE_HEADSET,
+    android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER -> R.drawable.ic_bluetooth
+    android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,
+    android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+    android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> R.drawable.ic_headphones
+    else -> R.drawable.ic_speaker
 }
