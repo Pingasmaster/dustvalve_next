@@ -850,6 +850,29 @@ fun SettingsScreen(
                             )
                         }
 
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Album art colors",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Theme the app using colors from the playing track's album art",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.albumArtTheme,
+                                onCheckedChange = { viewModel.setAlbumArtTheme(it) },
+                            )
+                        }
+
                         val isDarkEffective = when (state.themeMode) {
                             "dark" -> true
                             "light" -> false

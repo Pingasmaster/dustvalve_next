@@ -16,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 57
-        versionName = "0.0.57"
+        versionCode = 58
+        versionName = "0.0.58"
     }
 
     signingConfigs {
@@ -122,6 +122,9 @@ dependencies {
 
     // Palette (for extracting dominant colors from album art)
     implementation("androidx.palette:palette-ktx:1.0.0")
+
+    // MaterialKolor (generate M3 ColorScheme from seed color)
+    implementation("com.materialkolor:material-kolor:4.1.1")
 
     // Media3
     implementation("androidx.media3:media3-exoplayer:1.10.0-rc01")
