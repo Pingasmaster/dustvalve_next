@@ -16,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 58
-        versionName = "0.0.58"
+        versionCode = 60
+        versionName = "0.0.60"
     }
 
     signingConfigs {
@@ -127,9 +127,9 @@ dependencies {
     implementation("com.materialkolor:material-kolor:4.1.1")
 
     // Media3
-    implementation("androidx.media3:media3-exoplayer:1.10.0-rc01")
-    implementation("androidx.media3:media3-session:1.10.0-rc01")
-    implementation("androidx.media3:media3-datasource-okhttp:1.10.0-rc01")
+    implementation("androidx.media3:media3-exoplayer:1.10.0-rc02")
+    implementation("androidx.media3:media3-session:1.10.0-rc02")
+    implementation("androidx.media3:media3-datasource-okhttp:1.10.0-rc02")
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
