@@ -81,6 +81,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun YouTubeScreen(
     playerViewModel: PlayerViewModel,
+    onPlaylistClick: (url: String, name: String) -> Unit,
+    onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -319,11 +321,6 @@ fun YouTubeScreen(
                         label = { Text("Playlists") },
                     )
                     FilterChip(
-                        selected = state.selectedFilter == "albums",
-                        onClick = { viewModel.onFilterSelected("albums") },
-                        label = { Text("Albums") },
-                    )
-                    FilterChip(
                         selected = state.selectedFilter == "artists",
                         onClick = { viewModel.onFilterSelected("artists") },
                         label = { Text("Artists") },
@@ -412,13 +409,16 @@ fun YouTubeScreen(
                                                         }
                                                     }
                                                 }
-                                                SearchResultType.YOUTUBE_PLAYLIST -> {
-                                                    scope.launch {
-                                                        viewModel.importPlaylist(result.url, result.name)
-                                                        snackbarHostState.showSnackbar("Playlist imported: ${result.name}")
-                                                    }
+                                                SearchResultType.YOUTUBE_PLAYLIST,
+                                                SearchResultType.YOUTUBE_ALBUM -> {
+                                                    scope.launch { searchBarState.animateToCollapsed() }
+                                                    onPlaylistClick(result.url, result.name)
                                                 }
-                                                else -> { /* no-op for other types */ }
+                                                SearchResultType.YOUTUBE_ARTIST -> {
+                                                    scope.launch { searchBarState.animateToCollapsed() }
+                                                    onArtistClick(result.url, result.name, result.imageUrl)
+                                                }
+                                                else -> { /* not applicable */ }
                                             }
                                         },
                                         interactionSource = interactionSource,
@@ -454,20 +454,27 @@ fun YouTubeScreen(
                                                 }
                                             },
                                             leadingContent = {
+                                                val thumbnailShape = when (result.type) {
+                                                    SearchResultType.YOUTUBE_ARTIST -> AppShapes.SearchResultArtist
+                                                    SearchResultType.YOUTUBE_ALBUM,
+                                                    SearchResultType.YOUTUBE_PLAYLIST -> AppShapes.SearchResultAlbum
+                                                    else -> AppShapes.SearchResultTrack
+                                                }
                                                 if (result.imageUrl != null) {
                                                     AsyncImage(
                                                         model = result.imageUrl,
                                                         contentDescription = result.name,
                                                         modifier = Modifier
                                                             .size(48.dp)
-                                                            .clip(AppShapes.SearchResultTrack),
+                                                            .clip(thumbnailShape),
                                                         contentScale = ContentScale.Crop,
                                                     )
                                                 } else {
                                                     val iconRes = when (result.type) {
-                                                        SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_queue_music
                                                         SearchResultType.YOUTUBE_ARTIST -> R.drawable.ic_person
-                                                        else -> R.drawable.ic_play_circle
+                                                        SearchResultType.YOUTUBE_ALBUM,
+                                                        SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_album
+                                                        else -> R.drawable.ic_music_note
                                                     }
                                                     Icon(
                                                         painter = painterResource(iconRes),
@@ -478,7 +485,8 @@ fun YouTubeScreen(
                                                 }
                                             },
                                             trailingContent = {
-                                                if (result.type == SearchResultType.YOUTUBE_PLAYLIST) {
+                                                if (result.type == SearchResultType.YOUTUBE_PLAYLIST ||
+                                                    result.type == SearchResultType.YOUTUBE_ALBUM) {
                                                     IconButton(
                                                         onClick = {
                                                             scope.launch {

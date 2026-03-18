@@ -15,6 +15,7 @@ import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.Page
 import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.ListExtractor
+import org.schabi.newpipe.extractor.Image
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -87,7 +88,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
             duration = extractor.length.toFloat(),
             streamUrl = bestStream?.content
                 ?: throw IllegalStateException("No audio streams available for $videoUrl"),
-            artUrl = extractor.thumbnails.firstOrNull()?.url ?: "",
+            artUrl = pickBestThumbnail(extractor.thumbnails) ?: "",
             albumTitle = "",
             source = TrackSource.YOUTUBE,
         )
@@ -129,7 +130,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
                         trackNumber = tracks.size + 1,
                         duration = item.duration.toFloat(),
                         streamUrl = item.url,
-                        artUrl = item.thumbnails.firstOrNull()?.url ?: "",
+                        artUrl = pickBestThumbnail(item.thumbnails) ?: "",
                         albumTitle = "",
                         source = TrackSource.YOUTUBE,
                     )
@@ -143,13 +144,63 @@ class YouTubeExtractorWrapper @Inject constructor() {
         tracks
     }
 
+    suspend fun getChannelVideos(
+        channelUrl: String,
+        page: Page? = null,
+    ): Triple<List<Track>, String?, Page?> = withContext(Dispatchers.IO) {
+        ensureInitialized()
+        val service = ServiceList.YouTube
+        val channelExtractor = service.getChannelExtractor(channelUrl)
+        channelExtractor.fetchPage()
+
+        val channelName = channelExtractor.name
+
+        // Find the "videos" tab from channel tabs
+        val videosTab = channelExtractor.tabs.firstOrNull { tab ->
+            tab.contentFilters.any { it == "videos" }
+        } ?: return@withContext Triple(emptyList(), channelName, null)
+
+        val tabExtractor = service.getChannelTabExtractor(videosTab)
+        tabExtractor.fetchPage()
+
+        val infoPage: ListExtractor.InfoItemsPage<InfoItem> = if (page == null) {
+            tabExtractor.initialPage
+        } else {
+            tabExtractor.getPage(page)
+        }
+
+        val tracks = mutableListOf<Track>()
+        for (item in infoPage.items) {
+            if (item is StreamInfoItem) {
+                val videoId = extractVideoId(item.url) ?: md5Hash(item.url).take(12)
+                tracks.add(
+                    Track(
+                        id = "yt_$videoId",
+                        albumId = "yt_channel_${md5Hash(channelUrl).take(12)}",
+                        title = item.name ?: "Unknown",
+                        artist = channelName ?: item.uploaderName ?: "Unknown",
+                        artistUrl = channelUrl,
+                        trackNumber = tracks.size + 1,
+                        duration = item.duration.toFloat(),
+                        streamUrl = item.url,
+                        artUrl = pickBestThumbnail(item.thumbnails) ?: "",
+                        albumTitle = "",
+                        source = TrackSource.YOUTUBE,
+                    )
+                )
+            }
+        }
+
+        Triple(tracks, channelName, infoPage.nextPage)
+    }
+
     private fun mapInfoItemToSearchResult(item: InfoItem): SearchResult? {
         return when (item) {
             is StreamInfoItem -> SearchResult(
                 type = SearchResultType.YOUTUBE_TRACK,
                 name = item.name ?: return null,
                 url = item.url ?: return null,
-                imageUrl = item.thumbnails.firstOrNull()?.url,
+                imageUrl = pickBestThumbnail(item.thumbnails),
                 artist = item.uploaderName,
                 album = null,
                 genre = null,
@@ -159,7 +210,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
                 type = SearchResultType.YOUTUBE_PLAYLIST,
                 name = item.name ?: return null,
                 url = item.url ?: return null,
-                imageUrl = item.thumbnails.firstOrNull()?.url,
+                imageUrl = pickBestThumbnail(item.thumbnails),
                 artist = item.uploaderName,
                 album = null,
                 genre = null,
@@ -169,7 +220,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
                 type = SearchResultType.YOUTUBE_ARTIST,
                 name = item.name ?: return null,
                 url = item.url ?: return null,
-                imageUrl = item.thumbnails.firstOrNull()?.url,
+                imageUrl = pickBestThumbnail(item.thumbnails),
                 artist = null,
                 album = null,
                 genre = null,
@@ -199,6 +250,12 @@ class YouTubeExtractorWrapper @Inject constructor() {
             pattern.find(url)?.groupValues?.getOrNull(1)?.let { return it }
         }
         return null
+    }
+
+    private fun pickBestThumbnail(images: List<Image>): String? {
+        return images
+            .sortedByDescending { it.height.takeIf { h -> h != Image.HEIGHT_UNKNOWN } ?: 0 }
+            .firstOrNull()?.url
     }
 
     private fun md5Hash(input: String): String {
