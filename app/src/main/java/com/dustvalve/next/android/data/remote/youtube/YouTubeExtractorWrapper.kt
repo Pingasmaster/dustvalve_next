@@ -109,11 +109,12 @@ class YouTubeExtractorWrapper @Inject constructor() {
         }
     }
 
-    suspend fun getPlaylistItems(playlistUrl: String): List<Track> = withContext(Dispatchers.IO) {
+    suspend fun getPlaylistItems(playlistUrl: String): Pair<List<Track>, String> = withContext(Dispatchers.IO) {
         ensureInitialized()
         val extractor = ServiceList.YouTube.getPlaylistExtractor(playlistUrl)
         extractor.fetchPage()
 
+        val playlistName = extractor.name ?: ""
         val tracks = mutableListOf<Track>()
         var page: ListExtractor.InfoItemsPage<StreamInfoItem> = extractor.initialPage
 
@@ -141,7 +142,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
             page = extractor.getPage(page.nextPage)
         }
 
-        tracks
+        tracks to playlistName
     }
 
     suspend fun getChannelVideos(

@@ -1,6 +1,7 @@
 package com.dustvalve.next.android
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -51,6 +53,9 @@ import androidx.lifecycle.compose.LifecycleStartEffect
 import dagger.hilt.android.AndroidEntryPoint
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -70,6 +75,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var albumThemeManager: AlbumThemeManager
 
+    private val _deepLinkUrl = MutableStateFlow<String?>(null)
+    val deepLinkUrl: StateFlow<String?> = _deepLinkUrl.asStateFlow()
+
+    fun consumeDeepLink() {
+        _deepLinkUrl.value = null
+    }
+
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* Result not needed — media session works without it, just no notification */ }
@@ -77,6 +89,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleIncomingIntent(intent)
         requestNotificationPermissionIfNeeded()
         triggerLocalMusicRescanIfNeeded()
         setContent {
@@ -106,7 +119,7 @@ class MainActivity : ComponentActivity() {
                 oledBlack = config.oledBlack,
                 albumSeedColor = config.albumSeedColor,
             ) {
-                MainContent(accountRepository = accountRepository)
+                MainContent(accountRepository = accountRepository, activity = this@MainActivity)
             }
         }
     }
@@ -123,6 +136,25 @@ class MainActivity : ComponentActivity() {
             } catch (_: Exception) {
                 // Best-effort foreground rescan
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent == null) return
+        val url = when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data?.toString()
+            Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()?.let { text ->
+                Regex("https?://\\S+").find(text)?.value
+            }
+            else -> null
+        }
+        if (url != null) {
+            _deepLinkUrl.value = url
         }
     }
 
@@ -146,13 +178,29 @@ private data class ThemeConfig(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MainContent(accountRepository: AccountRepository) {
+private fun MainContent(accountRepository: AccountRepository, activity: MainActivity) {
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val navViewModel: NavigationViewModel = hiltViewModel()
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
+
+    // Deep link handling
+    val deepLinkUrl by activity.deepLinkUrl.collectAsStateWithLifecycle()
+    val deepLinkTrack by navViewModel.deepLinkTrack.collectAsStateWithLifecycle()
+
+    LaunchedEffect(deepLinkUrl) {
+        val url = deepLinkUrl ?: return@LaunchedEffect
+        activity.consumeDeepLink()
+        navViewModel.handleDeepLink(url)
+    }
+
+    LaunchedEffect(deepLinkTrack) {
+        val track = deepLinkTrack ?: return@LaunchedEffect
+        navViewModel.consumeDeepLinkTrack()
+        playerViewModel.playTrack(track)
+    }
 
     // Adaptive layout: use NavigationRail on screens >= 600dp wide
     val windowInfo = LocalWindowInfo.current

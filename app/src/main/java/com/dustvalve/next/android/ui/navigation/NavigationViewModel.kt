@@ -3,7 +3,11 @@ package com.dustvalve.next.android.ui.navigation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.domain.model.MusicProvider
+import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.ProviderStateUseCase
+import com.dustvalve.next.android.util.DeepLinkAction
+import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +22,7 @@ import javax.inject.Inject
 @HiltViewModel
 class NavigationViewModel @Inject constructor(
     private val providerStateUseCase: ProviderStateUseCase,
+    private val youtubeRepository: YouTubeRepository,
 ) : ViewModel() {
 
     private val _activeProviders = MutableStateFlow(setOf(MusicProvider.LOCAL))
@@ -62,6 +67,31 @@ class NavigationViewModel @Inject constructor(
                 val currentProvider = _currentTab.value.provider
                 if (currentProvider != null && currentProvider !in providers) {
                     navigateTo(NavDestination.LocalHome)
+                }
+            }
+        }
+    }
+
+    private val _deepLinkTrack = MutableStateFlow<Track?>(null)
+    val deepLinkTrack: StateFlow<Track?> = _deepLinkTrack.asStateFlow()
+
+    fun consumeDeepLinkTrack() {
+        _deepLinkTrack.value = null
+    }
+
+    fun handleDeepLink(url: String) {
+        val action = DeepLinkRouter.route(url) ?: return
+        when (action) {
+            is DeepLinkAction.Navigate -> navigateTo(action.destination)
+            is DeepLinkAction.PlayYouTubeVideo -> {
+                navigateTo(NavDestination.YouTubeHome)
+                viewModelScope.launch {
+                    try {
+                        val track = youtubeRepository.getTrackInfo(action.videoUrl)
+                        _deepLinkTrack.value = track
+                    } catch (_: Exception) {
+                        // Track resolution failed — silently ignore
+                    }
                 }
             }
         }

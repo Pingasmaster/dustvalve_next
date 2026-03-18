@@ -178,7 +178,7 @@ class YouTubeViewModel @Inject constructor(
     fun importPlaylist(playlistUrl: String, name: String) {
         viewModelScope.launch {
             try {
-                val tracks = youtubeRepository.getPlaylistTracks(playlistUrl)
+                val (tracks, _) = youtubeRepository.getPlaylistTracks(playlistUrl)
                 database.withTransaction {
                     trackDao.insertAll(tracks.map { it.toEntity() })
                     val playlist = playlistRepository.createPlaylist(name)

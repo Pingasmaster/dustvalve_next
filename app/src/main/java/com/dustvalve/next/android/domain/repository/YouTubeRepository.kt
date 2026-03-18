@@ -8,6 +8,6 @@ interface YouTubeRepository {
     suspend fun getStreamUrl(videoUrl: String): String
     suspend fun getTrackInfo(videoUrl: String): Track
     suspend fun getRecommendations(videoUrl: String): List<SearchResult>
-    suspend fun getPlaylistTracks(playlistUrl: String): List<Track>
+    suspend fun getPlaylistTracks(playlistUrl: String): Pair<List<Track>, String>
     suspend fun getChannelVideos(channelUrl: String, page: Any? = null): Triple<List<Track>, String?, Any?>
 }

@@ -47,9 +47,13 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(playlistUrl = url, playlistName = name, isLoading = true, error = null) }
         viewModelScope.launch {
             try {
-                val tracks = youtubeRepository.getPlaylistTracks(url)
+                val (tracks, fetchedName) = youtubeRepository.getPlaylistTracks(url)
                 _uiState.update {
-                    it.copy(tracks = tracks, isLoading = false)
+                    it.copy(
+                        tracks = tracks,
+                        playlistName = if (it.playlistName.isBlank()) fetchedName else it.playlistName,
+                        isLoading = false,
+                    )
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

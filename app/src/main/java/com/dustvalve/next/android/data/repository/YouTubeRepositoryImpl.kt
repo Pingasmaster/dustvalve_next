@@ -40,7 +40,7 @@ class YouTubeRepositoryImpl @Inject constructor(
         return extractor.getRelatedItems(videoUrl)
     }
 
-    override suspend fun getPlaylistTracks(playlistUrl: String): List<Track> {
+    override suspend fun getPlaylistTracks(playlistUrl: String): Pair<List<Track>, String> {
         return extractor.getPlaylistItems(playlistUrl)
     }
 
