@@ -103,7 +103,7 @@ class DustvalveCollectionScraper @Inject constructor(
             }
 
             val artUrl = if (item.itemArtId > 0) {
-                "https://f4.bcbits.com/img/a${item.itemArtId}_10.jpg"
+                "https://f4.bcbits.com/img/a${item.itemArtId}_16.jpg"
             } else {
                 ""
             }

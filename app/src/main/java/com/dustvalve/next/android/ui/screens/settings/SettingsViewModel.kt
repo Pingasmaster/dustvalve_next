@@ -32,7 +32,7 @@ data class SettingsUiState(
     val autoDownloadFutureContent: Boolean = false,
     val signOutSuccess: Boolean = false,
     val downloadFormat: String = "flac",
-    val downloadQualityMode: String = "best",
+    val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
     val oledBlack: Boolean = false,
     val albumArtTheme: Boolean = false,
@@ -40,7 +40,6 @@ data class SettingsUiState(
     val localMusicEnabled: Boolean = false,
     val localMusicFolderUris: List<String> = emptyList(),
     val localMusicUseMediaStore: Boolean = false,
-    val localMusicSearchEnabled: Boolean = true,
     val isScanning: Boolean = false,
     val scanMessage: String? = null,
     val bandcampEnabled: Boolean = false,
@@ -73,7 +72,7 @@ class SettingsViewModel @Inject constructor(
         collectAutoDownloadCollection()
         collectAutoDownloadFutureContent()
         collectDownloadFormat()
-        collectDownloadQualityMode()
+        collectSaveDataOnMetered()
         collectProgressiveDownload()
         collectOledBlack()
         collectAlbumArtTheme()
@@ -81,7 +80,6 @@ class SettingsViewModel @Inject constructor(
         collectLocalMusicEnabled()
         collectLocalMusicFolderUris()
         collectLocalMusicUseMediaStore()
-        collectLocalMusicSearchEnabled()
         collectBandcampEnabled()
         collectYoutubeEnabled()
         collectShowInlineVolumeSlider()
@@ -182,10 +180,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setDownloadQualityMode(mode: String) {
+    fun setSaveDataOnMetered(enabled: Boolean) {
         viewModelScope.launch {
             try {
-                settingsDataStore.setDownloadQualityMode(mode)
+                settingsDataStore.setSaveDataOnMetered(enabled)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -303,12 +301,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun collectDownloadQualityMode() {
+    private fun collectSaveDataOnMetered() {
         viewModelScope.launch {
-            settingsDataStore.downloadQualityMode
+            settingsDataStore.saveDataOnMetered
                 .catch { /* ignore */ }
-                .collect { mode ->
-                    _uiState.update { it.copy(downloadQualityMode = mode) }
+                .collect { enabled ->
+                    _uiState.update { it.copy(saveDataOnMetered = enabled) }
                 }
         }
     }
@@ -462,16 +460,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setLocalMusicSearchEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            try {
-                settingsDataStore.setLocalMusicSearchEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
     fun clearScanMessage() {
         _uiState.update { it.copy(scanMessage = null) }
     }
@@ -502,16 +490,6 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(localMusicUseMediaStore = enabled) }
-                }
-        }
-    }
-
-    private fun collectLocalMusicSearchEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.localMusicSearchEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(localMusicSearchEnabled = enabled) }
                 }
         }
     }

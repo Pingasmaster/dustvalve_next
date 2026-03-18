@@ -74,6 +74,7 @@ class DustvalveSearchScraper @Inject constructor(
             val imageUrl = artElement?.attr("src")
                 ?.takeIf { it.isNotBlank() && (it.startsWith("https://") || it.startsWith("//")) }
                 ?.let { if (it.startsWith("//")) "https:$it" else it }
+                ?.let { NetworkUtils.upgradeBandcampImageUrl(it) }
 
             val subhead = element.selectFirst(".subhead")?.text()?.trim()
             val releaseDate = element.selectFirst(".released")?.text()

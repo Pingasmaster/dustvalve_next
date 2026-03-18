@@ -99,7 +99,7 @@ class DustvalveAlbumScraper @Inject constructor(
         val baseUrl = "${parsedUrl.protocol}://${parsedUrl.host}"
         val rawArtistUrl = tralbumData.current.bandUrl ?: baseUrl
         val artistUrl = if (NetworkUtils.isValidHttpsUrl(rawArtistUrl)) rawArtistUrl else baseUrl
-        val artUrl = "https://f4.bcbits.com/img/a${tralbumData.artId}_10.jpg"
+        val artUrl = "https://f4.bcbits.com/img/a${tralbumData.artId}_16.jpg"
 
         val albumId = stableId(tralbumData.url.ifEmpty { albumUrl })
         val artistName = tralbumData.current.artist ?: extractArtistFromHtml(html) ?: "Unknown Artist"
