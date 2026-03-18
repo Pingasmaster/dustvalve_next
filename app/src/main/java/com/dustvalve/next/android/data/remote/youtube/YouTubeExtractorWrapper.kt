@@ -85,7 +85,8 @@ class YouTubeExtractorWrapper @Inject constructor() {
             artistUrl = extractor.uploaderUrl,
             trackNumber = 0,
             duration = extractor.length.toFloat(),
-            streamUrl = bestStream?.content ?: videoUrl,
+            streamUrl = bestStream?.content
+                ?: throw IllegalStateException("No audio streams available for $videoUrl"),
             artUrl = extractor.thumbnails.firstOrNull()?.url ?: "",
             albumTitle = "",
             source = TrackSource.YOUTUBE,

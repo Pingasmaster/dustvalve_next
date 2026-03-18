@@ -576,6 +576,7 @@ private fun TrackListItem(
                     model = track.artUrl,
                     contentDescription = track.albumTitle,
                     modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
                 )
                 if (isPlaying) {
                     Box(

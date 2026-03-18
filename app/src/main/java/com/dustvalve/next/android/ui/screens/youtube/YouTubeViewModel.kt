@@ -2,7 +2,9 @@ package com.dustvalve.next.android.ui.screens.youtube
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.domain.model.SearchResult
@@ -44,6 +46,7 @@ class YouTubeViewModel @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
     private val playlistRepository: PlaylistRepository,
     private val trackDao: TrackDao,
+    private val database: DustvalveNextDatabase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(YouTubeUiState())
@@ -176,11 +179,11 @@ class YouTubeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val tracks = youtubeRepository.getPlaylistTracks(playlistUrl)
-                // Persist tracks to DB
-                trackDao.insertAll(tracks.map { it.toEntity() })
-                // Create playlist and add tracks
-                val playlist = playlistRepository.createPlaylist(name)
-                playlistRepository.addTracksToPlaylist(playlist.id, tracks.map { it.id })
+                database.withTransaction {
+                    trackDao.insertAll(tracks.map { it.toEntity() })
+                    val playlist = playlistRepository.createPlaylist(name)
+                    playlistRepository.addTracksToPlaylist(playlist.id, tracks.map { it.id })
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update { it.copy(error = "Failed to import playlist: ${e.message}") }
