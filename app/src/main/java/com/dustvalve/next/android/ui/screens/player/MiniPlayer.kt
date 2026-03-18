@@ -1,5 +1,7 @@
 package com.dustvalve.next.android.ui.screens.player
 
+import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
+
 import android.graphics.Matrix
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -135,20 +137,25 @@ fun MiniPlayer(
                         .clickable(onClick = onExpandClick)
                         .padding(horizontal = 12.dp),
                 ) {
-                    AsyncImage(
-                        model = track.artUrl,
-                        contentDescription = track.albumTitle.ifEmpty { track.title },
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .graphicsLayer { rotationZ = effectiveRotation }
-                            .clip(
-                                MorphShape(
-                                    morph = morph,
-                                    progress = morphProgress,
-                                )
-                            ),
-                    )
+                    val artModifier = Modifier
+                        .size(48.dp)
+                        .graphicsLayer { rotationZ = effectiveRotation }
+                        .clip(
+                            MorphShape(
+                                morph = morph,
+                                progress = morphProgress,
+                            )
+                        )
+                    if (track.artUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = track.artUrl,
+                            contentDescription = track.albumTitle.ifEmpty { track.title },
+                            contentScale = ContentScale.Crop,
+                            modifier = artModifier,
+                        )
+                    } else {
+                        TrackArtPlaceholder(modifier = artModifier)
+                    }
 
                     Spacer(modifier = Modifier.width(12.dp))
 

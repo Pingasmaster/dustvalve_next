@@ -58,6 +58,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -342,11 +343,10 @@ private fun LocalTrackItem(
                             .clip(AppShapes.SearchResultTrack),
                     )
                 } else {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_music_note),
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    TrackArtPlaceholder(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(AppShapes.SearchResultTrack),
                     )
                 }
             },

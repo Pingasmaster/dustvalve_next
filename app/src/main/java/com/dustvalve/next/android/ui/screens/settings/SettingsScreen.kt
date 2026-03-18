@@ -202,6 +202,27 @@ fun SettingsScreen(
 
         // Sources section
         item {
+            val localContext = LocalContext.current
+            val folderPickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocumentTree(),
+            ) { uri: Uri? ->
+                if (uri != null) {
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    try {
+                        localContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                    } catch (_: Exception) { /* Best effort */ }
+                    viewModel.setLocalMusicFolderUri(uri.toString())
+                }
+            }
+
+            LaunchedEffect(state.scanMessage) {
+                val message = state.scanMessage
+                if (message != null) {
+                    snackbarHostState.showSnackbar(message)
+                    viewModel.clearScanMessage()
+                }
+            }
+
             SettingsSection(
                 title = "Sources",
                 icon = R.drawable.ic_tune,
@@ -213,7 +234,7 @@ fun SettingsScreen(
                     ),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        // Local — always on
+                        // Local
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -231,11 +252,98 @@ fun SettingsScreen(
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                             }
-                            Text(
-                                text = "Always on",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Switch(
+                                checked = state.localMusicEnabled,
+                                onCheckedChange = { enabled ->
+                                    viewModel.setLocalMusicEnabled(enabled)
+                                    if (enabled && state.localMusicFolderUri == null) {
+                                        folderPickerLauncher.launch(null)
+                                    }
+                                },
                             )
+                        }
+
+                        if (state.localMusicEnabled) {
+                            val folderUri = state.localMusicFolderUri
+                            if (folderUri != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val folderName = try {
+                                    folderUri.toUri().lastPathSegment
+                                        ?.substringAfterLast(':')
+                                        ?: "Selected folder"
+                                } catch (_: Exception) {
+                                    "Selected folder"
+                                }
+                                Text(
+                                    text = folderName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 36.dp),
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 36.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                FilledTonalButton(
+                                    onClick = { folderPickerLauncher.launch(null) },
+                                    shapes = ButtonDefaults.shapes(),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_folder_open),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(if (state.localMusicFolderUri != null) "Change Folder" else "Choose Folder")
+                                }
+
+                                if (state.localMusicFolderUri != null) {
+                                    FilledTonalButton(
+                                        onClick = { viewModel.rescanLocalMusic() },
+                                        shapes = ButtonDefaults.shapes(),
+                                        enabled = !state.isScanning,
+                                    ) {
+                                        if (state.isScanning) {
+                                            CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
+                                        } else {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_refresh),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Rescan")
+                                    }
+                                }
+                            }
+
+                            if (state.localMusicFolderUri != null) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 36.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Include in search",
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                    Switch(
+                                        checked = state.localMusicSearchEnabled,
+                                        onCheckedChange = { viewModel.setLocalMusicSearchEnabled(it) },
+                                    )
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -578,151 +686,6 @@ fun SettingsScreen(
                     }
                 }
             }
-
-        // Local Music section
-        item {
-            val localContext = LocalContext.current
-            val folderPickerLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.OpenDocumentTree(),
-            ) { uri: Uri? ->
-                if (uri != null) {
-                    // Take persistable permission so access survives reboots
-                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    try {
-                        localContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
-                    } catch (_: Exception) {
-                        // Best effort
-                    }
-                    viewModel.setLocalMusicFolderUri(uri.toString())
-                }
-            }
-
-            LaunchedEffect(state.scanMessage) {
-                val message = state.scanMessage
-                if (message != null) {
-                    snackbarHostState.showSnackbar(message)
-                    viewModel.clearScanMessage()
-                }
-            }
-
-            SettingsSection(
-                title = "Local Music",
-                icon = R.drawable.ic_phone_android,
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Enable Local Music",
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                                Text(
-                                    text = "Play music files from your device",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(
-                                checked = state.localMusicEnabled,
-                                onCheckedChange = { viewModel.setLocalMusicEnabled(it) },
-                            )
-                        }
-
-                        if (state.localMusicEnabled) {
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            val folderUri = state.localMusicFolderUri
-                            if (folderUri != null) {
-                                val folderName = try {
-                                    folderUri.toUri().lastPathSegment
-                                        ?.substringAfterLast(':')
-                                        ?: "Selected folder"
-                                } catch (_: Exception) {
-                                    "Selected folder"
-                                }
-                                Text(
-                                    text = folderName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                FilledTonalButton(
-                                    onClick = { folderPickerLauncher.launch(null) },
-                                    shapes = ButtonDefaults.shapes(),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_folder_open),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(if (state.localMusicFolderUri != null) "Change Folder" else "Choose Folder")
-                                }
-
-                                if (state.localMusicFolderUri != null) {
-                                    FilledTonalButton(
-                                        onClick = { viewModel.rescanLocalMusic() },
-                                        shapes = ButtonDefaults.shapes(),
-                                        enabled = !state.isScanning,
-                                    ) {
-                                        if (state.isScanning) {
-                                            CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
-                                        } else {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_refresh),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Rescan")
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Include in search",
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = "Show local songs in search results",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.localMusicSearchEnabled,
-                                    onCheckedChange = { viewModel.setLocalMusicSearchEnabled(it) },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
 
         // Appearance section
         item {

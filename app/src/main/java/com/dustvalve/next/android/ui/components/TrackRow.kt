@@ -56,12 +56,16 @@ fun TrackRow(
                     .size(48.dp)
                     .clip(MaterialTheme.shapes.small),
             ) {
-                AsyncImage(
-                    model = track.artUrl,
-                    contentDescription = track.albumTitle,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                )
+                if (track.artUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = track.artUrl,
+                        contentDescription = track.albumTitle,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    TrackArtPlaceholder(modifier = Modifier.fillMaxSize())
+                }
                 if (isPlaying) {
                     Box(
                         modifier = Modifier
