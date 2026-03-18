@@ -388,7 +388,13 @@ fun ArtistDetailScreen(
                             key = { "album_${it.id}" },
                         ) { album ->
                             Surface(
-                                modifier = Modifier.padding(6.dp),
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .animateItem(
+                                        fadeInSpec = null,
+                                        fadeOutSpec = null,
+                                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                    ),
                                 shape = MaterialTheme.shapes.medium,
                                 color = MaterialTheme.colorScheme.surfaceContainer,
                             ) {

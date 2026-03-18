@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -31,11 +32,16 @@ fun StorageIndicator(
     modifier: Modifier = Modifier,
 ) {
     val progress = (cacheInfo.usagePercent / 100f).coerceIn(0f, 1f)
-    val color = when {
+    val targetColor = when {
         cacheInfo.usagePercent >= 95f -> MaterialTheme.colorScheme.error
         cacheInfo.usagePercent >= 85f -> MaterialTheme.colorScheme.tertiary
         else -> MaterialTheme.colorScheme.primary
     }
+    val color by animateColorAsState(
+        targetValue = targetColor,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "storageColor",
+    )
     var freeBytes by remember { mutableLongStateOf(0L) }
     LaunchedEffect(cacheInfo) {
         freeBytes = withContext(Dispatchers.IO) {

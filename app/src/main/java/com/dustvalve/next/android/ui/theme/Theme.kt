@@ -70,7 +70,7 @@ fun DustvalveNextTheme(
 @Composable
 private fun ColorScheme.animated(): ColorScheme {
     // Spring spec matching M3E fastEffectsSpec (for color/opacity transitions)
-    val spec = spring<Color>(dampingRatio = 0.9f, stiffness = 1400f)
+    val spec = spring<Color>(dampingRatio = 1.0f, stiffness = 1400f)
 
     return copy(
         primary = animateColorAsState(primary, spec).value,

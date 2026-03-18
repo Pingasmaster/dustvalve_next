@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -47,6 +49,8 @@ fun PlaylistListItem(
     onLongClick: () -> Unit = {},
     onMoreClick: (() -> Unit)? = null,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
+
     val thumbnailShape = when (playlist.systemType) {
         Playlist.SystemPlaylistType.FAVORITES -> AppShapes.PlaylistFavorites
         Playlist.SystemPlaylistType.DOWNLOADS -> AppShapes.PlaylistDownloads
@@ -74,7 +78,10 @@ fun PlaylistListItem(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
                 onClick = onClick,
-                onLongClick = onLongClick,
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
             ),
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent,

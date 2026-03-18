@@ -4,7 +4,6 @@ import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 
 import android.graphics.Matrix
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 
 import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
@@ -119,6 +118,7 @@ fun MiniPlayer(
         }
         val animatedProgress by animateFloatAsState(
             targetValue = rawProgress,
+            animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
             label = "miniPlayerProgress",
         )
 
