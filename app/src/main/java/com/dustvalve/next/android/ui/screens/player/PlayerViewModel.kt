@@ -124,7 +124,6 @@ class PlayerViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
     }
 
