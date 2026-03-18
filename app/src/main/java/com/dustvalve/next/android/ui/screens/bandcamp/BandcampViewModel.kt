@@ -20,6 +20,7 @@ import kotlin.coroutines.cancellation.CancellationException
 data class BandcampUiState(
     /** Preview thumbnails per genre tag (loaded on init) */
     val categoryPreviews: Map<String, List<Album>> = emptyMap(),
+    val previewsError: Boolean = false,
 
     /** Bottom sheet state */
     val showCategorySheet: Boolean = false,
@@ -62,8 +63,14 @@ class BandcampViewModel @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "loadPreviews failed", e)
+                _uiState.update { it.copy(previewsError = true) }
             }
         }
+    }
+
+    fun retryPreviews() {
+        _uiState.update { it.copy(previewsError = false) }
+        loadPreviews()
     }
 
     fun selectCategory(tag: String, name: String) {

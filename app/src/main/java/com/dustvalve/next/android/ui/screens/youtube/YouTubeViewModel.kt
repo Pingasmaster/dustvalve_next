@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -131,7 +132,7 @@ class YouTubeViewModel @Inject constructor(
     private fun loadRecommendations() {
         viewModelScope.launch {
             try {
-                val videoId = lastVideoId.value ?: return@launch
+                val videoId = settingsDataStore.lastYoutubeVideoId.firstOrNull() ?: return@launch
                 val recommendations = youtubeRepository.getRecommendations(
                     "https://www.youtube.com/watch?v=$videoId"
                 )

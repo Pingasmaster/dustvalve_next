@@ -63,6 +63,12 @@ class NavigationViewModel @Inject constructor(
         viewModelScope.launch {
             providerStateUseCase.activeProviders.collect { providers ->
                 _activeProviders.value = providers
+                // Reset tab stacks for disabled providers so re-enabling starts fresh
+                for (item in BottomNavItem.entries) {
+                    if (item.provider != null && item.provider !in providers) {
+                        tabStacks[item] = listOf(item.destination)
+                    }
+                }
                 // If current tab's provider got disabled, redirect to LOCAL
                 val currentProvider = _currentTab.value.provider
                 if (currentProvider != null && currentProvider !in providers) {
@@ -89,7 +95,8 @@ class NavigationViewModel @Inject constructor(
                     try {
                         val track = youtubeRepository.getTrackInfo(action.videoUrl)
                         _deepLinkTrack.value = track
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                         // Track resolution failed — silently ignore
                     }
                 }

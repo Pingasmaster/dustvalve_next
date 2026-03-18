@@ -173,7 +173,9 @@ class PlayerViewModel @Inject constructor(
                         isSnackbarError = true,
                     )
                 }
-                track // Fall back, ExoPlayer will handle gracefully
+                // Return track with null streamUrl so callers skip playback
+                // instead of passing the YouTube watch page URL to ExoPlayer
+                track.copy(streamUrl = null)
             }
         }
 
@@ -445,6 +447,7 @@ class PlayerViewModel @Inject constructor(
     fun playTrack(track: Track) {
         viewModelScope.launch {
             val resolved = resolveTrackForPlayback(track)
+            if (resolved.streamUrl == null) return@launch // Stream resolution failed
             queueManager.setQueue(listOf(resolved), 0)
             playbackManager.playTrack(resolved)
             triggerProgressiveDownload(track)
