@@ -37,7 +37,7 @@ data class SettingsUiState(
     val oledBlack: Boolean = false,
     val wavyProgressBar: Boolean = true,
     val localMusicEnabled: Boolean = false,
-    val localMusicFolderUri: String? = null,
+    val localMusicFolderUris: List<String> = emptyList(),
     val localMusicSearchEnabled: Boolean = true,
     val isScanning: Boolean = false,
     val scanMessage: String? = null,
@@ -76,7 +76,7 @@ class SettingsViewModel @Inject constructor(
         collectOledBlack()
         collectWavyProgressBar()
         collectLocalMusicEnabled()
-        collectLocalMusicFolderUri()
+        collectLocalMusicFolderUris()
         collectLocalMusicSearchEnabled()
         collectBandcampEnabled()
         collectYoutubeEnabled()
@@ -336,7 +336,6 @@ class SettingsViewModel @Inject constructor(
                 if (!enabled) {
                     localMusicRepository.cancelSyncWork()
                     localMusicRepository.clearAll()
-                    _uiState.update { it.copy(localMusicFolderUri = null) }
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -344,12 +343,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setLocalMusicFolderUri(uri: String) {
+    fun addLocalMusicFolder(uri: String) {
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
             try {
-                settingsDataStore.setLocalMusicFolderUri(uri)
-                // Trigger initial scan
+                localMusicRepository.addFolder(uri)
                 _uiState.update { it.copy(isScanning = true) }
                 val result = localMusicRepository.scan()
                 _uiState.update {
@@ -367,6 +365,20 @@ class SettingsViewModel @Inject constructor(
                         scanMessage = "Scan failed: ${e.message}",
                     )
                 }
+            }
+        }
+    }
+
+    fun removeLocalMusicFolder(uri: String) {
+        viewModelScope.launch {
+            try {
+                localMusicRepository.removeFolder(uri)
+                val uris = _uiState.value.localMusicFolderUris - uri
+                if (uris.isEmpty()) {
+                    localMusicRepository.cancelSyncWork()
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
             }
         }
     }
@@ -419,12 +431,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun collectLocalMusicFolderUri() {
+    private fun collectLocalMusicFolderUris() {
         viewModelScope.launch {
-            settingsDataStore.localMusicFolderUri
+            settingsDataStore.localMusicFolderUris
                 .catch { /* ignore */ }
-                .collect { uri ->
-                    _uiState.update { it.copy(localMusicFolderUri = uri) }
+                .collect { uris ->
+                    _uiState.update { it.copy(localMusicFolderUris = uris) }
                 }
         }
     }

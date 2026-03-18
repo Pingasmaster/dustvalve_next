@@ -108,7 +108,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 if (settingsDataStore.getLocalMusicEnabledSync() &&
-                    settingsDataStore.getLocalMusicFolderUriSync() != null
+                    settingsDataStore.getLocalMusicFolderUrisSync().isNotEmpty()
                 ) {
                     localMusicRepository.scan()
                 }

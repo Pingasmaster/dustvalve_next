@@ -31,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -211,7 +212,7 @@ fun SettingsScreen(
                     try {
                         localContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
                     } catch (_: Exception) { /* Best effort */ }
-                    viewModel.setLocalMusicFolderUri(uri.toString())
+                    viewModel.addLocalMusicFolder(uri.toString())
                 }
             }
 
@@ -256,7 +257,7 @@ fun SettingsScreen(
                                 checked = state.localMusicEnabled,
                                 onCheckedChange = { enabled ->
                                     viewModel.setLocalMusicEnabled(enabled)
-                                    if (enabled && state.localMusicFolderUri == null) {
+                                    if (enabled && state.localMusicFolderUris.isEmpty()) {
                                         folderPickerLauncher.launch(null)
                                     }
                                 },
@@ -264,22 +265,47 @@ fun SettingsScreen(
                         }
 
                         if (state.localMusicEnabled) {
-                            val folderUri = state.localMusicFolderUri
-                            if (folderUri != null) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                val folderName = try {
-                                    folderUri.toUri().lastPathSegment
-                                        ?.substringAfterLast(':')
-                                        ?: "Selected folder"
-                                } catch (_: Exception) {
-                                    "Selected folder"
+                            if (state.localMusicFolderUris.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                state.localMusicFolderUris.forEach { uri ->
+                                    val folderName = try {
+                                        uri.toUri().lastPathSegment
+                                            ?.substringAfterLast(':')
+                                            ?: "Selected folder"
+                                    } catch (_: Exception) {
+                                        "Selected folder"
+                                    }
+                                    ListItem(
+                                        headlineContent = {
+                                            Text(
+                                                text = folderName,
+                                                style = MaterialTheme.typography.bodySmall,
+                                            )
+                                        },
+                                        leadingContent = {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_folder_open),
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        },
+                                        trailingContent = {
+                                            IconButton(onClick = { viewModel.removeLocalMusicFolder(uri) }) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_close),
+                                                    contentDescription = "Remove folder",
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            }
+                                        },
+                                        modifier = Modifier.padding(start = 20.dp),
+                                        colors = ListItemDefaults.colors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                        ),
+                                    )
                                 }
-                                Text(
-                                    text = folderName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(start = 36.dp),
-                                )
                             }
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -300,10 +326,10 @@ fun SettingsScreen(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(if (state.localMusicFolderUri != null) "Change Folder" else "Choose Folder")
+                                    Text("Add Folder")
                                 }
 
-                                if (state.localMusicFolderUri != null) {
+                                if (state.localMusicFolderUris.isNotEmpty()) {
                                     FilledTonalButton(
                                         onClick = { viewModel.rescanLocalMusic() },
                                         shapes = ButtonDefaults.shapes(),
@@ -324,7 +350,7 @@ fun SettingsScreen(
                                 }
                             }
 
-                            if (state.localMusicFolderUri != null) {
+                            if (state.localMusicFolderUris.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier

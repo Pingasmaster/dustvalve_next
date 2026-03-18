@@ -67,6 +67,12 @@ interface TrackDao {
     @Query("DELETE FROM tracks WHERE source = 'local'")
     suspend fun deleteAllLocalTracks()
 
+    @Query("SELECT id FROM tracks WHERE source = 'local' AND folderUri = :folderUri")
+    suspend fun getLocalTrackIdsByFolderSync(folderUri: String): List<String>
+
+    @Query("DELETE FROM tracks WHERE source = 'local' AND folderUri = :folderUri")
+    suspend fun deleteLocalTracksByFolder(folderUri: String)
+
     @Query("DELETE FROM tracks WHERE id IN (:ids)")
     suspend fun deleteByIdsChunk(ids: List<String>)
 
