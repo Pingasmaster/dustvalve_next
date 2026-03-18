@@ -38,6 +38,7 @@ data class SettingsUiState(
     val wavyProgressBar: Boolean = true,
     val localMusicEnabled: Boolean = false,
     val localMusicFolderUris: List<String> = emptyList(),
+    val localMusicUseMediaStore: Boolean = false,
     val localMusicSearchEnabled: Boolean = true,
     val isScanning: Boolean = false,
     val scanMessage: String? = null,
@@ -77,6 +78,7 @@ class SettingsViewModel @Inject constructor(
         collectWavyProgressBar()
         collectLocalMusicEnabled()
         collectLocalMusicFolderUris()
+        collectLocalMusicUseMediaStore()
         collectLocalMusicSearchEnabled()
         collectBandcampEnabled()
         collectYoutubeEnabled()
@@ -336,9 +338,40 @@ class SettingsViewModel @Inject constructor(
                 if (!enabled) {
                     localMusicRepository.cancelSyncWork()
                     localMusicRepository.clearAll()
+                    settingsDataStore.setLocalMusicUseMediaStore(false)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setLocalMusicUseMediaStore(enabled: Boolean) {
+        scanJob?.cancel()
+        scanJob = viewModelScope.launch {
+            try {
+                // Clear all existing local tracks before switching modes
+                localMusicRepository.clearAll()
+                settingsDataStore.setLocalMusicUseMediaStore(enabled)
+                if (enabled) {
+                    _uiState.update { it.copy(isScanning = true) }
+                    val result = localMusicRepository.scan()
+                    _uiState.update {
+                        it.copy(
+                            isScanning = false,
+                            scanMessage = "Found ${result.total} songs",
+                        )
+                    }
+                    localMusicRepository.scheduleSyncWork()
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        isScanning = false,
+                        scanMessage = "Scan failed: ${e.message}",
+                    )
+                }
             }
         }
     }
@@ -437,6 +470,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { uris ->
                     _uiState.update { it.copy(localMusicFolderUris = uris) }
+                }
+        }
+    }
+
+    private fun collectLocalMusicUseMediaStore() {
+        viewModelScope.launch {
+            settingsDataStore.localMusicUseMediaStore
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(localMusicUseMediaStore = enabled) }
                 }
         }
     }
