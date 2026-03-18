@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp" width="100" alt="Dustvalve Next icon"/>
+  <img src="logo.png" width="100" alt="Dustvalve Next icon"/>
 </p>
 
 <h1 align="center">Dustvalve Next</h1>
