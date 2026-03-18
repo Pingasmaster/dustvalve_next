@@ -12,6 +12,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import com.dustvalve.next.android.util.CookieEncryption
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,7 +41,7 @@ class SettingsDataStore @Inject constructor(
         val OLED_BLACK = booleanPreferencesKey("oled_black")
         val WAVY_PROGRESS_BAR = booleanPreferencesKey("wavy_progress_bar")
         val LOCAL_MUSIC_ENABLED = booleanPreferencesKey("local_music_enabled")
-        val LOCAL_MUSIC_FOLDER_URI = stringPreferencesKey("local_music_folder_uri")
+        val LOCAL_MUSIC_FOLDER_URIS = stringPreferencesKey("local_music_folder_uris")
         val LOCAL_MUSIC_SEARCH_ENABLED = booleanPreferencesKey("local_music_search_enabled")
         val BANDCAMP_ENABLED = booleanPreferencesKey("bandcamp_enabled")
         val YOUTUBE_ENABLED = booleanPreferencesKey("youtube_enabled")
@@ -265,8 +267,9 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.LOCAL_MUSIC_ENABLED] ?: false
     }
 
-    val localMusicFolderUri: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[Keys.LOCAL_MUSIC_FOLDER_URI]
+    val localMusicFolderUris: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val json = prefs[Keys.LOCAL_MUSIC_FOLDER_URIS]
+        if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
     }
 
     val localMusicSearchEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -279,12 +282,37 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setLocalMusicFolderUri(uri: String?) {
+    suspend fun setLocalMusicFolderUris(uris: List<String>) {
         context.dataStore.edit { prefs ->
-            if (uri != null) {
-                prefs[Keys.LOCAL_MUSIC_FOLDER_URI] = uri
+            if (uris.isNotEmpty()) {
+                prefs[Keys.LOCAL_MUSIC_FOLDER_URIS] = Json.encodeToString(uris)
             } else {
-                prefs.remove(Keys.LOCAL_MUSIC_FOLDER_URI)
+                prefs.remove(Keys.LOCAL_MUSIC_FOLDER_URIS)
+            }
+        }
+    }
+
+    suspend fun addLocalMusicFolderUri(uri: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.LOCAL_MUSIC_FOLDER_URIS]
+                ?.let { Json.decodeFromString<List<String>>(it) }
+                ?: emptyList()
+            if (uri !in current) {
+                prefs[Keys.LOCAL_MUSIC_FOLDER_URIS] = Json.encodeToString(current + uri)
+            }
+        }
+    }
+
+    suspend fun removeLocalMusicFolderUri(uri: String) {
+        context.dataStore.edit { prefs ->
+            val current = prefs[Keys.LOCAL_MUSIC_FOLDER_URIS]
+                ?.let { Json.decodeFromString<List<String>>(it) }
+                ?: emptyList()
+            val updated = current - uri
+            if (updated.isNotEmpty()) {
+                prefs[Keys.LOCAL_MUSIC_FOLDER_URIS] = Json.encodeToString(updated)
+            } else {
+                prefs.remove(Keys.LOCAL_MUSIC_FOLDER_URIS)
             }
         }
     }
@@ -299,8 +327,9 @@ class SettingsDataStore @Inject constructor(
         return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
     }
 
-    suspend fun getLocalMusicFolderUriSync(): String? {
-        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URI)
+    suspend fun getLocalMusicFolderUrisSync(): List<String> {
+        val json = context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS)
+        return if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
     }
 
     suspend fun getLocalMusicSearchEnabledSync(): Boolean {

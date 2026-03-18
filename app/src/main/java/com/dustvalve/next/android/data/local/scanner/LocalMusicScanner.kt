@@ -36,16 +36,17 @@ class LocalMusicScanner @Inject constructor(
     }
 
     suspend fun scan(folderUri: Uri): ScanResult = withContext(Dispatchers.IO) {
+        val folderUriString = folderUri.toString()
         val audioFiles = mutableListOf<AudioFileInfo>()
         listAudioFilesRecursive(folderUri, folderUri, audioFiles)
 
         val trackEntities = audioFiles.mapNotNull { fileInfo ->
             ensureActive()
-            extractTrackEntity(fileInfo)
+            extractTrackEntity(fileInfo, folderUriString)
         }
 
-        // Get existing local track IDs before inserting
-        val existingIds = trackDao.getLocalTrackIdsSync().toSet()
+        // Get existing local track IDs for this folder before inserting
+        val existingIds = trackDao.getLocalTrackIdsByFolderSync(folderUriString).toSet()
         val scannedIds = trackEntities.map { it.id }.toSet()
 
         // Insert/update scanned tracks
@@ -134,7 +135,7 @@ class LocalMusicScanner @Inject constructor(
         return extension in AUDIO_EXTENSIONS
     }
 
-    private fun extractTrackEntity(fileInfo: AudioFileInfo): TrackEntity? {
+    private fun extractTrackEntity(fileInfo: AudioFileInfo, folderUriString: String): TrackEntity? {
         val trackId = generateStableId(fileInfo.documentId)
         val mmr = MediaMetadataRetriever()
         return try {
@@ -169,6 +170,7 @@ class LocalMusicScanner @Inject constructor(
                 artUrl = artUrl,
                 albumTitle = albumTitle,
                 source = "local",
+                folderUri = folderUriString,
             )
         } catch (_: Exception) {
             // Skip files that can't be read

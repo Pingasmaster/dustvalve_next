@@ -34,10 +34,50 @@ class LocalMusicRepositoryImpl @Inject constructor(
     }
 
     override suspend fun scan(): ScanResult {
-        val folderUriString = settingsDataStore.getLocalMusicFolderUriSync()
-            ?: return ScanResult(0, 0, 0)
-        val folderUri = folderUriString.toUri()
-        return scanner.scan(folderUri)
+        val folderUris = settingsDataStore.getLocalMusicFolderUrisSync()
+        if (folderUris.isEmpty()) return ScanResult(0, 0, 0)
+
+        var totalAdded = 0
+        var totalRemoved = 0
+        var totalCount = 0
+        for (uriString in folderUris) {
+            val result = scanner.scan(uriString.toUri())
+            totalAdded += result.added
+            totalRemoved += result.removed
+            totalCount += result.total
+        }
+        return ScanResult(added = totalAdded, removed = totalRemoved, total = totalCount)
+    }
+
+    override suspend fun addFolder(uri: String) {
+        settingsDataStore.addLocalMusicFolderUri(uri)
+    }
+
+    override suspend fun removeFolder(uri: String) {
+        // Get track IDs for cover art cleanup
+        val trackIds = trackDao.getLocalTrackIdsByFolderSync(uri)
+
+        // Delete tracks belonging to this folder
+        trackDao.deleteLocalTracksByFolder(uri)
+
+        // Clean up cached cover art
+        trackIds.forEach { id ->
+            val artFile = File(context.filesDir, "local_art/$id.jpg")
+            artFile.delete()
+        }
+
+        // Release SAF permission
+        try {
+            context.contentResolver.releasePersistableUriPermission(
+                uri.toUri(),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        } catch (_: Exception) {
+            // Permission may already be released
+        }
+
+        // Remove from settings
+        settingsDataStore.removeLocalMusicFolderUri(uri)
     }
 
     override suspend fun clearAll() {
@@ -50,13 +90,11 @@ class LocalMusicRepositoryImpl @Inject constructor(
             artDir.deleteRecursively()
         }
 
-        // Release persisted URI permission
-        val folderUriString = settingsDataStore.getLocalMusicFolderUriSync()
-        if (folderUriString != null) {
+        // Release all persisted URI permissions
+        for (uriString in settingsDataStore.getLocalMusicFolderUrisSync()) {
             try {
-                val uri = folderUriString.toUri()
                 context.contentResolver.releasePersistableUriPermission(
-                    uri,
+                    uriString.toUri(),
                     Intent.FLAG_GRANT_READ_URI_PERMISSION,
                 )
             } catch (_: Exception) {
@@ -64,8 +102,8 @@ class LocalMusicRepositoryImpl @Inject constructor(
             }
         }
 
-        // Clear folder URI from settings
-        settingsDataStore.setLocalMusicFolderUri(null)
+        // Clear all folder URIs from settings
+        settingsDataStore.setLocalMusicFolderUris(emptyList())
     }
 
     override suspend fun scheduleSyncWork() {
