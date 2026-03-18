@@ -205,8 +205,7 @@ class PlayerViewModel @Inject constructor(
      * The next time this track is played, the local HQ file will be used.
      */
     private fun triggerProgressiveDownload(track: Track) {
-        if (track.isLocal) return // Local tracks don't need downloading
-        if (track.source == TrackSource.YOUTUBE) return // YouTube tracks use a different download path
+        if (track.isLocal) return
         progressiveDownloadJob?.cancel()
         progressiveDownloadJob = viewModelScope.launch {
             try {
@@ -220,16 +219,25 @@ class PlayerViewModel @Inject constructor(
                     return@launch
                 }
 
-                // On metered + save-data enabled → download MP3-320 instead of preferred format
-                val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
-                val formatOverride = if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
-                    AudioFormat.MP3_320
+                // Resolve quality mode for metered networks (Bandcamp only — YouTube always downloads)
+                val qualityMode = settingsDataStore.getDownloadQualityModeSync()
+                val isMetered = NetworkUtils.isMeteredConnection(appContext)
+                val formatOverride = if (track.source != TrackSource.YOUTUBE && qualityMode == "economical" && isMetered) {
+                    AudioFormat.ECONOMICAL
                 } else {
                     null
                 }
 
+                // For YouTube: resolve stream URL to a downloadable audio URL
+                val resolvedTrack = if (track.source == TrackSource.YOUTUBE) {
+                    val streamUrl = youtubeRepository.getStreamUrl(track.streamUrl ?: return@launch)
+                    track.copy(streamUrl = streamUrl)
+                } else {
+                    track
+                }
+
                 // Download in background
-                downloadRepository.downloadTrack(track, formatOverride)
+                downloadRepository.downloadTrack(resolvedTrack, formatOverride)
 
                 // Seamless hot-swap: if the same track is still playing, switch to local HQ file
                 val downloadInfo = downloadRepository.getDownloadInfo(track.id)
@@ -263,6 +271,7 @@ class PlayerViewModel @Inject constructor(
         val queue = queueManager.queue.value
         val currentIndex = queueManager.currentIndex.value
         val nextTrack = queue.getOrNull(currentIndex + 1) ?: return
+        if (nextTrack.isLocal) return
 
         // Already downloaded — nothing to do
         val existing = downloadRepository.getDownloadInfo(nextTrack.id)
@@ -272,13 +281,23 @@ class PlayerViewModel @Inject constructor(
         if (_extraState.value.downloadingTrackId == nextTrack.id) return
 
         try {
-            val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
-            val formatOverride = if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
-                AudioFormat.MP3_320
+            val qualityMode = settingsDataStore.getDownloadQualityModeSync()
+            val isMetered = NetworkUtils.isMeteredConnection(appContext)
+            val formatOverride = if (nextTrack.source != TrackSource.YOUTUBE && qualityMode == "economical" && isMetered) {
+                AudioFormat.ECONOMICAL
             } else {
                 null
             }
-            downloadRepository.downloadTrack(nextTrack, formatOverride)
+
+            // For YouTube: resolve stream URL to a downloadable audio URL
+            val resolvedTrack = if (nextTrack.source == TrackSource.YOUTUBE) {
+                val streamUrl = youtubeRepository.getStreamUrl(nextTrack.streamUrl ?: return)
+                nextTrack.copy(streamUrl = streamUrl)
+            } else {
+                nextTrack
+            }
+
+            downloadRepository.downloadTrack(resolvedTrack, formatOverride)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             // Best-effort: precache failure is silent

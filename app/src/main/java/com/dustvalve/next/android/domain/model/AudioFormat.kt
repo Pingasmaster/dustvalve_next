@@ -16,5 +16,6 @@ enum class AudioFormat(
     companion object {
         fun fromKey(key: String): AudioFormat? = entries.find { it.key == key }
         val DOWNLOADABLE = listOf(FLAC, MP3_320, MP3_V0, AAC, OGG_VORBIS)
+        val ECONOMICAL = AAC
     }
 }

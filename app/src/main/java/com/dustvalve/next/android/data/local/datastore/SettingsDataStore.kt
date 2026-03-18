@@ -36,7 +36,7 @@ class SettingsDataStore @Inject constructor(
         val AUTO_DOWNLOAD_COLLECTION = booleanPreferencesKey("auto_download_collection")
         val AUTO_DOWNLOAD_FUTURE_CONTENT = booleanPreferencesKey("auto_download_future_content")
         val DOWNLOAD_FORMAT = stringPreferencesKey("download_format")
-        val SAVE_DATA_ON_METERED = booleanPreferencesKey("save_data_on_metered")
+        val DOWNLOAD_QUALITY_MODE = stringPreferencesKey("download_quality_mode")
         val PROGRESSIVE_DOWNLOAD = booleanPreferencesKey("progressive_download")
         val OLED_BLACK = booleanPreferencesKey("oled_black")
         val ALBUM_ART_THEME = booleanPreferencesKey("album_art_theme")
@@ -104,8 +104,8 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.DOWNLOAD_FORMAT] ?: "flac"
     }
 
-    val saveDataOnMetered: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.SAVE_DATA_ON_METERED] ?: true
+    val downloadQualityMode: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.DOWNLOAD_QUALITY_MODE] ?: "best"
     }
 
     val progressiveDownload: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -224,9 +224,9 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setSaveDataOnMetered(enabled: Boolean) {
+    suspend fun setDownloadQualityMode(mode: String) {
         context.dataStore.edit { prefs ->
-            prefs[Keys.SAVE_DATA_ON_METERED] = enabled
+            prefs[Keys.DOWNLOAD_QUALITY_MODE] = mode
         }
     }
 
@@ -262,8 +262,8 @@ class SettingsDataStore @Inject constructor(
         return context.dataStore.data.firstOrNull()?.get(Keys.PROGRESSIVE_DOWNLOAD) ?: true
     }
 
-    suspend fun getSaveDataOnMeteredSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.SAVE_DATA_ON_METERED) ?: true
+    suspend fun getDownloadQualityModeSync(): String {
+        return context.dataStore.data.firstOrNull()?.get(Keys.DOWNLOAD_QUALITY_MODE) ?: "best"
     }
 
     suspend fun clearAccount() {
