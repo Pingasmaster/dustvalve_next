@@ -132,6 +132,33 @@ app/src/main/java/com/dustvalve/next/android/
 └── util/               Network utils, file helpers, encryption
 ```
 
+## Automated Releases (for forks)
+
+This repository includes a GitHub Actions workflow that builds a signed release APK and attaches it to GitHub Releases automatically. To set it up on your fork:
+
+### 1. Generate a signing keystore
+
+If you don't already have one:
+
+```bash
+keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias dustvalve
+```
+
+### 2. Add repository secrets
+
+Go to your fork on GitHub: **Settings > Secrets and variables > Actions > New repository secret**, and add:
+
+| Secret | Value |
+|---|---|
+| `KEYSTORE_BASE64` | Base64-encoded keystore. Generate with: `base64 -w 0 release-keystore.jks` |
+| `KEYSTORE_PASSWORD` | The password you used when creating the keystore |
+
+### 3. Publish a release
+
+Go to **Releases > Draft a new release**, create a tag (e.g. `v0.0.69`), write release notes, and click **Publish release**. The workflow will build the release APK and attach it as a downloadable asset.
+
+> **Note:** The workflow only triggers on published releases — not on pushes or pull requests. You can monitor builds in the **Actions** tab.
+
 ## Contributing
 
 Contributions are welcome. Please open an issue to discuss larger changes before submitting a PR.
