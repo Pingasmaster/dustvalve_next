@@ -9,6 +9,7 @@ import androidx.work.WorkManager
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.scanner.LocalMusicScanner
+import com.dustvalve.next.android.data.local.scanner.MediaStoreScanner
 import com.dustvalve.next.android.data.local.scanner.ScanResult
 import com.dustvalve.next.android.data.local.scanner.LocalMusicSyncWorker
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
@@ -25,6 +26,7 @@ import javax.inject.Singleton
 class LocalMusicRepositoryImpl @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val scanner: LocalMusicScanner,
+    private val mediaStoreScanner: MediaStoreScanner,
     private val settingsDataStore: SettingsDataStore,
     private val trackDao: TrackDao,
 ) : LocalMusicRepository {
@@ -34,6 +36,10 @@ class LocalMusicRepositoryImpl @Inject constructor(
     }
 
     override suspend fun scan(): ScanResult {
+        if (settingsDataStore.getLocalMusicUseMediaStoreSync()) {
+            return mediaStoreScanner.scan()
+        }
+
         val folderUris = settingsDataStore.getLocalMusicFolderUrisSync()
         if (folderUris.isEmpty()) return ScanResult(0, 0, 0)
 

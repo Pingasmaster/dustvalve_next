@@ -60,8 +60,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -204,6 +206,13 @@ fun SettingsScreen(
         // Sources section
         item {
             val localContext = LocalContext.current
+            val audioPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+            ) { granted: Boolean ->
+                if (granted) {
+                    viewModel.setLocalMusicUseMediaStore(true)
+                }
+            }
             val folderPickerLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocumentTree(),
             ) { uri: Uri? ->
@@ -257,7 +266,7 @@ fun SettingsScreen(
                                 checked = state.localMusicEnabled,
                                 onCheckedChange = { enabled ->
                                     viewModel.setLocalMusicEnabled(enabled)
-                                    if (enabled && state.localMusicFolderUris.isEmpty()) {
+                                    if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
                                         folderPickerLauncher.launch(null)
                                     }
                                 },
@@ -265,71 +274,136 @@ fun SettingsScreen(
                         }
 
                         if (state.localMusicEnabled) {
-                            if (state.localMusicFolderUris.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                state.localMusicFolderUris.forEach { uri ->
-                                    val folderName = try {
-                                        uri.toUri().lastPathSegment
-                                            ?.substringAfterLast(':')
-                                            ?: "Selected folder"
-                                    } catch (_: Exception) {
-                                        "Selected folder"
-                                    }
-                                    ListItem(
-                                        headlineContent = {
-                                            Text(
-                                                text = folderName,
-                                                style = MaterialTheme.typography.bodySmall,
-                                            )
-                                        },
-                                        leadingContent = {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_folder_open),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        },
-                                        trailingContent = {
-                                            IconButton(onClick = { viewModel.removeLocalMusicFolder(uri) }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.ic_close),
-                                                    contentDescription = "Remove folder",
-                                                    modifier = Modifier.size(20.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                        },
-                                        modifier = Modifier.padding(start = 20.dp),
-                                        colors = ListItemDefaults.colors(
-                                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                        ),
-                                    )
-                                }
-                            }
-
+                            // "Scan all audio" toggle
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(start = 36.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                FilledTonalButton(
-                                    onClick = { folderPickerLauncher.launch(null) },
-                                    shapes = ButtonDefaults.shapes(),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_folder_open),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Scan all audio",
+                                        style = MaterialTheme.typography.bodySmall,
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Add Folder")
+                                    Text(
+                                        text = "Use device media library instead of folders",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.localMusicUseMediaStore,
+                                    onCheckedChange = { enabled ->
+                                        if (enabled) {
+                                            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                                Manifest.permission.READ_MEDIA_AUDIO
+                                            } else {
+                                                Manifest.permission.READ_EXTERNAL_STORAGE
+                                            }
+                                            audioPermissionLauncher.launch(permission)
+                                        } else {
+                                            viewModel.setLocalMusicUseMediaStore(false)
+                                        }
+                                    },
+                                )
+                            }
+
+                            if (!state.localMusicUseMediaStore) {
+                                // SAF folder mode
+                                if (state.localMusicFolderUris.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    state.localMusicFolderUris.forEach { uri ->
+                                        val folderName = try {
+                                            uri.toUri().lastPathSegment
+                                                ?.substringAfterLast(':')
+                                                ?: "Selected folder"
+                                        } catch (_: Exception) {
+                                            "Selected folder"
+                                        }
+                                        ListItem(
+                                            headlineContent = {
+                                                Text(
+                                                    text = folderName,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                )
+                                            },
+                                            leadingContent = {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_folder_open),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(20.dp),
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                )
+                                            },
+                                            trailingContent = {
+                                                IconButton(onClick = { viewModel.removeLocalMusicFolder(uri) }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.ic_close),
+                                                        contentDescription = "Remove folder",
+                                                        modifier = Modifier.size(20.dp),
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
+                                            },
+                                            modifier = Modifier.padding(start = 20.dp),
+                                            colors = ListItemDefaults.colors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                            ),
+                                        )
+                                    }
                                 }
 
-                                if (state.localMusicFolderUris.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 36.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    FilledTonalButton(
+                                        onClick = { folderPickerLauncher.launch(null) },
+                                        shapes = ButtonDefaults.shapes(),
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_folder_open),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Add Folder")
+                                    }
+
+                                    if (state.localMusicFolderUris.isNotEmpty()) {
+                                        FilledTonalButton(
+                                            onClick = { viewModel.rescanLocalMusic() },
+                                            shapes = ButtonDefaults.shapes(),
+                                            enabled = !state.isScanning,
+                                        ) {
+                                            if (state.isScanning) {
+                                                CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
+                                            } else {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_refresh),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp),
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text("Rescan")
+                                        }
+                                    }
+                                }
+                            } else {
+                                // MediaStore mode — just show Rescan button
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 36.dp),
+                                ) {
                                     FilledTonalButton(
                                         onClick = { viewModel.rescanLocalMusic() },
                                         shapes = ButtonDefaults.shapes(),
@@ -350,7 +424,7 @@ fun SettingsScreen(
                                 }
                             }
 
-                            if (state.localMusicFolderUris.isNotEmpty()) {
+                            if (state.localMusicUseMediaStore || state.localMusicFolderUris.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     modifier = Modifier

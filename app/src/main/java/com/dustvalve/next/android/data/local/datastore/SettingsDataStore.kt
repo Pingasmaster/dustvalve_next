@@ -42,6 +42,7 @@ class SettingsDataStore @Inject constructor(
         val WAVY_PROGRESS_BAR = booleanPreferencesKey("wavy_progress_bar")
         val LOCAL_MUSIC_ENABLED = booleanPreferencesKey("local_music_enabled")
         val LOCAL_MUSIC_FOLDER_URIS = stringPreferencesKey("local_music_folder_uris")
+        val LOCAL_MUSIC_USE_MEDIASTORE = booleanPreferencesKey("local_music_use_mediastore")
         val LOCAL_MUSIC_SEARCH_ENABLED = booleanPreferencesKey("local_music_search_enabled")
         val BANDCAMP_ENABLED = booleanPreferencesKey("bandcamp_enabled")
         val YOUTUBE_ENABLED = booleanPreferencesKey("youtube_enabled")
@@ -272,6 +273,10 @@ class SettingsDataStore @Inject constructor(
         if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
     }
 
+    val localMusicUseMediaStore: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.LOCAL_MUSIC_USE_MEDIASTORE] ?: false
+    }
+
     val localMusicSearchEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.LOCAL_MUSIC_SEARCH_ENABLED] ?: true
     }
@@ -317,6 +322,12 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setLocalMusicUseMediaStore(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.LOCAL_MUSIC_USE_MEDIASTORE] = enabled
+        }
+    }
+
     suspend fun setLocalMusicSearchEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.LOCAL_MUSIC_SEARCH_ENABLED] = enabled
@@ -330,6 +341,10 @@ class SettingsDataStore @Inject constructor(
     suspend fun getLocalMusicFolderUrisSync(): List<String> {
         val json = context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS)
         return if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
+    }
+
+    suspend fun getLocalMusicUseMediaStoreSync(): Boolean {
+        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: false
     }
 
     suspend fun getLocalMusicSearchEnabledSync(): Boolean {
