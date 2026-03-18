@@ -40,6 +40,7 @@ class MediaStoreScanner @Inject constructor(
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
 
         val trackEntities = mutableListOf<TrackEntity>()
+        val albumArtCache = mutableMapOf<Long, String>()
 
         context.contentResolver.query(
             collection,
@@ -81,10 +82,23 @@ class MediaStoreScanner @Inject constructor(
                     mediaId,
                 )
 
-                val artUri = ContentUris.withAppendedId(
-                    "content://media/external/audio/albumart".toUri(),
-                    albumId,
-                )
+                val artUrl = albumArtCache.getOrPut(albumId) {
+                    val artUri = ContentUris.withAppendedId(
+                        "content://media/external/audio/albumart".toUri(),
+                        albumId,
+                    )
+                    try {
+                        val stream = context.contentResolver.openInputStream(artUri)
+                        if (stream != null) {
+                            stream.close()
+                            artUri.toString()
+                        } else {
+                            ""
+                        }
+                    } catch (_: Exception) {
+                        ""
+                    }
+                }
 
                 trackEntities.add(
                     TrackEntity(
@@ -96,7 +110,7 @@ class MediaStoreScanner @Inject constructor(
                         trackNumber = trackNumber,
                         duration = durationMs / 1000f,
                         streamUrl = contentUri.toString(),
-                        artUrl = artUri.toString(),
+                        artUrl = artUrl,
                         albumTitle = album,
                         source = "local",
                         folderUri = FOLDER_URI_SENTINEL,
