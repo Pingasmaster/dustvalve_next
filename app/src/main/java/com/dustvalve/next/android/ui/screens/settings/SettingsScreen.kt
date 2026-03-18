@@ -67,6 +67,8 @@ import android.os.Build
 import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.AudioFormat
 import androidx.compose.ui.platform.LocalContext
@@ -140,6 +142,7 @@ fun SettingsScreen(
     }
 
     if (showFormatSheet) {
+        val formatHaptic = LocalHapticFeedback.current
         ModalBottomSheet(
             onDismissRequest = { showFormatSheet = false },
             sheetState = rememberModalBottomSheetState(),
@@ -174,6 +177,7 @@ fun SettingsScreen(
                         .padding(horizontal = 8.dp)
                         .clip(MaterialTheme.shapes.medium)
                         .clickable {
+                            formatHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.setDownloadFormat(format.key)
                             showFormatSheet = false
                         },

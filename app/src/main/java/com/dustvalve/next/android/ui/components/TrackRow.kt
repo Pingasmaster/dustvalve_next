@@ -1,7 +1,11 @@
 package com.dustvalve.next.android.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,10 +22,13 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,14 +48,43 @@ fun TrackRow(
     isDownloading: Boolean = false,
     isDownloaded: Boolean = false,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "pressScale",
+    )
+
+    val containerColor by animateColorAsState(
+        targetValue = if (isPlaying) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        } else {
+            Color.Transparent
+        },
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "containerColor",
+    )
+    val headlineColor by animateColorAsState(
+        targetValue = if (isPlaying) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurface,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+        label = "headlineColor",
+    )
+
     ListItem(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            ),
         colors = ListItemDefaults.colors(
-            containerColor = if (isPlaying) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-            } else {
-                Color.Transparent
-            },
+            containerColor = containerColor,
         ),
         leadingContent = {
             Box(
@@ -88,8 +124,7 @@ fun TrackRow(
                 text = track.title,
                 style = if (isPlaying) MaterialTheme.typography.bodyLargeEmphasized
                     else MaterialTheme.typography.bodyLarge,
-                color = if (isPlaying) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface,
+                color = headlineColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

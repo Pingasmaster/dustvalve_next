@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.ui.screens.local
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -133,12 +134,20 @@ fun LocalScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_phone_android),
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(AppShapes.EmptyStateIcon)
+                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_phone_android),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                )
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
                                 text = "No local music",
@@ -203,6 +212,11 @@ fun LocalScreen(
                                 onClick = {
                                     playerViewModel.playTrackInList(allTracks, index)
                                 },
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    fadeOutSpec = null,
+                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                ),
                             )
                         }
                     }
@@ -265,6 +279,11 @@ fun LocalScreen(
                                         onClick = {
                                             playerViewModel.playTrackInList(state.searchResults, index)
                                         },
+                                        modifier = Modifier.animateItem(
+                                            fadeInSpec = null,
+                                            fadeOutSpec = null,
+                                            placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                        ),
                                     )
                                 }
                             }
@@ -283,6 +302,7 @@ private fun LocalTrackItem(
     index: Int,
     total: Int,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -297,7 +317,7 @@ private fun LocalTrackItem(
         interactionSource = interactionSource,
         shape = segmentedItemShape(index, total),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier
+        modifier = modifier
             .padding(
                 start = 16.dp,
                 end = 16.dp,

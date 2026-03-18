@@ -55,6 +55,8 @@ import androidx.compose.ui.res.painterResource
 import com.dustvalve.next.android.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -272,7 +274,13 @@ private fun LibraryList(
             Surface(
                 shape = segmentedItemShape(index, items.size),
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier.padding(bottom = 2.dp),
+                modifier = Modifier
+                    .padding(bottom = 2.dp)
+                    .animateItem(
+                        fadeInSpec = null,
+                        fadeOutSpec = null,
+                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                    ),
             ) {
                 when (item) {
                     is LibraryItem.PlaylistItem -> {
@@ -426,6 +434,7 @@ private fun LibraryAlbumListItem(
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     val thumbnailShape = resolveLibraryItemShape(item.shapeKey, "album")
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -446,7 +455,10 @@ private fun LibraryAlbumListItem(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
                 onClick = onClick,
-                onLongClick = onLongClick,
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
             ),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         leadingContent = {
@@ -520,6 +532,7 @@ private fun LibraryArtistListItem(
     onLongClick: () -> Unit,
     onMoreClick: () -> Unit,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
     val thumbnailShape = resolveLibraryItemShape(item.shapeKey, "artist")
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -540,7 +553,10 @@ private fun LibraryArtistListItem(
                 interactionSource = interactionSource,
                 indication = LocalIndication.current,
                 onClick = onClick,
-                onLongClick = onLongClick,
+                onLongClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
             ),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         leadingContent = {

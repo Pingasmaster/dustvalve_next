@@ -431,6 +431,11 @@ fun YouTubeScreen(
                                                 top = if (index == 0) 8.dp else 1.dp,
                                                 bottom = if (index == state.results.lastIndex) 0.dp else 1.dp,
                                             )
+                                            .animateItem(
+                                                fadeInSpec = null,
+                                                fadeOutSpec = null,
+                                                placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                            )
                                             .graphicsLayer {
                                                 scaleX = pressScale
                                                 scaleY = pressScale
