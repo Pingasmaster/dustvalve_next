@@ -8,6 +8,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import android.media.AudioDeviceInfo
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.dustvalve.next.android.domain.model.RepeatMode
@@ -398,6 +399,12 @@ class PlaybackManager @Inject constructor(
         _repeatMode.value = mode
         // Always keep ExoPlayer repeat off — our custom handlePlaybackEnded handles all repeat logic
         player.repeatMode = Player.REPEAT_MODE_OFF
+    }
+
+    @OptIn(UnstableApi::class)
+    fun setPreferredAudioDevice(device: AudioDeviceInfo?) {
+        if (released) return
+        player.setPreferredAudioDevice(device)
     }
 
     internal fun release() {

@@ -3,7 +3,11 @@ package com.dustvalve.next.android.ui.screens.player
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
+import android.media.AudioDeviceCallback
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Playlist
@@ -56,6 +60,8 @@ data class PlayerUiState(
     val maxVolumeLevel: Int = 15,
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
+    val audioOutputDevices: List<AudioDeviceInfo> = emptyList(),
+    val activeAudioDevice: AudioDeviceInfo? = null,
 )
 
 @HiltViewModel
@@ -86,10 +92,40 @@ class PlayerViewModel @Inject constructor(
 
     private var progressiveDownloadJob: Job? = null
 
+    private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val _audioDevices = MutableStateFlow(getOutputDevices())
+    private val _activeAudioDevice = MutableStateFlow<AudioDeviceInfo?>(null)
+
+    private val audioDeviceCallback = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+            _audioDevices.value = getOutputDevices()
+        }
+        override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+            _audioDevices.value = getOutputDevices()
+            // Clear active device if it was removed
+            val active = _activeAudioDevice.value
+            if (active != null && _audioDevices.value.none { it.id == active.id }) {
+                _activeAudioDevice.value = null
+                playbackManager.setPreferredAudioDevice(null)
+            }
+        }
+    }
+
+    private fun getOutputDevices(): List<AudioDeviceInfo> =
+        audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            .filter { it.type != AudioDeviceInfo.TYPE_TELEPHONY }
+            .toList()
+
     init {
         collectDownloadedTrackIds()
         collectPlaylists()
         collectUserPlaylistTrackIds()
+        audioManager.registerAudioDeviceCallback(audioDeviceCallback, Handler(Looper.getMainLooper()))
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        audioManager.unregisterAudioDeviceCallback(audioDeviceCallback)
     }
 
     /**
@@ -326,7 +362,6 @@ class PlayerViewModel @Inject constructor(
             settingsDataStore.showVolumeButton,
         ) { inline, button -> inline to button }
     ) { state, (inline, button) ->
-        val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val curVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
         state.copy(
@@ -335,14 +370,25 @@ class PlayerViewModel @Inject constructor(
             maxVolumeLevel = maxVol,
             volumeLevel = if (maxVol > 0) curVol.toFloat() / maxVol else 1f,
         )
+    }.combine(
+        combine(_audioDevices, _activeAudioDevice) { devices, active -> devices to active }
+    ) { state, (devices, active) ->
+        state.copy(
+            audioOutputDevices = devices,
+            activeAudioDevice = active,
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = PlayerUiState(),
     )
 
+    fun setAudioOutputDevice(device: AudioDeviceInfo?) {
+        _activeAudioDevice.value = device
+        playbackManager.setPreferredAudioDevice(device)
+    }
+
     fun setVolume(level: Float) {
-        val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val newVol = (level * maxVol).toInt().coerceIn(0, maxVol)
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
