@@ -1,8 +1,6 @@
 package com.dustvalve.next.android.ui.screens.bandcamp
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -74,7 +72,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -84,6 +81,7 @@ import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
+import com.dustvalve.next.android.ui.theme.AppMotion
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import kotlinx.coroutines.delay
@@ -900,23 +898,20 @@ private fun StaggeredAnimatedItem(
     index: Int,
     content: @Composable () -> Unit,
 ) {
-    var visible by remember { mutableStateOf(false) }
-    val slideSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
-    val fadeSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+    val progress = remember { Animatable(0f) }
+    val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     LaunchedEffect(Unit) {
-        delay(index * 50L)
-        visible = true
+        delay(index * AppMotion.staggerDelay)
+        progress.animateTo(1f, spec)
     }
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(animationSpec = fadeSpec) +
-            slideInVertically(
-                animationSpec = slideSpec,
-                initialOffsetY = { it / 4 },
-            ),
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                alpha = progress.value
+                translationY = (1f - progress.value) * size.height / 4f
+            },
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            content()
-        }
+        content()
     }
 }
