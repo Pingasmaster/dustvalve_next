@@ -19,10 +19,9 @@ class YouTubeRepositoryImpl @Inject constructor(
         page: Any?,
     ): Pair<List<SearchResult>, Any?> {
         val contentFilter = when (filter) {
-            "songs" -> listOf("music_songs")
-            "playlists" -> listOf("music_playlists")
-            "albums" -> listOf("music_albums")
-            "artists" -> listOf("music_artists")
+            "songs" -> listOf("videos")
+            "playlists" -> listOf("playlists")
+            "artists" -> listOf("channels")
             else -> emptyList()
         }
         val npPage = page as? Page
@@ -43,5 +42,10 @@ class YouTubeRepositoryImpl @Inject constructor(
 
     override suspend fun getPlaylistTracks(playlistUrl: String): List<Track> {
         return extractor.getPlaylistItems(playlistUrl)
+    }
+
+    override suspend fun getChannelVideos(channelUrl: String, page: Any?): Triple<List<Track>, String?, Any?> {
+        val npPage = page as? Page
+        return extractor.getChannelVideos(channelUrl, npPage)
     }
 }

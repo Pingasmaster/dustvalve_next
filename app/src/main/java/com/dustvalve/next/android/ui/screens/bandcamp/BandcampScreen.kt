@@ -564,7 +564,9 @@ fun BandcampScreen(
                                             when (result.type) {
                                                 SearchResultType.ALBUM -> onAlbumClick(result.url)
                                                 SearchResultType.ARTIST -> onArtistClick(result.url)
-                                                SearchResultType.TRACK -> onAlbumClick(result.url)
+                                                SearchResultType.TRACK -> {
+                                                    searchViewModel.playBandcampTrack(result.url, result.name, playerViewModel)
+                                                }
                                                 SearchResultType.LOCAL_TRACK -> {
                                                     val trackId = result.url.removePrefix("local://")
                                                     searchViewModel.playLocalTrack(trackId, playerViewModel)
@@ -634,8 +636,9 @@ private fun SearchResultItem(
         SearchResultType.ALBUM -> AppShapes.SearchResultAlbum
         SearchResultType.TRACK -> AppShapes.SearchResultTrack
         SearchResultType.LOCAL_TRACK -> AppShapes.SearchResultTrack
-        SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-        SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> AppShapes.SearchResultTrack
+        SearchResultType.YOUTUBE_TRACK -> AppShapes.SearchResultTrack
+        SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> AppShapes.SearchResultAlbum
+        SearchResultType.YOUTUBE_ARTIST -> AppShapes.SearchResultArtist
     }
 
     ListItem(
@@ -705,8 +708,9 @@ private fun SearchResultItem(
                     SearchResultType.ALBUM -> R.drawable.ic_album
                     SearchResultType.TRACK -> R.drawable.ic_music_note
                     SearchResultType.LOCAL_TRACK -> R.drawable.ic_phone_android
-                    SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                    SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_play_circle
+                    SearchResultType.YOUTUBE_TRACK -> R.drawable.ic_music_note
+                    SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_album
+                    SearchResultType.YOUTUBE_ARTIST -> R.drawable.ic_person
                 }
                 Icon(
                     painter = painterResource(iconRes),

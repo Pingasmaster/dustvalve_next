@@ -9,4 +9,5 @@ interface YouTubeRepository {
     suspend fun getTrackInfo(videoUrl: String): Track
     suspend fun getRecommendations(videoUrl: String): List<SearchResult>
     suspend fun getPlaylistTracks(playlistUrl: String): List<Track>
+    suspend fun getChannelVideos(channelUrl: String, page: Any? = null): Triple<List<Track>, String?, Any?>
 }

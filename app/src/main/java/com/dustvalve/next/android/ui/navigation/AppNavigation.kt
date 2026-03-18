@@ -25,6 +25,8 @@ import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.screens.youtube.YouTubeArtistDetailScreen
+import com.dustvalve.next.android.ui.screens.youtube.YouTubePlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
 import kotlinx.coroutines.launch
 
@@ -70,6 +72,12 @@ fun AppNavigation(
             )
             is NavDestination.YouTubeHome -> YouTubeScreen(
                 playerViewModel = playerViewModel,
+                onPlaylistClick = { url, name ->
+                    navViewModel.navigateTo(NavDestination.YouTubePlaylistDetail(url, name))
+                },
+                onArtistClick = { url, name, imageUrl ->
+                    navViewModel.navigateTo(NavDestination.YouTubeArtistDetail(url, name, imageUrl))
+                },
             )
             is NavDestination.Library -> LibraryScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
@@ -106,6 +114,21 @@ fun AppNavigation(
                 onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                 playerViewModel = playerViewModel,
                 viewModel = hiltViewModel(key = destination.playlistId),
+            )
+            is NavDestination.YouTubePlaylistDetail -> YouTubePlaylistDetailScreen(
+                playlistUrl = destination.url,
+                playlistName = destination.name,
+                onBack = { navViewModel.navigateBack() },
+                playerViewModel = playerViewModel,
+                viewModel = hiltViewModel(key = destination.url),
+            )
+            is NavDestination.YouTubeArtistDetail -> YouTubeArtistDetailScreen(
+                artistUrl = destination.url,
+                artistName = destination.name,
+                artistImageUrl = destination.imageUrl,
+                onBack = { navViewModel.navigateBack() },
+                playerViewModel = playerViewModel,
+                viewModel = hiltViewModel(key = destination.url),
             )
             is NavDestination.AccountLogin -> AccountLoginScreen(
                 onLoginSuccess = { cookies ->

@@ -10,6 +10,7 @@ import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -44,6 +45,7 @@ data class SearchUiState(
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val searchDustvalveUseCase: SearchDustvalveUseCase,
+    private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
     private val recentSearchDao: RecentSearchDao,
     private val trackDao: TrackDao,
     private val settingsDataStore: SettingsDataStore,
@@ -137,6 +139,23 @@ class SearchViewModel @Inject constructor(
                 playerViewModel.playTrack(track)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun playBandcampTrack(trackUrl: String, trackName: String, playerViewModel: PlayerViewModel) {
+        viewModelScope.launch {
+            try {
+                val album = getAlbumDetailUseCase(trackUrl)
+                val track = album.tracks.find { it.title.equals(trackName, ignoreCase = true) }
+                    ?: album.tracks.firstOrNull()
+                if (track != null) {
+                    playerViewModel.playTrack(track)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Best-effort — silent fail for track play
             }
         }
     }
