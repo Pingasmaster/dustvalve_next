@@ -20,7 +20,7 @@ fun TrackArtPlaceholder(
     iconSize: Dp = 24.dp,
 ) {
     Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
