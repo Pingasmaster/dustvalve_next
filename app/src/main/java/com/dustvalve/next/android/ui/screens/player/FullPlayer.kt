@@ -59,6 +59,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.drawscope.Stroke
 
@@ -90,6 +91,7 @@ import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.RepeatMode
 import androidx.compose.foundation.background
+import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.theme.AppShapes
@@ -147,6 +149,15 @@ fun FullPlayer(
 
     // Full-screen volume control sheet
     if (showVolumeSheet) {
+        val sheetVolumeState = androidx.compose.material3.rememberSliderState(
+            value = state.volumeLevel,
+        )
+        LaunchedEffect(state.volumeLevel) { sheetVolumeState.value = state.volumeLevel }
+        LaunchedEffect(Unit) {
+            snapshotFlow { sheetVolumeState.value }
+                .collect { playerViewModel.setVolume(it) }
+        }
+
         ModalBottomSheet(
             onDismissRequest = { showVolumeSheet = false },
             sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -171,20 +182,25 @@ fun FullPlayer(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                // XL vertical slider
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .width(64.dp)
-                        .graphicsLayer { rotationZ = -90f },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    androidx.compose.material3.Slider(
-                        value = state.volumeLevel,
-                        onValueChange = { playerViewModel.setVolume(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
+                androidx.compose.material3.VerticalSlider(
+                    state = sheetVolumeState,
+                    modifier = Modifier.weight(1f),
+                    reverseDirection = true,
+                    thumb = { sliderState ->
+                        androidx.compose.material3.SliderDefaults.Thumb(
+                            interactionSource = remember { MutableInteractionSource() },
+                            sliderState = sliderState,
+                            thumbSize = androidx.compose.ui.unit.DpSize(36.dp, 36.dp),
+                        )
+                    },
+                    track = { sliderState ->
+                        androidx.compose.material3.SliderDefaults.Track(
+                            sliderState = sliderState,
+                            modifier = Modifier.width(20.dp),
+                            trackCornerSize = 10.dp,
+                        )
+                    },
+                )
                 Spacer(modifier = Modifier.height(16.dp))
                 Icon(
                     painter = painterResource(R.drawable.ic_volume_off),
@@ -294,48 +310,56 @@ fun FullPlayer(
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center,
                 ) {
-                    AsyncImage(
-                        model = track.artUrl,
-                        contentDescription = track.albumTitle.ifEmpty { "Album art" },
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(albumArtShape)
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onTap = {
-                                        feedbackIsPlaying = state.isPlaying
-                                        playerViewModel.onPlayPause()
-                                        scope.launch {
-                                            feedbackScale.snapTo(0f)
-                                            showPlayPauseFeedback = true
-                                            feedbackScale.animateTo(1f, feedbackSpec)
-                                            delay(400L)
-                                            feedbackScale.animateTo(0f, feedbackSpec)
-                                            showPlayPauseFeedback = false
-                                        }
-                                    },
-                                    onDoubleTap = {
-                                        playerViewModel.onToggleFavorite()
-                                        scope.launch {
-                                            heartProgress.animateTo(
-                                                targetValue = 1f,
-                                                animationSpec = heartInSpec,
-                                            )
-                                            delay(1000L)
-                                            heartProgress.animateTo(
-                                                targetValue = 0f,
-                                                animationSpec = heartOutSpec,
-                                            )
-                                        }
-                                    },
-                                    onLongPress = {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        showDebugSheet = true
-                                    },
-                                )
-                            },
-                    )
+                    val albumArtGestureModifier = Modifier
+                        .fillMaxSize()
+                        .clip(albumArtShape)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    feedbackIsPlaying = state.isPlaying
+                                    playerViewModel.onPlayPause()
+                                    scope.launch {
+                                        feedbackScale.snapTo(0f)
+                                        showPlayPauseFeedback = true
+                                        feedbackScale.animateTo(1f, feedbackSpec)
+                                        delay(400L)
+                                        feedbackScale.animateTo(0f, feedbackSpec)
+                                        showPlayPauseFeedback = false
+                                    }
+                                },
+                                onDoubleTap = {
+                                    playerViewModel.onToggleFavorite()
+                                    scope.launch {
+                                        heartProgress.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = heartInSpec,
+                                        )
+                                        delay(1000L)
+                                        heartProgress.animateTo(
+                                            targetValue = 0f,
+                                            animationSpec = heartOutSpec,
+                                        )
+                                    }
+                                },
+                                onLongPress = {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    showDebugSheet = true
+                                },
+                            )
+                        }
+                    if (track.artUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = track.artUrl,
+                            contentDescription = track.albumTitle.ifEmpty { "Album art" },
+                            contentScale = ContentScale.Crop,
+                            modifier = albumArtGestureModifier,
+                        )
+                    } else {
+                        TrackArtPlaceholder(
+                            modifier = albumArtGestureModifier,
+                            iconSize = 64.dp,
+                        )
+                    }
 
                     // Play/pause tap feedback overlay
                     if (showPlayPauseFeedback) {
@@ -356,6 +380,15 @@ fun FullPlayer(
 
                 // Inline volume slider (to the right of album art)
                 if (state.showInlineVolumeSlider) {
+                    val inlineVolumeState = androidx.compose.material3.rememberSliderState(
+                        value = state.volumeLevel,
+                    )
+                    LaunchedEffect(state.volumeLevel) { inlineVolumeState.value = state.volumeLevel }
+                    LaunchedEffect(Unit) {
+                        snapshotFlow { inlineVolumeState.value }
+                            .collect { playerViewModel.setVolume(it) }
+                    }
+
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -368,19 +401,25 @@ fun FullPlayer(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        // Vertical slider via rotated horizontal slider
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .width(48.dp)
-                                .graphicsLayer { rotationZ = -90f },
-                        ) {
-                            androidx.compose.material3.Slider(
-                                value = state.volumeLevel,
-                                onValueChange = { playerViewModel.setVolume(it) },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
+                        androidx.compose.material3.VerticalSlider(
+                            state = inlineVolumeState,
+                            modifier = Modifier.weight(1f),
+                            reverseDirection = true,
+                            thumb = { sliderState ->
+                                androidx.compose.material3.SliderDefaults.Thumb(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    sliderState = sliderState,
+                                    thumbSize = androidx.compose.ui.unit.DpSize(28.dp, 28.dp),
+                                )
+                            },
+                            track = { sliderState ->
+                                androidx.compose.material3.SliderDefaults.Track(
+                                    sliderState = sliderState,
+                                    modifier = Modifier.width(12.dp),
+                                    trackCornerSize = 6.dp,
+                                )
+                            },
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
                         Icon(
                             painter = painterResource(R.drawable.ic_volume_down),
