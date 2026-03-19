@@ -53,9 +53,12 @@ class SearchViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    val recentSearches: StateFlow<List<String>> = recentSearchDao.getRecent(8)
+    val recentSearches: StateFlow<List<String>> = recentSearchDao.getRecent("bandcamp", 8)
         .map { entities -> entities.map { it.query } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val searchHistoryEnabled: StateFlow<Boolean> = settingsDataStore.searchHistoryEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val localSearchEnabled: StateFlow<Boolean> = settingsDataStore.localMusicEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
@@ -161,17 +164,18 @@ class SearchViewModel @Inject constructor(
     }
 
     fun removeRecentSearch(query: String) {
-        viewModelScope.launch { recentSearchDao.delete(query) }
+        viewModelScope.launch { recentSearchDao.delete(query, "bandcamp") }
     }
 
     fun clearRecentSearches() {
-        viewModelScope.launch { recentSearchDao.clearAll() }
+        viewModelScope.launch { recentSearchDao.clearAll("bandcamp") }
     }
 
     private fun saveRecentSearch(query: String) {
+        if (!searchHistoryEnabled.value) return
         viewModelScope.launch {
-            recentSearchDao.insert(RecentSearchEntity(query = query.trim()))
-            recentSearchDao.deleteOld(keepCount = 20)
+            recentSearchDao.insert(RecentSearchEntity(query = query.trim(), source = "bandcamp"))
+            recentSearchDao.deleteOld(source = "bandcamp", keepCount = 20)
         }
     }
 

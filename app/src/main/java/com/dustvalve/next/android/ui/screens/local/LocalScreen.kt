@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
+import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -72,6 +73,8 @@ fun LocalScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val allTracks by viewModel.allLocalTracks.collectAsStateWithLifecycle()
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val searchHistoryEnabled by viewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
 
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
@@ -235,7 +238,17 @@ fun LocalScreen(
                 ) {
                     when {
                         state.query.isBlank() -> {
-                            // Show nothing when query is empty
+                            if (searchHistoryEnabled && recentSearches.isNotEmpty()) {
+                                RecentSearchesList(
+                                    recentSearches = recentSearches,
+                                    onSearchClick = { query ->
+                                        textFieldState.setTextAndPlaceCursorAtEnd(query)
+                                        viewModel.onSearch()
+                                    },
+                                    onRemoveClick = { viewModel.removeRecentSearch(it) },
+                                    onClearAllClick = { viewModel.clearRecentSearches() },
+                                )
+                            }
                         }
                         state.isSearching -> {
                             ContainedLoadingIndicator(

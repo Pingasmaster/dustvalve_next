@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
+import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.Track
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -48,10 +51,18 @@ class YouTubeViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
     private val trackDao: TrackDao,
     private val database: DustvalveNextDatabase,
+    private val recentSearchDao: RecentSearchDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(YouTubeUiState())
     val uiState: StateFlow<YouTubeUiState> = _uiState.asStateFlow()
+
+    val recentSearches: StateFlow<List<String>> = recentSearchDao.getRecent("youtube", 8)
+        .map { entities -> entities.map { it.query } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val searchHistoryEnabled: StateFlow<Boolean> = settingsDataStore.searchHistoryEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val lastVideoId: StateFlow<String?> = settingsDataStore.lastYoutubeVideoId
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -97,7 +108,24 @@ class YouTubeViewModel @Inject constructor(
         searchJob?.cancel()
         val query = _uiState.value.query
         if (query.isNotBlank()) {
+            saveRecentSearch(query)
             searchJob = viewModelScope.launch { performSearch(query, resetResults = true) }
+        }
+    }
+
+    fun removeRecentSearch(query: String) {
+        viewModelScope.launch { recentSearchDao.delete(query, "youtube") }
+    }
+
+    fun clearRecentSearches() {
+        viewModelScope.launch { recentSearchDao.clearAll("youtube") }
+    }
+
+    private fun saveRecentSearch(query: String) {
+        if (!searchHistoryEnabled.value) return
+        viewModelScope.launch {
+            recentSearchDao.insert(RecentSearchEntity(query = query.trim(), source = "youtube"))
+            recentSearchDao.deleteOld(source = "youtube", keepCount = 20)
         }
     }
 

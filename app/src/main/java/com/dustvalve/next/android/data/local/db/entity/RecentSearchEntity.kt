@@ -6,9 +6,11 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "recent_searches",
+    primaryKeys = ["query", "source"],
     indices = [Index("searchedAt")]
 )
 data class RecentSearchEntity(
-    @PrimaryKey val query: String,
+    val query: String,
+    val source: String,
     val searchedAt: Long = System.currentTimeMillis(),
 )

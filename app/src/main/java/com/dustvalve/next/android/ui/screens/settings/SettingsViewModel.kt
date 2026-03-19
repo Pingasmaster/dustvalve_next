@@ -39,13 +39,14 @@ data class SettingsUiState(
     val wavyProgressBar: Boolean = true,
     val localMusicEnabled: Boolean = false,
     val localMusicFolderUris: List<String> = emptyList(),
-    val localMusicUseMediaStore: Boolean = false,
+    val localMusicUseMediaStore: Boolean = true,
     val isScanning: Boolean = false,
     val scanMessage: String? = null,
     val bandcampEnabled: Boolean = false,
     val youtubeEnabled: Boolean = false,
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
+    val searchHistoryEnabled: Boolean = true,
 )
 
 @HiltViewModel
@@ -84,6 +85,7 @@ class SettingsViewModel @Inject constructor(
         collectYoutubeEnabled()
         collectShowInlineVolumeSlider()
         collectShowVolumeButton()
+        collectSearchHistoryEnabled()
     }
 
     fun setThemeMode(mode: String) {
@@ -358,7 +360,7 @@ class SettingsViewModel @Inject constructor(
                 if (!enabled) {
                     localMusicRepository.cancelSyncWork()
                     localMusicRepository.clearAll()
-                    settingsDataStore.setLocalMusicUseMediaStore(false)
+                    settingsDataStore.setLocalMusicUseMediaStore(true)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -534,6 +536,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSearchHistoryEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setSearchHistoryEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     fun removeAllDownloads() {
         viewModelScope.launch {
             try {
@@ -583,6 +595,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(showVolumeButton = enabled) }
+                }
+        }
+    }
+
+    private fun collectSearchHistoryEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.searchHistoryEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(searchHistoryEnabled = enabled) }
                 }
         }
     }

@@ -72,6 +72,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -86,6 +87,8 @@ fun YouTubeScreen(
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val searchHistoryEnabled by viewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -334,7 +337,17 @@ fun YouTubeScreen(
                 ) {
                     when {
                         state.query.isBlank() -> {
-                            // Empty search state
+                            if (searchHistoryEnabled && recentSearches.isNotEmpty()) {
+                                RecentSearchesList(
+                                    recentSearches = recentSearches,
+                                    onSearchClick = { query ->
+                                        textFieldState.setTextAndPlaceCursorAtEnd(query)
+                                        viewModel.onSearch()
+                                    },
+                                    onRemoveClick = { viewModel.removeRecentSearch(it) },
+                                    onClearAllClick = { viewModel.clearRecentSearches() },
+                                )
+                            }
                         }
                         state.isLoading && state.results.isEmpty() -> {
                             ContainedLoadingIndicator(
