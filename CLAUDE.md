@@ -10,7 +10,11 @@ After making any code fixes or changes, always verify compilation by running `./
 
 This script builds debug + release, copies the release APK to the project root, and bumps the version automatically.
 
-Always use `run_in_background: true` when launching builds so you can continue working while they compile.
+Always use `run_in_background: true` when launching builds so you can continue working while they compile. Once the build finishes and you've completed your task, stop and wait — you will be notified via a hook when the build completes.
+
+## Git Policy
+
+Do NOT commit or push unless the user explicitly asks you to. Never commit/push proactively after completing changes.
 
 ## Known Non-Bugs (Do NOT Fix)
 

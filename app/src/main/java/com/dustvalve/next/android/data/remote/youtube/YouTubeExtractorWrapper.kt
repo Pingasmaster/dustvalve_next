@@ -256,7 +256,23 @@ class YouTubeExtractorWrapper @Inject constructor() {
     private fun pickBestThumbnail(images: List<Image>): String? {
         return images
             .sortedByDescending { it.height.takeIf { h -> h != Image.HEIGHT_UNKNOWN } ?: 0 }
-            .firstOrNull()?.url
+            .firstOrNull()?.url?.let { upgradeThumbnailUrl(it) }
+    }
+
+    private fun upgradeThumbnailUrl(url: String): String {
+        // For YouTube video thumbnails, rewrite to hq720 (1280x720, 16:9, no black bars)
+        // Matches all CDN subdomains: i.ytimg.com, i1.ytimg.com, i2.ytimg.com, etc.
+        val videoIdMatch = Regex("i\\d*\\.ytimg\\.com/vi(?:_webp)?/([^/]+)").find(url)
+        if (videoIdMatch != null) {
+            val videoId = videoIdMatch.groupValues[1]
+            return "https://i.ytimg.com/vi/$videoId/hq720.jpg"
+        }
+        // Request larger channel avatars / Google profile images
+        // Matches all CDN variants: yt3/yt4/etc.ggpht.com, lh0-lh9.googleusercontent.com
+        if (url.contains("ggpht.com") || url.contains("googleusercontent.com")) {
+            return url.replace(Regex("=s\\d+"), "=s900")
+        }
+        return url
     }
 
     private fun md5Hash(input: String): String {
