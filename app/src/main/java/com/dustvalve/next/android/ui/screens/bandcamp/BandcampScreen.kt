@@ -51,7 +51,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberSearchBarState
@@ -79,6 +78,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
 import com.dustvalve.next.android.ui.theme.AppMotion
@@ -120,6 +120,7 @@ fun BandcampScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
     val recentSearches by searchViewModel.recentSearches.collectAsStateWithLifecycle()
+    val searchHistoryEnabled by searchViewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedCategoryColor by remember { mutableStateOf(Color.Unspecified) }
 
@@ -445,66 +446,16 @@ fun BandcampScreen(
                 ) {
                     when {
                         searchState.query.isBlank() -> {
-                            if (recentSearches.isNotEmpty()) {
-                                LazyColumn(
-                                    modifier = Modifier.fillMaxSize(),
-                                ) {
-                                    item(key = "recent_header") {
-                                        ListItem(
-                                            headlineContent = {
-                                                Text(
-                                                    text = "Recent searches",
-                                                    style = MaterialTheme.typography.titleSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            },
-                                            trailingContent = {
-                                                TextButton(
-                                                    onClick = { searchViewModel.clearRecentSearches() },
-                                                ) {
-                                                    Text("Clear all")
-                                                }
-                                            },
-                                        )
-                                    }
-                                    items(
-                                        items = recentSearches,
-                                        key = { it },
-                                    ) { query ->
-                                        ListItem(
-                                            headlineContent = {
-                                                Text(
-                                                    text = query,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                )
-                                            },
-                                            leadingContent = {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.ic_history),
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            },
-                                            trailingContent = {
-                                                IconButton(
-                                                    onClick = { searchViewModel.removeRecentSearch(query) },
-                                                ) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.ic_close),
-                                                        contentDescription = "Remove",
-                                                    )
-                                                }
-                                            },
-                                            modifier = Modifier
-                                                .animateItem()
-                                                .clickable {
-                                                    textFieldState.setTextAndPlaceCursorAtEnd(query)
-                                                    searchViewModel.onSearch()
-                                                },
-                                        )
-                                    }
-                                }
+                            if (searchHistoryEnabled && recentSearches.isNotEmpty()) {
+                                RecentSearchesList(
+                                    recentSearches = recentSearches,
+                                    onSearchClick = { query ->
+                                        textFieldState.setTextAndPlaceCursorAtEnd(query)
+                                        searchViewModel.onSearch()
+                                    },
+                                    onRemoveClick = { searchViewModel.removeRecentSearch(it) },
+                                    onClearAllClick = { searchViewModel.clearRecentSearches() },
+                                )
                             }
                         }
                         searchState.isLoading && searchState.results.isEmpty() -> {

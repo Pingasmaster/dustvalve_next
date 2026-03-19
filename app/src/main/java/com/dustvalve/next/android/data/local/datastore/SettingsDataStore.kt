@@ -49,6 +49,7 @@ class SettingsDataStore @Inject constructor(
         val SHOW_INLINE_VOLUME_SLIDER = booleanPreferencesKey("show_inline_volume_slider")
         val SHOW_VOLUME_BUTTON = booleanPreferencesKey("show_volume_button")
         val LAST_YOUTUBE_VIDEO_ID = stringPreferencesKey("last_youtube_video_id")
+        val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
     }
 
     companion object {
@@ -284,7 +285,7 @@ class SettingsDataStore @Inject constructor(
     }
 
     val localMusicUseMediaStore: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.LOCAL_MUSIC_USE_MEDIASTORE] ?: false
+        prefs[Keys.LOCAL_MUSIC_USE_MEDIASTORE] ?: true
     }
 
     suspend fun setLocalMusicEnabled(enabled: Boolean) {
@@ -344,7 +345,7 @@ class SettingsDataStore @Inject constructor(
     }
 
     suspend fun getLocalMusicUseMediaStoreSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: false
+        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true
     }
 
     val bandcampEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -388,6 +389,16 @@ class SettingsDataStore @Inject constructor(
     suspend fun setShowVolumeButton(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.SHOW_VOLUME_BUTTON] = enabled
+        }
+    }
+
+    val searchHistoryEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SEARCH_HISTORY_ENABLED] ?: true
+    }
+
+    suspend fun setSearchHistoryEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SEARCH_HISTORY_ENABLED] = enabled
         }
     }
 

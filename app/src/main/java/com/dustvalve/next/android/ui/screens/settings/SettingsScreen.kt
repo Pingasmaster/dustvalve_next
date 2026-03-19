@@ -270,7 +270,14 @@ fun SettingsScreen(
                                 checked = state.localMusicEnabled,
                                 onCheckedChange = { enabled ->
                                     viewModel.setLocalMusicEnabled(enabled)
-                                    if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
+                                    if (enabled && state.localMusicUseMediaStore) {
+                                        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                            Manifest.permission.READ_MEDIA_AUDIO
+                                        } else {
+                                            Manifest.permission.READ_EXTERNAL_STORAGE
+                                        }
+                                        audioPermissionLauncher.launch(permission)
+                                    } else if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
                                         folderPickerLauncher.launch(null)
                                     }
                                 },
@@ -288,27 +295,27 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Scan all audio",
+                                        text = "Use individual folders",
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                     Text(
-                                        text = "Use device media library instead of folders",
+                                        text = "Pick specific folders instead of scanning all audio",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                                 Switch(
-                                    checked = state.localMusicUseMediaStore,
-                                    onCheckedChange = { enabled ->
-                                        if (enabled) {
+                                    checked = !state.localMusicUseMediaStore,
+                                    onCheckedChange = { useIndividualFolders ->
+                                        if (useIndividualFolders) {
+                                            viewModel.setLocalMusicUseMediaStore(false)
+                                        } else {
                                             val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                                 Manifest.permission.READ_MEDIA_AUDIO
                                             } else {
                                                 Manifest.permission.READ_EXTERNAL_STORAGE
                                             }
                                             audioPermissionLauncher.launch(permission)
-                                        } else {
-                                            viewModel.setLocalMusicUseMediaStore(false)
                                         }
                                     },
                                 )
@@ -969,6 +976,44 @@ fun SettingsScreen(
                             Switch(
                                 checked = state.showVolumeButton,
                                 onCheckedChange = { viewModel.setShowVolumeButton(it) },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Search section
+        item {
+            SettingsSection(
+                title = "Search",
+                icon = R.drawable.ic_search,
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Search history",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Save recent searches for quick access",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.searchHistoryEnabled,
+                                onCheckedChange = { viewModel.setSearchHistoryEnabled(it) },
                             )
                         }
                     }
