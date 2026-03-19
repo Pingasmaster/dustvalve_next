@@ -114,7 +114,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
         val extractor = ServiceList.YouTube.getPlaylistExtractor(playlistUrl)
         extractor.fetchPage()
 
-        val playlistName = extractor.name ?: ""
+        val playlistName = extractor.name
         val tracks = mutableListOf<Track>()
         var page: ListExtractor.InfoItemsPage<StreamInfoItem> = extractor.initialPage
 
@@ -179,7 +179,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
                         id = "yt_$videoId",
                         albumId = "yt_channel_${md5Hash(channelUrl).take(12)}",
                         title = item.name ?: "Unknown",
-                        artist = channelName ?: item.uploaderName ?: "Unknown",
+                        artist = channelName,
                         artistUrl = channelUrl,
                         trackNumber = tracks.size + 1,
                         duration = item.duration.toFloat(),

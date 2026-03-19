@@ -113,7 +113,12 @@ class PlayerViewModel @Inject constructor(
 
     private fun getOutputDevices(): List<AudioDeviceInfo> =
         audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            .filter { it.type != AudioDeviceInfo.TYPE_TELEPHONY }
+            .filter { it.type !in setOf(
+                AudioDeviceInfo.TYPE_TELEPHONY,
+                AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                AudioDeviceInfo.TYPE_BUILTIN_EARPIECE,
+            )}
+            .distinctBy { it.type to (it.productName?.toString() ?: "") }
             .toList()
 
     init {

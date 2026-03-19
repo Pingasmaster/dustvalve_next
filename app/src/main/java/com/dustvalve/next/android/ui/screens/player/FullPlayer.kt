@@ -16,8 +16,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +33,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TwoRowsTopAppBar
@@ -81,6 +85,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
@@ -216,45 +221,60 @@ fun FullPlayer(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                // System default option
-                ListItem(
-                    headlineContent = { Text("Automatic") },
-                    leadingContent = {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_speaker),
-                            contentDescription = null,
-                        )
-                    },
-                    trailingContent = if (state.activeAudioDevice == null) {
-                        { Icon(painter = painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
-                    } else null,
-                    colors = ListItemDefaults.colors(
-                        containerColor = if (state.activeAudioDevice == null) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent,
-                    ),
-                    modifier = Modifier
-                        .clickable { playerViewModel.setAudioOutputDevice(null) }
-                        .fillMaxWidth(),
-                )
-                state.audioOutputDevices.forEach { device ->
-                    val isActive = state.activeAudioDevice?.id == device.id
+                Column(modifier = Modifier.selectableGroup()) {
+                    // System default option
+                    val autoSelected = state.activeAudioDevice == null
+                    val autoColor by animateColorAsState(
+                        targetValue = if (autoSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                      else Color.Transparent,
+                        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+                        label = "autoDeviceColor",
+                    )
                     ListItem(
-                        headlineContent = { Text(audioDeviceDisplayName(device)) },
-                        leadingContent = {
+                        headlineContent = { Text("Automatic") },
+                        leadingContent = { RadioButton(selected = autoSelected, onClick = null) },
+                        trailingContent = {
                             Icon(
-                                painter = painterResource(audioDeviceIcon(device)),
+                                painter = painterResource(R.drawable.ic_speaker),
                                 contentDescription = null,
                             )
                         },
-                        trailingContent = if (isActive) {
-                            { Icon(painter = painterResource(R.drawable.ic_check), contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
-                        } else null,
-                        colors = ListItemDefaults.colors(
-                            containerColor = if (isActive) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent,
-                        ),
+                        colors = ListItemDefaults.colors(containerColor = autoColor),
                         modifier = Modifier
-                            .clickable { playerViewModel.setAudioOutputDevice(device) }
+                            .selectable(
+                                selected = autoSelected,
+                                onClick = { playerViewModel.setAudioOutputDevice(null) },
+                                role = Role.RadioButton,
+                            )
                             .fillMaxWidth(),
                     )
+                    state.audioOutputDevices.forEach { device ->
+                        val isActive = state.activeAudioDevice?.id == device.id
+                        val bgColor by animateColorAsState(
+                            targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                          else Color.Transparent,
+                            animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+                            label = "deviceColor",
+                        )
+                        ListItem(
+                            headlineContent = { Text(audioDeviceDisplayName(device)) },
+                            leadingContent = { RadioButton(selected = isActive, onClick = null) },
+                            trailingContent = {
+                                Icon(
+                                    painter = painterResource(audioDeviceIcon(device)),
+                                    contentDescription = null,
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = bgColor),
+                            modifier = Modifier
+                                .selectable(
+                                    selected = isActive,
+                                    onClick = { playerViewModel.setAudioOutputDevice(device) },
+                                    role = Role.RadioButton,
+                                )
+                                .fillMaxWidth(),
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
             }
