@@ -62,9 +62,8 @@ class DustvalveArtistScraper @Inject constructor(
 
         val bio = document.selectFirst(".signed-out-artists-bio-text")?.text()?.trim()
 
-        val imageUrl = (document.selectFirst(".band-photo img")?.attr("abs:src")
-            ?: document.selectFirst("img.band-photo")?.attr("abs:src"))
-            ?.let { NetworkUtils.upgradeBandcampImageUrl(it) }
+        val imageUrl = document.selectFirst(".band-photo img")?.attr("abs:src")
+            ?: document.selectFirst("img.band-photo")?.attr("abs:src")
 
         val location = document.selectFirst("#band-name-location .location")?.text()?.trim()
 
