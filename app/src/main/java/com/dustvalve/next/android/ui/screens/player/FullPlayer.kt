@@ -222,6 +222,7 @@ fun FullPlayer(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Column(modifier = Modifier.selectableGroup()) {
+                    val totalDeviceCount = 1 + state.audioOutputDevices.size
                     // System default option
                     val autoSelected = state.activeAudioDevice == null
                     val autoColor by animateColorAsState(
@@ -230,25 +231,30 @@ fun FullPlayer(
                         animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
                         label = "autoDeviceColor",
                     )
-                    ListItem(
-                        headlineContent = { Text("Automatic") },
-                        leadingContent = { RadioButton(selected = autoSelected, onClick = null) },
-                        trailingContent = {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_speaker),
-                                contentDescription = null,
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = autoColor),
+                    Surface(
+                        shape = segmentedItemShape(0, totalDeviceCount),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier
                             .selectable(
                                 selected = autoSelected,
                                 onClick = { playerViewModel.setAudioOutputDevice(null) },
                                 role = Role.RadioButton,
-                            )
-                            .fillMaxWidth(),
-                    )
-                    state.audioOutputDevices.forEach { device ->
+                            ),
+                    ) {
+                        ListItem(
+                            headlineContent = { Text("Automatic") },
+                            leadingContent = { RadioButton(selected = autoSelected, onClick = null) },
+                            trailingContent = {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_speaker),
+                                    contentDescription = null,
+                                )
+                            },
+                            colors = ListItemDefaults.colors(containerColor = autoColor),
+                        )
+                    }
+                    state.audioOutputDevices.forEachIndexed { index, device ->
+                        val deviceIndex = index + 1
                         val isActive = state.activeAudioDevice?.id == device.id
                         val bgColor by animateColorAsState(
                             targetValue = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
@@ -256,24 +262,29 @@ fun FullPlayer(
                             animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
                             label = "deviceColor",
                         )
-                        ListItem(
-                            headlineContent = { Text(audioDeviceDisplayName(device)) },
-                            leadingContent = { RadioButton(selected = isActive, onClick = null) },
-                            trailingContent = {
-                                Icon(
-                                    painter = painterResource(audioDeviceIcon(device)),
-                                    contentDescription = null,
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = bgColor),
+                        Surface(
+                            shape = segmentedItemShape(deviceIndex, totalDeviceCount),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
                             modifier = Modifier
+                                .padding(top = 1.dp)
                                 .selectable(
                                     selected = isActive,
                                     onClick = { playerViewModel.setAudioOutputDevice(device) },
                                     role = Role.RadioButton,
-                                )
-                                .fillMaxWidth(),
-                        )
+                                ),
+                        ) {
+                            ListItem(
+                                headlineContent = { Text(audioDeviceDisplayName(device)) },
+                                leadingContent = { RadioButton(selected = isActive, onClick = null) },
+                                trailingContent = {
+                                    Icon(
+                                        painter = painterResource(audioDeviceIcon(device)),
+                                        contentDescription = null,
+                                    )
+                                },
+                                colors = ListItemDefaults.colors(containerColor = bgColor),
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -874,14 +885,22 @@ fun FullPlayer(
                                             )
                                         },
                                         leadingContent = {
-                                            AsyncImage(
-                                                model = queueTrack.artUrl,
-                                                contentDescription = queueTrack.albumTitle,
+                                            Box(
                                                 modifier = Modifier
                                                     .size(48.dp)
                                                     .clip(AppShapes.SearchResultTrack),
-                                                contentScale = ContentScale.Crop,
-                                            )
+                                            ) {
+                                                if (queueTrack.artUrl.isNotBlank()) {
+                                                    AsyncImage(
+                                                        model = queueTrack.artUrl,
+                                                        contentDescription = queueTrack.albumTitle,
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        contentScale = ContentScale.Crop,
+                                                    )
+                                                } else {
+                                                    TrackArtPlaceholder(modifier = Modifier.fillMaxSize())
+                                                }
+                                            }
                                         },
                                         trailingContent = if (isDownloaded) {
                                             {
