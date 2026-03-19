@@ -101,17 +101,7 @@ object NetworkUtils {
      * Returns a URL in the format used by Dustvalve's CDN for album/artist artwork.
      */
     fun buildArtUrl(artId: Long): String {
-        return "https://f4.bcbits.com/img/a${artId}_16.jpg"
-    }
-
-    private val BCBITS_SIZE_REGEX = Regex("""(https://f4\.bcbits\.com/img/\w+)_\d+\.jpg""")
-
-    /**
-     * Upgrades a Bandcamp CDN image URL to size 16 (~700x700).
-     * Returns the original URL unchanged if it doesn't match the bcbits pattern.
-     */
-    fun upgradeBandcampImageUrl(url: String): String {
-        return BCBITS_SIZE_REGEX.matchEntire(url)?.let { "${it.groupValues[1]}_16.jpg" } ?: url
+        return "https://f4.bcbits.com/img/a${artId}_10.jpg"
     }
 
     /**
