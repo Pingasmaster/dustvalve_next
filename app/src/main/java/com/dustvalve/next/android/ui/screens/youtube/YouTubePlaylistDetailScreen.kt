@@ -15,23 +15,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -60,6 +68,7 @@ fun YouTubePlaylistDetailScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(playlistUrl, playlistName) {
         viewModel.loadPlaylist(playlistUrl, playlistName)
@@ -268,6 +277,56 @@ fun YouTubePlaylistDetailScreen(
                                             else "Import to library",
                                     )
                                 }
+
+                                FilledTonalIconToggleButton(
+                                    checked = state.isFavorite,
+                                    onCheckedChange = { viewModel.toggleFavorite() },
+                                    colors = IconToggleButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        checkedContentColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (state.isFavorite) R.drawable.ic_favorite
+                                            else R.drawable.ic_favorite_border,
+                                        ),
+                                        contentDescription = if (state.isFavorite) "Remove from favorites"
+                                            else "Add to favorites",
+                                    )
+                                }
+
+                                val allDownloaded = state.tracks.isNotEmpty() &&
+                                    state.tracks.all { it.id in state.downloadedTrackIds }
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        if (allDownloaded) {
+                                            showDeleteDialog = true
+                                        } else {
+                                            viewModel.downloadAll()
+                                        }
+                                    },
+                                    enabled = !state.isDownloading,
+                                ) {
+                                    if (state.isDownloading) {
+                                        CircularWavyProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    } else {
+                                        Icon(
+                                            painter = painterResource(
+                                                if (allDownloaded) R.drawable.ic_download_done
+                                                else R.drawable.ic_download,
+                                            ),
+                                            contentDescription = if (allDownloaded) "Delete downloads"
+                                                else "Download all",
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -326,5 +385,28 @@ fun YouTubePlaylistDetailScreen(
                 }
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Downloads") },
+            text = { Text("Delete all downloaded tracks from this playlist?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAllDownloads()
+                        showDeleteDialog = false
+                    },
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
     }
 }
