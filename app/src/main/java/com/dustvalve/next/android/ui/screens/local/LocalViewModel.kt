@@ -33,7 +33,10 @@ data class LocalUiState(
     val query: String = "",
     val searchResults: List<Track> = emptyList(),
     val isSearching: Boolean = false,
+    val searchFilter: LocalSearchFilter? = null,
 )
+
+enum class LocalSearchFilter { TRACKS, ARTISTS, ALBUMS }
 
 enum class LocalSortOption(val label: String) {
     TITLE_AZ("Title A-Z"),
@@ -219,6 +222,15 @@ class LocalViewModel @Inject constructor(
         }
     }
 
+    fun onSearchFilterSelected(filter: LocalSearchFilter?) {
+        _uiState.update { it.copy(searchFilter = filter, searchResults = emptyList()) }
+        val query = _uiState.value.query
+        if (query.isNotBlank()) {
+            searchJob?.cancel()
+            searchJob = viewModelScope.launch { performSearch(query) }
+        }
+    }
+
     fun removeRecentSearch(query: String) {
         viewModelScope.launch { recentSearchDao.delete(query, "local") }
     }
@@ -238,8 +250,16 @@ class LocalViewModel @Inject constructor(
     private suspend fun performSearch(query: String) {
         _uiState.update { it.copy(isSearching = true) }
         try {
+            val filter = _uiState.value.searchFilter
             val results = withContext(Dispatchers.IO) {
-                trackDao.searchLocalTracks(query).map { it.toDomain(isFavorite = false) }
+                val all = trackDao.searchLocalTracks(query).map { it.toDomain(isFavorite = false) }
+                val lowerQuery = query.lowercase()
+                when (filter) {
+                    null -> all
+                    LocalSearchFilter.TRACKS -> all.filter { it.title.lowercase().contains(lowerQuery) }
+                    LocalSearchFilter.ARTISTS -> all.filter { it.artist.lowercase().contains(lowerQuery) }
+                    LocalSearchFilter.ALBUMS -> all.filter { it.albumTitle.lowercase().contains(lowerQuery) }
+                }
             }
             _uiState.update { it.copy(searchResults = results, isSearching = false) }
         } catch (e: Exception) {

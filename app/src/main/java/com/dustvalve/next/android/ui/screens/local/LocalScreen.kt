@@ -386,6 +386,36 @@ fun LocalScreen(
                 state = searchBarState,
                 inputField = inputField,
             ) {
+                // Type filter chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = state.searchFilter == null,
+                        onClick = { viewModel.onSearchFilterSelected(null) },
+                        label = { Text("All") },
+                    )
+                    FilterChip(
+                        selected = state.searchFilter == LocalSearchFilter.ARTISTS,
+                        onClick = { viewModel.onSearchFilterSelected(LocalSearchFilter.ARTISTS) },
+                        label = { Text("Artists") },
+                    )
+                    FilterChip(
+                        selected = state.searchFilter == LocalSearchFilter.ALBUMS,
+                        onClick = { viewModel.onSearchFilterSelected(LocalSearchFilter.ALBUMS) },
+                        label = { Text("Albums") },
+                    )
+                    FilterChip(
+                        selected = state.searchFilter == LocalSearchFilter.TRACKS,
+                        onClick = { viewModel.onSearchFilterSelected(LocalSearchFilter.TRACKS) },
+                        label = { Text("Tracks") },
+                    )
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()

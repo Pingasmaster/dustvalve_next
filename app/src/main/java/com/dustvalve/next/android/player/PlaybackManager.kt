@@ -286,6 +286,17 @@ class PlaybackManager @Inject constructor(
         player.pause()
     }
 
+    fun stop() {
+        if (released) return
+        player.stop()
+        player.clearMediaItems()
+        _isPlaying.value = false
+        _currentPosition.value = 0L
+        _duration.value = 0L
+        _playbackState.value = Player.STATE_IDLE
+        stopPositionUpdates()
+    }
+
     fun togglePlayPause() {
         if (released) return
         if (player.isPlaying) {

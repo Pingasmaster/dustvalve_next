@@ -419,6 +419,11 @@ class PlayerViewModel @Inject constructor(
         playbackManager.seekTo(ms)
     }
 
+    fun onStop() {
+        playbackManager.stop()
+        queueManager.clear()
+    }
+
     fun onToggleShuffle() {
         val newValue = !playbackManager.shuffleEnabled.value
         playbackManager.setShuffleEnabled(newValue)

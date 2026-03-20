@@ -317,9 +317,9 @@ fun YouTubeScreen(
                         label = { Text("All") },
                     )
                     FilterChip(
-                        selected = state.selectedFilter == "songs",
-                        onClick = { viewModel.onFilterSelected("songs") },
-                        label = { Text("Songs") },
+                        selected = state.selectedFilter == "artists",
+                        onClick = { viewModel.onFilterSelected("artists") },
+                        label = { Text("Artists") },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "playlists",
@@ -327,9 +327,9 @@ fun YouTubeScreen(
                         label = { Text("Playlists") },
                     )
                     FilterChip(
-                        selected = state.selectedFilter == "artists",
-                        onClick = { viewModel.onFilterSelected("artists") },
-                        label = { Text("Artists") },
+                        selected = state.selectedFilter == "songs",
+                        onClick = { viewModel.onFilterSelected("songs") },
+                        label = { Text("Tracks") },
                     )
                 }
 
