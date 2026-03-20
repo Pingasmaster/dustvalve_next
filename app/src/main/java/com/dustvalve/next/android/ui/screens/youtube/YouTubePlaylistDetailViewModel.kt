@@ -6,6 +6,7 @@ import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.domain.model.Track
@@ -31,6 +32,7 @@ data class YouTubePlaylistDetailUiState(
     val error: String? = null,
     val isImported: Boolean = false,
     val isImporting: Boolean = false,
+    val importedPlaylistId: String? = null,
     val isFavorite: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
@@ -43,6 +45,7 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
     private val trackDao: TrackDao,
     private val database: DustvalveNextDatabase,
     private val favoriteDao: FavoriteDao,
+    private val playlistDao: PlaylistDao,
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
 ) : ViewModel() {
@@ -74,12 +77,16 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
             try {
                 val (tracks, fetchedName) = youtubeRepository.getPlaylistTracks(url)
                 val isFav = favoriteDao.isFavorite(url)
+                val displayName = if (_uiState.value.playlistName.isBlank()) fetchedName else _uiState.value.playlistName
+                val existingPlaylist = playlistDao.getPlaylistByName(displayName)
                 _uiState.update {
                     it.copy(
                         tracks = tracks,
-                        playlistName = if (it.playlistName.isBlank()) fetchedName else it.playlistName,
+                        playlistName = displayName,
                         isLoading = false,
                         isFavorite = isFav,
+                        isImported = existingPlaylist != null,
+                        importedPlaylistId = existingPlaylist?.id,
                     )
                 }
             } catch (e: Exception) {
@@ -97,12 +104,14 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isImporting = true) }
         viewModelScope.launch {
             try {
+                val playlistId: String
                 database.withTransaction {
                     trackDao.insertAll(state.tracks.map { it.toEntity() })
                     val playlist = playlistRepository.createPlaylist(state.playlistName)
+                    playlistId = playlist.id
                     playlistRepository.addTracksToPlaylist(playlist.id, state.tracks.map { it.id })
                 }
-                _uiState.update { it.copy(isImported = true, isImporting = false) }
+                _uiState.update { it.copy(isImported = true, isImporting = false, importedPlaylistId = playlistId) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update { it.copy(isImporting = false, error = "Failed to import: ${e.message}") }
@@ -119,6 +128,13 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
             try {
                 if (prev) {
                     favoriteDao.delete(url)
+                    // Remove the imported playlist from library
+                    val playlistId = _uiState.value.importedPlaylistId
+                        ?: playlistDao.getPlaylistByName(_uiState.value.playlistName)?.id
+                    if (playlistId != null) {
+                        playlistRepository.deletePlaylist(playlistId)
+                        _uiState.update { it.copy(isImported = false, importedPlaylistId = null) }
+                    }
                 } else {
                     favoriteDao.insert(FavoriteEntity(id = url, type = "youtube_playlist"))
                     importToLibrary()
