@@ -69,6 +69,18 @@ class QueueManager @Inject constructor() {
         }
     }
 
+    fun playNext(track: Track) {
+        _state.update { s ->
+            if (s.tracks.isEmpty() || s.currentIndex < 0) {
+                QueueState(tracks = listOf(track), currentIndex = 0)
+            } else {
+                val insertIndex = s.currentIndex + 1
+                val newTracks = s.tracks.toMutableList().apply { add(insertIndex, track) }
+                QueueState(tracks = newTracks, currentIndex = s.currentIndex)
+            }
+        }
+    }
+
     fun removeFromQueue(index: Int) {
         _state.update { s ->
             if (index !in s.tracks.indices) return@update s

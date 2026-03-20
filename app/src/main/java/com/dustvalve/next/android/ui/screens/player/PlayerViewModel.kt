@@ -634,6 +634,87 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun removeFromQueue(index: Int) {
+        queueManager.removeFromQueue(index)
+    }
+
+    fun toggleFavoriteById(trackId: String) {
+        viewModelScope.launch {
+            try {
+                val newIsFavorite = libraryRepository.toggleTrackFavorite(trackId)
+                val currentQueue = queueManager.queue.value
+                val currentIndex = queueManager.currentIndex.value
+                val updatedQueue = currentQueue.toMutableList()
+                for (i in updatedQueue.indices) {
+                    if (updatedQueue[i].id == trackId) {
+                        updatedQueue[i] = updatedQueue[i].copy(isFavorite = newIsFavorite)
+                    }
+                }
+                if (currentIndex in updatedQueue.indices) {
+                    queueManager.setQueue(updatedQueue, currentIndex)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun playNext(track: Track) {
+        queueManager.playNext(track)
+        _extraState.update {
+            it.copy(
+                snackbarMessage = "'${track.title}' will play next",
+                isSnackbarError = false,
+            )
+        }
+    }
+
+    fun addTrackToPlaylist(playlistId: String, trackId: String) {
+        viewModelScope.launch {
+            try {
+                playlistRepository.addTrackToPlaylist(playlistId, trackId)
+                val playlist = _extraState.value.playlists.find { it.id == playlistId }
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = "Added to ${playlist?.name ?: "playlist"}",
+                        isSnackbarError = false,
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = e.message ?: "Failed to add to playlist",
+                        isSnackbarError = true,
+                    )
+                }
+            }
+        }
+    }
+
+    fun createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, trackId: String) {
+        viewModelScope.launch {
+            try {
+                val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
+                playlistRepository.addTrackToPlaylist(playlist.id, trackId)
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = "Added to ${playlist.name}",
+                        isSnackbarError = false,
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = e.message ?: "Failed to create playlist",
+                        isSnackbarError = true,
+                    )
+                }
+            }
+        }
+    }
+
     fun clearSnackbar() {
         _extraState.update { it.copy(snackbarMessage = null) }
     }

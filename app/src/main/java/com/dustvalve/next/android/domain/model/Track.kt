@@ -13,6 +13,7 @@ data class Track(
     val albumTitle: String,
     val isFavorite: Boolean = false,
     val source: TrackSource = TrackSource.BANDCAMP,
+    val folderUri: String = "",
 ) {
     val isLocal: Boolean get() = source == TrackSource.LOCAL
 }

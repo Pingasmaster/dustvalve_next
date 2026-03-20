@@ -1,14 +1,18 @@
 package com.dustvalve.next.android.ui.screens.local
 
+import android.content.Context
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.domain.model.Track
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -16,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -30,11 +35,43 @@ data class LocalUiState(
     val isSearching: Boolean = false,
 )
 
+enum class LocalSortOption(val label: String) {
+    TITLE_AZ("Title A-Z"),
+    ARTIST_AZ("Artist A-Z"),
+    ALBUM_AZ("Album A-Z"),
+    SHORTEST("Shortest First"),
+    LONGEST("Longest First"),
+}
+
+enum class DurationRange(val label: String) {
+    UNDER_3("Under 3 min"),
+    THREE_TO_FIVE("3-5 min"),
+    OVER_5("Over 5 min"),
+}
+
+data class LocalFilterState(
+    val sortOption: LocalSortOption = LocalSortOption.TITLE_AZ,
+    val selectedArtists: Set<String> = emptySet(),
+    val selectedAlbums: Set<String> = emptySet(),
+    val selectedDurations: Set<DurationRange> = emptySet(),
+    val favoritesOnly: Boolean = false,
+    val selectedFolders: Set<String> = emptySet(),
+) {
+    val hasActiveFilters: Boolean get() =
+        selectedArtists.isNotEmpty() ||
+            selectedAlbums.isNotEmpty() ||
+            selectedDurations.isNotEmpty() ||
+            favoritesOnly ||
+            selectedFolders.isNotEmpty()
+}
+
 @HiltViewModel
 class LocalViewModel @Inject constructor(
     private val trackDao: TrackDao,
+    private val favoriteDao: FavoriteDao,
     private val recentSearchDao: RecentSearchDao,
     private val settingsDataStore: SettingsDataStore,
+    @param:ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LocalUiState())
@@ -47,9 +84,116 @@ class LocalViewModel @Inject constructor(
     val searchHistoryEnabled: StateFlow<Boolean> = settingsDataStore.searchHistoryEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
-    val allLocalTracks: StateFlow<List<Track>> = trackDao.getLocalTracks()
-        .map { entities -> entities.map { it.toDomain(isFavorite = false) } }
+    val allLocalTracks: StateFlow<List<Track>> = combine(
+        trackDao.getLocalTracks(),
+        favoriteDao.getAllByType("track"),
+    ) { entities, favorites ->
+        val favoriteIds = favorites.map { it.id }.toSet()
+        entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Filter state
+
+    private val _filterState = MutableStateFlow(LocalFilterState())
+    val filterState: StateFlow<LocalFilterState> = _filterState.asStateFlow()
+
+    val filteredTracks: StateFlow<List<Track>> = combine(
+        allLocalTracks,
+        _filterState,
+    ) { tracks, filters ->
+        tracks
+            .filter { applyFilters(it, filters) }
+            .sortedWith(getSortComparator(filters.sortOption))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val availableArtists: StateFlow<List<String>> = allLocalTracks
+        .map { tracks -> tracks.map { it.artist }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val availableAlbums: StateFlow<List<String>> = allLocalTracks
+        .map { tracks -> tracks.map { it.albumTitle }.filter { it.isNotBlank() }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val availableFolders: StateFlow<List<String>> = allLocalTracks
+        .map { tracks -> tracks.map { it.folderUri }.filter { it.isNotBlank() }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // Filter mutation functions
+
+    fun setSortOption(option: LocalSortOption) {
+        _filterState.update { it.copy(sortOption = option) }
+    }
+
+    fun toggleArtist(artist: String) {
+        _filterState.update { state ->
+            val newSet = state.selectedArtists.toMutableSet()
+            if (artist in newSet) newSet.remove(artist) else newSet.add(artist)
+            state.copy(selectedArtists = newSet)
+        }
+    }
+
+    fun toggleAlbum(album: String) {
+        _filterState.update { state ->
+            val newSet = state.selectedAlbums.toMutableSet()
+            if (album in newSet) newSet.remove(album) else newSet.add(album)
+            state.copy(selectedAlbums = newSet)
+        }
+    }
+
+    fun toggleDuration(range: DurationRange) {
+        _filterState.update { state ->
+            val newSet = state.selectedDurations.toMutableSet()
+            if (range in newSet) newSet.remove(range) else newSet.add(range)
+            state.copy(selectedDurations = newSet)
+        }
+    }
+
+    fun toggleFavoritesFilter() {
+        _filterState.update { it.copy(favoritesOnly = !it.favoritesOnly) }
+    }
+
+    fun toggleFolder(folder: String) {
+        _filterState.update { state ->
+            val newSet = state.selectedFolders.toMutableSet()
+            if (folder in newSet) newSet.remove(folder) else newSet.add(folder)
+            state.copy(selectedFolders = newSet)
+        }
+    }
+
+    fun clearFilters() {
+        _filterState.update { LocalFilterState() }
+    }
+
+    private fun applyFilters(track: Track, filters: LocalFilterState): Boolean {
+        if (filters.selectedArtists.isNotEmpty() && track.artist !in filters.selectedArtists) return false
+        if (filters.selectedAlbums.isNotEmpty() && track.albumTitle !in filters.selectedAlbums) return false
+        if (filters.selectedDurations.isNotEmpty()) {
+            val minutes = track.duration / 60f
+            val matches = filters.selectedDurations.any { range ->
+                when (range) {
+                    DurationRange.UNDER_3 -> minutes < 3f
+                    DurationRange.THREE_TO_FIVE -> minutes in 3f..5f
+                    DurationRange.OVER_5 -> minutes > 5f
+                }
+            }
+            if (!matches) return false
+        }
+        if (filters.favoritesOnly && !track.isFavorite) return false
+        if (filters.selectedFolders.isNotEmpty() && track.folderUri !in filters.selectedFolders) return false
+        return true
+    }
+
+    private fun getSortComparator(option: LocalSortOption): Comparator<Track> = when (option) {
+        LocalSortOption.TITLE_AZ -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+        LocalSortOption.ARTIST_AZ -> compareBy<Track, String>(String.CASE_INSENSITIVE_ORDER) { it.artist }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+        LocalSortOption.ALBUM_AZ -> compareBy<Track, String>(String.CASE_INSENSITIVE_ORDER) { it.albumTitle }
+            .thenBy { it.trackNumber }
+        LocalSortOption.SHORTEST -> compareBy { it.duration }
+        LocalSortOption.LONGEST -> compareByDescending { it.duration }
+    }
+
+    // Search
 
     private var searchJob: Job? = null
 
@@ -101,6 +245,21 @@ class LocalViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             _uiState.update { it.copy(isSearching = false) }
+        }
+    }
+
+    fun deleteLocalTrack(track: Track) {
+        viewModelScope.launch {
+            try {
+                track.streamUrl?.let { uri ->
+                    try {
+                        appContext.contentResolver.delete(uri.toUri(), null, null)
+                    } catch (_: Exception) { }
+                }
+                trackDao.deleteByIdsChunk(listOf(track.id))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 }
