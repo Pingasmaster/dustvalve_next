@@ -144,6 +144,8 @@ fun FullPlayer(
     val track = state.currentTrack
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     // Snackbar handling
     LaunchedEffect(state.snackbarMessage) {
         state.snackbarMessage?.let { message ->
@@ -329,6 +331,7 @@ fun FullPlayer(
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
                 val upNextCount = if (state.currentQueueIndex >= 0)
@@ -348,8 +351,25 @@ fun FullPlayer(
                 }
             },
             topBar = {
-                TopAppBar(
-                    title = { },
+                TwoRowsTopAppBar(
+                    title = { expanded ->
+                        Text(
+                            text = if (expanded) "Now Playing" else (track?.title ?: "Now Playing"),
+                            style = MaterialTheme.typography.titleMediumEmphasized,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    subtitle = { expanded ->
+                        if (expanded && track != null) {
+                            Text(
+                                text = track.title,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = onCollapse) {
                             Icon(
@@ -368,10 +388,11 @@ fun FullPlayer(
                             }
                         }
                     },
+                    titleHorizontalAlignment = Alignment.CenterHorizontally,
+                    scrollBehavior = scrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ),
-                    windowInsets = WindowInsets(0),
                 )
             },
         ) { paddingValues ->
@@ -1469,7 +1490,7 @@ fun FullPlayer(
         ModalBottomSheet(
             onDismissRequest = { showQueueSheet = false },
             sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
                 text = "Up next (${allUpNextTracks.size})",
@@ -1529,6 +1550,7 @@ fun FullPlayer(
                     )
                     SwipeToDismissBox(
                         state = dismissState,
+                        gesturesEnabled = queueDraggedIndex == -1,
                         modifier = Modifier
                             .padding(
                                 top = if (upNextIndex == 0) 0.dp else 1.dp,
@@ -1542,19 +1564,21 @@ fun FullPlayer(
                             )
                             .zIndex(if (isDragging || queueTrack.id == queueDroppingItemKey) 1f else 0f),
                         backgroundContent = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(itemShape)
-                                    .background(MaterialTheme.colorScheme.errorContainer)
-                                    .padding(horizontal = 20.dp),
-                                contentAlignment = Alignment.CenterEnd,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_delete),
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer,
-                                )
+                            if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(itemShape)
+                                        .background(MaterialTheme.colorScheme.errorContainer)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_delete),
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                }
                             }
                         },
                         enableDismissFromStartToEnd = false,
@@ -1576,17 +1600,12 @@ fun FullPlayer(
                                 .onGloballyPositioned { coords ->
                                     queueItemHeights[upNextIndex] = coords.size.height.toFloat()
                                 }
-                                .combinedClickable(
+                                .clickable(
                                     interactionSource = interactionSource,
                                     indication = LocalIndication.current,
-                                    onClick = {
-                                        playerViewModel.skipToQueueIndex(queueIndex)
-                                    },
-                                    onLongClick = {
-                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        upNextContextTrack = queueTrack to queueIndex
-                                    },
-                                ),
+                                ) {
+                                    playerViewModel.skipToQueueIndex(queueIndex)
+                                },
                             shadowElevation = if (!isDragging) elevation else 0.dp,
                         ) {
                             ListItem(
