@@ -90,8 +90,11 @@ fun SettingsScreen(
 
     LaunchedEffect(state.signOutSuccess) {
         if (state.signOutSuccess) {
-            snackbarHostState.showSnackbar("Successfully disconnected")
-            viewModel.clearSignOutSuccess()
+            try {
+                snackbarHostState.showSnackbar("Successfully disconnected")
+            } finally {
+                viewModel.clearSignOutSuccess()
+            }
         }
     }
 
@@ -232,8 +235,11 @@ fun SettingsScreen(
             LaunchedEffect(state.scanMessage) {
                 val message = state.scanMessage
                 if (message != null) {
-                    snackbarHostState.showSnackbar(message)
-                    viewModel.clearScanMessage()
+                    try {
+                        snackbarHostState.showSnackbar(message)
+                    } finally {
+                        viewModel.clearScanMessage()
+                    }
                 }
             }
 

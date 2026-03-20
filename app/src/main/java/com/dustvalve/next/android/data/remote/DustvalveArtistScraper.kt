@@ -48,9 +48,24 @@ class DustvalveArtistScraper @Inject constructor(
 
         val call = client.newCall(request)
         coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
-        val html = call.execute().use { response ->
+        var html = call.execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            response.body.string()
+            val finalPath = response.request.url.encodedPath
+            if (finalPath.contains("/album/") || finalPath.contains("/track/")) {
+                // Main page redirected to an album/track page — mobile layout lacks
+                // artist metadata, so re-fetch the /music page instead.
+                response.body.string() // consume body to release connection
+                val baseUrl = artistUrl.trimEnd('/')
+                val musicRequest = Request.Builder().url("$baseUrl/music").build()
+                val musicCall = client.newCall(musicRequest)
+                coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) musicCall.cancel() }
+                musicCall.execute().use { musicResponse ->
+                    if (!musicResponse.isSuccessful) throw IOException("HTTP ${musicResponse.code}")
+                    musicResponse.body.string()
+                }
+            } else {
+                response.body.string()
+            }
         }
         ensureActive()
 

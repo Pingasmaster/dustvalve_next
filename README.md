@@ -5,8 +5,8 @@
 <h1 align="center">Dustvalve Next</h1>
 
 <p align="center">
-  <b>A free and open-source music player for Android</b><br/>
-  Bandcamp discovery, YouTube playback, and local music — all in one place.
+  <b>An emotional music player for Android, made with intention</b><br/>
+  Touch, swipe, drag, double-tap, and slide your way through Bandcamp, YouTube, and your local library.
 </p>
 
 <p align="center">
@@ -61,6 +61,20 @@ Dustvalve Next is a multi-source music player that lets you browse Bandcamp, sea
 - OLED pure black option
 - Wavy animated seek bar
 - Responsive layout — bottom nav on phones, navigation rail on tablets
+
+**Gesture-driven**
+- **Tap** album art to play/pause, **double-tap** to favorite
+- **Swipe** album art left or right to skip tracks
+- **Long-press** album art to browse upcoming tracks in a carousel
+- **Drag** the seek bar or volume slider to scrub and adjust
+- **Swipe** queue items or playlist tracks to remove them
+- **Long-press and drag** handles to reorder queue and playlists
+- **Long-press** library items for context menus
+- **Tap** stacked covers behind the album art to jump to upcoming tracks
+
+**Lightweight**
+- ~4 MB release APK — minimal dependencies, no bloat
+- Instant startup with zero splash screen delay
 
 **Privacy-respecting**
 - No telemetry or tracking
