@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -93,6 +96,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Playlist
+import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.RepeatMode
 import androidx.compose.foundation.background
@@ -105,7 +109,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun FullPlayer(
     playerViewModel: PlayerViewModel,
@@ -150,6 +154,9 @@ fun FullPlayer(
     var showCreatePlaylistSheet by remember { mutableStateOf(false) }
     var showDebugSheet by remember { mutableStateOf(false) }
     var showVolumeSheet by remember { mutableStateOf(false) }
+    var upNextContextTrack by remember { mutableStateOf<Pair<Track, Int>?>(null) }
+    var showUpNextPlaylistSheet by remember { mutableStateOf(false) }
+    var showUpNextCreatePlaylistSheet by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
 
     // Full-screen volume control sheet
@@ -369,9 +376,9 @@ fun FullPlayer(
                     .padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Album art with single-tap play/pause and double-tap heart
                 val albumArtShape = if (heartProgress.value > 0f) {
@@ -825,7 +832,7 @@ fun FullPlayer(
                 // Up Next section — use actual queue index
                 val currentIndex = state.currentQueueIndex
                 val upNextTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
-                    state.queue.subList(currentIndex + 1, minOf(currentIndex + 6, state.queue.size))
+                    state.queue.subList(currentIndex + 1, state.queue.size)
                 } else {
                     emptyList()
                 }
@@ -853,10 +860,6 @@ fun FullPlayer(
                                 val isDownloaded = queueTrack.id in state.downloadedTrackIds || queueTrack.isLocal
 
                                 Surface(
-                                    onClick = {
-                                        playerViewModel.skipToQueueIndex(queueIndex)
-                                    },
-                                    interactionSource = interactionSource,
                                     shape = segmentedItemShape(upNextIndex, upNextTracks.size),
                                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                                     modifier = Modifier
@@ -867,7 +870,18 @@ fun FullPlayer(
                                         .graphicsLayer {
                                             scaleX = pressScale
                                             scaleY = pressScale
-                                        },
+                                        }
+                                        .combinedClickable(
+                                            interactionSource = interactionSource,
+                                            indication = LocalIndication.current,
+                                            onClick = {
+                                                playerViewModel.skipToQueueIndex(queueIndex)
+                                            },
+                                            onLongClick = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                upNextContextTrack = queueTrack to queueIndex
+                                            },
+                                        ),
                                 ) {
                                     ListItem(
                                         headlineContent = {
@@ -902,17 +916,28 @@ fun FullPlayer(
                                                 }
                                             }
                                         },
-                                        trailingContent = if (isDownloaded) {
-                                            {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.ic_download_done),
-                                                    contentDescription = "Downloaded",
-                                                    modifier = Modifier.size(18.dp),
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
+                                        trailingContent = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (isDownloaded) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.ic_download_done),
+                                                        contentDescription = "Downloaded",
+                                                        modifier = Modifier.size(18.dp),
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
+                                                IconButton(
+                                                    onClick = { playerViewModel.removeFromQueue(queueIndex) },
+                                                    modifier = Modifier.size(32.dp),
+                                                ) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.ic_close),
+                                                        contentDescription = "Remove from queue",
+                                                        modifier = Modifier.size(18.dp),
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
                                             }
-                                        } else {
-                                            null
                                         },
                                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                     )
@@ -1176,6 +1201,189 @@ fun FullPlayer(
                 showCreatePlaylistSheet = false
                 showPlaylistSheet = false
                 playerViewModel.createPlaylistAndAddTrack(name, shapeKey, iconUrl)
+            },
+            isCreate = true,
+        )
+    }
+
+    // Up Next context menu bottom sheet
+    upNextContextTrack?.let { (contextTrack, contextQueueIndex) ->
+        ModalBottomSheet(
+            onDismissRequest = { upNextContextTrack = null },
+        ) {
+            Text(
+                text = contextTrack.title,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+
+            ListItem(
+                headlineContent = {
+                    Text(if (contextTrack.isFavorite) "Remove from Favorites" else "Add to Favorites")
+                },
+                leadingContent = {
+                    Icon(
+                        painter = painterResource(
+                            if (contextTrack.isFavorite) R.drawable.ic_favorite
+                            else R.drawable.ic_favorite_border,
+                        ),
+                        contentDescription = null,
+                    )
+                },
+                modifier = Modifier.clickable {
+                    playerViewModel.toggleFavoriteById(contextTrack.id)
+                    upNextContextTrack = null
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
+
+            ListItem(
+                headlineContent = { Text("Add to Playlist") },
+                leadingContent = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_playlist_add),
+                        contentDescription = null,
+                    )
+                },
+                modifier = Modifier.clickable {
+                    showUpNextPlaylistSheet = true
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
+
+            ListItem(
+                headlineContent = {
+                    Text(
+                        text = "Remove from Queue",
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                },
+                leadingContent = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                },
+                modifier = Modifier.clickable {
+                    playerViewModel.removeFromQueue(contextQueueIndex)
+                    upNextContextTrack = null
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+        }
+    }
+
+    // Up Next — add to playlist sheet
+    if (showUpNextPlaylistSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showUpNextPlaylistSheet = false },
+        ) {
+            val userPlaylists = state.playlists.filter { !it.isSystem }
+            Box {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Add to playlist",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                    if (userPlaylists.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(horizontal = 32.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(96.dp)
+                                        .clip(AppShapes.EmptyStateIcon)
+                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_queue_music),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "No playlists yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "Create one to get started",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    } else {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        ) {
+                            userPlaylists.forEachIndexed { index, playlist ->
+                                Surface(
+                                    shape = segmentedItemShape(index, userPlaylists.size),
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ) {
+                                    PlaylistListItem(
+                                        playlist = playlist,
+                                        onClick = {
+                                            showUpNextPlaylistSheet = false
+                                            upNextContextTrack?.let { (ctxTrack, _) ->
+                                                playerViewModel.addTrackToPlaylist(playlist.id, ctxTrack.id)
+                                            }
+                                            upNextContextTrack = null
+                                        },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(72.dp))
+                }
+                FloatingActionButton(
+                    onClick = { showUpNextCreatePlaylistSheet = true },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 16.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_add),
+                        contentDescription = "Create playlist",
+                    )
+                }
+            }
+        }
+    }
+
+    // Up Next — create playlist sheet
+    if (showUpNextCreatePlaylistSheet) {
+        PlaylistEditSheet(
+            onDismiss = { showUpNextCreatePlaylistSheet = false },
+            onConfirm = { name, shapeKey, iconUrl ->
+                showUpNextCreatePlaylistSheet = false
+                showUpNextPlaylistSheet = false
+                upNextContextTrack?.let { (ctxTrack, _) ->
+                    playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, ctxTrack.id)
+                }
+                upNextContextTrack = null
             },
             isCreate = true,
         )
