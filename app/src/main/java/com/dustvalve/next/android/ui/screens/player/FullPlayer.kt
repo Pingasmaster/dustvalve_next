@@ -28,6 +28,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -101,6 +102,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.graphicsLayer
@@ -180,6 +182,7 @@ fun FullPlayer(
     var showVolumeSheet by remember { mutableStateOf(false) }
     var showQueueSheet by remember { mutableStateOf(false) }
     var isCarouselMode by remember { mutableStateOf(false) }
+    val albumSwipeOffsetX = remember { Animatable(0f) }
     var upNextContextTrack by remember { mutableStateOf<Pair<Track, Int>?>(null) }
     var showUpNextPlaylistSheet by remember { mutableStateOf(false) }
     var showUpNextCreatePlaylistSheet by remember { mutableStateOf(false) }
@@ -422,6 +425,8 @@ fun FullPlayer(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
 
+                Spacer(modifier = Modifier.height(48.dp))
+
                 // Album art with single-tap play/pause and double-tap heart
                 val albumArtShape = if (heartProgress.value > 0f) {
                     PlaybackMorphShape(heartMorph, heartProgress.value)
@@ -455,9 +460,9 @@ fun FullPlayer(
                         label = "albumArtCarousel",
                     ) { carousel ->
                         if (carousel) {
-                            // Carousel mode: M3E HorizontalMultiBrowseCarousel
-                            val carouselTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
-                                state.queue.subList(currentIndex + 1, minOf(currentIndex + 26, state.queue.size))
+                            // Carousel mode: M3E HorizontalMultiBrowseCarousel (starts with current track)
+                            val carouselTracks = if (currentIndex >= 0) {
+                                state.queue.subList(currentIndex, minOf(currentIndex + 26, state.queue.size))
                             } else {
                                 emptyList()
                             }
@@ -471,7 +476,7 @@ fun FullPlayer(
                                     itemSpacing = 8.dp,
                                 ) { page ->
                                     val carouselTrack = carouselTracks[page]
-                                    val carouselQueueIndex = currentIndex + 1 + page
+                                    val carouselQueueIndex = currentIndex + page
 
                                     Box(
                                         modifier = Modifier
@@ -534,6 +539,8 @@ fun FullPlayer(
                                                 translationY = offsetY.toPx()
                                                 scaleX = stackScale
                                                 scaleY = stackScale
+                                                rotationZ = (stackIndex + 1) * 5f
+                                                transformOrigin = TransformOrigin(1f, 0f)
                                             }
                                             .clip(PlaybackMorphShape(heartMorph, 0f))
                                             .clickable {
@@ -557,10 +564,43 @@ fun FullPlayer(
                                 }
 
                                 // Main album art (on top)
+                                val swipeSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
                                 val albumArtGestureModifier = Modifier
                                     .fillMaxSize()
                                     .zIndex(1f)
+                                    .graphicsLayer {
+                                        translationX = albumSwipeOffsetX.value
+                                    }
                                     .clip(albumArtShape)
+                                    .pointerInput(Unit) {
+                                        detectHorizontalDragGestures(
+                                            onDragEnd = {
+                                                val threshold = size.width * 0.3f
+                                                if (albumSwipeOffsetX.value < -threshold) {
+                                                    scope.launch {
+                                                        albumSwipeOffsetX.animateTo(-size.width.toFloat(), swipeSpec)
+                                                        playerViewModel.onNext()
+                                                        albumSwipeOffsetX.snapTo(0f)
+                                                    }
+                                                } else if (albumSwipeOffsetX.value > threshold) {
+                                                    scope.launch {
+                                                        albumSwipeOffsetX.animateTo(size.width.toFloat(), swipeSpec)
+                                                        playerViewModel.onPrevious()
+                                                        albumSwipeOffsetX.snapTo(0f)
+                                                    }
+                                                } else {
+                                                    scope.launch { albumSwipeOffsetX.animateTo(0f, swipeSpec) }
+                                                }
+                                            },
+                                            onDragCancel = {
+                                                scope.launch { albumSwipeOffsetX.animateTo(0f, swipeSpec) }
+                                            },
+                                            onHorizontalDrag = { change, dragAmount ->
+                                                change.consume()
+                                                scope.launch { albumSwipeOffsetX.snapTo(albumSwipeOffsetX.value + dragAmount) }
+                                            },
+                                        )
+                                    }
                                     .pointerInput(Unit) {
                                         detectTapGestures(
                                             onTap = {

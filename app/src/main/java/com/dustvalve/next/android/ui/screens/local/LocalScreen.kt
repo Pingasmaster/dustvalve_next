@@ -304,16 +304,15 @@ fun LocalScreen(
                             selected = filterState.favoritesOnly,
                             onClick = { viewModel.toggleFavoritesFilter() },
                             label = { Text("Favorites") },
-                            leadingIcon = if (filterState.favoritesOnly) {
-                                {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_check),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                }
-                            } else {
-                                null
+                            leadingIcon = {
+                                Icon(
+                                    painter = painterResource(
+                                        if (filterState.favoritesOnly) R.drawable.ic_check
+                                        else R.drawable.ic_favorite_border
+                                    ),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
                             },
                         )
 
