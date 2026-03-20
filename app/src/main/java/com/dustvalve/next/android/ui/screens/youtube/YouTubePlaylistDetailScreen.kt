@@ -264,20 +264,6 @@ fun YouTubePlaylistDetailScreen(
                                     )
                                 }
 
-                                FilledTonalIconButton(
-                                    onClick = { viewModel.importToLibrary() },
-                                    enabled = !state.isImported && !state.isImporting && state.tracks.isNotEmpty(),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (state.isImported) R.drawable.ic_check
-                                            else R.drawable.ic_playlist_add,
-                                        ),
-                                        contentDescription = if (state.isImported) "Already imported"
-                                            else "Import to library",
-                                    )
-                                }
-
                                 FilledTonalIconToggleButton(
                                     checked = state.isFavorite,
                                     onCheckedChange = { viewModel.toggleFavorite() },

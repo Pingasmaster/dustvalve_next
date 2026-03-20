@@ -67,6 +67,7 @@ import coil3.compose.AsyncImage
 fun MiniPlayer(
     playerViewModel: PlayerViewModel,
     onExpandClick: () -> Unit,
+    onDragUpProgress: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
@@ -160,31 +161,43 @@ fun MiniPlayer(
                             detectVerticalDragGestures(
                                 onDragStart = { hasPassedThreshold = false },
                                 onDragEnd = {
-                                    val threshold = size.height * 0.35f
-                                    if (swipeOffsetY.value > threshold) {
-                                        scope.launch {
-                                            swipeOffsetY.animateTo(size.height.toFloat(), swipeSpec)
+                                    val downThreshold = size.height * 0.15f
+                                    val upThreshold = size.height * 0.20f
+                                    when {
+                                        swipeOffsetY.value > downThreshold -> {
                                             playerViewModel.onStop()
-                                            swipeOffsetY.snapTo(0f)
+                                            scope.launch { swipeOffsetY.snapTo(0f) }
+                                            onDragUpProgress(0f)
                                         }
-                                    } else if (swipeOffsetY.value < -threshold) {
-                                        scope.launch {
-                                            swipeOffsetY.animateTo(-size.height.toFloat(), swipeSpec)
+                                        swipeOffsetY.value < -upThreshold -> {
                                             onExpandClick()
-                                            swipeOffsetY.snapTo(0f)
+                                            scope.launch { swipeOffsetY.snapTo(0f) }
+                                            onDragUpProgress(0f)
                                         }
-                                    } else {
-                                        scope.launch { swipeOffsetY.animateTo(0f, swipeSpec) }
+                                        else -> {
+                                            scope.launch { swipeOffsetY.animateTo(0f, swipeSpec) }
+                                            onDragUpProgress(0f)
+                                        }
                                     }
                                 },
                                 onDragCancel = {
                                     scope.launch { swipeOffsetY.animateTo(0f, swipeSpec) }
+                                    onDragUpProgress(0f)
                                 },
                                 onVerticalDrag = { change, dragAmount ->
                                     change.consume()
                                     scope.launch { swipeOffsetY.snapTo(swipeOffsetY.value + dragAmount) }
-                                    val threshold = size.height * 0.35f
-                                    val nowPastThreshold = swipeOffsetY.value > threshold || swipeOffsetY.value < -threshold
+                                    // Report upward drag progress for full player preview
+                                    if (swipeOffsetY.value < 0f) {
+                                        val progress = (-swipeOffsetY.value / size.height).coerceIn(0f, 1f)
+                                        onDragUpProgress(progress)
+                                    } else {
+                                        onDragUpProgress(0f)
+                                    }
+                                    // Haptic feedback at threshold
+                                    val downThreshold = size.height * 0.15f
+                                    val upThreshold = size.height * 0.20f
+                                    val nowPastThreshold = swipeOffsetY.value > downThreshold || swipeOffsetY.value < -upThreshold
                                     if (nowPastThreshold && !hasPassedThreshold) {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                                         hasPassedThreshold = true

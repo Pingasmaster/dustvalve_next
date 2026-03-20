@@ -10,12 +10,10 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.Animatable
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -183,6 +181,7 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
     val navViewModel: NavigationViewModel = hiltViewModel()
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
+    val dragProgress by navViewModel.playerDragProgress.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
 
@@ -233,6 +232,7 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                         MiniPlayer(
                             playerViewModel = playerViewModel,
                             onExpandClick = { navViewModel.expandPlayer() },
+                            onDragUpProgress = { navViewModel.setPlayerDragProgress(it) },
                         )
                     },
                 ) { innerPadding ->
@@ -254,6 +254,7 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                         MiniPlayer(
                             playerViewModel = playerViewModel,
                             onExpandClick = { navViewModel.expandPlayer() },
+                            onDragUpProgress = { navViewModel.setPlayerDragProgress(it) },
                         )
                         BottomNavBar(
                             currentTab = currentTab,
@@ -274,27 +275,38 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
             }
         }
 
-        // Full-screen player expand/collapse uses slow spec
-        val slideSpec = MaterialTheme.motionScheme.slowSpatialSpec<IntOffset>()
-        AnimatedVisibility(
-            visible = showFullPlayer,
-            enter = slideInVertically(
-                animationSpec = slideSpec,
-                initialOffsetY = { it },
-            ),
-            exit = slideOutVertically(
-                animationSpec = slideSpec,
-                targetOffsetY = { it },
-            ),
-        ) {
-            FullPlayer(
-                playerViewModel = playerViewModel,
-                onCollapse = { navViewModel.collapsePlayer() },
-                onArtistClick = { url ->
-                    navViewModel.collapsePlayer()
-                    navViewModel.navigateTo(NavDestination.ArtistDetail(url))
-                },
-            )
+        // Full-screen player: offset-driven for swipe preview
+        val expandAnimatable = remember { Animatable(0f) }
+        val expandSpec = MaterialTheme.motionScheme.slowSpatialSpec<Float>()
+        val collapseSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+
+        LaunchedEffect(showFullPlayer) {
+            if (showFullPlayer) {
+                expandAnimatable.animateTo(1f, expandSpec)
+            } else {
+                expandAnimatable.animateTo(0f, collapseSpec)
+            }
+        }
+
+        val effectiveProgress = maxOf(expandAnimatable.value, dragProgress)
+
+        if (effectiveProgress > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationY = size.height * (1f - effectiveProgress)
+                    },
+            ) {
+                FullPlayer(
+                    playerViewModel = playerViewModel,
+                    onCollapse = { navViewModel.collapsePlayer() },
+                    onArtistClick = { url ->
+                        navViewModel.collapsePlayer()
+                        navViewModel.navigateTo(NavDestination.ArtistDetail(url))
+                    },
+                )
+            }
         }
     }
 }

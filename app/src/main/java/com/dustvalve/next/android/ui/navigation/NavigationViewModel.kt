@@ -59,6 +59,13 @@ class NavigationViewModel @Inject constructor(
     private val _showFullPlayer = MutableStateFlow(false)
     val showFullPlayer: StateFlow<Boolean> = _showFullPlayer.asStateFlow()
 
+    private val _playerDragProgress = MutableStateFlow(0f)
+    val playerDragProgress: StateFlow<Float> = _playerDragProgress.asStateFlow()
+
+    fun setPlayerDragProgress(progress: Float) {
+        _playerDragProgress.value = progress
+    }
+
     init {
         viewModelScope.launch {
             providerStateUseCase.activeProviders.collect { providers ->

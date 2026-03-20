@@ -121,6 +121,7 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
                     favoriteDao.delete(url)
                 } else {
                     favoriteDao.insert(FavoriteEntity(id = url, type = "youtube_playlist"))
+                    importToLibrary()
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
