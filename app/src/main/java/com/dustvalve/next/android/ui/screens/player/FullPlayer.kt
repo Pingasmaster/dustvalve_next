@@ -393,6 +393,7 @@ fun FullPlayer(
                     },
                     titleHorizontalAlignment = Alignment.CenterHorizontally,
                     scrollBehavior = scrollBehavior,
+                    windowInsets = WindowInsets(0),
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ),
@@ -1515,13 +1516,15 @@ fun FullPlayer(
         }
 
         // Pagination: load more when near bottom
+        val currentHasMore by rememberUpdatedState(hasMore)
+        val currentDisplayedCount by rememberUpdatedState(displayedTracks.size)
         LaunchedEffect(queueListState) {
             snapshotFlow {
                 val last = queueListState.layoutInfo.visibleItemsInfo.lastOrNull()
                 val totalCount = queueListState.layoutInfo.totalItemsCount
                 last != null && totalCount > 0 && last.index >= totalCount - 3
             }.collect { nearEnd ->
-                if (nearEnd && hasMore && displayedTracks.isNotEmpty()) {
+                if (nearEnd && currentHasMore && currentDisplayedCount > 0) {
                     displayCount += 25
                 }
             }
