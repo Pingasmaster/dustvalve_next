@@ -104,7 +104,7 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isImporting = true) }
         viewModelScope.launch {
             try {
-                val playlistId: String
+                var playlistId: String? = null
                 database.withTransaction {
                     trackDao.insertAll(state.tracks.map { it.toEntity() })
                     val playlist = playlistRepository.createPlaylist(state.playlistName)
