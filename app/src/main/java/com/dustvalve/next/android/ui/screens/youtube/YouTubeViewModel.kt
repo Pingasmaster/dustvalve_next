@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
+import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.domain.model.SearchResult
@@ -52,6 +54,7 @@ class YouTubeViewModel @Inject constructor(
     private val trackDao: TrackDao,
     private val database: DustvalveNextDatabase,
     private val recentSearchDao: RecentSearchDao,
+    private val favoriteDao: FavoriteDao,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(YouTubeUiState())
@@ -213,6 +216,7 @@ class YouTubeViewModel @Inject constructor(
                     val playlist = playlistRepository.createPlaylist(name)
                     playlistRepository.addTracksToPlaylist(playlist.id, tracks.map { it.id })
                 }
+                favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update { it.copy(error = "Failed to import playlist: ${e.message}") }

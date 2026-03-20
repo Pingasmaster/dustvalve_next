@@ -58,6 +58,9 @@ interface PlaylistDao {
     @Query("DELETE FROM playlists WHERE id = :playlistId AND isSystem = 0")
     suspend fun deletePlaylist(playlistId: String): Int
 
+    @Query("SELECT * FROM playlists WHERE name = :name AND isSystem = 0 ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getPlaylistByName(name: String): PlaylistEntity?
+
     @Query("SELECT COUNT(*) FROM playlists")
     suspend fun getPlaylistCount(): Int
 
