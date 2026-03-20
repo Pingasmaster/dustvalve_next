@@ -393,7 +393,6 @@ fun FullPlayer(
                     },
                     titleHorizontalAlignment = Alignment.CenterHorizontally,
                     scrollBehavior = scrollBehavior,
-                    windowInsets = WindowInsets(0),
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ),
