@@ -313,52 +313,139 @@ private fun PlaylistContent(
                     segmentedItemShape(index, reorderableTracks.size)
                 }
 
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = { value ->
-                        if (value == SwipeToDismissBoxValue.EndToStart) {
-                            onRemoveTrack(track.id)
-                            true
-                        } else false
-                    },
-                )
-                SwipeToDismissBox(
-                    state = dismissState,
-                    modifier = Modifier
-                        .padding(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = if (index == 0) 8.dp else 1.dp,
-                            bottom = if (index == reorderableTracks.lastIndex) 0.dp else 1.dp,
-                        )
-                        .animateItem(
-                            fadeInSpec = null,
-                            fadeOutSpec = null,
-                            placementSpec = if (isDragging || track.id == droppingItemKey) null
-                                else MaterialTheme.motionScheme.defaultSpatialSpec(),
-                        )
-                        .zIndex(if (isDragging || track.id == droppingItemKey) 1f else 0f),
-                    backgroundContent = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(itemShape)
-                                .background(MaterialTheme.colorScheme.errorContainer)
-                                .padding(horizontal = 20.dp),
-                            contentAlignment = Alignment.CenterEnd,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_delete),
-                                contentDescription = "Delete",
-                                tint = MaterialTheme.colorScheme.onErrorContainer,
-                            )
-                        }
-                    },
-                    enableDismissFromStartToEnd = false,
-                ) {
+                val itemModifier = Modifier
+                    .padding(
+                        start = 16.dp,
+                        end = 16.dp,
+                        top = if (index == 0) 8.dp else 1.dp,
+                        bottom = if (index == reorderableTracks.lastIndex) 0.dp else 1.dp,
+                    )
+                    .animateItem(
+                        fadeInSpec = null,
+                        fadeOutSpec = null,
+                        placementSpec = if (isDragging || track.id == droppingItemKey) null
+                            else MaterialTheme.motionScheme.defaultSpatialSpec(),
+                    )
+                    .zIndex(if (isDragging || track.id == droppingItemKey) 1f else 0f)
+
+                val canSwipeToDelete = !playlist.isSystem
+
+                if (canSwipeToDelete) {
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = { value ->
+                            if (value == SwipeToDismissBoxValue.EndToStart) {
+                                onRemoveTrack(track.id)
+                                true
+                            } else false
+                        },
+                    )
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        modifier = itemModifier,
+                        backgroundContent = {
+                            if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(itemShape)
+                                        .background(MaterialTheme.colorScheme.errorContainer)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_delete),
+                                        contentDescription = "Delete",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                                    )
+                                }
+                            }
+                        },
+                        enableDismissFromStartToEnd = false,
+                    ) {
                     Surface(
                         onClick = { onTrackClick(reorderableTracks.toList(), index) },
                         interactionSource = interactionSource,
                         modifier = Modifier
+                            .graphicsLayer {
+                                scaleX = pressScale
+                                scaleY = pressScale
+                                if (isDragging) {
+                                    translationY = dragOffset
+                                    shadowElevation = elevation.toPx()
+                                } else if (track.id == droppingItemKey) {
+                                    translationY = dropAnimOffset.value
+                                }
+                            }
+                            .onGloballyPositioned { coords ->
+                                itemHeights[index] = coords.size.height.toFloat()
+                            },
+                        shadowElevation = if (!isDragging) elevation else 0.dp,
+                        shape = itemShape,
+                        color = containerColor,
+                    ) {
+                        TrackListItem(
+                            track = track,
+                            isPlaying = isTrackPlaying,
+                            isCurrentTrack = isCurrentTrack,
+                            onDragStart = {
+                                droppingItemKey = null
+                                scope.launch { dropAnimOffset.snapTo(0f) }
+                                draggedIndex = index
+                                dragStartIndex = index
+                                dragOffset = 0f
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            },
+                            onDrag = { delta ->
+                                dragOffset += delta
+                                val ci = draggedIndex
+                                if (ci < 0) return@TrackListItem
+                                val h = itemHeights[ci] ?: return@TrackListItem
+                                if (dragOffset > h * 0.6f && ci < reorderableTracks.lastIndex) {
+                                    val item = reorderableTracks.removeAt(ci)
+                                    reorderableTracks.add(ci + 1, item)
+                                    draggedIndex = ci + 1
+                                    dragOffset -= h
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                } else if (dragOffset < -h * 0.6f && ci > 0) {
+                                    val item = reorderableTracks.removeAt(ci)
+                                    reorderableTracks.add(ci - 1, item)
+                                    draggedIndex = ci - 1
+                                    dragOffset += h
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                            },
+                            onDragEnd = {
+                                val from = dragStartIndex
+                                val to = draggedIndex
+                                val finalOffset = dragOffset
+                                val droppedKey = if (to in reorderableTracks.indices) reorderableTracks[to].id else null
+
+                                draggedIndex = -1
+                                dragStartIndex = -1
+                                dragOffset = 0f
+
+                                if (from >= 0 && to >= 0 && from != to) {
+                                    onMoveTrack(from, to)
+                                }
+
+                                if (droppedKey != null && kotlin.math.abs(finalOffset) > 1f) {
+                                    droppingItemKey = droppedKey
+                                    scope.launch {
+                                        dropAnimOffset.snapTo(finalOffset)
+                                        dropAnimOffset.animateTo(0f, dropSpec)
+                                        droppingItemKey = null
+                                    }
+                                }
+                            },
+                        )
+                    }
+                    }
+                } else {
+                    // System playlist — no swipe to delete
+                    Surface(
+                        onClick = { onTrackClick(reorderableTracks.toList(), index) },
+                        interactionSource = interactionSource,
+                        modifier = itemModifier
                             .graphicsLayer {
                                 scaleX = pressScale
                                 scaleY = pressScale

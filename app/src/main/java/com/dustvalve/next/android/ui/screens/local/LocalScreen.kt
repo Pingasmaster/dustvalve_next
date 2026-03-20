@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.screens.local
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
@@ -111,7 +112,6 @@ fun LocalScreen(
     var showSortSheet by remember { mutableStateOf(false) }
     var showArtistSheet by remember { mutableStateOf(false) }
     var showAlbumSheet by remember { mutableStateOf(false) }
-    var showDurationSheet by remember { mutableStateOf(false) }
     var showFolderSheet by remember { mutableStateOf(false) }
 
     val searchBarState = rememberSearchBarState()
@@ -151,6 +151,21 @@ fun LocalScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0),
+        floatingActionButton = {
+            if (filteredTracks.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = {
+                        val shuffled = filteredTracks.shuffled()
+                        playerViewModel.playTrackInList(shuffled, 0)
+                    },
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_shuffle),
+                        contentDescription = "Mix",
+                    )
+                }
+            }
+        },
     ) { scaffoldPadding ->
         Box(
             modifier = Modifier
@@ -284,28 +299,6 @@ fun LocalScreen(
                             },
                         )
 
-                        // Duration chip
-                        FilterChip(
-                            selected = filterState.selectedDurations.isNotEmpty(),
-                            onClick = { showDurationSheet = true },
-                            label = {
-                                Text(
-                                    when (filterState.selectedDurations.size) {
-                                        0 -> "Duration"
-                                        1 -> filterState.selectedDurations.first().label
-                                        else -> "Duration (${filterState.selectedDurations.size})"
-                                    },
-                                )
-                            },
-                            trailingIcon = {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_keyboard_arrow_down),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            },
-                        )
-
                         // Favorites chip
                         FilterChip(
                             selected = filterState.favoritesOnly,
@@ -349,24 +342,6 @@ fun LocalScreen(
                             )
                         }
 
-                        // Mix button
-                        FilledTonalButton(
-                            onClick = {
-                                val shuffled = filteredTracks.shuffled()
-                                if (shuffled.isNotEmpty()) {
-                                    playerViewModel.playTrackInList(shuffled, 0)
-                                }
-                            },
-                            shapes = ButtonDefaults.shapes(),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_shuffle),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Mix")
-                        }
                     }
 
                     // Track list
@@ -715,7 +690,10 @@ fun LocalScreen(
 
     // Sort bottom sheet
     if (showSortSheet) {
-        ModalBottomSheet(onDismissRequest = { showSortSheet = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { showSortSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
             Text(
                 text = "Sort by",
                 style = MaterialTheme.typography.titleMedium,
@@ -727,9 +705,15 @@ fun LocalScreen(
             ) {
                 LocalSortOption.entries.forEachIndexed { index, option ->
                     val isSelected = filterState.sortOption == option
+                    val sortItemColor by animateColorAsState(
+                        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                        label = "sortItemColor",
+                    )
                     Surface(
                         shape = segmentedItemShape(index, LocalSortOption.entries.size),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = sortItemColor,
                         modifier = Modifier.selectable(
                             selected = isSelected,
                             onClick = {
@@ -753,7 +737,10 @@ fun LocalScreen(
 
     // Artist filter bottom sheet
     if (showArtistSheet) {
-        ModalBottomSheet(onDismissRequest = { showArtistSheet = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { showArtistSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
             Text(
                 text = "Filter by artist",
                 style = MaterialTheme.typography.titleMedium,
@@ -765,9 +752,15 @@ fun LocalScreen(
             ) {
                 itemsIndexed(availableArtists) { index, artist ->
                     val isChecked = artist in filterState.selectedArtists
+                    val artistItemColor by animateColorAsState(
+                        targetValue = if (isChecked) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                        label = "artistItemColor",
+                    )
                     Surface(
                         shape = segmentedItemShape(index, availableArtists.size),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = artistItemColor,
                     ) {
                         ListItem(
                             headlineContent = { Text(artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -784,7 +777,10 @@ fun LocalScreen(
 
     // Album filter bottom sheet
     if (showAlbumSheet) {
-        ModalBottomSheet(onDismissRequest = { showAlbumSheet = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { showAlbumSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
             Text(
                 text = "Filter by album",
                 style = MaterialTheme.typography.titleMedium,
@@ -796,9 +792,15 @@ fun LocalScreen(
             ) {
                 itemsIndexed(availableAlbums) { index, album ->
                     val isChecked = album in filterState.selectedAlbums
+                    val albumItemColor by animateColorAsState(
+                        targetValue = if (isChecked) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                        label = "albumItemColor",
+                    )
                     Surface(
                         shape = segmentedItemShape(index, availableAlbums.size),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = albumItemColor,
                     ) {
                         ListItem(
                             headlineContent = { Text(album, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -813,40 +815,12 @@ fun LocalScreen(
         }
     }
 
-    // Duration filter bottom sheet
-    if (showDurationSheet) {
-        ModalBottomSheet(onDismissRequest = { showDurationSheet = false }) {
-            Text(
-                text = "Filter by duration",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-            Column(
-                verticalArrangement = Arrangement.spacedBy(1.dp),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                DurationRange.entries.forEachIndexed { index, range ->
-                    val isChecked = range in filterState.selectedDurations
-                    Surface(
-                        shape = segmentedItemShape(index, DurationRange.entries.size),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ) {
-                        ListItem(
-                            headlineContent = { Text(range.label) },
-                            leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
-                            modifier = Modifier.clickable { viewModel.toggleDuration(range) },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(28.dp))
-        }
-    }
-
     // Folder filter bottom sheet
     if (showFolderSheet) {
-        ModalBottomSheet(onDismissRequest = { showFolderSheet = false }) {
+        ModalBottomSheet(
+            onDismissRequest = { showFolderSheet = false },
+            containerColor = MaterialTheme.colorScheme.surface,
+        ) {
             Text(
                 text = "Filter by folder",
                 style = MaterialTheme.typography.titleMedium,
@@ -863,9 +837,15 @@ fun LocalScreen(
                     } catch (_: Exception) {
                         folder
                     }
+                    val folderItemColor by animateColorAsState(
+                        targetValue = if (isChecked) MaterialTheme.colorScheme.primaryContainer
+                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                        label = "folderItemColor",
+                    )
                     Surface(
                         shape = segmentedItemShape(index, availableFolders.size),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        color = folderItemColor,
                     ) {
                         ListItem(
                             headlineContent = { Text(displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
