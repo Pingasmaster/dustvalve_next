@@ -78,6 +78,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
@@ -369,27 +370,37 @@ fun LocalScreen(
                     }
 
                     // Track list
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 80.dp),
-                    ) {
-                        itemsIndexed(
-                            items = filteredTracks,
-                            key = { _, track -> track.id },
-                        ) { index, track ->
-                            LocalTrackItem(
-                                track = track,
-                                index = index,
-                                total = filteredTracks.size,
-                                onClick = {
-                                    playerViewModel.playTrackInList(filteredTracks, index)
-                                },
-                                onLongClick = { contextMenuTrack = track },
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                                ),
+                    val localListState = rememberLazyListState()
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            state = localListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 80.dp),
+                        ) {
+                            itemsIndexed(
+                                items = filteredTracks,
+                                key = { _, track -> track.id },
+                            ) { index, track ->
+                                LocalTrackItem(
+                                    track = track,
+                                    index = index,
+                                    total = filteredTracks.size,
+                                    onClick = {
+                                        playerViewModel.playTrackInList(filteredTracks, index)
+                                    },
+                                    onLongClick = { contextMenuTrack = track },
+                                    modifier = Modifier.animateItem(
+                                        fadeInSpec = null,
+                                        fadeOutSpec = null,
+                                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                    ),
+                                )
+                            }
+                        }
+                        if (filteredTracks.size > 15) {
+                            FastScrollbar(
+                                listState = localListState,
+                                modifier = Modifier.align(Alignment.CenterEnd),
                             )
                         }
                     }
@@ -492,7 +503,7 @@ fun LocalScreen(
             )
 
             ListItem(
-                headlineContent = { Text("Play Next") },
+                headlineContent = { Text("Play next") },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_skip_next),
@@ -508,7 +519,7 @@ fun LocalScreen(
 
             ListItem(
                 headlineContent = {
-                    Text(if (menuTrack.isFavorite) "Remove from Favorites" else "Add to Favorites")
+                    Text(if (menuTrack.isFavorite) "Remove from favorites" else "Add to favorites")
                 },
                 leadingContent = {
                     Icon(
@@ -527,7 +538,7 @@ fun LocalScreen(
             )
 
             ListItem(
-                headlineContent = { Text("Add to Playlist") },
+                headlineContent = { Text("Add to playlist") },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_playlist_add),
@@ -569,7 +580,7 @@ fun LocalScreen(
         contextMenuTrack?.let { menuTrack ->
             AlertDialog(
                 onDismissRequest = { showDeleteTrackDialog = false },
-                title = { Text("Delete Song") },
+                title = { Text("Delete song") },
                 text = { Text("Delete '${menuTrack.title}'? This cannot be undone.") },
                 confirmButton = {
                     TextButton(

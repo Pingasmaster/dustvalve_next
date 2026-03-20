@@ -107,7 +107,7 @@ fun AlbumDetailScreen(
     if (showDeleteAlbumDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAlbumDialog = false },
-            title = { Text("Delete Downloads") },
+            title = { Text("Delete downloads") },
             text = { Text("Remove all downloaded tracks for '${state.album?.title}'?") },
             confirmButton = {
                 TextButton(
@@ -130,7 +130,7 @@ fun AlbumDetailScreen(
     trackToDelete?.let { track ->
         AlertDialog(
             onDismissRequest = { trackToDelete = null },
-            title = { Text("Delete Download") },
+            title = { Text("Delete download") },
             text = { Text("Remove downloaded file for '${track.title}'?") },
             confirmButton = {
                 TextButton(

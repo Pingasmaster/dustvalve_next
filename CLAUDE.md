@@ -40,6 +40,8 @@ Always search for and use **Material 3 Expressive** APIs over outdated or generi
 
 When `WebFetch` fails to retrieve a resource (e.g., raw GitHub files returning 404), use `wget -qO-` via Bash as a fallback.
 
+IMPORTANT: Before any design actions, make sure to fully understand material you 3 expressive deisng around it, best guidelines and implementations by doing at least two agents that search material you 3 expressive guidelines and elements related to what you want to achieve in EACH CONVERSATION. THIS IS MANDATORY if any complex design work is done.
+
 ## Dependency Notes
 
 - **hiltViewModel**: Use `androidx.hilt:hilt-lifecycle-viewmodel-compose` (not `hilt-navigation-compose`). Import from `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`. The navigation-compose variant is deprecated as of 1.3.0.

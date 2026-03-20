@@ -47,6 +47,7 @@ data class SettingsUiState(
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
+    val albumCoverLongPressCarousel: Boolean = true,
 )
 
 @HiltViewModel
@@ -86,6 +87,7 @@ class SettingsViewModel @Inject constructor(
         collectShowInlineVolumeSlider()
         collectShowVolumeButton()
         collectSearchHistoryEnabled()
+        collectAlbumCoverLongPressCarousel()
     }
 
     fun setThemeMode(mode: String) {
@@ -546,6 +548,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setAlbumCoverLongPressCarousel(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setAlbumCoverLongPressCarousel(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     fun removeAllDownloads() {
         viewModelScope.launch {
             try {
@@ -605,6 +617,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(searchHistoryEnabled = enabled) }
+                }
+        }
+    }
+
+    private fun collectAlbumCoverLongPressCarousel() {
+        viewModelScope.launch {
+            settingsDataStore.albumCoverLongPressCarousel
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(albumCoverLongPressCarousel = enabled) }
                 }
         }
     }

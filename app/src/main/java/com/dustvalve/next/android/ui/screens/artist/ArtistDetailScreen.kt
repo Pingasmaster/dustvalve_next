@@ -106,7 +106,7 @@ fun ArtistDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Downloads") },
+            title = { Text("Delete downloads") },
             text = { Text("Remove all downloaded tracks by ${state.artist?.name}?") },
             confirmButton = {
                 TextButton(
