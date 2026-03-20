@@ -98,7 +98,7 @@ fun SettingsScreen(
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
-            title = { Text("Clear Cache") },
+            title = { Text("Clear cache") },
             text = { Text("This will remove all cached audio and images. Downloaded tracks will not be affected.") },
             confirmButton = {
                 TextButton(
@@ -121,7 +121,7 @@ fun SettingsScreen(
     if (showRemoveDownloadsDialog) {
         AlertDialog(
             onDismissRequest = { showRemoveDownloadsDialog = false },
-            title = { Text("Remove All Downloads") },
+            title = { Text("Remove all downloads") },
             text = { Text("This will remove all downloaded tracks. Cached audio and images will not be affected.") },
             confirmButton = {
                 TextButton(
@@ -384,7 +384,7 @@ fun SettingsScreen(
                                             modifier = Modifier.size(18.dp),
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Add Folder")
+                                        Text("Add folder")
                                     }
 
                                     if (state.localMusicFolderUris.isNotEmpty()) {
@@ -615,7 +615,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Manage Downloads")
+                            Text("Manage downloads")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         FilledTonalButton(
@@ -629,7 +629,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Remove All Downloads")
+                            Text("Remove all downloads")
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         FilledTonalButton(
@@ -643,7 +643,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Clear Cache")
+                            Text("Clear cache")
                         }
 
                         if (state.accountState.isLoggedIn) {
@@ -976,6 +976,29 @@ fun SettingsScreen(
                             Switch(
                                 checked = state.showVolumeButton,
                                 onCheckedChange = { viewModel.setShowVolumeButton(it) },
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Cover carousel",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Long-press album cover to browse upcoming tracks (disabling shows debug info instead)",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.albumCoverLongPressCarousel,
+                                onCheckedChange = { viewModel.setAlbumCoverLongPressCarousel(it) },
                             )
                         }
                     }

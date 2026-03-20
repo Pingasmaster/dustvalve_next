@@ -389,7 +389,7 @@ fun YouTubeArtistDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Downloads") },
+            title = { Text("Delete downloads") },
             text = { Text("Delete all downloaded tracks from this artist?") },
             confirmButton = {
                 TextButton(

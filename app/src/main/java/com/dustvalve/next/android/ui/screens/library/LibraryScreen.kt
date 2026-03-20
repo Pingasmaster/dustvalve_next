@@ -186,7 +186,7 @@ fun LibraryScreen(
         when (item) {
             is LibraryItem.PlaylistItem -> {
                 DeleteLibraryItemDialog(
-                    title = "Delete Playlist",
+                    title = "Delete playlist",
                     message = "Delete \"${item.name}\"? This cannot be undone.",
                     confirmText = "Delete",
                     onDismiss = { viewModel.dismissDeleteDialog() },
@@ -195,7 +195,7 @@ fun LibraryScreen(
             }
             is LibraryItem.AlbumItem -> {
                 DeleteLibraryItemDialog(
-                    title = "Remove from Library",
+                    title = "Remove from library",
                     message = "Remove \"${item.name}\" from library? This will also unfavorite it.",
                     confirmText = "Remove",
                     onDismiss = { viewModel.dismissDeleteDialog() },
@@ -204,7 +204,7 @@ fun LibraryScreen(
             }
             is LibraryItem.ArtistItem -> {
                 DeleteLibraryItemDialog(
-                    title = "Remove from Library",
+                    title = "Remove from library",
                     message = "Remove \"${item.name}\" from library? This will also unfavorite it.",
                     confirmText = "Remove",
                     onDismiss = { viewModel.dismissDeleteDialog() },
@@ -386,7 +386,7 @@ private fun LibraryList(
                 }
                 is LibraryItem.AlbumItem, is LibraryItem.ArtistItem -> {
                     ListItem(
-                        headlineContent = { Text("Change Shape") },
+                        headlineContent = { Text("Change shape") },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_palette),

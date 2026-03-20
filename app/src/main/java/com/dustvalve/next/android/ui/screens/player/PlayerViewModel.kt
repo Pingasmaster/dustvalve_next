@@ -62,6 +62,7 @@ data class PlayerUiState(
     val showVolumeButton: Boolean = false,
     val audioOutputDevices: List<AudioDeviceInfo> = emptyList(),
     val activeAudioDevice: AudioDeviceInfo? = null,
+    val albumCoverLongPressCarousel: Boolean = true,
 )
 
 @HiltViewModel
@@ -383,6 +384,8 @@ class PlayerViewModel @Inject constructor(
             audioOutputDevices = devices,
             activeAudioDevice = active,
         )
+    }.combine(settingsDataStore.albumCoverLongPressCarousel) { state, carousel ->
+        state.copy(albumCoverLongPressCarousel = carousel)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -636,6 +639,10 @@ class PlayerViewModel @Inject constructor(
 
     fun removeFromQueue(index: Int) {
         queueManager.removeFromQueue(index)
+    }
+
+    fun moveQueueItem(from: Int, to: Int) {
+        queueManager.moveItem(from, to)
     }
 
     fun toggleFavoriteById(trackId: String) {

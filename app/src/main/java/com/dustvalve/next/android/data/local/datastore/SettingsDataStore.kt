@@ -50,6 +50,7 @@ class SettingsDataStore @Inject constructor(
         val SHOW_VOLUME_BUTTON = booleanPreferencesKey("show_volume_button")
         val LAST_YOUTUBE_VIDEO_ID = stringPreferencesKey("last_youtube_video_id")
         val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
+        val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
     }
 
     companion object {
@@ -399,6 +400,16 @@ class SettingsDataStore @Inject constructor(
     suspend fun setSearchHistoryEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.SEARCH_HISTORY_ENABLED] = enabled
+        }
+    }
+
+    val albumCoverLongPressCarousel: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] ?: true
+    }
+
+    suspend fun setAlbumCoverLongPressCarousel(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] = enabled
         }
     }
 

@@ -1,5 +1,10 @@
 package com.dustvalve.next.android.ui.screens.player
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -22,10 +27,15 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
@@ -39,9 +49,17 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TwoRowsTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
+import androidx.compose.material3.carousel.rememberCarouselState
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,9 +81,12 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -84,12 +105,14 @@ import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -100,6 +123,7 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.RepeatMode
 import androidx.compose.foundation.background
+import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
@@ -119,8 +143,6 @@ fun FullPlayer(
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
     val track = state.currentTrack
     val snackbarHostState = remember { SnackbarHostState() }
-
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     // Snackbar handling
     LaunchedEffect(state.snackbarMessage) {
@@ -154,6 +176,8 @@ fun FullPlayer(
     var showCreatePlaylistSheet by remember { mutableStateOf(false) }
     var showDebugSheet by remember { mutableStateOf(false) }
     var showVolumeSheet by remember { mutableStateOf(false) }
+    var showQueueSheet by remember { mutableStateOf(false) }
+    var isCarouselMode by remember { mutableStateOf(false) }
     var upNextContextTrack by remember { mutableStateOf<Pair<Track, Int>?>(null) }
     var showUpNextPlaylistSheet by remember { mutableStateOf(false) }
     var showUpNextCreatePlaylistSheet by remember { mutableStateOf(false) }
@@ -305,28 +329,27 @@ fun FullPlayer(
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            topBar = {
-                TwoRowsTopAppBar(
-                    title = { expanded ->
-                        Text(
-                            text = if (expanded) "Now Playing" else (track?.title ?: "Now Playing"),
-                            style = MaterialTheme.typography.titleMediumEmphasized,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    subtitle = { expanded ->
-                        if (expanded && track != null) {
-                            Text(
-                                text = track.title,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+            floatingActionButton = {
+                val upNextCount = if (state.currentQueueIndex >= 0)
+                    (state.queue.size - state.currentQueueIndex - 1).coerceAtLeast(0)
+                else 0
+                if (state.currentTrack != null && upNextCount > 0) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showQueueSheet = true },
+                        icon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_queue_music),
+                                contentDescription = null,
                             )
-                        }
-                    },
+                        },
+                        text = { Text("Queue ($upNextCount)") },
+                    )
+                }
+            },
+            topBar = {
+                TopAppBar(
+                    title = { },
                     navigationIcon = {
                         IconButton(onClick = onCollapse) {
                             Icon(
@@ -345,11 +368,10 @@ fun FullPlayer(
                             }
                         }
                     },
-                    titleHorizontalAlignment = Alignment.CenterHorizontally,
-                    scrollBehavior = scrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ),
+                    windowInsets = WindowInsets(0),
                 )
             },
         ) { paddingValues ->
@@ -376,9 +398,8 @@ fun FullPlayer(
                     .padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Spacer(modifier = Modifier.height(4.dp))
 
                 // Album art with single-tap play/pause and double-tap heart
                 val albumArtShape = if (heartProgress.value > 0f) {
@@ -390,77 +411,205 @@ fun FullPlayer(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                // BackHandler to close carousel on back press
+                BackHandler(enabled = isCarouselMode) {
+                    isCarouselMode = false
+                }
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .aspectRatio(1f),
                     contentAlignment = Alignment.Center,
                 ) {
-                    val albumArtGestureModifier = Modifier
-                        .fillMaxSize()
-                        .clip(albumArtShape)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = {
-                                    feedbackIsPlaying = state.isPlaying
-                                    playerViewModel.onPlayPause()
-                                    scope.launch {
-                                        feedbackScale.snapTo(0f)
-                                        showPlayPauseFeedback = true
-                                        feedbackScale.animateTo(1f, feedbackSpec)
-                                        delay(400L)
-                                        feedbackScale.animateTo(0f, feedbackSpec)
-                                        showPlayPauseFeedback = false
-                                    }
-                                },
-                                onDoubleTap = {
-                                    playerViewModel.onToggleFavorite()
-                                    scope.launch {
-                                        heartProgress.animateTo(
-                                            targetValue = 1f,
-                                            animationSpec = heartInSpec,
-                                        )
-                                        delay(1000L)
-                                        heartProgress.animateTo(
-                                            targetValue = 0f,
-                                            animationSpec = heartOutSpec,
-                                        )
-                                    }
-                                },
-                                onLongPress = {
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    showDebugSheet = true
-                                },
-                            )
-                        }
-                    if (track.artUrl.isNotBlank()) {
-                        AsyncImage(
-                            model = track.artUrl,
-                            contentDescription = track.albumTitle.ifEmpty { "Album art" },
-                            contentScale = ContentScale.Crop,
-                            modifier = albumArtGestureModifier,
-                        )
-                    } else {
-                        TrackArtPlaceholder(
-                            modifier = albumArtGestureModifier,
-                            iconSize = 64.dp,
-                        )
-                    }
+                    val currentIndex = state.currentQueueIndex
 
-                    // Play/pause tap feedback overlay
-                    if (showPlayPauseFeedback) {
-                        Icon(
-                            painter = painterResource(if (!feedbackIsPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                            modifier = Modifier
-                                .size(72.dp)
-                                .graphicsLayer {
-                                    scaleX = feedbackScale.value
-                                    scaleY = feedbackScale.value
-                                    alpha = feedbackScale.value
-                                },
-                        )
+                    val carouselTransitionSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+                    AnimatedContent(
+                        targetState = isCarouselMode,
+                        transitionSpec = {
+                            fadeIn(animationSpec = carouselTransitionSpec) togetherWith
+                                fadeOut(animationSpec = carouselTransitionSpec)
+                        },
+                        label = "albumArtCarousel",
+                    ) { carousel ->
+                        if (carousel) {
+                            // Carousel mode: M3E HorizontalMultiBrowseCarousel
+                            val carouselTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
+                                state.queue.subList(currentIndex + 1, minOf(currentIndex + 26, state.queue.size))
+                            } else {
+                                emptyList()
+                            }
+
+                            if (carouselTracks.isNotEmpty()) {
+                                val carouselState = rememberCarouselState { carouselTracks.size }
+                                HorizontalMultiBrowseCarousel(
+                                    state = carouselState,
+                                    preferredItemWidth = 200.dp,
+                                    modifier = Modifier.fillMaxSize(),
+                                    itemSpacing = 8.dp,
+                                ) { page ->
+                                    val carouselTrack = carouselTracks[page]
+                                    val carouselQueueIndex = currentIndex + 1 + page
+
+                                    Box(
+                                        modifier = Modifier
+                                            .maskClip(AppShapes.SearchResultTrack)
+                                            .aspectRatio(1f)
+                                            .clickable {
+                                                playerViewModel.skipToQueueIndex(carouselQueueIndex)
+                                                isCarouselMode = false
+                                            },
+                                    ) {
+                                        if (carouselTrack.artUrl.isNotBlank()) {
+                                            AsyncImage(
+                                                model = carouselTrack.artUrl,
+                                                contentDescription = carouselTrack.title,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        } else {
+                                            TrackArtPlaceholder(
+                                                modifier = Modifier.fillMaxSize(),
+                                                iconSize = 48.dp,
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                // No upcoming tracks — close carousel
+                                LaunchedEffect(Unit) { isCarouselMode = false }
+                            }
+                        } else {
+                            // Normal mode: stacked covers + main album art
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                // Stacked background covers (up to 3 behind current)
+                                val stackedTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
+                                    state.queue.subList(
+                                        currentIndex + 1,
+                                        minOf(currentIndex + 4, state.queue.size),
+                                    )
+                                } else {
+                                    emptyList()
+                                }
+
+                                // Render stacked covers back-to-front
+                                stackedTracks.reversed().forEachIndexed { reverseIndex, stackTrack ->
+                                    val stackIndex = stackedTracks.size - 1 - reverseIndex
+                                    val offsetX = ((stackIndex + 1) * 20).dp
+                                    val offsetY = (-(stackIndex + 1) * 24).dp
+                                    val stackScale = 1f - ((stackIndex + 1) * 0.06f)
+                                    val actualQueueIndex = currentIndex + 1 + stackIndex
+
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .zIndex(-((stackIndex + 1).toFloat()))
+                                            .graphicsLayer {
+                                                translationX = offsetX.toPx()
+                                                translationY = offsetY.toPx()
+                                                scaleX = stackScale
+                                                scaleY = stackScale
+                                            }
+                                            .clip(PlaybackMorphShape(heartMorph, 0f))
+                                            .clickable {
+                                                playerViewModel.skipToQueueIndex(actualQueueIndex)
+                                            },
+                                    ) {
+                                        if (stackTrack.artUrl.isNotBlank()) {
+                                            AsyncImage(
+                                                model = stackTrack.artUrl,
+                                                contentDescription = stackTrack.title,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize(),
+                                            )
+                                        } else {
+                                            TrackArtPlaceholder(
+                                                modifier = Modifier.fillMaxSize(),
+                                                iconSize = 48.dp,
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Main album art (on top)
+                                val albumArtGestureModifier = Modifier
+                                    .fillMaxSize()
+                                    .zIndex(1f)
+                                    .clip(albumArtShape)
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                feedbackIsPlaying = state.isPlaying
+                                                playerViewModel.onPlayPause()
+                                                scope.launch {
+                                                    feedbackScale.snapTo(0f)
+                                                    showPlayPauseFeedback = true
+                                                    feedbackScale.animateTo(1f, feedbackSpec)
+                                                    delay(400L)
+                                                    feedbackScale.animateTo(0f, feedbackSpec)
+                                                    showPlayPauseFeedback = false
+                                                }
+                                            },
+                                            onDoubleTap = {
+                                                playerViewModel.onToggleFavorite()
+                                                scope.launch {
+                                                    heartProgress.animateTo(
+                                                        targetValue = 1f,
+                                                        animationSpec = heartInSpec,
+                                                    )
+                                                    delay(1000L)
+                                                    heartProgress.animateTo(
+                                                        targetValue = 0f,
+                                                        animationSpec = heartOutSpec,
+                                                    )
+                                                }
+                                            },
+                                            onLongPress = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                if (state.albumCoverLongPressCarousel) {
+                                                    isCarouselMode = true
+                                                } else {
+                                                    showDebugSheet = true
+                                                }
+                                            },
+                                        )
+                                    }
+                                if (track.artUrl.isNotBlank()) {
+                                    AsyncImage(
+                                        model = track.artUrl,
+                                        contentDescription = track.albumTitle.ifEmpty { "Album art" },
+                                        contentScale = ContentScale.Crop,
+                                        modifier = albumArtGestureModifier,
+                                    )
+                                } else {
+                                    TrackArtPlaceholder(
+                                        modifier = albumArtGestureModifier,
+                                        iconSize = 64.dp,
+                                    )
+                                }
+
+                                // Play/pause tap feedback overlay
+                                if (showPlayPauseFeedback) {
+                                    Icon(
+                                        painter = painterResource(if (!feedbackIsPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .zIndex(2f)
+                                            .graphicsLayer {
+                                                scaleX = feedbackScale.value
+                                                scaleY = feedbackScale.value
+                                                alpha = feedbackScale.value
+                                            },
+                                    )
+                                }
+                            }
+                        }
                     }
                 } // end album art Box
 
@@ -829,123 +978,8 @@ fun FullPlayer(
                     }
                 }
 
-                // Up Next section — use actual queue index
-                val currentIndex = state.currentQueueIndex
-                val upNextTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
-                    state.queue.subList(currentIndex + 1, state.queue.size)
-                } else {
-                    emptyList()
-                }
-
-                if (upNextTracks.isNotEmpty()) {
-                    Column {
-                        Text(
-                            text = "Up Next",
-                            style = MaterialTheme.typography.titleSmallEmphasized,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                        )
-
-                        upNextTracks.forEachIndexed { upNextIndex, queueTrack ->
-                            val queueIndex = currentIndex + 1 + upNextIndex
-                            key("upnext_${queueIndex}_${queueTrack.id}") {
-                                val interactionSource = remember { MutableInteractionSource() }
-                                val isPressed by interactionSource.collectIsPressedAsState()
-                                val pressScale by animateFloatAsState(
-                                    targetValue = if (isPressed) 0.97f else 1f,
-                                    animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-                                    label = "upNextPressScale",
-                                )
-                                val isDownloaded = queueTrack.id in state.downloadedTrackIds || queueTrack.isLocal
-
-                                Surface(
-                                    shape = segmentedItemShape(upNextIndex, upNextTracks.size),
-                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                    modifier = Modifier
-                                        .padding(
-                                            top = if (upNextIndex == 0) 8.dp else 1.dp,
-                                            bottom = if (upNextIndex == upNextTracks.lastIndex) 0.dp else 1.dp,
-                                        )
-                                        .graphicsLayer {
-                                            scaleX = pressScale
-                                            scaleY = pressScale
-                                        }
-                                        .combinedClickable(
-                                            interactionSource = interactionSource,
-                                            indication = LocalIndication.current,
-                                            onClick = {
-                                                playerViewModel.skipToQueueIndex(queueIndex)
-                                            },
-                                            onLongClick = {
-                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                upNextContextTrack = queueTrack to queueIndex
-                                            },
-                                        ),
-                                ) {
-                                    ListItem(
-                                        headlineContent = {
-                                            Text(
-                                                text = queueTrack.title,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                        },
-                                        supportingContent = {
-                                            Text(
-                                                text = queueTrack.artist,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                        },
-                                        leadingContent = {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(48.dp)
-                                                    .clip(AppShapes.SearchResultTrack),
-                                            ) {
-                                                if (queueTrack.artUrl.isNotBlank()) {
-                                                    AsyncImage(
-                                                        model = queueTrack.artUrl,
-                                                        contentDescription = queueTrack.albumTitle,
-                                                        modifier = Modifier.fillMaxSize(),
-                                                        contentScale = ContentScale.Crop,
-                                                    )
-                                                } else {
-                                                    TrackArtPlaceholder(modifier = Modifier.fillMaxSize())
-                                                }
-                                            }
-                                        },
-                                        trailingContent = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                if (isDownloaded) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.ic_download_done),
-                                                        contentDescription = "Downloaded",
-                                                        modifier = Modifier.size(18.dp),
-                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = { playerViewModel.removeFromQueue(queueIndex) },
-                                                    modifier = Modifier.size(32.dp),
-                                                ) {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.ic_close),
-                                                        contentDescription = "Remove from queue",
-                                                        modifier = Modifier.size(18.dp),
-                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                }
-                                            }
-                                        },
-                                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                // Bottom spacer for FAB clearance
+                Spacer(modifier = Modifier.height(80.dp))
             }
         }
     }
@@ -954,7 +988,7 @@ fun FullPlayer(
     if (showDeleteDownloadDialog && track != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDownloadDialog = false },
-            title = { Text("Delete Download") },
+            title = { Text("Delete download") },
             text = { Text("Remove downloaded file for '${track.title}'?") },
             confirmButton = {
                 TextButton(
@@ -1221,7 +1255,7 @@ fun FullPlayer(
 
             ListItem(
                 headlineContent = {
-                    Text(if (contextTrack.isFavorite) "Remove from Favorites" else "Add to Favorites")
+                    Text(if (contextTrack.isFavorite) "Remove from favorites" else "Add to favorites")
                 },
                 leadingContent = {
                     Icon(
@@ -1240,7 +1274,7 @@ fun FullPlayer(
             )
 
             ListItem(
-                headlineContent = { Text("Add to Playlist") },
+                headlineContent = { Text("Add to playlist") },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_playlist_add),
@@ -1256,7 +1290,7 @@ fun FullPlayer(
             ListItem(
                 headlineContent = {
                     Text(
-                        text = "Remove from Queue",
+                        text = "Remove from queue",
                         color = MaterialTheme.colorScheme.error,
                     )
                 },
@@ -1387,6 +1421,325 @@ fun FullPlayer(
             },
             isCreate = true,
         )
+    }
+
+    // Queue bottom sheet with pagination, swipe-to-delete, and drag reorder
+    if (showQueueSheet) {
+        val currentIndex = state.currentQueueIndex
+        val allUpNextTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
+            state.queue.subList(currentIndex + 1, state.queue.size)
+        } else {
+            emptyList()
+        }
+
+        var displayCount by remember(currentIndex) { mutableIntStateOf(25) }
+        val displayedTracks = allUpNextTracks.take(displayCount)
+        val hasMore = displayCount < allUpNextTracks.size
+        val queueListState = rememberLazyListState()
+
+        // Drag-and-drop state
+        var queueDraggedIndex by remember { mutableIntStateOf(-1) }
+        var queueDragStartIndex by remember { mutableIntStateOf(-1) }
+        var queueDragOffset by remember { mutableFloatStateOf(0f) }
+        val queueItemHeights = remember { mutableMapOf<Int, Float>() }
+        var queueDroppingItemKey by remember { mutableStateOf<String?>(null) }
+        val queueDropAnimOffset = remember { Animatable(0f) }
+        val queueDropSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+        val queueReorderableTracks = remember { displayedTracks.toMutableStateList() }
+        LaunchedEffect(displayedTracks) {
+            if (queueDraggedIndex == -1) {
+                queueReorderableTracks.clear()
+                queueReorderableTracks.addAll(displayedTracks)
+            }
+        }
+
+        // Pagination: load more when near bottom
+        LaunchedEffect(queueListState) {
+            snapshotFlow {
+                val last = queueListState.layoutInfo.visibleItemsInfo.lastOrNull()
+                val totalCount = queueListState.layoutInfo.totalItemsCount
+                last != null && totalCount > 0 && last.index >= totalCount - 3
+            }.collect { nearEnd ->
+                if (nearEnd && hasMore && displayedTracks.isNotEmpty()) {
+                    displayCount += 25
+                }
+            }
+        }
+
+        ModalBottomSheet(
+            onDismissRequest = { showQueueSheet = false },
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        ) {
+            Text(
+                text = "Up next (${allUpNextTracks.size})",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+            LazyColumn(
+                state = queueListState,
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                items(
+                    count = queueReorderableTracks.size,
+                    key = { queueReorderableTracks[it].id },
+                ) { upNextIndex ->
+                    val queueTrack = queueReorderableTracks[upNextIndex]
+                    val queueIndex = currentIndex + 1 + upNextIndex
+                    val isDownloaded = queueTrack.id in state.downloadedTrackIds || queueTrack.isLocal
+                    val isDragging = queueDraggedIndex == upNextIndex
+
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
+                    val pressScale by animateFloatAsState(
+                        targetValue = if (isPressed) 0.97f else 1f,
+                        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+                        label = "queuePressScale",
+                    )
+                    val elevation by animateDpAsState(
+                        targetValue = if (isDragging) 2.dp else 0.dp,
+                        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                        label = "queueDragElevation",
+                    )
+                    val containerColor by animateColorAsState(
+                        targetValue = if (isDragging) {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        },
+                        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
+                        label = "queueDragColor",
+                    )
+                    val itemShape = if (isDragging) {
+                        MaterialTheme.shapes.large
+                    } else {
+                        segmentedItemShape(upNextIndex, queueReorderableTracks.size)
+                    }
+
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = { value ->
+                            if (value == SwipeToDismissBoxValue.EndToStart) {
+                                playerViewModel.removeFromQueue(queueIndex)
+                                true
+                            } else false
+                        },
+                    )
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        modifier = Modifier
+                            .padding(
+                                top = if (upNextIndex == 0) 0.dp else 1.dp,
+                                bottom = if (upNextIndex == queueReorderableTracks.lastIndex) 0.dp else 1.dp,
+                            )
+                            .animateItem(
+                                fadeInSpec = null,
+                                fadeOutSpec = null,
+                                placementSpec = if (isDragging || queueTrack.id == queueDroppingItemKey) null
+                                    else MaterialTheme.motionScheme.defaultSpatialSpec(),
+                            )
+                            .zIndex(if (isDragging || queueTrack.id == queueDroppingItemKey) 1f else 0f),
+                        backgroundContent = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(itemShape)
+                                    .background(MaterialTheme.colorScheme.errorContainer)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_delete),
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                )
+                            }
+                        },
+                        enableDismissFromStartToEnd = false,
+                    ) {
+                        Surface(
+                            shape = itemShape,
+                            color = containerColor,
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    scaleX = pressScale
+                                    scaleY = pressScale
+                                    if (isDragging) {
+                                        translationY = queueDragOffset
+                                        shadowElevation = elevation.toPx()
+                                    } else if (queueTrack.id == queueDroppingItemKey) {
+                                        translationY = queueDropAnimOffset.value
+                                    }
+                                }
+                                .onGloballyPositioned { coords ->
+                                    queueItemHeights[upNextIndex] = coords.size.height.toFloat()
+                                }
+                                .combinedClickable(
+                                    interactionSource = interactionSource,
+                                    indication = LocalIndication.current,
+                                    onClick = {
+                                        playerViewModel.skipToQueueIndex(queueIndex)
+                                    },
+                                    onLongClick = {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        upNextContextTrack = queueTrack to queueIndex
+                                    },
+                                ),
+                            shadowElevation = if (!isDragging) elevation else 0.dp,
+                        ) {
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        text = queueTrack.title,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                                supportingContent = {
+                                    Text(
+                                        text = queueTrack.artist,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                },
+                                leadingContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(AppShapes.SearchResultTrack),
+                                    ) {
+                                        if (queueTrack.artUrl.isNotBlank()) {
+                                            AsyncImage(
+                                                model = queueTrack.artUrl,
+                                                contentDescription = queueTrack.albumTitle,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop,
+                                            )
+                                        } else {
+                                            TrackArtPlaceholder(modifier = Modifier.fillMaxSize())
+                                        }
+                                    }
+                                },
+                                trailingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (isDownloaded) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_download_done),
+                                                contentDescription = "Downloaded",
+                                                modifier = Modifier.size(18.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .pointerInput(Unit) {
+                                                    detectDragGesturesAfterLongPress(
+                                                        onDragStart = {
+                                                            queueDroppingItemKey = null
+                                                            scope.launch { queueDropAnimOffset.snapTo(0f) }
+                                                            queueDraggedIndex = upNextIndex
+                                                            queueDragStartIndex = upNextIndex
+                                                            queueDragOffset = 0f
+                                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        },
+                                                        onDrag = { change, dragAmount ->
+                                                            change.consume()
+                                                            queueDragOffset += dragAmount.y
+                                                            val ci = queueDraggedIndex
+                                                            if (ci < 0) return@detectDragGesturesAfterLongPress
+                                                            val h = queueItemHeights[ci] ?: return@detectDragGesturesAfterLongPress
+                                                            if (queueDragOffset > h * 0.6f && ci < queueReorderableTracks.lastIndex) {
+                                                                val item = queueReorderableTracks.removeAt(ci)
+                                                                queueReorderableTracks.add(ci + 1, item)
+                                                                queueDraggedIndex = ci + 1
+                                                                queueDragOffset -= h
+                                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            } else if (queueDragOffset < -h * 0.6f && ci > 0) {
+                                                                val item = queueReorderableTracks.removeAt(ci)
+                                                                queueReorderableTracks.add(ci - 1, item)
+                                                                queueDraggedIndex = ci - 1
+                                                                queueDragOffset += h
+                                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            }
+                                                        },
+                                                        onDragEnd = {
+                                                            val from = currentIndex + 1 + queueDragStartIndex
+                                                            val to = currentIndex + 1 + queueDraggedIndex
+                                                            val finalOffset = queueDragOffset
+                                                            val droppedKey = if (queueDraggedIndex in queueReorderableTracks.indices)
+                                                                queueReorderableTracks[queueDraggedIndex].id else null
+
+                                                            queueDraggedIndex = -1
+                                                            queueDragStartIndex = -1
+                                                            queueDragOffset = 0f
+
+                                                            if (from != to) {
+                                                                playerViewModel.moveQueueItem(from, to)
+                                                            }
+
+                                                            if (droppedKey != null && kotlin.math.abs(finalOffset) > 1f) {
+                                                                queueDroppingItemKey = droppedKey
+                                                                scope.launch {
+                                                                    queueDropAnimOffset.snapTo(finalOffset)
+                                                                    queueDropAnimOffset.animateTo(0f, queueDropSpec)
+                                                                    queueDroppingItemKey = null
+                                                                }
+                                                            }
+                                                        },
+                                                        onDragCancel = {
+                                                            queueDraggedIndex = -1
+                                                            queueDragStartIndex = -1
+                                                            queueDragOffset = 0f
+                                                        },
+                                                    )
+                                                },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.ic_drag_handle),
+                                                contentDescription = "Reorder",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                        }
+                                    }
+                                },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }
+                    }
+                }
+
+                // Loading indicator at bottom for pagination
+                if (hasMore) {
+                    item(key = "queue_loading_more") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+
+                // Bottom spacer
+                item(key = "queue_bottom_spacer") {
+                    Spacer(modifier = Modifier.height(28.dp))
+                }
+            }
+            if (queueReorderableTracks.size > 15) {
+                FastScrollbar(
+                    listState = queueListState,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
+            }
+            } // end Box wrapping LazyColumn + scrollbar
+        }
     }
 }
 
