@@ -117,8 +117,11 @@ fun YouTubeScreen(
     LaunchedEffect(state.error) {
         val error = state.error ?: return@LaunchedEffect
         if (state.results.isNotEmpty()) {
-            snackbarHostState.showSnackbar(error)
-            viewModel.clearError()
+            try {
+                snackbarHostState.showSnackbar(error)
+            } finally {
+                viewModel.clearError()
+            }
         }
     }
 
