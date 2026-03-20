@@ -4,6 +4,7 @@ import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 
 import android.graphics.Matrix
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 
 import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
@@ -11,7 +12,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,17 +35,21 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -51,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
+import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
@@ -122,9 +129,24 @@ fun MiniPlayer(
             label = "miniPlayerProgress",
         )
 
+        val scope = rememberCoroutineScope()
+        val hapticFeedback = LocalHapticFeedback.current
+        val swipeOffsetY = remember { Animatable(0f) }
+        val swipeSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+        var hasPassedThreshold by remember { mutableStateOf(false) }
+
         Surface(
             tonalElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    translationY = swipeOffsetY.value
+                    alpha = if (swipeOffsetY.value > 0f) {
+                        (1f - (swipeOffsetY.value / size.height) * 0.6f).coerceIn(0.4f, 1f)
+                    } else {
+                        1f
+                    }
+                },
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -134,7 +156,47 @@ fun MiniPlayer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(64.dp)
-                        .clickable(onClick = onExpandClick)
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures(
+                                onDragStart = { hasPassedThreshold = false },
+                                onDragEnd = {
+                                    val threshold = size.height * 0.35f
+                                    if (swipeOffsetY.value > threshold) {
+                                        scope.launch {
+                                            swipeOffsetY.animateTo(size.height.toFloat(), swipeSpec)
+                                            playerViewModel.onStop()
+                                            swipeOffsetY.snapTo(0f)
+                                        }
+                                    } else if (swipeOffsetY.value < -threshold) {
+                                        scope.launch {
+                                            swipeOffsetY.animateTo(-size.height.toFloat(), swipeSpec)
+                                            onExpandClick()
+                                            swipeOffsetY.snapTo(0f)
+                                        }
+                                    } else {
+                                        scope.launch { swipeOffsetY.animateTo(0f, swipeSpec) }
+                                    }
+                                },
+                                onDragCancel = {
+                                    scope.launch { swipeOffsetY.animateTo(0f, swipeSpec) }
+                                },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    scope.launch { swipeOffsetY.snapTo(swipeOffsetY.value + dragAmount) }
+                                    val threshold = size.height * 0.35f
+                                    val nowPastThreshold = swipeOffsetY.value > threshold || swipeOffsetY.value < -threshold
+                                    if (nowPastThreshold && !hasPassedThreshold) {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        hasPassedThreshold = true
+                                    } else if (!nowPastThreshold) {
+                                        hasPassedThreshold = false
+                                    }
+                                },
+                            )
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { onExpandClick() })
+                        }
                         .padding(horizontal = 12.dp),
                 ) {
                     val artModifier = Modifier
