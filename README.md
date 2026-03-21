@@ -22,15 +22,15 @@
 ## About
 
 Play your music from a single, snappy and emotional interface no matter the source: bandcamp, youtube music, or just your local music folder.
-See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from, all in a nicely designed, lightweight (4mb), extremely fast and no-nonsenses GPLv3 Material you 3 Expressive app.
+See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from, all in a nicely designed, lightweight (4mb), extremely fast and no-nonsense GPLv3 Material you 3 Expressive app.
 
-> **Pre-alpha**. Expect bugs and design overhauls. We will add more sources once we get out of alpha and have unified the player features.
+> **Pre-alpha**. Report any bugs. We will add more sources once we get out of alpha and have unified the player features.
 
 Download the app [here](https://github.com/Pingasmaster/dustvalve_next/releases).
 
 ## Features
 
-We provide progressive streaming, automatic caching (never redownloads a song more than once) and optional downloads for all platforms. Also, the main music player is pretty intuitive and not boring like other apps.
+We provide progressive streaming, automatic caching (never redownloads a song or album cover more than once) and optional downloads for all platforms. Also, the main music player is pretty intuitive and not boring like other apps.
 
 We have no tracking or bullshit, you choose whether you want to allow music access storage permissions or per-folder access which does not require any storage permissions at all. This software is designed to repesct you and your privacy. We provide instructions to build the app yourself from this repo in the build section.
 
@@ -70,39 +70,20 @@ For devs who want to modify, fork and test the app, we have a build script which
 ./build.sh
 ```
 
-## Project Structure
+## Contributing
 
-```
-app/src/main/java/com/dustvalve/next/android/
-├── cache/              Cache eviction policy & storage tracking
-├── data/
-│   ├── local/          Room database, DAOs, entities, DataStore
-│   ├── remote/         Bandcamp scrapers, YouTube extractor, HTTP client
-│   └── repository/     Repository implementations
-├── di/                 Hilt modules
-├── domain/
-│   ├── model/          Domain models (Track, Album, AudioFormat, etc.)
-│   ├── repository/     Repository interfaces
-│   └── usecase/        Use cases (download, cache management)
-├── player/             ExoPlayer wrapper, queue, playback service
-├── ui/
-│   ├── components/     Shared composables
-│   ├── navigation/     Route definitions
-│   ├── screens/
-│   │   ├── album/      Album detail
-│   │   ├── artist/     Artist profile & discography
-│   │   ├── bandcamp/   Browse & search
-│   │   ├── library/    Favorites, playlists, downloads
-│   │   ├── local/      Local music browser
-│   │   ├── player/     Full & mini player
-│   │   ├── playlist/   Playlist detail & reorder
-│   │   ├── settings/   Settings & account login
-│   │   └── youtube/    YouTube search & playback
-│   └── theme/          Colors, typography, shapes, motion
-└── util/               Network utils, file helpers, encryption
-```
+Contributions are welcome, but this music player was originally built for myself because I found the bandcamp app to be lacking in design and speed. If it makes sense I'll merge it.
 
-## Automated releases (for forks)
+## License
+
+Dustvalve Next is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html).
+
+<p align="center">
+  <img src="gplv3.png" alt="GPLv3"/>
+</p>
+
+<details>
+<summary><h2>Automated releases (for forks)</h2></summary>
 
 This repository includes a GitHub Actions workflow that builds a signed release APK and attaches it to GitHub Releases automatically. To set it up on your fork:
 
@@ -129,14 +110,4 @@ Go to **Releases > Draft a new release**, create a tag (e.g. `v1.0.0`), write re
 
 > **Note:** The workflow only triggers on published releases, not on pushes or pull requests. You can monitor builds in the **Actions** tab.
 
-## Contributing
-
-Contributions are welcome, but this music player was originally built for myself because I found the bandcamp app to be lacking in design and speed. If it makes sense I'll merge it.
-
-## License
-
-Dustvalve Next is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html).
-
-<p align="center">
-  <img src="gplv3.png" alt="GPLv3"/>
-</p>
+</details>
