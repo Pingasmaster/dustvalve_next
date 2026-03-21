@@ -27,42 +27,12 @@ Dustvalve Next is a multi-source music player that lets you browse Bandcamp, sea
 
 ## Features
 
-**Multi-source playback**
-- Stream and download from **Bandcamp** — browse hot releases, search, manage favorites, purchase downloads
-- Play and download from **YouTube** via NewPipe Extractor — no API key or Google account needed
-- Scan and play **local audio files** (mp3, flac, m4a, ogg, wav, opus, aac, wma, alac) via folder picker or device-wide MediaStore scanning
-- Multiple local music folder support with per-folder track association
+Play your music from a single, snappy and emotional interface no matter where it comes from: bandcamp, youtube music, or just your local music folder. With progressive downloads on cellular, automatic caching (never redownloads a song more than once) and optional downloads for all platforms,
+See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from. We have no tracking or bullshit, you choose whether you want to allow music access storage permissions or per-folder access which does not require any storage permissions at all, GPLv3, this software is designed to repesct you and your privacy. We provide instructions to build the app yourself from this repo in the build section.
+We heavily follow all Material you 3 Expressive guidelines and recommendations with a touch of expressiveness on top to make it all as much android-native and intentional as possible, though I'm a dev not a designer so feel free to create some Issues for any suggestions. This app apk is around 4Mb, it takes around 40Mb of storage space for the app itself, has configurable caching storage limits and most importantly starts up instantly, no splash screen for 5 seconds on slow devices.
+We will add more sources once we get out of alpha and have unified the player features.
 
-**Downloads & caching**
-- Progressive download: stream at preview quality, then seamlessly upgrade to full quality in the background
-- Download quality presets: **Best quality** (preferred format always) or **Economical** (AAC on metered networks)
-- Unified download behavior across YouTube and Bandcamp sources
-- HQ format selection for purchased Bandcamp content (FLAC, MP3 320, MP3 V0, AAC, Ogg Vorbis)
-- 512 MB LRU media cache with configurable storage limits and cache eviction
-
-**Player**
-- Queue management with shuffle and repeat (off / all / one)
-- Volume control with inline slider and full-screen volume sheet
-- Audio output device switching
-- Media session notifications and lock screen controls
-- Seamless hot-swap from stream to local file mid-playback
-
-**Library**
-- Favorites for tracks, albums, and artists
-- Custom playlists with drag-to-reorder
-- System playlists: Downloads, Recent, Collection, Favorites, Local
-- Search history across all sources
-
-**Design**
-- Material You 3 Expressive theming with `MotionScheme` spring animations
-- Dynamic color from your wallpaper (Android 12+)
-- Album art color theming — theme the app using colors from the playing track
-- Dark, light, and system theme modes
-- OLED pure black option
-- Wavy animated seek bar
-- Responsive layout — bottom nav on phones, navigation rail on tablets
-
-**Gesture-driven**
+**Gestures**
 - **Tap** album art to play/pause, **double-tap** to favorite
 - **Swipe** album art left or right to skip tracks
 - **Long-press** album art to browse upcoming tracks in a carousel
@@ -72,46 +42,28 @@ Dustvalve Next is a multi-source music player that lets you browse Bandcamp, sea
 - **Long-press** library items for context menus
 - **Tap** stacked covers behind the album art to jump to upcoming tracks
 
-**Lightweight**
-- ~4 MB release APK — minimal dependencies, no bloat
-- Instant startup with zero splash screen delay
-
-**Privacy-respecting**
-- No telemetry or tracking
-- YouTube access through NewPipe Extractor (no Google services dependency)
-- Bandcamp rate limiting to be respectful to servers
-
-## Tech Stack
-
-| | |
-|---|---|
-| **Language** | Kotlin 2.3 |
-| **UI** | Jetpack Compose 1.11 + Material 3 Expressive 1.5 |
-| **Architecture** | MVVM · Hilt · Coroutines + StateFlow |
-| **Navigation** | Jetpack Navigation 3 |
-| **Database** | Room 2.8 |
-| **Playback** | Media3 / ExoPlayer 1.10 |
-| **Networking** | OkHttp 5.3 · Jsoup 1.22 |
-| **YouTube** | NewPipe Extractor 0.26 |
-| **Images** | Coil 3.4 |
-| **Build** | Gradle (Kotlin DSL) · AGP 9.2 · KSP · Java 21 |
-
 ## Building from source
 
 **Requirements:** Java 21, Android SDK 36
 
+If you just want an apk to install to your device:
+
 ```bash
 git clone https://github.com/Pingasmaster/dustvalve_next.git
 cd dustvalve_next
-./build.sh
+# You have to generate bogus keys to assemble a release apk, you can skip this step for a debug apk but it'll be way slower and larger
+keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias dustvalve
+# Store the password you just chose so the build script can find it
+echo "your-password-here" > .password-signing-keys
+
+# Then you can build
+./gradlew assembleRelease
 ```
 
-The build script runs lint, assembles debug and release APKs, copies the release APK to the project root as `app-release.apk`, and auto-increments the version.
-
-To build manually:
+For devs who want to modify, fork and test the app, we have a build script which runs lint, assembles debug and release APKs, copies sthe release APK to the project root as `app-release.apk`, and auto-increments the version.
 
 ```bash
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew assembleDebug
+./build.sh
 ```
 
 ## Project Structure
@@ -146,7 +98,7 @@ app/src/main/java/com/dustvalve/next/android/
 └── util/               Network utils, file helpers, encryption
 ```
 
-## Automated Releases (for forks)
+## Automated releases (for forks)
 
 This repository includes a GitHub Actions workflow that builds a signed release APK and attaches it to GitHub Releases automatically. To set it up on your fork:
 
@@ -169,23 +121,18 @@ Go to your fork on GitHub: **Settings > Secrets and variables > Actions > New re
 
 ### 3. Publish a release
 
-Go to **Releases > Draft a new release**, create a tag (e.g. `v0.0.69`), write release notes, and click **Publish release**. The workflow will build the release APK and attach it as a downloadable asset.
+Go to **Releases > Draft a new release**, create a tag (e.g. `v1.0.0`), write release notes, and click **Publish release**. The workflow will build the release APK and attach it as a downloadable asset.
 
-> **Note:** The workflow only triggers on published releases — not on pushes or pull requests. You can monitor builds in the **Actions** tab.
+> **Note:** The workflow only triggers on published releases, not on pushes or pull requests. You can monitor builds in the **Actions** tab.
 
 ## Contributing
 
-Contributions are welcome. Please open an issue to discuss larger changes before submitting a PR.
+Contributions are welcome, but this music player was originally built for myself because I found the bandcamp app to be lacking in design and speed. If it makes sense I'll merge it.
 
 ## License
 
 Dustvalve Next is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html).
 
-```
-Copyright (C) 2026 Dustvalve Next contributors
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-```
+<p align="center">
+  <img src="gplv3.png" alt="GPLv3"/>
+</p>
