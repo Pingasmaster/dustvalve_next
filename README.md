@@ -21,17 +21,20 @@
 
 ## About
 
-Dustvalve Next is a multi-source music player that lets you browse Bandcamp, search YouTube, and play your local files from a single, cohesive interface. It's built entirely in Kotlin with Jetpack Compose and follows Material You 3 Expressive design.
+Play your music from a single, snappy and emotional interface no matter the source: bandcamp, youtube music, or just your local music folder.
+See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from, all in a nicely designed, lightweight (4mb), extremely fast and no-nonsenses GPLv3 Material you 3 Expressive app.
 
 > **Pre-alpha**. Expect bugs and design overhauls. We will add more sources once we get out of alpha and have unified the player features.
 
+Download the app [here](https://github.com/Pingasmaster/dustvalve_next/releases).
+
 ## Features
 
-Play your music from a single, snappy and emotional interface no matter where it comes from: bandcamp, youtube music, or just your local music folder. With progressive downloads on cellular, automatic caching (never redownloads a song more than once) and optional downloads for all platforms,
+We provide progressive streaming, automatic caching (never redownloads a song more than once) and optional downloads for all platforms. Also, the main music player is pretty intuitive and not boring like other apps.
 
-See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from. We have no tracking or bullshit, you choose whether you want to allow music access storage permissions or per-folder access which does not require any storage permissions at all, GPLv3, this software is designed to repesct you and your privacy. We provide instructions to build the app yourself from this repo in the build section.
+We have no tracking or bullshit, you choose whether you want to allow music access storage permissions or per-folder access which does not require any storage permissions at all. This software is designed to repesct you and your privacy. We provide instructions to build the app yourself from this repo in the build section.
 
-We heavily follow all Material you 3 Expressive guidelines and recommendations with a touch of expressiveness on top to make it all as much android-native and intentional as possible, though I'm a dev not a designer so feel free to create some Issues for any suggestions. This app apk is around 4Mb, it takes around 40Mb of storage space for the app itself, has configurable caching storage limits and most importantly starts up instantly, no splash screen for 5 seconds on slow devices.
+We heavily follow all Material you 3 Expressive guidelines and recommendations with a touch of expressiveness on top to make it all as much android-native and intentional as possible, though I'm a dev not a designer so feel free to create some Issues for any suggestions. This app apk is around 4Mb, it takes around 32Mb of storage space for the app itself once installed, has configurable caching storage limits and most importantly starts up instantly, no splash screen for 5 seconds on slow devices.
 
 **Gestures**
 - **Tap** album art to play/pause, **double-tap** to favorite
