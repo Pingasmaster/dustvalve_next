@@ -48,9 +48,18 @@ class AlbumRepositoryImpl @Inject constructor(
             if (age < REVALIDATE_THRESHOLD_MS && trackEntities.isNotEmpty()) {
                 return buildCachedAlbum(cachedAlbum, trackEntities)
             }
+            // Stale but has tracks: try revalidate, fall back to stale cache offline
+            if (trackEntities.isNotEmpty()) {
+                return try {
+                    scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                    buildCachedAlbum(cachedAlbum, trackEntities)
+                }
+            }
         }
 
-        // Cache miss, stub, or stale: scrape and persist
+        // Cache miss or stub (no tracks): scrape and persist
         return scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
     }
 
@@ -71,10 +80,16 @@ class AlbumRepositoryImpl @Inject constructor(
         }
 
         // No cache, stub, or stale: scrape and emit
-        val fresh = scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
-        // Always emit fresh data after a scrape — metadata (title, art, tags)
-        // may have changed even if track IDs are identical
-        emit(fresh)
+        try {
+            val fresh = scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
+            // Always emit fresh data after a scrape — metadata (title, art, tags)
+            // may have changed even if track IDs are identical
+            emit(fresh)
+        } catch (e: Exception) {
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            if (cachedAlbum == null || trackDao.getByAlbumId(cachedAlbum.id).isEmpty()) throw e
+            // Stale cache already emitted — swallow network error for offline use
+        }
     }.flowOn(Dispatchers.IO)
 
     private suspend fun findCachedAlbum(

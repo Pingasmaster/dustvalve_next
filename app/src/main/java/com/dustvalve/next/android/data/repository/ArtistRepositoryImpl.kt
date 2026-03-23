@@ -54,9 +54,16 @@ class ArtistRepositoryImpl @Inject constructor(
             if (age < REVALIDATE_THRESHOLD_MS) {
                 return buildCachedArtist(cachedArtist, cleanUrl, url)
             }
+            // Stale: try revalidate, fall back to stale cache offline
+            return try {
+                scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
+            } catch (e: Exception) {
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                buildCachedArtist(cachedArtist, cleanUrl, url)
+            }
         }
 
-        // Cache miss or stale: scrape and persist
+        // Cache miss: scrape and persist
         return scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
     }
 
@@ -73,10 +80,16 @@ class ArtistRepositoryImpl @Inject constructor(
         }
 
         // No cache or stale: scrape in background and emit updated result
-        val fresh = scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
-        // Only re-emit if we didn't have cache, or if content actually changed
-        if (cachedArtist == null || didArtistChange(cachedArtist, fresh)) {
-            emit(fresh)
+        try {
+            val fresh = scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
+            // Only re-emit if we didn't have cache, or if content actually changed
+            if (cachedArtist == null || didArtistChange(cachedArtist, fresh)) {
+                emit(fresh)
+            }
+        } catch (e: Exception) {
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            if (cachedArtist == null) throw e
+            // Stale cache already emitted — swallow network error for offline use
         }
     }.flowOn(Dispatchers.IO)
 
