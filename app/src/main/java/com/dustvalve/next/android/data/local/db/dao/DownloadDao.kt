@@ -22,6 +22,9 @@ interface DownloadDao {
     @Query("DELETE FROM downloads WHERE trackId = :trackId")
     suspend fun delete(trackId: String)
 
+    @Query("SELECT * FROM downloads ORDER BY downloadedAt DESC")
+    suspend fun getAllSync(): List<DownloadEntity>
+
     @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM downloads")
     suspend fun getTotalSize(): Long
 

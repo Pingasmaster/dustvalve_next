@@ -52,6 +52,9 @@ data class SettingsUiState(
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
     val albumCoverLongPressCarousel: Boolean = true,
+    val isExporting: Boolean = false,
+    val exportProgress: Float = 0f,
+    val exportMessage: String? = null,
 )
 
 @HiltViewModel
@@ -635,6 +638,38 @@ class SettingsViewModel @Inject constructor(
                 if (e is CancellationException) throw e
             }
         }
+    }
+
+    private var exportJob: Job? = null
+
+    fun exportDownloads(destinationUri: String) {
+        exportJob?.cancel()
+        exportJob = viewModelScope.launch {
+            _uiState.update { it.copy(isExporting = true, exportProgress = 0f) }
+            try {
+                val count = downloadRepository.exportDownloads(destinationUri) { exported, total ->
+                    _uiState.update { it.copy(exportProgress = exported.toFloat() / total.toFloat()) }
+                }
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        exportMessage = "Exported $count track${if (count != 1) "s" else ""} successfully",
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        exportMessage = "Export failed: ${e.message}",
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearExportMessage() {
+        _uiState.update { it.copy(exportMessage = null) }
     }
 
     fun removeAllDownloads() {

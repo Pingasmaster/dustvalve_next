@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
@@ -358,6 +360,76 @@ class DownloadRepositoryImpl @Inject constructor(
 
     override fun getDownloadedAlbumIds(): Flow<List<String>> {
         return downloadDao.getDownloadedAlbumIds()
+    }
+
+    override suspend fun exportDownloads(
+        destinationUri: String,
+        onProgress: (exported: Int, total: Int) -> Unit,
+    ): Int = withContext(Dispatchers.IO) {
+        val downloads = downloadDao.getAllSync()
+        if (downloads.isEmpty()) return@withContext 0
+
+        val trackIds = downloads.map { it.trackId }
+        val albumIds = downloads.map { it.albumId }.distinct()
+        val trackEntitiesById = trackDao.getByIds(trackIds).associateBy { it.id }
+        val albumEntitiesById = albumDao.getByIds(albumIds).associateBy { it.id }
+
+        val treeUri = Uri.parse(destinationUri)
+        val rootDoc = DocumentFile.fromTreeUri(context, treeUri)
+            ?: throw IOException("Cannot access selected folder")
+
+        val dirCache = mutableMapOf<String, DocumentFile>()
+        var exported = 0
+        val total = downloads.size
+
+        for (download in downloads) {
+            coroutineContext.ensureActive()
+
+            val sourceFile = File(download.filePath)
+            if (!sourceFile.exists()) {
+                onProgress(++exported, total)
+                continue
+            }
+
+            val trackEntity = trackEntitiesById[download.trackId]
+            val albumEntity = albumEntitiesById[download.albumId]
+            val artist = trackEntity?.artist ?: "Unknown Artist"
+            val albumTitle = albumEntity?.title ?: trackEntity?.albumTitle ?: "Unknown Album"
+            val trackTitle = trackEntity?.title ?: download.trackId
+            val trackNumber = (trackEntity?.trackNumber ?: 0).toString().padStart(2, '0')
+            val format = AudioFormat.fromKey(download.format) ?: AudioFormat.MP3_128
+
+            val folderName = NetworkUtils.sanitizeFileName("$artist - $albumTitle")
+            val albumDir = dirCache.getOrPut(folderName) {
+                rootDoc.findFile(folderName) ?: rootDoc.createDirectory(folderName)
+                ?: throw IOException("Failed to create folder: $folderName")
+            }
+
+            val fileName = NetworkUtils.sanitizeFileName("$trackNumber - $trackTitle") + ".${format.extension}"
+            val mimeType = when (format.extension) {
+                "flac" -> "audio/flac"
+                "mp3" -> "audio/mpeg"
+                "m4a" -> "audio/mp4"
+                "ogg" -> "audio/ogg"
+                else -> "application/octet-stream"
+            }
+
+            // Remove existing file with same name (re-export)
+            albumDir.findFile(fileName)?.delete()
+
+            val newFile = albumDir.createFile(mimeType, fileName)
+                ?: throw IOException("Failed to create file: $fileName")
+
+            context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
+                sourceFile.inputStream().use { input ->
+                    input.copyTo(output, 8192)
+                }
+            } ?: throw IOException("Failed to open output stream for: $fileName")
+
+            onProgress(++exported, total)
+        }
+
+        exported
     }
 
     override suspend fun deleteDownload(trackId: String) {

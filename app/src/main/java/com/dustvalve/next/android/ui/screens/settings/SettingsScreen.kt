@@ -32,6 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -105,6 +106,17 @@ fun SettingsScreen(
                 snackbarHostState.showSnackbar("YouTube Music disconnected")
             } finally {
                 viewModel.clearYtmSignOutSuccess()
+            }
+        }
+    }
+
+    LaunchedEffect(state.exportMessage) {
+        val message = state.exportMessage
+        if (message != null) {
+            try {
+                snackbarHostState.showSnackbar(message)
+            } finally {
+                viewModel.clearExportMessage()
             }
         }
     }
@@ -642,6 +654,20 @@ fun SettingsScreen(
 
         // Storage section
         item {
+            val exportContext = LocalContext.current
+            val exportFolderPickerLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.OpenDocumentTree(),
+            ) { uri: Uri? ->
+                if (uri != null) {
+                    val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    try {
+                        exportContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                    } catch (_: Exception) { /* Best effort */ }
+                    viewModel.exportDownloads(uri.toString())
+                }
+            }
+
             SettingsSection(
                 title = "Storage",
                 icon = R.drawable.ic_storage,
@@ -696,6 +722,28 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text("Manage downloads")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = { exportFolderPickerLauncher.launch(null) },
+                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isExporting,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_folder_open),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Export downloads")
+                        }
+                        if (state.isExporting) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { state.exportProgress },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         FilledTonalButton(

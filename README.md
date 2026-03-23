@@ -56,7 +56,7 @@ If you just want an apk to install to your device:
 git clone https://github.com/Pingasmaster/dustvalve_next.git
 cd dustvalve_next
 # You have to generate bogus keys to assemble a release apk, you can skip this step for a debug apk but it'll be way slower and larger
-keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias dustvalve
+keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 4096 -validity 10000 -alias dustvalve
 # Store the password you just chose so the build script can find it
 echo "your-password-here" > .password-signing-keys
 

@@ -21,4 +21,8 @@ interface DownloadRepository {
     suspend fun deleteAlbumDownloads(albumId: String)
     fun getDownloadedTrackIds(): Flow<List<String>>
     fun getDownloadedAlbumIds(): Flow<List<String>>
+    suspend fun exportDownloads(
+        destinationUri: String,
+        onProgress: (exported: Int, total: Int) -> Unit,
+    ): Int
 }
