@@ -86,7 +86,13 @@ fun AppNavigation(
             )
             is NavDestination.Library -> LibraryScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
+                onArtistClick = { url ->
+                    if (url.contains("youtube.com") || url.contains("youtu.be")) {
+                        navViewModel.navigateTo(NavDestination.YouTubeArtistDetail(url, "", null))
+                    } else {
+                        navViewModel.navigateTo(NavDestination.ArtistDetail(url))
+                    }
+                },
                 onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
                 playerViewModel = playerViewModel,
             )

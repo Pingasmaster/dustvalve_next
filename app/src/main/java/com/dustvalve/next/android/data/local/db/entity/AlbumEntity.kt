@@ -19,4 +19,5 @@ data class AlbumEntity(
     val autoDownload: Boolean = false,
     val saleItemId: Long? = null,
     val saleItemType: String? = null,
+    val source: String = "bandcamp",
 )

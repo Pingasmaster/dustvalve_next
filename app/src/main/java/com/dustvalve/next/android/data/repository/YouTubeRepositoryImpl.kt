@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.repository
 
 import com.dustvalve.next.android.data.remote.youtube.YouTubeExtractorWrapper
+import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
@@ -30,6 +31,10 @@ class YouTubeRepositoryImpl @Inject constructor(
 
     override suspend fun getStreamUrl(videoUrl: String): String {
         return extractor.getStreamUrl(videoUrl)
+    }
+
+    override suspend fun getDownloadableStream(videoUrl: String): Pair<String, AudioFormat> {
+        return extractor.getDownloadableStream(videoUrl)
     }
 
     override suspend fun getTrackInfo(videoUrl: String): Track {

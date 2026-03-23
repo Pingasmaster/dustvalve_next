@@ -16,4 +16,5 @@ data class ArtistEntity(
     val autoDownload: Boolean = false,
     /** JSON-encoded list of album IDs in display order (from scraper) */
     val albumIdOrder: String? = null,
+    val source: String = "bandcamp",
 )

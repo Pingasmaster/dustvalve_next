@@ -17,8 +17,10 @@ import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.dustvalve.next.android.cache.StorageTracker
@@ -54,6 +56,7 @@ class DownloadRepositoryImpl @Inject constructor(
     private val storageTracker: StorageTracker,
     private val downloadScraper: DustvalveDownloadScraper,
     private val settingsDataStore: SettingsDataStore,
+    private val youtubeRepository: YouTubeRepository,
     @param:ApplicationContext private val context: Context,
 ) : DownloadRepository {
 
@@ -104,6 +107,11 @@ class DownloadRepositoryImpl @Inject constructor(
         val (downloadUrl, format) = if (purchaseInfo != null) {
             resolveHqDownloadUrl(purchaseInfo, preferredFormat)
                 ?: (track.streamUrl to AudioFormat.MP3_128)
+        } else if (track.source == TrackSource.YOUTUBE) {
+            // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream
+            val videoUrl = track.streamUrl
+                ?: throw IOException("Track '${track.title}' has no video URL")
+            youtubeRepository.getDownloadableStream(videoUrl)
         } else {
             (track.streamUrl to AudioFormat.MP3_128)
         }
@@ -412,6 +420,7 @@ class DownloadRepositoryImpl @Inject constructor(
                 "mp3" -> "audio/mpeg"
                 "m4a" -> "audio/mp4"
                 "ogg" -> "audio/ogg"
+                "webm" -> "audio/webm"
                 else -> "application/octet-stream"
             }
 

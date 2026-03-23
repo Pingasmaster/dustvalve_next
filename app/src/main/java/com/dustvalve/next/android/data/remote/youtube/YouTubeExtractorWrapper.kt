@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.remote.youtube
 
+import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
@@ -67,6 +68,29 @@ class YouTubeExtractorWrapper @Inject constructor() {
         val audioStreams = extractor.audioStreams ?: emptyList()
         pickBestAudioStream(audioStreams)?.content
             ?: throw IllegalStateException("No audio streams available for $videoUrl")
+    }
+
+    suspend fun getDownloadableStream(videoUrl: String): Pair<String, AudioFormat> = withContext(Dispatchers.IO) {
+        ensureInitialized()
+        val extractor = ServiceList.YouTube.getStreamExtractor(videoUrl)
+        extractor.fetchPage()
+        val audioStreams = extractor.audioStreams ?: emptyList()
+        val bestStream = pickBestAudioStream(audioStreams)
+            ?: throw IllegalStateException("No audio streams available for $videoUrl")
+        val format = detectAudioFormat(bestStream)
+        bestStream.content to format
+    }
+
+    private fun detectAudioFormat(stream: AudioStream): AudioFormat {
+        val format = stream.format
+        return when (format) {
+            org.schabi.newpipe.extractor.MediaFormat.WEBMA_OPUS,
+            org.schabi.newpipe.extractor.MediaFormat.WEBMA,
+            org.schabi.newpipe.extractor.MediaFormat.OPUS -> AudioFormat.OPUS
+            org.schabi.newpipe.extractor.MediaFormat.M4A,
+            org.schabi.newpipe.extractor.MediaFormat.MPEG_4 -> AudioFormat.AAC
+            else -> AudioFormat.OPUS // YouTube defaults to Opus
+        }
     }
 
     suspend fun getStreamInfo(videoUrl: String): Track = withContext(Dispatchers.IO) {

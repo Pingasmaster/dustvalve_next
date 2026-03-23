@@ -227,7 +227,6 @@ class PlayerViewModel @Inject constructor(
      */
     private fun triggerProgressiveDownload(track: Track) {
         if (track.isLocal) return // Local tracks don't need downloading
-        if (track.source == TrackSource.YOUTUBE) return // YouTube tracks use a different download path
         progressiveDownloadJob?.cancel()
         progressiveDownloadJob = viewModelScope.launch {
             try {
@@ -242,9 +241,14 @@ class PlayerViewModel @Inject constructor(
                 }
 
                 // On metered + save-data enabled → download MP3-320 instead of preferred format
-                val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
-                val formatOverride = if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
-                    AudioFormat.MP3_320
+                // YouTube always gets best available stream, so skip format override
+                val formatOverride = if (track.source != TrackSource.YOUTUBE) {
+                    val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
+                    if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
+                        AudioFormat.MP3_320
+                    } else {
+                        null
+                    }
                 } else {
                     null
                 }
@@ -296,9 +300,13 @@ class PlayerViewModel @Inject constructor(
         if (_extraState.value.downloadingTrackId == nextTrack.id) return
 
         try {
-            val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
-            val formatOverride = if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
-                AudioFormat.MP3_320
+            val formatOverride = if (nextTrack.source != TrackSource.YOUTUBE) {
+                val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
+                if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
+                    AudioFormat.MP3_320
+                } else {
+                    null
+                }
             } else {
                 null
             }

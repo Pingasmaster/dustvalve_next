@@ -37,6 +37,7 @@ import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.ui.navigation.AppNavigation
 import com.dustvalve.next.android.ui.navigation.BottomNavBar
 import com.dustvalve.next.android.ui.navigation.BottomNavItem
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.ui.navigation.NavDestination
 import com.dustvalve.next.android.ui.navigation.NavigationViewModel
 import com.dustvalve.next.android.ui.navigation.SideNavRail
@@ -321,10 +322,16 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                     onCollapse = { navViewModel.collapsePlayer() },
                     onArtistClick = { track ->
                         navViewModel.collapsePlayer()
-                        if (track.isLocal) {
-                            navViewModel.requestLocalArtistFilter(track.artist)
-                        } else {
-                            navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
+                        when {
+                            track.isLocal -> navViewModel.requestLocalArtistFilter(track.artist)
+                            track.source == TrackSource.YOUTUBE -> navViewModel.navigateTo(
+                                NavDestination.YouTubeArtistDetail(
+                                    url = track.artistUrl,
+                                    name = track.artist,
+                                    imageUrl = null,
+                                )
+                            )
+                            else -> navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
                         }
                     },
                 )
