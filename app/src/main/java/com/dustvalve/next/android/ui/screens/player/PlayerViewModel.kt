@@ -47,6 +47,7 @@ data class PlayerUiState(
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val isMiniPlayerVisible: Boolean = false,
+    val isLoadingTrack: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
     val downloadingTrackId: String? = null,
     val playlists: List<Playlist> = emptyList(),
@@ -89,9 +90,11 @@ class PlayerViewModel @Inject constructor(
         val currentPlaybackFormat: AudioFormat? = null,
         val currentSourcePath: String? = null,
         val userPlaylistTrackIds: Set<String> = emptySet(),
+        val isLoadingTrack: Boolean = false,
     )
 
     private var progressiveDownloadJob: Job? = null
+    private var playJob: Job? = null
 
     private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val _audioDevices = MutableStateFlow(getOutputDevices())
@@ -244,7 +247,10 @@ class PlayerViewModel @Inject constructor(
                 if (downloadInfo != null) {
                     val currentTrack = queueManager.currentTrack.value
                     if (currentTrack != null && currentTrack.id == track.id) {
-                        playbackManager.hotSwapSource(downloadInfo.filePath, track.id)
+                        val seamlessUpgrade = settingsDataStore.getSeamlessQualityUpgradeSync()
+                        if (seamlessUpgrade) {
+                            playbackManager.hotSwapSource(downloadInfo.filePath, track.id)
+                        }
                         _extraState.update {
                             it.copy(
                                 currentPlaybackFormat = downloadInfo.format,
@@ -360,6 +366,7 @@ class PlayerViewModel @Inject constructor(
             currentPlaybackFormat = extra.currentPlaybackFormat,
             currentSourcePath = extra.currentSourcePath,
             userPlaylistTrackIds = extra.userPlaylistTrackIds,
+            isLoadingTrack = extra.isLoadingTrack,
         )
     }.combine(settingsDataStore.wavyProgressBar) { state, wavy ->
         state.copy(wavyProgressBar = wavy)
@@ -439,8 +446,25 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playTrack(track: Track) {
-        viewModelScope.launch {
-            val resolved = resolveTrackForPlayback(track)
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            val isYouTubeStream = track.source == TrackSource.YOUTUBE
+                && downloadRepository.getDownloadInfo(track.id) == null
+
+            if (isYouTubeStream) {
+                playbackManager.pause()
+                queueManager.setQueue(listOf(track), 0)
+                _extraState.update { it.copy(isLoadingTrack = true) }
+            }
+
+            val resolved = try {
+                resolveTrackForPlayback(track)
+            } finally {
+                if (isYouTubeStream) {
+                    _extraState.update { it.copy(isLoadingTrack = false) }
+                }
+            }
+
             if (resolved.streamUrl == null) return@launch // Stream resolution failed
             queueManager.setQueue(listOf(resolved), 0)
             playbackManager.playTrack(resolved)
@@ -457,10 +481,27 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playTrackInList(tracks: List<Track>, index: Int) {
-        viewModelScope.launch {
-            // Resolve the target track first for immediate playback, then resolve the rest
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            val targetTrack = tracks[index]
+            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE
+                && downloadRepository.getDownloadInfo(targetTrack.id) == null
+
+            if (isYouTubeStream) {
+                playbackManager.pause()
+                queueManager.setQueue(tracks, index)
+                _extraState.update { it.copy(isLoadingTrack = true) }
+            }
+
             val mutableTracks = tracks.toMutableList()
-            mutableTracks[index] = resolveTrackForPlayback(tracks[index])
+            mutableTracks[index] = try {
+                resolveTrackForPlayback(tracks[index])
+            } finally {
+                if (isYouTubeStream) {
+                    _extraState.update { it.copy(isLoadingTrack = false) }
+                }
+            }
+
             playbackManager.playQueue(mutableTracks, index)
             triggerProgressiveDownload(tracks[index])
             try {
@@ -474,10 +515,27 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun playAlbum(tracks: List<Track>, startIndex: Int) {
-        viewModelScope.launch {
-            // Resolve the target track first for immediate playback, then resolve the rest
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            val targetTrack = tracks[startIndex]
+            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE
+                && downloadRepository.getDownloadInfo(targetTrack.id) == null
+
+            if (isYouTubeStream) {
+                playbackManager.pause()
+                queueManager.setQueue(tracks, startIndex)
+                _extraState.update { it.copy(isLoadingTrack = true) }
+            }
+
             val mutableTracks = tracks.toMutableList()
-            mutableTracks[startIndex] = resolveTrackForPlayback(tracks[startIndex])
+            mutableTracks[startIndex] = try {
+                resolveTrackForPlayback(tracks[startIndex])
+            } finally {
+                if (isYouTubeStream) {
+                    _extraState.update { it.copy(isLoadingTrack = false) }
+                }
+            }
+
             playbackManager.playQueue(mutableTracks, startIndex)
             triggerProgressiveDownload(tracks[startIndex])
             try {

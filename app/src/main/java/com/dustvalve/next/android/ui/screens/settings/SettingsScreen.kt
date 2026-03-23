@@ -853,6 +853,30 @@ fun SettingsScreen(
                                     onCheckedChange = { viewModel.setProgressiveDownload(it) },
                                 )
                             }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Seamless quality upgrade",
+                                        style = MaterialTheme.typography.titleSmall,
+                                    )
+                                    Text(
+                                        text = "Automatically switch to higher quality audio while playing",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.seamlessQualityUpgrade,
+                                    onCheckedChange = { viewModel.setSeamlessQualityUpgrade(it) },
+                                    enabled = state.progressiveDownload,
+                                )
+                            }
                         }
                     }
                 }

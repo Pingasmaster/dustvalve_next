@@ -45,3 +45,10 @@ IMPORTANT: Before any design actions, make sure to fully understand material you
 ## Dependency Notes
 
 - **hiltViewModel**: Use `androidx.hilt:hilt-lifecycle-viewmodel-compose` (not `hilt-navigation-compose`). Import from `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`. The navigation-compose variant is deprecated as of 1.3.0.
+
+# Important
+
+If any agents launched report inconclusive results, research more and  if youre unsure how to do something, confirm by launhcing an agent to deep dive the web.
+
+Make sure you understand thoroughly the problem and the solution before writing ANY plan. If you're unsure, launch more research agents on the web.
+Also make sure to confirm manually ALL bugs if your plan includes bug fixes to make sure ALL bugs found are real.

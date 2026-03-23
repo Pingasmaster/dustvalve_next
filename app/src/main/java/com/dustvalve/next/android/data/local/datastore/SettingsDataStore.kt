@@ -38,6 +38,7 @@ class SettingsDataStore @Inject constructor(
         val DOWNLOAD_FORMAT = stringPreferencesKey("download_format")
         val SAVE_DATA_ON_METERED = booleanPreferencesKey("save_data_on_metered")
         val PROGRESSIVE_DOWNLOAD = booleanPreferencesKey("progressive_download")
+        val SEAMLESS_QUALITY_UPGRADE = booleanPreferencesKey("seamless_quality_upgrade")
         val OLED_BLACK = booleanPreferencesKey("oled_black")
         val ALBUM_ART_THEME = booleanPreferencesKey("album_art_theme")
         val WAVY_PROGRESS_BAR = booleanPreferencesKey("wavy_progress_bar")
@@ -112,6 +113,10 @@ class SettingsDataStore @Inject constructor(
 
     val progressiveDownload: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.PROGRESSIVE_DOWNLOAD] ?: true
+    }
+
+    val seamlessQualityUpgrade: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SEAMLESS_QUALITY_UPGRADE] ?: true
     }
 
     val oledBlack: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -238,6 +243,12 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setSeamlessQualityUpgrade(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SEAMLESS_QUALITY_UPGRADE] = enabled
+        }
+    }
+
     suspend fun setOledBlack(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.OLED_BLACK] = enabled
@@ -262,6 +273,10 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun getProgressiveDownloadSync(): Boolean {
         return context.dataStore.data.firstOrNull()?.get(Keys.PROGRESSIVE_DOWNLOAD) ?: true
+    }
+
+    suspend fun getSeamlessQualityUpgradeSync(): Boolean {
+        return context.dataStore.data.firstOrNull()?.get(Keys.SEAMLESS_QUALITY_UPGRADE) ?: true
     }
 
     suspend fun getSaveDataOnMeteredSync(): Boolean {

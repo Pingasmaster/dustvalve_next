@@ -846,36 +846,61 @@ fun FullPlayer(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(40.dp)
-                        .pointerInput(trackId) {
-                            detectTapGestures { offset ->
-                                val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                seekPosition = fraction
-                                val targetMs = (fraction * state.duration).toLong()
-                                playerViewModel.onSeek(targetMs)
-                                // Keep showing seekPosition until player catches up
-                                isSeeking = true
+                        .then(
+                            if (!state.isLoadingTrack) {
+                                Modifier
+                                    .pointerInput(trackId) {
+                                        detectTapGestures { offset ->
+                                            val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                                            seekPosition = fraction
+                                            val targetMs = (fraction * state.duration).toLong()
+                                            playerViewModel.onSeek(targetMs)
+                                            // Keep showing seekPosition until player catches up
+                                            isSeeking = true
+                                        }
+                                    }
+                                    .pointerInput(trackId) {
+                                        detectDragGestures(
+                                            onDragEnd = {
+                                                val targetMs = (seekPosition * state.duration).toLong()
+                                                playerViewModel.onSeek(targetMs)
+                                                // Keep showing seekPosition until player catches up
+                                            },
+                                            onDragCancel = {
+                                                isSeeking = false
+                                            },
+                                        ) { change, _ ->
+                                            change.consume()
+                                            val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                                            isSeeking = true
+                                            seekPosition = fraction
+                                        }
+                                    }
+                            } else {
+                                Modifier
                             }
-                        }
-                        .pointerInput(trackId) {
-                            detectDragGestures(
-                                onDragEnd = {
-                                    val targetMs = (seekPosition * state.duration).toLong()
-                                    playerViewModel.onSeek(targetMs)
-                                    // Keep showing seekPosition until player catches up
-                                },
-                                onDragCancel = {
-                                    isSeeking = false
-                                },
-                            ) { change, _ ->
-                                change.consume()
-                                val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                                isSeeking = true
-                                seekPosition = fraction
-                            }
-                        },
+                        ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    if (state.wavyProgressBar) {
+                    if (state.isLoadingTrack) {
+                        if (state.wavyProgressBar) {
+                            LinearWavyProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(24.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(24.dp),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                        }
+                    } else if (state.wavyProgressBar) {
                         LinearWavyProgressIndicator(
                             progress = { sliderPosition.coerceIn(0f, 1f) },
                             modifier = Modifier
@@ -899,7 +924,9 @@ fun FullPlayer(
                 }
 
                 // Time labels — reflect seek position during drag
-                val displayPosition = if (isSeeking) {
+                val displayPosition = if (state.isLoadingTrack) {
+                    null
+                } else if (isSeeking) {
                     (seekPosition * state.duration).toLong()
                 } else {
                     state.currentPosition
@@ -911,13 +938,17 @@ fun FullPlayer(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = formatTime(displayPosition),
+                        text = if (displayPosition != null) formatTime(displayPosition) else "--:--",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    val remaining = (state.duration - displayPosition).coerceAtLeast(0L)
+                    val remaining = if (displayPosition != null) {
+                        (state.duration - displayPosition).coerceAtLeast(0L)
+                    } else {
+                        null
+                    }
                     Text(
-                        text = "-${formatTime(remaining)}",
+                        text = if (remaining != null) "-${formatTime(remaining)}" else "--:--",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

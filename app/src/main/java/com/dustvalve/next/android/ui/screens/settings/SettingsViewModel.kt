@@ -37,6 +37,7 @@ data class SettingsUiState(
     val downloadFormat: String = "flac",
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
+    val seamlessQualityUpgrade: Boolean = true,
     val oledBlack: Boolean = false,
     val albumArtTheme: Boolean = false,
     val wavyProgressBar: Boolean = true,
@@ -80,6 +81,7 @@ class SettingsViewModel @Inject constructor(
         collectDownloadFormat()
         collectSaveDataOnMetered()
         collectProgressiveDownload()
+        collectSeamlessQualityUpgrade()
         collectOledBlack()
         collectAlbumArtTheme()
         collectWavyProgressBar()
@@ -202,6 +204,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 settingsDataStore.setProgressiveDownload(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setSeamlessQualityUpgrade(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setSeamlessQualityUpgrade(enabled)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -378,6 +390,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(progressiveDownload = enabled) }
+                }
+        }
+    }
+
+    private fun collectSeamlessQualityUpgrade() {
+        viewModelScope.launch {
+            settingsDataStore.seamlessQualityUpgrade
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(seamlessQualityUpgrade = enabled) }
                 }
         }
     }
