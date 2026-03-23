@@ -175,12 +175,12 @@ class CookieStore @Inject constructor(
      * Imports cookies from a name/value map (e.g. from WebView login).
      * Converts to SerializableCookie format and persists through the existing mechanism.
      */
-    suspend fun importCookies(cookies: Map<String, String>) {
+    suspend fun importCookies(cookies: Map<String, String>, domain: String = "bandcamp.com") {
         val newCookies = cookies.map { (name, value) ->
             SerializableCookie(
                 name = name,
                 value = value,
-                domain = "bandcamp.com",
+                domain = domain,
                 path = "/",
                 secure = true,
             )
@@ -210,12 +210,31 @@ class CookieStore @Inject constructor(
         }
     }
 
+    suspend fun clearCookiesForDomain(domain: String) {
+        persistMutex.withLock {
+            synchronized(lock) {
+                cachedCookies = cachedCookies.filter { cookie ->
+                    !matchesDomain(domain, cookie.domain)
+                }
+            }
+            val currentSnapshot = synchronized(lock) { cachedCookies }
+            if (currentSnapshot.isEmpty()) {
+                settingsDataStore.setAuthCookies(null)
+            } else {
+                val updatedJson = json.encodeToString(currentSnapshot)
+                settingsDataStore.setAuthCookies(updatedJson)
+            }
+        }
+    }
+
     /**
      * Returns true only for bandcamp.com or *.bandcamp.com hosts.
      * Prevents lookalike domains like "evilbandcamp.com" from matching.
      */
     private fun isDustvalveHost(host: String): Boolean {
-        return host == "bandcamp.com" || host.endsWith(".bandcamp.com")
+        return host == "bandcamp.com" || host.endsWith(".bandcamp.com") ||
+            host == "youtube.com" || host.endsWith(".youtube.com") ||
+            host == "google.com" || host.endsWith(".google.com")
     }
 
     /**

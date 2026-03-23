@@ -2,21 +2,20 @@ package com.dustvalve.next.android.ui.screens.settings
 
 import android.annotation.SuppressLint
 import android.view.WindowManager
-import androidx.activity.compose.LocalActivity
-import androidx.core.net.toUri
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -33,18 +32,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import com.dustvalve.next.android.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
+import com.dustvalve.next.android.R
 
-private const val LOGIN_URL = "https://bandcamp.com/login"
+private const val LOGIN_URL =
+    "https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fmusic.youtube.com%2F"
 
-private val AUTH_COOKIE_NAMES = setOf("identity", "session", "client_id", "js_logged_in")
+/** Cookie that confirms a fully authenticated YouTube Music session. */
+private const val AUTH_MARKER_COOKIE = "__Secure-3PAPISID"
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun AccountLoginScreen(
+fun YouTubeMusicLoginScreen(
     onLoginSuccess: (Map<String, String>) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -53,7 +55,6 @@ fun AccountLoginScreen(
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
-    // Keep a stable reference to the latest callback to avoid stale lambda captures in WebView
     val currentOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
 
     // Prevent screenshots/screen recordings on the login screen
@@ -75,7 +76,7 @@ fun AccountLoginScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sign in to Dustvalve") },
+                title = { Text("Sign in to YouTube Music") },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -100,20 +101,15 @@ fun AccountLoginScreen(
                         webViewRef = this
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
+                        // Google login requires third-party cookies
+                        cookieManager.setAcceptThirdPartyCookies(this, true)
 
-                        // Only expire cookies on fresh entry, not on config change recreation
+                        // Clear YouTube/Google cookies on fresh entry so re-login starts clean
                         if (!loginHandled) {
-                            cookieManager.getCookie("https://bandcamp.com")
-                                ?.split(";")
-                                ?.forEach { cookie ->
-                                    val name = cookie.trim().split("=", limit = 2).firstOrNull()?.trim()
-                                    if (name != null) {
-                                        cookieManager.setCookie(
-                                            "https://bandcamp.com",
-                                            "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com"
-                                        )
-                                    }
-                                }
+                            clearDomainCookies(cookieManager, "https://youtube.com")
+                            clearDomainCookies(cookieManager, "https://music.youtube.com")
+                            clearDomainCookies(cookieManager, "https://google.com")
+                            clearDomainCookies(cookieManager, "https://accounts.google.com")
                             cookieManager.flush()
                         }
 
@@ -123,12 +119,8 @@ fun AccountLoginScreen(
                                 request: WebResourceRequest?,
                             ): Boolean {
                                 val url = request?.url?.toString() ?: return false
-                                // Block navigation to non-Dustvalve domains
-                                if (!isDustvalveHost(url)) return true
-                                if (!url.contains("/login")) {
-                                    handleLoginIfNeeded(cookieManager)
-                                    return true
-                                }
+                                // Allow Google and YouTube domains for the login flow
+                                if (!isAllowedHost(url)) return true
                                 return false
                             }
 
@@ -136,7 +128,7 @@ fun AccountLoginScreen(
                                 super.onPageFinished(view, url)
                                 isPageLoading = false
                                 loadError = null
-                                if (url != null && !url.contains("/login") && isDustvalveHost(url)) {
+                                if (url != null && isYouTubeMusicPage(url)) {
                                     handleLoginIfNeeded(cookieManager)
                                 }
                             }
@@ -147,7 +139,6 @@ fun AccountLoginScreen(
                                 error: android.webkit.WebResourceError,
                             ) {
                                 super.onReceivedError(view, request, error)
-                                // Only handle errors for the main frame to avoid spurious sub-resource errors
                                 if (request.isForMainFrame) {
                                     isPageLoading = false
                                     loadError = error.description?.toString() ?: "Failed to load page"
@@ -156,11 +147,10 @@ fun AccountLoginScreen(
 
                             private fun handleLoginIfNeeded(cm: CookieManager) {
                                 if (loginHandled) return
-                                val cookies = extractCookies(cm, "https://bandcamp.com")
-                                val authCookies = cookies.filterKeys { it in AUTH_COOKIE_NAMES }
-                                if ("identity" in authCookies) {
+                                val cookies = extractAllYouTubeCookies(cm)
+                                if (AUTH_MARKER_COOKIE in cookies) {
                                     loginHandled = true
-                                    currentOnLoginSuccess(authCookies)
+                                    currentOnLoginSuccess(cookies)
                                 }
                             }
                         }
@@ -171,7 +161,6 @@ fun AccountLoginScreen(
                 modifier = Modifier.fillMaxSize(),
             )
 
-            // Loading indicator
             if (isPageLoading) {
                 LinearWavyProgressIndicator(
                     modifier = Modifier
@@ -181,7 +170,6 @@ fun AccountLoginScreen(
                 )
             }
 
-            // Error state
             loadError?.let { error ->
                 Text(
                     text = error,
@@ -196,21 +184,51 @@ fun AccountLoginScreen(
     }
 }
 
-private fun isDustvalveHost(url: String): Boolean {
+private fun isAllowedHost(url: String): Boolean {
     val host = url.toUri().host ?: return false
-    return host == "bandcamp.com" || host.endsWith(".bandcamp.com")
+    return host == "youtube.com" || host.endsWith(".youtube.com") ||
+        host == "google.com" || host.endsWith(".google.com") ||
+        host.endsWith(".gstatic.com") || host.endsWith(".googleapis.com")
 }
 
-private fun extractCookies(cookieManager: CookieManager, url: String): Map<String, String> {
-    val cookieString = cookieManager.getCookie(url) ?: return emptyMap()
-    return cookieString.split(";")
-        .mapNotNull { cookie ->
+private fun isYouTubeMusicPage(url: String): Boolean {
+    val host = url.toUri().host ?: return false
+    return host == "music.youtube.com" || host == "www.music.youtube.com"
+}
+
+/**
+ * Extracts cookies from both youtube.com and music.youtube.com domains,
+ * merging them into a single map.
+ */
+private fun extractAllYouTubeCookies(cookieManager: CookieManager): Map<String, String> {
+    val result = mutableMapOf<String, String>()
+    listOf(
+        "https://youtube.com",
+        "https://music.youtube.com",
+        "https://www.youtube.com",
+    ).forEach { url ->
+        val cookieString = cookieManager.getCookie(url) ?: return@forEach
+        cookieString.split(";").forEach { cookie ->
             val parts = cookie.trim().split("=", limit = 2)
             if (parts.size == 2) {
-                parts[0].trim() to parts[1].trim()
-            } else {
-                null
+                result[parts[0].trim()] = parts[1].trim()
             }
         }
-        .toMap()
+    }
+    return result
+}
+
+private fun clearDomainCookies(cookieManager: CookieManager, url: String) {
+    cookieManager.getCookie(url)
+        ?.split(";")
+        ?.forEach { cookie ->
+            val name = cookie.trim().split("=", limit = 2).firstOrNull()?.trim()
+            if (name != null) {
+                val domain = url.toUri().host?.let { ".$it" } ?: return@forEach
+                cookieManager.setCookie(
+                    url,
+                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain"
+                )
+            }
+        }
 }

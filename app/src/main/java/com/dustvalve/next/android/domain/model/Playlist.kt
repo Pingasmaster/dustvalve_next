@@ -17,7 +17,7 @@ data class Playlist(
     enum class SystemPlaylistType(val defaultName: String, val iconRes: String? = null) {
         DOWNLOADS("Downloads"),
         RECENT("Recent"),
-        COLLECTION("Collection"),
+        COLLECTION("Bandcamp purchases"),
         FAVORITES("Favorites"),
         LOCAL("Local"),
     }

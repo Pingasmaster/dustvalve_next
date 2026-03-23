@@ -11,6 +11,7 @@ sealed interface NavDestination {
     data class AlbumDetail(val url: String) : NavDestination
     data class ArtistDetail(val url: String) : NavDestination
     data object AccountLogin : NavDestination
+    data object YouTubeMusicLogin : NavDestination
     data class PlaylistDetail(val playlistId: String) : NavDestination
     data class YouTubePlaylistDetail(val url: String, val name: String) : NavDestination
     data class YouTubeArtistDetail(val url: String, val name: String, val imageUrl: String?) : NavDestination

@@ -217,8 +217,13 @@ class LibraryViewModel @Inject constructor(
                 playlistRepository.getAllPlaylists(),
                 favoriteDao.getFavoritedAlbumsWithInfo(),
                 favoriteDao.getFavoritedArtistsWithInfo(),
-            ) { playlists, favAlbums, favArtists ->
-                val playlistItems = playlists.map { LibraryItem.PlaylistItem(it) }
+                accountRepository.getAccountState(),
+            ) { playlists, favAlbums, favArtists, accountState ->
+                val filteredPlaylists = playlists.filter { playlist ->
+                    // Hide Bandcamp purchases playlist when Bandcamp account is not connected
+                    if (playlist.id == Playlist.ID_COLLECTION) accountState.isLoggedIn else true
+                }
+                val playlistItems = filteredPlaylists.map { LibraryItem.PlaylistItem(it) }
                 val albumItems = favAlbums.map { info ->
                     LibraryItem.AlbumItem(
                         favoriteId = info.id,

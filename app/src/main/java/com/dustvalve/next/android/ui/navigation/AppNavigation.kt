@@ -24,6 +24,7 @@ import com.dustvalve.next.android.ui.screens.local.LocalScreen
 import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
+import com.dustvalve.next.android.ui.screens.settings.YouTubeMusicLoginScreen
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeArtistDetailScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubePlaylistDetailScreen
@@ -90,7 +91,8 @@ fun AppNavigation(
                 playerViewModel = playerViewModel,
             )
             is NavDestination.Settings -> SettingsScreen(
-                onLoginClick = { navViewModel.navigateTo(NavDestination.AccountLogin) },
+                onBandcampLoginClick = { navViewModel.navigateTo(NavDestination.AccountLogin) },
+                onYouTubeMusicLoginClick = { navViewModel.navigateTo(NavDestination.YouTubeMusicLogin) },
                 onDownloadsClick = {
                     navViewModel.navigateTo(
                         NavDestination.PlaylistDetail(com.dustvalve.next.android.domain.model.Playlist.ID_DOWNLOADS)
@@ -133,6 +135,21 @@ fun AppNavigation(
                 onBack = { navViewModel.navigateBack() },
                 playerViewModel = playerViewModel,
                 viewModel = hiltViewModel(key = destination.url),
+            )
+            is NavDestination.YouTubeMusicLogin -> YouTubeMusicLoginScreen(
+                onLoginSuccess = { cookies ->
+                    coroutineScope.launch {
+                        try {
+                            accountRepository.saveYouTubeMusicCookies(cookies)
+                        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                            throw e
+                        } catch (_: Exception) {
+                            // Cookie save failed — still navigate back
+                        }
+                        navViewModel.navigateBack()
+                    }
+                },
+                onBack = { navViewModel.navigateBack() },
             )
             is NavDestination.AccountLogin -> AccountLoginScreen(
                 onLoginSuccess = { cookies ->

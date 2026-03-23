@@ -78,7 +78,8 @@ import com.dustvalve.next.android.ui.theme.AppShapes
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
-    onLoginClick: () -> Unit,
+    onBandcampLoginClick: () -> Unit,
+    onYouTubeMusicLoginClick: () -> Unit,
     onDownloadsClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -88,12 +89,22 @@ fun SettingsScreen(
     var showFormatSheet by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.signOutSuccess) {
-        if (state.signOutSuccess) {
+    LaunchedEffect(state.bandcampSignOutSuccess) {
+        if (state.bandcampSignOutSuccess) {
             try {
-                snackbarHostState.showSnackbar("Successfully disconnected")
+                snackbarHostState.showSnackbar("Bandcamp disconnected")
             } finally {
                 viewModel.clearSignOutSuccess()
+            }
+        }
+    }
+
+    LaunchedEffect(state.ytmSignOutSuccess) {
+        if (state.ytmSignOutSuccess) {
+            try {
+                snackbarHostState.showSnackbar("YouTube Music disconnected")
+            } finally {
+                viewModel.clearYtmSignOutSuccess()
             }
         }
     }
@@ -499,10 +510,10 @@ fun SettingsScreen(
             }
         }
 
-        // Account section
+        // Connections section
         item {
             SettingsSection(
-                title = "Account",
+                title = "Connections",
                 icon = R.drawable.ic_account_circle,
             ) {
                 Card(
@@ -512,6 +523,24 @@ fun SettingsScreen(
                     ),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
+                        // Bandcamp connection
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_cloud),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Bandcamp",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         if (state.accountState.isLoggedIn) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -521,44 +550,89 @@ fun SettingsScreen(
                                         model = state.accountState.avatarUrl,
                                         contentDescription = "Avatar",
                                         modifier = Modifier
-                                            .size(48.dp)
+                                            .size(40.dp)
                                             .clip(AppShapes.Avatar),
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Connected as",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                    Text(
-                                        text = state.accountState.username ?: "Unknown",
-                                        style = MaterialTheme.typography.titleMedium,
+                                        text = state.accountState.username ?: "Connected",
+                                        style = MaterialTheme.typography.bodyMedium,
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedButton(
-                                onClick = { viewModel.signOut() },
+                                onClick = { viewModel.signOutBandcamp() },
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Log out")
+                                Text("Disconnect")
                             }
                         } else {
                             Text(
-                                text = "Sign in to access your Dustvalve collection and purchases.",
-                                style = MaterialTheme.typography.bodyMedium,
+                                text = "Connect to access your Bandcamp purchases.",
+                                style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Button(
-                                onClick = onLoginClick,
+                                onClick = onBandcampLoginClick,
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Sign in")
+                                Text("Connect Bandcamp")
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // YouTube Music connection
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_play_circle),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "YouTube Music",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (state.ytmAccountState.isLoggedIn) {
+                            Text(
+                                text = "Connected",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.signOutYouTubeMusic() },
+                                shapes = ButtonDefaults.shapes(),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Disconnect")
+                            }
+                        } else {
+                            Text(
+                                text = "Connect to access your YouTube Music library.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = onYouTubeMusicLoginClick,
+                                shapes = ButtonDefaults.shapes(),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Connect YouTube Music")
                             }
                         }
                     }
@@ -660,7 +734,7 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Auto-download Collection",
+                                        text = "Auto-download purchases",
                                         style = MaterialTheme.typography.titleSmall,
                                     )
                                     Text(
@@ -720,7 +794,7 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.titleSmall,
                             )
                             Text(
-                                text = "Format for downloaded collection items",
+                                text = "Format for downloaded Bandcamp purchases",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
+import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.CacheRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
@@ -30,7 +31,9 @@ data class SettingsUiState(
     val storageLimitIndex: Int = 3, // default 2 GB
     val autoDownloadCollection: Boolean = true,
     val autoDownloadFutureContent: Boolean = false,
-    val signOutSuccess: Boolean = false,
+    val bandcampSignOutSuccess: Boolean = false,
+    val ytmAccountState: YouTubeMusicAccountState = YouTubeMusicAccountState(),
+    val ytmSignOutSuccess: Boolean = false,
     val downloadFormat: String = "flac",
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
@@ -67,6 +70,7 @@ class SettingsViewModel @Inject constructor(
 
     init {
         collectAccountState()
+        collectYtmAccountState()
         collectCacheInfo()
         collectThemeMode()
         collectDynamicColor()
@@ -214,17 +218,29 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun signOut() {
+    fun signOutBandcamp() {
         viewModelScope.launch {
             try {
                 accountRepository.clearAccount()
-                // Clear WebView cookies so re-login starts fresh
+                // Clear only Bandcamp WebView cookies so re-login starts fresh
                 try {
-                    android.webkit.CookieManager.getInstance().removeAllCookies { /* best-effort */ }
+                    val cm = android.webkit.CookieManager.getInstance()
+                    cm.getCookie("https://bandcamp.com")
+                        ?.split(";")
+                        ?.forEach { cookie ->
+                            val name = cookie.trim().split("=", limit = 2).firstOrNull()?.trim()
+                            if (name != null) {
+                                cm.setCookie(
+                                    "https://bandcamp.com",
+                                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com"
+                                )
+                            }
+                        }
+                    cm.flush()
                 } catch (_: Exception) {
                     // CookieManager may not be initialized if WebView was never used
                 }
-                _uiState.update { it.copy(signOutSuccess = true) }
+                _uiState.update { it.copy(bandcampSignOutSuccess = true) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -232,7 +248,38 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun clearSignOutSuccess() {
-        _uiState.update { it.copy(signOutSuccess = false) }
+        _uiState.update { it.copy(bandcampSignOutSuccess = false) }
+    }
+
+    fun signOutYouTubeMusic() {
+        viewModelScope.launch {
+            try {
+                accountRepository.clearYouTubeMusicAccount()
+                // Clear YouTube/Google WebView cookies (domain-specific)
+                try {
+                    val cm = android.webkit.CookieManager.getInstance()
+                    listOf("https://youtube.com", "https://music.youtube.com", "https://google.com").forEach { url ->
+                        cm.getCookie(url)?.split(";")?.forEach { cookie ->
+                            val name = cookie.trim().split("=", limit = 2).firstOrNull()?.trim()
+                            if (name != null) {
+                                val domain = android.net.Uri.parse(url).host?.let { ".$it" } ?: return@forEach
+                                cm.setCookie(url, "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain")
+                            }
+                        }
+                    }
+                    cm.flush()
+                } catch (_: Exception) {
+                    // CookieManager may not be initialized if WebView was never used
+                }
+                _uiState.update { it.copy(ytmSignOutSuccess = true) }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun clearYtmSignOutSuccess() {
+        _uiState.update { it.copy(ytmSignOutSuccess = false) }
     }
 
     private fun collectAccountState() {
@@ -241,6 +288,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore collection errors */ }
                 .collect { state ->
                     _uiState.update { it.copy(accountState = state) }
+                }
+        }
+    }
+
+    private fun collectYtmAccountState() {
+        viewModelScope.launch {
+            accountRepository.getYouTubeMusicAccountState()
+                .catch { /* ignore collection errors */ }
+                .collect { state ->
+                    _uiState.update { it.copy(ytmAccountState = state) }
                 }
         }
     }

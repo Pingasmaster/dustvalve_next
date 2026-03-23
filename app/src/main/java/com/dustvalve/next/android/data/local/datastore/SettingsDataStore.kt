@@ -51,6 +51,7 @@ class SettingsDataStore @Inject constructor(
         val LAST_YOUTUBE_VIDEO_ID = stringPreferencesKey("last_youtube_video_id")
         val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
         val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
+        val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
     }
 
     companion object {
@@ -410,6 +411,22 @@ class SettingsDataStore @Inject constructor(
     suspend fun setAlbumCoverLongPressCarousel(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] = enabled
+        }
+    }
+
+    val ytmConnected: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.YTM_CONNECTED] ?: false
+    }
+
+    suspend fun setYtmConnected(connected: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.YTM_CONNECTED] = connected
+        }
+    }
+
+    suspend fun clearYtmAccount() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.YTM_CONNECTED)
         }
     }
 

@@ -3,9 +3,11 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.CookieStore
 import com.dustvalve.next.android.domain.model.AccountState
+import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -68,7 +70,7 @@ class AccountRepositoryImpl @Inject constructor(
     }
 
     override suspend fun clearAccount() {
-        cookieStore.clearCookies()
+        cookieStore.clearCookiesForDomain("bandcamp.com")
         settingsDataStore.clearAccount()
     }
 
@@ -76,5 +78,24 @@ class AccountRepositoryImpl @Inject constructor(
         // Read from CookieStore's in-memory cache to avoid format mismatch
         return cookieStore.loadCookiesForDomain("bandcamp.com")
             .associate { it.name to it.value }
+    }
+
+    // YouTube Music
+
+    override fun getYouTubeMusicAccountState(): Flow<YouTubeMusicAccountState> {
+        return settingsDataStore.ytmConnected.map { connected ->
+            YouTubeMusicAccountState(isLoggedIn = connected)
+        }
+    }
+
+    override suspend fun saveYouTubeMusicCookies(cookies: Map<String, String>) {
+        cookieStore.importCookies(cookies, domain = "youtube.com")
+        settingsDataStore.setYtmConnected(true)
+    }
+
+    override suspend fun clearYouTubeMusicAccount() {
+        cookieStore.clearCookiesForDomain("youtube.com")
+        cookieStore.clearCookiesForDomain("google.com")
+        settingsDataStore.clearYtmAccount()
     }
 }
