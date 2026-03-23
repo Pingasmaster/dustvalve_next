@@ -69,6 +69,8 @@ fun TrackEntity.toDomain(isFavorite: Boolean): Track = Track(
     isFavorite = isFavorite,
     source = TrackSource.fromKey(source),
     folderUri = folderUri,
+    dateAdded = dateAdded,
+    year = year,
 )
 
 fun Track.toEntity(): TrackEntity = TrackEntity(
@@ -84,6 +86,8 @@ fun Track.toEntity(): TrackEntity = TrackEntity(
     albumTitle = albumTitle,
     source = source.key,
     folderUri = folderUri,
+    dateAdded = dateAdded,
+    year = year,
 )
 
 fun ArtistEntity.toDomain(albums: List<Album>, isFavorite: Boolean = false): Artist = Artist(

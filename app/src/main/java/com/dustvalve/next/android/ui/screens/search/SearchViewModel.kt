@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.screens.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
@@ -47,6 +48,7 @@ class SearchViewModel @Inject constructor(
     private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
     private val recentSearchDao: RecentSearchDao,
     private val trackDao: TrackDao,
+    private val favoriteDao: FavoriteDao,
     private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
 
@@ -134,7 +136,8 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val entity = withContext(Dispatchers.IO) { trackDao.getById(trackId) } ?: return@launch
-                val track = entity.toDomain(false)
+                val isFav = favoriteDao.isFavorite(trackId)
+                val track = entity.toDomain(isFav)
                 playerViewModel.playTrack(track)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

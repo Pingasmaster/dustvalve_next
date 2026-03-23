@@ -114,6 +114,7 @@ fun BandcampScreen(
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
     playerViewModel: PlayerViewModel,
+    onExpandPlayer: () -> Unit = {},
     viewModel: BandcampViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
 ) {
@@ -518,10 +519,12 @@ fun BandcampScreen(
                                                 SearchResultType.ARTIST -> onArtistClick(result.url)
                                                 SearchResultType.TRACK -> {
                                                     searchViewModel.playBandcampTrack(result.url, result.name, playerViewModel)
+                                                    onExpandPlayer()
                                                 }
                                                 SearchResultType.LOCAL_TRACK -> {
                                                     val trackId = result.url.removePrefix("local://")
                                                     searchViewModel.playLocalTrack(trackId, playerViewModel)
+                                                    onExpandPlayer()
                                                 }
                                                 SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
                                                 SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> { /* not applicable */ }

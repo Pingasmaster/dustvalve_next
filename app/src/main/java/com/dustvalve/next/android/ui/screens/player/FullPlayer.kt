@@ -140,7 +140,7 @@ import java.util.Locale
 fun FullPlayer(
     playerViewModel: PlayerViewModel,
     onCollapse: () -> Unit,
-    onArtistClick: (String) -> Unit = {},
+    onArtistClick: (Track) -> Unit = {},
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
     val track = state.currentTrack
@@ -748,8 +748,8 @@ fun FullPlayer(
                     ) {
                         // Artist name as TextButton
                         TextButton(
-                            onClick = { onArtistClick(track.artistUrl) },
-                            enabled = track.artistUrl.isNotEmpty(),
+                            onClick = { onArtistClick(track) },
+                            enabled = track.artistUrl.isNotEmpty() || track.isLocal,
                             modifier = Modifier.weight(1f, fill = false),
                         ) {
                             Text(

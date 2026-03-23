@@ -43,6 +43,8 @@ import com.dustvalve.next.android.ui.navigation.SideNavRail
 import com.dustvalve.next.android.ui.screens.player.FullPlayer
 import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.update.UpdateDialog
+import com.dustvalve.next.android.ui.update.UpdateViewModel
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
 import androidx.compose.ui.graphics.Color
@@ -179,11 +181,27 @@ private data class ThemeConfig(
 private fun MainContent(accountRepository: AccountRepository, activity: MainActivity) {
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val navViewModel: NavigationViewModel = hiltViewModel()
+    val updateViewModel: UpdateViewModel = hiltViewModel()
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val dragProgress by navViewModel.playerDragProgress.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
+    val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Auto-update check
+    LaunchedEffect(Unit) {
+        updateViewModel.checkForUpdate()
+    }
+
+    if (updateState.showDialog) {
+        UpdateDialog(
+            state = updateState,
+            onDismiss = { updateViewModel.dismissDialog() },
+            onDownload = { updateViewModel.startDownload() },
+            onInstall = { updateViewModel.installApk() },
+        )
+    }
 
     // Deep link handling
     val deepLinkUrl by activity.deepLinkUrl.collectAsStateWithLifecycle()
@@ -301,9 +319,13 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                 FullPlayer(
                     playerViewModel = playerViewModel,
                     onCollapse = { navViewModel.collapsePlayer() },
-                    onArtistClick = { url ->
+                    onArtistClick = { track ->
                         navViewModel.collapsePlayer()
-                        navViewModel.navigateTo(NavDestination.ArtistDetail(url))
+                        if (track.isLocal) {
+                            navViewModel.requestLocalArtistFilter(track.artist)
+                        } else {
+                            navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
+                        }
                     },
                 )
             }

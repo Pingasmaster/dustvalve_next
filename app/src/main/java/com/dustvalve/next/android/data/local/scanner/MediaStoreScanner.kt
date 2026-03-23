@@ -35,6 +35,8 @@ class MediaStoreScanner @Inject constructor(
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.TRACK,
             MediaStore.Audio.Media.DISPLAY_NAME,
+            MediaStore.Audio.Media.DATE_ADDED,
+            MediaStore.Audio.Media.YEAR,
         )
 
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -57,6 +59,8 @@ class MediaStoreScanner @Inject constructor(
             val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val trackCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
             val displayNameCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            val dateAddedCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+            val yearCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.YEAR)
 
             while (cursor.moveToNext()) {
                 ensureActive()
@@ -76,6 +80,8 @@ class MediaStoreScanner @Inject constructor(
                     // MediaStore TRACK can be encoded as DTTT (disc * 1000 + track)
                     if (raw > 1000) raw % 1000 else raw
                 }
+                val dateAdded = cursor.getLong(dateAddedCol)
+                val year = cursor.getInt(yearCol)
 
                 val contentUri = ContentUris.withAppendedId(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -114,6 +120,8 @@ class MediaStoreScanner @Inject constructor(
                         albumTitle = album,
                         source = "local",
                         folderUri = FOLDER_URI_SENTINEL,
+                        dateAdded = dateAdded,
+                        year = year,
                     ),
                 )
             }

@@ -292,7 +292,10 @@ class LibraryViewModel @Inject constructor(
                 for ((albumId, info) in result.purchaseInfo) {
                     try {
                         albumRepository.updatePurchaseInfo(albumId, info)
-                    } catch (_: Exception) { /* best-effort */ }
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        /* best-effort */
+                    }
                 }
                 playlistRepository.syncCollectionPlaylist(result.albums.map { it.id })
                 autoDownloadCollection(result.albums)

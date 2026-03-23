@@ -84,6 +84,7 @@ fun YouTubeScreen(
     playerViewModel: PlayerViewModel,
     onPlaylistClick: (url: String, name: String) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
+    onExpandPlayer: () -> Unit = {},
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -203,6 +204,7 @@ fun YouTubeScreen(
                                                 try {
                                                     val track = viewModel.getTrackInfo(item.url)
                                                     playerViewModel.playTrack(track)
+                                                    onExpandPlayer()
                                                 } catch (_: Exception) {
                                                     snackbarHostState.showSnackbar("Failed to play")
                                                 }
@@ -420,6 +422,7 @@ fun YouTubeScreen(
                                                             val track = viewModel.getTrackInfo(result.url)
                                                             searchBarState.animateToCollapsed()
                                                             playerViewModel.playTrack(track)
+                                                            onExpandPlayer()
                                                         } catch (_: Exception) {
                                                             snackbarHostState.showSnackbar("Failed to play")
                                                         }

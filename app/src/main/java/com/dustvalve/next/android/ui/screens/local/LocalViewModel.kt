@@ -44,6 +44,8 @@ enum class LocalSortOption(val label: String) {
     ALBUM_AZ("Album A-Z"),
     SHORTEST("Shortest First"),
     LONGEST("Longest First"),
+    DATE_ADDED("Date Added"),
+    RELEASE_YEAR("Release Year"),
 }
 
 enum class DurationRange(val label: String) {
@@ -59,6 +61,7 @@ data class LocalFilterState(
     val selectedDurations: Set<DurationRange> = emptySet(),
     val favoritesOnly: Boolean = false,
     val selectedFolders: Set<String> = emptySet(),
+    val reverseOrder: Boolean = false,
 ) {
     val hasActiveFilters: Boolean get() =
         selectedArtists.isNotEmpty() ||
@@ -104,9 +107,12 @@ class LocalViewModel @Inject constructor(
         allLocalTracks,
         _filterState,
     ) { tracks, filters ->
+        val comparator = getSortComparator(filters.sortOption).let {
+            if (filters.reverseOrder) it.reversed() else it
+        }
         tracks
             .filter { applyFilters(it, filters) }
-            .sortedWith(getSortComparator(filters.sortOption))
+            .sortedWith(comparator)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val availableArtists: StateFlow<List<String>> = allLocalTracks
@@ -163,6 +169,14 @@ class LocalViewModel @Inject constructor(
         }
     }
 
+    fun toggleReverseOrder() {
+        _filterState.update { it.copy(reverseOrder = !it.reverseOrder) }
+    }
+
+    fun setArtistFilter(artist: String) {
+        _filterState.update { LocalFilterState(selectedArtists = setOf(artist)) }
+    }
+
     fun clearFilters() {
         _filterState.update { LocalFilterState() }
     }
@@ -194,6 +208,9 @@ class LocalViewModel @Inject constructor(
             .thenBy { it.trackNumber }
         LocalSortOption.SHORTEST -> compareBy { it.duration }
         LocalSortOption.LONGEST -> compareByDescending { it.duration }
+        LocalSortOption.DATE_ADDED -> compareByDescending { it.dateAdded }
+        LocalSortOption.RELEASE_YEAR -> compareByDescending<Track> { it.year }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
     }
 
     // Search
@@ -252,7 +269,10 @@ class LocalViewModel @Inject constructor(
         try {
             val filter = _uiState.value.searchFilter
             val results = withContext(Dispatchers.IO) {
-                val all = trackDao.searchLocalTracks(query).map { it.toDomain(isFavorite = false) }
+                val entities = trackDao.searchLocalTracks(query)
+                val ids = entities.map { it.id }
+                val favoriteIds = if (ids.isNotEmpty()) favoriteDao.getFavoriteIdsChunk(ids).toSet() else emptySet()
+                val all = entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
                 val lowerQuery = query.lowercase()
                 when (filter) {
                     null -> all

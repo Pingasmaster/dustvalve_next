@@ -18,6 +18,8 @@ data class TrackEntity(
     val albumTitle: String,
     val source: String = "bandcamp",
     val folderUri: String = "",
+    val dateAdded: Long = 0,
+    val year: Int = 0,
 ) {
     val isLocal: Boolean get() = source == "local"
 }

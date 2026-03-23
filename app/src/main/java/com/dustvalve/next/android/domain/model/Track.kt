@@ -14,6 +14,8 @@ data class Track(
     val isFavorite: Boolean = false,
     val source: TrackSource = TrackSource.BANDCAMP,
     val folderUri: String = "",
+    val dateAdded: Long = 0,
+    val year: Int = 0,
 ) {
     val isLocal: Boolean get() = source == TrackSource.LOCAL
 }

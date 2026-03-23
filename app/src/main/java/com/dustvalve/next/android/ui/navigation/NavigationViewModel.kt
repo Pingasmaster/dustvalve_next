@@ -161,6 +161,18 @@ class NavigationViewModel @Inject constructor(
         }
     }
 
+    private val _pendingLocalArtistFilter = MutableStateFlow<String?>(null)
+    val pendingLocalArtistFilter: StateFlow<String?> = _pendingLocalArtistFilter.asStateFlow()
+
+    fun requestLocalArtistFilter(artist: String) {
+        navigateTo(NavDestination.LocalHome)
+        _pendingLocalArtistFilter.value = artist
+    }
+
+    fun consumeLocalArtistFilter() {
+        _pendingLocalArtistFilter.value = null
+    }
+
     fun expandPlayer() {
         _showFullPlayer.value = true
     }

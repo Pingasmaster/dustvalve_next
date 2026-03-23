@@ -169,7 +169,9 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
             for (track in _uiState.value.tracks) {
                 try {
                     downloadAlbumUseCase.deleteTrackDownload(track.id)
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                }
             }
         }
     }

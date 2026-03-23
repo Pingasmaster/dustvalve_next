@@ -92,6 +92,8 @@ import com.dustvalve.next.android.ui.theme.segmentedItemShape
 @Composable
 fun LocalScreen(
     playerViewModel: PlayerViewModel,
+    navViewModel: com.dustvalve.next.android.ui.navigation.NavigationViewModel? = null,
+    onExpandPlayer: () -> Unit = {},
     viewModel: LocalViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -120,6 +122,16 @@ fun LocalScreen(
     LaunchedEffect(textFieldState) {
         snapshotFlow { textFieldState.text.toString() }
             .collect { viewModel.onQueryChange(it) }
+    }
+
+    // Observe pending artist filter from navigation (e.g. clicking artist in full player)
+    if (navViewModel != null) {
+        val pendingArtist by navViewModel.pendingLocalArtistFilter.collectAsStateWithLifecycle()
+        LaunchedEffect(pendingArtist) {
+            val artist = pendingArtist ?: return@LaunchedEffect
+            viewModel.setArtistFilter(artist)
+            navViewModel.consumeLocalArtistFilter()
+        }
     }
 
     val inputField = @Composable {
@@ -476,6 +488,7 @@ fun LocalScreen(
                                         total = state.searchResults.size,
                                         onClick = {
                                             playerViewModel.playTrackInList(state.searchResults, index)
+                                            onExpandPlayer()
                                         },
                                         onLongClick = { contextMenuTrack = track },
                                         modifier = Modifier.animateItem(
@@ -760,6 +773,22 @@ fun LocalScreen(
                     }
                 }
             }
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            ListItem(
+                headlineContent = { Text("Reverse order") },
+                trailingContent = {
+                    androidx.compose.material3.Switch(
+                        checked = filterState.reverseOrder,
+                        onCheckedChange = { viewModel.toggleReverseOrder() },
+                    )
+                },
+                modifier = Modifier
+                    .clickable { viewModel.toggleReverseOrder() }
+                    .padding(horizontal = 16.dp),
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            )
             Spacer(modifier = Modifier.height(28.dp))
         }
     }

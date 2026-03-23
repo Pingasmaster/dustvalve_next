@@ -152,6 +152,25 @@ class LocalMusicScanner @Inject constructor(
                 ?.toLongOrNull() ?: 0L
             val trackNumber = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER)
                 ?.split("/")?.firstOrNull()?.trim()?.toIntOrNull() ?: 0
+            val year = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_YEAR)
+                ?.trim()?.take(4)?.toIntOrNull() ?: 0
+
+            // Use file's last modified time as dateAdded
+            val dateAdded = try {
+                val docUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                    fileInfo.contentUri,
+                    android.provider.DocumentsContract.getDocumentId(fileInfo.contentUri),
+                )
+                context.contentResolver.query(
+                    docUri,
+                    arrayOf(android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED),
+                    null, null, null,
+                )?.use { c ->
+                    if (c.moveToFirst()) c.getLong(0) / 1000 else 0L
+                } ?: 0L
+            } catch (_: Exception) {
+                0L
+            }
 
             // Extract and cache cover art
             val artUrl = extractCoverArt(mmr, trackId) ?: ""
@@ -171,6 +190,8 @@ class LocalMusicScanner @Inject constructor(
                 albumTitle = albumTitle,
                 source = "local",
                 folderUri = folderUriString,
+                dateAdded = dateAdded,
+                year = year,
             )
         } catch (_: Exception) {
             // Skip files that can't be read

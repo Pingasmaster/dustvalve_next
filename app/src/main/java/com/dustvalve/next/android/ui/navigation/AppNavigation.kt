@@ -64,11 +64,14 @@ fun AppNavigation(
         when (destination) {
             is NavDestination.LocalHome -> LocalScreen(
                 playerViewModel = playerViewModel,
+                navViewModel = navViewModel,
+                onExpandPlayer = { navViewModel.expandPlayer() },
             )
             is NavDestination.BandcampHome -> BandcampScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                 onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                 playerViewModel = playerViewModel,
+                onExpandPlayer = { navViewModel.expandPlayer() },
             )
             is NavDestination.YouTubeHome -> YouTubeScreen(
                 playerViewModel = playerViewModel,
@@ -78,6 +81,7 @@ fun AppNavigation(
                 onArtistClick = { url, name, imageUrl ->
                     navViewModel.navigateTo(NavDestination.YouTubeArtistDetail(url, name, imageUrl))
                 },
+                onExpandPlayer = { navViewModel.expandPlayer() },
             )
             is NavDestination.Library -> LibraryScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
