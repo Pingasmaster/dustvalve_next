@@ -45,6 +45,7 @@ class NavigationViewModel @Inject constructor(
             BottomNavItem.LOCAL to listOf(NavDestination.LocalHome),
             BottomNavItem.BANDCAMP to listOf(NavDestination.BandcampHome),
             BottomNavItem.YOUTUBE to listOf(NavDestination.YouTubeHome),
+            BottomNavItem.SPOTIFY to listOf(NavDestination.SpotifyHome),
             BottomNavItem.LIBRARY to listOf(NavDestination.Library),
             BottomNavItem.SETTINGS to listOf(NavDestination.Settings),
         )
@@ -185,6 +186,7 @@ class NavigationViewModel @Inject constructor(
         is NavDestination.LocalHome -> BottomNavItem.LOCAL
         is NavDestination.BandcampHome -> BottomNavItem.BANDCAMP
         is NavDestination.YouTubeHome -> BottomNavItem.YOUTUBE
+        is NavDestination.SpotifyHome -> BottomNavItem.SPOTIFY
         is NavDestination.Library -> BottomNavItem.LIBRARY
         is NavDestination.Settings -> BottomNavItem.SETTINGS
         else -> null

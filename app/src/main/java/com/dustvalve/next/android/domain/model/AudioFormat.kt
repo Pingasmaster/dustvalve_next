@@ -7,6 +7,7 @@ enum class AudioFormat(
     val qualityRank: Int,
 ) {
     FLAC("flac", "flac", "FLAC (Lossless)", 100),
+    OGG_VORBIS_320("ogg-320", "ogg", "OGG Vorbis 320", 85),
     MP3_320("mp3-320", "mp3", "MP3 320 kbps", 80),
     MP3_V0("mp3-v0", "mp3", "MP3 V0 (VBR)", 70),
     AAC("aac-hi", "m4a", "AAC", 60),

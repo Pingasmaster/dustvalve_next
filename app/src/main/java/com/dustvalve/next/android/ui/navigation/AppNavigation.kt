@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.domain.repository.AccountRepository
+import com.dustvalve.next.android.domain.repository.SpotifyRepository
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.artist.ArtistDetailScreen
 import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
@@ -24,8 +25,13 @@ import com.dustvalve.next.android.ui.screens.local.LocalScreen
 import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
+import com.dustvalve.next.android.ui.screens.settings.SpotifyLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.YouTubeMusicLoginScreen
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.screens.spotify.SpotifyAlbumDetailScreen
+import com.dustvalve.next.android.ui.screens.spotify.SpotifyArtistDetailScreen
+import com.dustvalve.next.android.ui.screens.spotify.SpotifyPlaylistDetailScreen
+import com.dustvalve.next.android.ui.screens.spotify.SpotifyScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeArtistDetailScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubePlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
@@ -37,6 +43,7 @@ fun AppNavigation(
     navViewModel: NavigationViewModel,
     playerViewModel: PlayerViewModel,
     accountRepository: AccountRepository,
+    spotifyRepository: SpotifyRepository,
     modifier: Modifier = Modifier,
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
@@ -89,6 +96,8 @@ fun AppNavigation(
                 onArtistClick = { url ->
                     if (url.contains("youtube.com") || url.contains("youtu.be")) {
                         navViewModel.navigateTo(NavDestination.YouTubeArtistDetail(url, "", null))
+                    } else if (url.startsWith("spotify:") || url.contains("open.spotify.com")) {
+                        navViewModel.navigateTo(NavDestination.SpotifyArtistDetail(url, "", null))
                     } else {
                         navViewModel.navigateTo(NavDestination.ArtistDetail(url))
                     }
@@ -96,9 +105,23 @@ fun AppNavigation(
                 onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
                 playerViewModel = playerViewModel,
             )
+            is NavDestination.SpotifyHome -> SpotifyScreen(
+                playerViewModel = playerViewModel,
+                onAlbumClick = { uri, name, imageUrl ->
+                    navViewModel.navigateTo(NavDestination.SpotifyAlbumDetail(uri, name, imageUrl))
+                },
+                onArtistClick = { uri, name, imageUrl ->
+                    navViewModel.navigateTo(NavDestination.SpotifyArtistDetail(uri, name, imageUrl))
+                },
+                onPlaylistClick = { uri, name ->
+                    navViewModel.navigateTo(NavDestination.SpotifyPlaylistDetail(uri, name))
+                },
+                onExpandPlayer = { navViewModel.expandPlayer() },
+            )
             is NavDestination.Settings -> SettingsScreen(
                 onBandcampLoginClick = { navViewModel.navigateTo(NavDestination.AccountLogin) },
                 onYouTubeMusicLoginClick = { navViewModel.navigateTo(NavDestination.YouTubeMusicLogin) },
+                onSpotifyLoginClick = { navViewModel.navigateTo(NavDestination.SpotifyLogin) },
                 onDownloadsClick = {
                     navViewModel.navigateTo(
                         NavDestination.PlaylistDetail(com.dustvalve.next.android.domain.model.Playlist.ID_DOWNLOADS)
@@ -152,6 +175,47 @@ fun AppNavigation(
                         } catch (_: Exception) {
                             // Cookie save failed — still navigate back
                         }
+                        navViewModel.navigateBack()
+                    }
+                },
+                onBack = { navViewModel.navigateBack() },
+            )
+            is NavDestination.SpotifyAlbumDetail -> SpotifyAlbumDetailScreen(
+                albumUri = destination.uri,
+                albumName = destination.name,
+                albumImageUrl = destination.imageUrl,
+                onArtistClick = { uri, name, imageUrl ->
+                    navViewModel.navigateTo(NavDestination.SpotifyArtistDetail(uri, name, imageUrl))
+                },
+                onBack = { navViewModel.navigateBack() },
+                playerViewModel = playerViewModel,
+                viewModel = hiltViewModel(key = destination.uri),
+            )
+            is NavDestination.SpotifyArtistDetail -> SpotifyArtistDetailScreen(
+                artistUri = destination.uri,
+                artistName = destination.name,
+                artistImageUrl = destination.imageUrl,
+                onAlbumClick = { uri, name, imageUrl ->
+                    navViewModel.navigateTo(NavDestination.SpotifyAlbumDetail(uri, name, imageUrl))
+                },
+                onBack = { navViewModel.navigateBack() },
+                playerViewModel = playerViewModel,
+                viewModel = hiltViewModel(key = destination.uri),
+            )
+            is NavDestination.SpotifyPlaylistDetail -> SpotifyPlaylistDetailScreen(
+                playlistUri = destination.uri,
+                playlistName = destination.name,
+                onBack = { navViewModel.navigateBack() },
+                playerViewModel = playerViewModel,
+                viewModel = hiltViewModel(key = destination.uri),
+            )
+            is NavDestination.SpotifyLogin -> SpotifyLoginScreen(
+                spotifyRepository = spotifyRepository,
+                onLoginSuccess = {
+                    coroutineScope.launch {
+                        try {
+                            accountRepository.setSpotifyConnected(true)
+                        } catch (_: Exception) {}
                         navViewModel.navigateBack()
                     }
                 },

@@ -53,6 +53,8 @@ class SettingsDataStore @Inject constructor(
         val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
         val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
         val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
+        val SPOTIFY_ENABLED = booleanPreferencesKey("spotify_enabled")
+        val SPOTIFY_CONNECTED = booleanPreferencesKey("spotify_connected")
     }
 
     companion object {
@@ -373,6 +375,10 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.YOUTUBE_ENABLED] ?: false
     }
 
+    val spotifyEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SPOTIFY_ENABLED] ?: false
+    }
+
     val showInlineVolumeSlider: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.SHOW_INLINE_VOLUME_SLIDER] ?: false
     }
@@ -442,6 +448,28 @@ class SettingsDataStore @Inject constructor(
     suspend fun clearYtmAccount() {
         context.dataStore.edit { prefs ->
             prefs.remove(Keys.YTM_CONNECTED)
+        }
+    }
+
+    val spotifyConnected: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SPOTIFY_CONNECTED] ?: false
+    }
+
+    suspend fun setSpotifyEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SPOTIFY_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSpotifyConnected(connected: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SPOTIFY_CONNECTED] = connected
+        }
+    }
+
+    suspend fun clearSpotifyAccount() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.SPOTIFY_CONNECTED)
         }
     }
 

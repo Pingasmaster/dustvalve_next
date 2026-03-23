@@ -34,7 +34,11 @@ class DustvalveSearchScraper @Inject constructor(
             SearchResultType.YOUTUBE_TRACK,
             SearchResultType.YOUTUBE_ALBUM,
             SearchResultType.YOUTUBE_ARTIST,
-            SearchResultType.YOUTUBE_PLAYLIST -> return@withContext emptyList()
+            SearchResultType.YOUTUBE_PLAYLIST,
+            SearchResultType.SPOTIFY_TRACK,
+            SearchResultType.SPOTIFY_ALBUM,
+            SearchResultType.SPOTIFY_ARTIST,
+            SearchResultType.SPOTIFY_PLAYLIST -> return@withContext emptyList()
             null -> null
         }
 
@@ -103,7 +107,9 @@ class DustvalveSearchScraper @Inject constructor(
                 }
                 SearchResultType.ARTIST, SearchResultType.LOCAL_TRACK,
                 SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> {
+                SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
+                SearchResultType.SPOTIFY_TRACK, SearchResultType.SPOTIFY_ALBUM,
+                SearchResultType.SPOTIFY_ARTIST, SearchResultType.SPOTIFY_PLAYLIST -> {
                     artist = null
                     album = null
                 }

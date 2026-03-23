@@ -67,8 +67,8 @@ import coil3.compose.AsyncImage
 fun MiniPlayer(
     playerViewModel: PlayerViewModel,
     onExpandClick: () -> Unit,
-    onDragUpProgress: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
+    onDragUpProgress: (Float) -> Unit = {},
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
 

@@ -11,4 +11,5 @@ enum class MusicProvider(
     LOCAL("local", "Local", R.drawable.ic_phone_android, alwaysEnabled = true),
     BANDCAMP("bandcamp", "Bandcamp", R.drawable.ic_cloud),
     YOUTUBE("youtube", "YouTube", R.drawable.ic_play_circle),
+    SPOTIFY("spotify", "Spotify", R.drawable.ic_spotify),
 }

@@ -15,6 +15,11 @@ sealed interface NavDestination {
     data class PlaylistDetail(val playlistId: String) : NavDestination
     data class YouTubePlaylistDetail(val url: String, val name: String) : NavDestination
     data class YouTubeArtistDetail(val url: String, val name: String, val imageUrl: String?) : NavDestination
+    data object SpotifyHome : NavDestination
+    data class SpotifyAlbumDetail(val uri: String, val name: String, val imageUrl: String?) : NavDestination
+    data class SpotifyArtistDetail(val uri: String, val name: String, val imageUrl: String?) : NavDestination
+    data class SpotifyPlaylistDetail(val uri: String, val name: String) : NavDestination
+    data object SpotifyLogin : NavDestination
 }
 
 enum class BottomNavItem(
@@ -25,6 +30,7 @@ enum class BottomNavItem(
     LOCAL("Local", NavDestination.LocalHome, MusicProvider.LOCAL),
     BANDCAMP("Bandcamp", NavDestination.BandcampHome, MusicProvider.BANDCAMP),
     YOUTUBE("YouTube", NavDestination.YouTubeHome, MusicProvider.YOUTUBE),
+    SPOTIFY("Spotify", NavDestination.SpotifyHome, MusicProvider.SPOTIFY),
     LIBRARY("Library", NavDestination.Library),
     SETTINGS("Settings", NavDestination.Settings),
 }

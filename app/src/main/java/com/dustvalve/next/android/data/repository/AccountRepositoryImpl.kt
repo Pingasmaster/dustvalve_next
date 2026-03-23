@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.CookieStore
 import com.dustvalve.next.android.domain.model.AccountState
+import com.dustvalve.next.android.domain.model.SpotifyAccountState
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.Flow
@@ -97,5 +98,20 @@ class AccountRepositoryImpl @Inject constructor(
         cookieStore.clearCookiesForDomain("youtube.com")
         cookieStore.clearCookiesForDomain("google.com")
         settingsDataStore.clearYtmAccount()
+    }
+
+    // Spotify
+    override fun getSpotifyAccountState(): Flow<SpotifyAccountState> {
+        return settingsDataStore.spotifyConnected.map { connected ->
+            SpotifyAccountState(isConnected = connected)
+        }
+    }
+
+    override suspend fun setSpotifyConnected(connected: Boolean) {
+        settingsDataStore.setSpotifyConnected(connected)
+    }
+
+    override suspend fun clearSpotifyAccount() {
+        settingsDataStore.clearSpotifyAccount()
     }
 }

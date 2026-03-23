@@ -81,6 +81,7 @@ import com.dustvalve.next.android.ui.theme.AppShapes
 fun SettingsScreen(
     onBandcampLoginClick: () -> Unit,
     onYouTubeMusicLoginClick: () -> Unit,
+    onSpotifyLoginClick: () -> Unit = {},
     onDownloadsClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -517,6 +518,31 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.setYoutubeEnabled(it) },
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_spotify),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Spotify",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                            }
+                            Switch(
+                                checked = state.spotifyEnabled,
+                                onCheckedChange = { viewModel.setSpotifyEnabled(it) },
+                            )
+                        }
                     }
                 }
             }
@@ -649,6 +675,83 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+        }
+
+        // Spotify section
+        item {
+            var showSpotifyWarning by rememberSaveable { mutableStateOf(false) }
+
+            SettingsSection(
+                title = "Spotify",
+                icon = R.drawable.ic_spotify,
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        if (state.spotifyConnected) {
+                            Text(
+                                text = "Spotify connected",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.disconnectSpotify() },
+                                shapes = ButtonDefaults.shapes(),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Disconnect")
+                            }
+                        } else {
+                            Text(
+                                text = "Connect to search and stream from Spotify. Requires Premium.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = { showSpotifyWarning = true },
+                                shapes = ButtonDefaults.shapes(),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Connect Spotify")
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showSpotifyWarning) {
+                AlertDialog(
+                    onDismissRequest = { showSpotifyWarning = false },
+                    title = { Text("Spotify Integration Warning") },
+                    text = {
+                        Text(
+                            "This feature requires a paid Spotify Premium account.\n\n" +
+                                "Using unofficial Spotify clients violates Spotify's Terms of Service. " +
+                                "Your account may be suspended or banned. Use at your own risk.\n\n" +
+                                "Dustvalve is not affiliated with Spotify."
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showSpotifyWarning = false
+                            onSpotifyLoginClick()
+                        }) {
+                            Text("I understand, continue")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showSpotifyWarning = false }) {
+                            Text("Cancel")
+                        }
+                    },
+                )
             }
         }
 

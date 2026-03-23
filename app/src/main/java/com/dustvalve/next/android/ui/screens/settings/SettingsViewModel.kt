@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.screens.settings
 
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
@@ -34,6 +35,7 @@ data class SettingsUiState(
     val bandcampSignOutSuccess: Boolean = false,
     val ytmAccountState: YouTubeMusicAccountState = YouTubeMusicAccountState(),
     val ytmSignOutSuccess: Boolean = false,
+    val spotifyConnected: Boolean = false,
     val downloadFormat: String = "flac",
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
@@ -48,6 +50,7 @@ data class SettingsUiState(
     val scanMessage: String? = null,
     val bandcampEnabled: Boolean = false,
     val youtubeEnabled: Boolean = false,
+    val spotifyEnabled: Boolean = false,
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
@@ -75,6 +78,7 @@ class SettingsViewModel @Inject constructor(
     init {
         collectAccountState()
         collectYtmAccountState()
+        collectSpotifyState()
         collectCacheInfo()
         collectThemeMode()
         collectDynamicColor()
@@ -93,6 +97,7 @@ class SettingsViewModel @Inject constructor(
         collectLocalMusicUseMediaStore()
         collectBandcampEnabled()
         collectYoutubeEnabled()
+        collectSpotifyEnabled()
         collectShowInlineVolumeSlider()
         collectShowVolumeButton()
         collectSearchHistoryEnabled()
@@ -266,6 +271,14 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(bandcampSignOutSuccess = false) }
     }
 
+    fun disconnectSpotify() {
+        viewModelScope.launch {
+            try {
+                accountRepository.clearSpotifyAccount()
+            } catch (_: Exception) {}
+        }
+    }
+
     fun signOutYouTubeMusic() {
         viewModelScope.launch {
             try {
@@ -277,7 +290,7 @@ class SettingsViewModel @Inject constructor(
                         cm.getCookie(url)?.split(";")?.forEach { cookie ->
                             val name = cookie.trim().split("=", limit = 2).firstOrNull()?.trim()
                             if (name != null) {
-                                val domain = android.net.Uri.parse(url).host?.let { ".$it" } ?: return@forEach
+                                val domain = url.toUri().host?.let { ".$it" } ?: return@forEach
                                 cm.setCookie(url, "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain")
                             }
                         }
@@ -303,6 +316,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore collection errors */ }
                 .collect { state ->
                     _uiState.update { it.copy(accountState = state) }
+                }
+        }
+    }
+
+    private fun collectSpotifyState() {
+        viewModelScope.launch {
+            accountRepository.getSpotifyAccountState()
+                .catch { /* ignore */ }
+                .collect { state ->
+                    _uiState.update { it.copy(spotifyConnected = state.isConnected) }
                 }
         }
     }
@@ -600,6 +623,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSpotifyEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setSpotifyEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     fun setShowInlineVolumeSlider(enabled: Boolean) {
         viewModelScope.launch {
             try {
@@ -701,6 +734,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(youtubeEnabled = enabled) }
+                }
+        }
+    }
+
+    private fun collectSpotifyEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.spotifyEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(spotifyEnabled = enabled) }
                 }
         }
     }

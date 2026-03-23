@@ -16,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 117
-        versionName = "0.1.8"
+        versionCode = 119
+        versionName = "0.1.10"
     }
 
     signingConfigs {
@@ -111,7 +111,7 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.3.0-alpha07")
 
     // DocumentFile (SAF directory/file creation for export)
-    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.documentfile:documentfile:1.1.0")
 
     // OkHttp
     implementation("com.squareup.okhttp3:okhttp:5.3.2")

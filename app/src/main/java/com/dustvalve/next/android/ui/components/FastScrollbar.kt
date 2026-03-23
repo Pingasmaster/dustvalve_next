@@ -13,6 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -35,14 +36,14 @@ fun FastScrollbar(
     listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
-    val totalItems = listState.layoutInfo.totalItemsCount
+    val totalItems by remember { derivedStateOf { listState.layoutInfo.totalItemsCount } }
     if (totalItems <= 0) return
 
     val scope = rememberCoroutineScope()
     var isDragging by remember { mutableStateOf(false) }
     var trackHeight by remember { mutableFloatStateOf(0f) }
 
-    val firstVisible = listState.firstVisibleItemIndex
+    val firstVisible by remember { derivedStateOf { listState.firstVisibleItemIndex } }
     val scrollFraction = if (totalItems > 1) {
         firstVisible.toFloat() / (totalItems - 1).toFloat()
     } else 0f

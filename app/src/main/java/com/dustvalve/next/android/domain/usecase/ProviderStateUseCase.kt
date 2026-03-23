@@ -14,11 +14,13 @@ class ProviderStateUseCase @Inject constructor(
     val activeProviders: Flow<Set<MusicProvider>> = combine(
         settingsDataStore.bandcampEnabled,
         settingsDataStore.youtubeEnabled,
-    ) { bc, yt ->
+        settingsDataStore.spotifyEnabled,
+    ) { bc, yt, sp ->
         buildSet {
             add(MusicProvider.LOCAL)
             if (bc) add(MusicProvider.BANDCAMP)
             if (yt) add(MusicProvider.YOUTUBE)
+            if (sp) add(MusicProvider.SPOTIFY)
         }
     }
 }
