@@ -134,8 +134,6 @@ class PlaylistRepositoryImpl @Inject constructor(
             playlistDao.insertPlaylistIfAbsent(entity)
         }
 
-        // Update Collection name in case it was created with the old "Collection" name
-        playlistDao.renamePlaylist(Playlist.ID_COLLECTION, "Bandcamp purchases")
     }
 
     override fun getSystemPlaylist(type: Playlist.SystemPlaylistType): Flow<Playlist?> {

@@ -143,14 +143,16 @@ class PlayerViewModel @Inject constructor(
      *
      * Also triggers a progressive background download if enabled.
      */
-    private suspend fun resolveTrackForPlayback(track: Track): Track {
+    private suspend fun resolveTrackForPlayback(track: Track, updateState: Boolean = true): Track {
         // Local tracks already have a content:// URI — use as-is
         if (track.isLocal) {
-            _extraState.update {
-                it.copy(
-                    currentPlaybackFormat = null,
-                    currentSourcePath = track.streamUrl,
-                )
+            if (updateState) {
+                _extraState.update {
+                    it.copy(
+                        currentPlaybackFormat = null,
+                        currentSourcePath = track.streamUrl,
+                    )
+                }
             }
             return track
         }
@@ -159,19 +161,23 @@ class PlayerViewModel @Inject constructor(
         if (track.source == TrackSource.YOUTUBE) {
             val ytDownloadInfo = downloadRepository.getDownloadInfo(track.id)
             if (ytDownloadInfo != null) {
-                _extraState.update {
-                    it.copy(
-                        currentPlaybackFormat = ytDownloadInfo.format,
-                        currentSourcePath = ytDownloadInfo.filePath,
-                    )
+                if (updateState) {
+                    _extraState.update {
+                        it.copy(
+                            currentPlaybackFormat = ytDownloadInfo.format,
+                            currentSourcePath = ytDownloadInfo.filePath,
+                        )
+                    }
                 }
                 return track.copy(streamUrl = android.net.Uri.fromFile(File(ytDownloadInfo.filePath)).toString())
             }
             // Resolve stream URL from YouTube
             return try {
                 val streamUrl = youtubeRepository.getStreamUrl(track.streamUrl ?: return track)
-                _extraState.update {
-                    it.copy(currentPlaybackFormat = null, currentSourcePath = null)
+                if (updateState) {
+                    _extraState.update {
+                        it.copy(currentPlaybackFormat = null, currentSourcePath = null)
+                    }
                 }
                 track.copy(streamUrl = streamUrl)
             } catch (e: Exception) {
@@ -192,21 +198,25 @@ class PlayerViewModel @Inject constructor(
         val downloadInfo = downloadRepository.getDownloadInfo(track.id)
         if (downloadInfo != null && downloadInfo.format.qualityRank >= AudioFormat.MP3_128.qualityRank) {
             // Already have a same-or-higher quality local file — use it
-            _extraState.update {
-                it.copy(
-                    currentPlaybackFormat = downloadInfo.format,
-                    currentSourcePath = downloadInfo.filePath,
-                )
+            if (updateState) {
+                _extraState.update {
+                    it.copy(
+                        currentPlaybackFormat = downloadInfo.format,
+                        currentSourcePath = downloadInfo.filePath,
+                    )
+                }
             }
             return track.copy(streamUrl = android.net.Uri.fromFile(File(downloadInfo.filePath)).toString())
         }
 
         // No local download — use original stream URL (mp3-128)
-        _extraState.update {
-            it.copy(
-                currentPlaybackFormat = AudioFormat.MP3_128,
-                currentSourcePath = null,
-            )
+        if (updateState) {
+            _extraState.update {
+                it.copy(
+                    currentPlaybackFormat = AudioFormat.MP3_128,
+                    currentSourcePath = null,
+                )
+            }
         }
         return track
     }
@@ -552,7 +562,7 @@ class PlayerViewModel @Inject constructor(
         val originalTrackId = tracks.getOrNull(skipIndex)?.id
         for (i in tracks.indices) {
             if (i == skipIndex) continue
-            tracks[i] = resolveTrackForPlayback(tracks[i])
+            tracks[i] = resolveTrackForPlayback(tracks[i], updateState = false)
         }
         // Only update the queue if the user hasn't switched to different content
         val currentTrack = queueManager.currentTrack.value

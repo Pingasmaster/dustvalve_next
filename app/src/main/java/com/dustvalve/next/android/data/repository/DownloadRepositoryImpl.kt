@@ -379,7 +379,8 @@ class DownloadRepositoryImpl @Inject constructor(
             ?: throw IOException("Cannot access selected folder")
 
         val dirCache = mutableMapOf<String, DocumentFile>()
-        var exported = 0
+        var processed = 0
+        var actuallyExported = 0
         val total = downloads.size
 
         for (download in downloads) {
@@ -387,7 +388,7 @@ class DownloadRepositoryImpl @Inject constructor(
 
             val sourceFile = File(download.filePath)
             if (!sourceFile.exists()) {
-                onProgress(++exported, total)
+                onProgress(++processed, total)
                 continue
             }
 
@@ -426,10 +427,11 @@ class DownloadRepositoryImpl @Inject constructor(
                 }
             } ?: throw IOException("Failed to open output stream for: $fileName")
 
-            onProgress(++exported, total)
+            actuallyExported++
+            onProgress(++processed, total)
         }
 
-        exported
+        actuallyExported
     }
 
     override suspend fun deleteDownload(trackId: String) {
