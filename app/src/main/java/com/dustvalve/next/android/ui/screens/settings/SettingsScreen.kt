@@ -256,6 +256,8 @@ fun SettingsScreen(
                 }
             }
 
+            var showSpotifySourceWarning by rememberSaveable { mutableStateOf(false) }
+
             LaunchedEffect(state.scanMessage) {
                 val message = state.scanMessage
                 if (message != null) {
@@ -540,11 +542,43 @@ fun SettingsScreen(
                             }
                             Switch(
                                 checked = state.spotifyEnabled,
-                                onCheckedChange = { viewModel.setSpotifyEnabled(it) },
+                                onCheckedChange = { enabled ->
+                                    if (enabled) {
+                                        showSpotifySourceWarning = true
+                                    } else {
+                                        viewModel.setSpotifyEnabled(false)
+                                    }
+                                },
                             )
                         }
                     }
                 }
+            }
+
+            if (showSpotifySourceWarning) {
+                AlertDialog(
+                    onDismissRequest = { showSpotifySourceWarning = false },
+                    title = { Text("Spotify Premium Required") },
+                    text = {
+                        Text(
+                            "Spotify streaming requires a paid Spotify Premium account. " +
+                                "Free accounts are not supported."
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showSpotifySourceWarning = false
+                            viewModel.setSpotifyEnabled(true)
+                        }) {
+                            Text("Enable")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showSpotifySourceWarning = false }) {
+                            Text("Cancel")
+                        }
+                    },
+                )
             }
         }
 
