@@ -119,6 +119,7 @@ class PlaybackManager @Inject constructor(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            android.util.Log.e("PlaybackManager", "Player error: ${error.errorCodeName}", error)
             _isPlaying.value = false
             _playbackState.value = Player.STATE_IDLE
             _duration.value = 0L
@@ -192,7 +193,7 @@ class PlaybackManager @Inject constructor(
 
     @OptIn(UnstableApi::class)
     fun playTrack(track: Track) {
-        if (released) return
+        if (released) reinitialize()
         val url = track.streamUrl
         if (url.isNullOrBlank()) {
             android.util.Log.w("PlaybackManager", "Cannot play track '${track.title}': streamUrl is null")
@@ -239,7 +240,7 @@ class PlaybackManager @Inject constructor(
     }
 
     fun playQueue(tracks: List<Track>, startIndex: Int) {
-        if (released) return
+        if (released) reinitialize()
         queueManager.setQueue(tracks, startIndex)
         val track = tracks.getOrNull(startIndex) ?: return
         playTrack(track)
