@@ -50,8 +50,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TwoRowsTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.animation.core.animateDpAsState
@@ -75,7 +73,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TonalToggleButton
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -104,7 +101,6 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asComposePath
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -146,7 +142,6 @@ fun FullPlayer(
     val track = state.currentTrack
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     // Snackbar handling
     LaunchedEffect(state.snackbarMessage) {
@@ -334,7 +329,6 @@ fun FullPlayer(
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
                 val upNextCount = if (state.currentQueueIndex >= 0)
@@ -353,51 +347,6 @@ fun FullPlayer(
                     )
                 }
             },
-            topBar = {
-                TwoRowsTopAppBar(
-                    title = { expanded ->
-                        Text(
-                            text = if (expanded) "Now Playing" else (track?.title ?: "Now Playing"),
-                            style = MaterialTheme.typography.titleMediumEmphasized,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    subtitle = { expanded ->
-                        if (expanded && track != null) {
-                            Text(
-                                text = track.title,
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onCollapse) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_keyboard_arrow_down),
-                                contentDescription = "Collapse",
-                            )
-                        }
-                    },
-                    actions = {
-                        if (state.showVolumeButton) {
-                            IconButton(onClick = { showVolumeSheet = true }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_volume_up),
-                                    contentDescription = "Volume",
-                                )
-                            }
-                        }
-                    },
-                    titleHorizontalAlignment = Alignment.CenterHorizontally,
-                    scrollBehavior = scrollBehavior,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    ),
-                )
-            },
         ) { paddingValues ->
             if (track == null) {
                 Box(
@@ -415,17 +364,21 @@ fun FullPlayer(
                 return@Scaffold
             }
 
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(modifier = Modifier.height(86.dp))
 
                 // Album art with single-tap play/pause and double-tap heart
                 val albumArtShape = if (heartProgress.value > 0f) {
@@ -1072,6 +1025,31 @@ fun FullPlayer(
 
                 // Bottom spacer for FAB clearance
                 Spacer(modifier = Modifier.height(80.dp))
+            }
+
+            // Transparent overlay — collapse + volume icons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onCollapse) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_keyboard_arrow_down),
+                        contentDescription = "Collapse",
+                    )
+                }
+                if (state.showVolumeButton) {
+                    IconButton(onClick = { showVolumeSheet = true }) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_volume_up),
+                            contentDescription = "Volume",
+                        )
+                    }
+                }
+            }
             }
         }
     }
