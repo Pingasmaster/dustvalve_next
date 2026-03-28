@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -58,6 +60,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -192,6 +196,30 @@ private fun MainContent(accountRepository: AccountRepository, spotifyRepository:
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
     val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Screen wake lock
+    val isPlaying by remember {
+        playerViewModel.uiState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val keepScreenOnInApp by remember {
+        activity.settingsDataStore.keepScreenOnInApp
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val keepScreenOnWhilePlaying by remember {
+        activity.settingsDataStore.keepScreenOnWhilePlaying
+    }.collectAsStateWithLifecycle(initialValue = false)
+
+    val shouldKeepScreenOn = keepScreenOnInApp || (keepScreenOnWhilePlaying && isPlaying)
+
+    DisposableEffect(shouldKeepScreenOn) {
+        if (shouldKeepScreenOn) {
+            activity.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
 
     // Auto-update check
     LaunchedEffect(Unit) {

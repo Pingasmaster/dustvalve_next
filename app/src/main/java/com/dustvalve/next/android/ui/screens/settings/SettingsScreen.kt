@@ -1293,6 +1293,52 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.setAlbumCoverLongPressCarousel(it) },
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Keep screen on while open",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Prevent the screen from locking while the app is open",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.keepScreenOnInApp,
+                                onCheckedChange = { viewModel.setKeepScreenOnInApp(it) },
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Keep screen on while playing",
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "Prevent the screen from locking while music is playing",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.keepScreenOnWhilePlaying,
+                                onCheckedChange = { viewModel.setKeepScreenOnWhilePlaying(it) },
+                            )
+                        }
                     }
                 }
             }

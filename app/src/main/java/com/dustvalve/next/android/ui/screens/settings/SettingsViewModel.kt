@@ -55,6 +55,8 @@ data class SettingsUiState(
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
     val albumCoverLongPressCarousel: Boolean = true,
+    val keepScreenOnInApp: Boolean = false,
+    val keepScreenOnWhilePlaying: Boolean = false,
     val isExporting: Boolean = false,
     val exportProgress: Float = 0f,
     val exportMessage: String? = null,
@@ -102,6 +104,8 @@ class SettingsViewModel @Inject constructor(
         collectShowVolumeButton()
         collectSearchHistoryEnabled()
         collectAlbumCoverLongPressCarousel()
+        collectKeepScreenOnInApp()
+        collectKeepScreenOnWhilePlaying()
     }
 
     fun setThemeMode(mode: String) {
@@ -673,6 +677,26 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setKeepScreenOnInApp(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setKeepScreenOnInApp(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun setKeepScreenOnWhilePlaying(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setKeepScreenOnWhilePlaying(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     private var exportJob: Job? = null
 
     fun exportDownloads(destinationUri: String) {
@@ -784,6 +808,26 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(albumCoverLongPressCarousel = enabled) }
+                }
+        }
+    }
+
+    private fun collectKeepScreenOnInApp() {
+        viewModelScope.launch {
+            settingsDataStore.keepScreenOnInApp
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(keepScreenOnInApp = enabled) }
+                }
+        }
+    }
+
+    private fun collectKeepScreenOnWhilePlaying() {
+        viewModelScope.launch {
+            settingsDataStore.keepScreenOnWhilePlaying
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(keepScreenOnWhilePlaying = enabled) }
                 }
         }
     }

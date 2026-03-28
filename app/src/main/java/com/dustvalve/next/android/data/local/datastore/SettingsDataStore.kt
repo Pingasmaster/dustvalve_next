@@ -55,6 +55,8 @@ class SettingsDataStore @Inject constructor(
         val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
         val SPOTIFY_ENABLED = booleanPreferencesKey("spotify_enabled")
         val SPOTIFY_CONNECTED = booleanPreferencesKey("spotify_connected")
+        val KEEP_SCREEN_ON_IN_APP = booleanPreferencesKey("keep_screen_on_in_app")
+        val KEEP_SCREEN_ON_WHILE_PLAYING = booleanPreferencesKey("keep_screen_on_while_playing")
     }
 
     companion object {
@@ -415,8 +417,28 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    val keepScreenOnInApp: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.KEEP_SCREEN_ON_IN_APP] ?: false
+    }
+
+    val keepScreenOnWhilePlaying: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.KEEP_SCREEN_ON_WHILE_PLAYING] ?: false
+    }
+
     val searchHistoryEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.SEARCH_HISTORY_ENABLED] ?: true
+    }
+
+    suspend fun setKeepScreenOnInApp(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.KEEP_SCREEN_ON_IN_APP] = enabled
+        }
+    }
+
+    suspend fun setKeepScreenOnWhilePlaying(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.KEEP_SCREEN_ON_WHILE_PLAYING] = enabled
+        }
     }
 
     suspend fun setSearchHistoryEnabled(enabled: Boolean) {
