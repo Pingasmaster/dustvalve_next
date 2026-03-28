@@ -584,6 +584,8 @@ fun SettingsScreen(
 
         // Connections section
         item {
+            var showSpotifyWarning by rememberSaveable { mutableStateOf(false) }
+
             SettingsSection(
                 title = "Connections",
                 icon = R.drawable.ic_account_circle,
@@ -707,26 +709,27 @@ fun SettingsScreen(
                                 Text("Connect YouTube Music")
                             }
                         }
-                    }
-                }
-            }
-        }
 
-        // Spotify section
-        item {
-            var showSpotifyWarning by rememberSaveable { mutableStateOf(false) }
+                        Spacer(modifier = Modifier.height(20.dp))
 
-            SettingsSection(
-                title = "Spotify",
-                icon = R.drawable.ic_spotify,
-            ) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                    ),
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                        // Spotify connection
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_spotify),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Spotify",
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         if (state.spotifyConnected) {
                             Text(
                                 text = "Spotify connected",

@@ -11,6 +11,7 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -77,6 +78,7 @@ class LocalViewModel @Inject constructor(
     private val favoriteDao: FavoriteDao,
     private val recentSearchDao: RecentSearchDao,
     private val settingsDataStore: SettingsDataStore,
+    private val localMusicRepository: LocalMusicRepository,
     @param:ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -89,6 +91,12 @@ class LocalViewModel @Inject constructor(
 
     val searchHistoryEnabled: StateFlow<Boolean> = settingsDataStore.searchHistoryEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val localMusicEnabled: StateFlow<Boolean> = settingsDataStore.localMusicEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
     val allLocalTracks: StateFlow<List<Track>> = combine(
         trackDao.getLocalTracks(),
@@ -179,6 +187,34 @@ class LocalViewModel @Inject constructor(
 
     fun clearFilters() {
         _filterState.update { LocalFilterState() }
+    }
+
+    // Local music enable + scan
+
+    fun enableLocalMusic() {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setLocalMusicEnabled(true)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun onAudioPermissionGranted() {
+        viewModelScope.launch {
+            try {
+                localMusicRepository.clearAll()
+                settingsDataStore.setLocalMusicUseMediaStore(true)
+                _isScanning.value = true
+                localMusicRepository.scan()
+                _isScanning.value = false
+                localMusicRepository.scheduleSyncWork()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _isScanning.value = false
+            }
+        }
     }
 
     private fun applyFilters(track: Track, filters: LocalFilterState): Boolean {
