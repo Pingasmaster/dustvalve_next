@@ -4,12 +4,20 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Ensure only one build runs at a time
+LOCKFILE="$SCRIPT_DIR/.build.lock"
+exec 9>"$LOCKFILE"
+if ! flock -n 9; then
+    echo "Another build is already running. Exiting."
+    exit 1
+fi
+
 GRADLE_APK="app/build/outputs/apk/release/app-release.apk"
 ROOT_APK="app-release.apk"
 BUILD_GRADLE="app/build.gradle.kts"
 
-# Build
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew lint assembleDebug assembleRelease
+# Clean + Build
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew clean lint assembleDebug assembleRelease
 
 # Replace root APK with fresh build
 rm -f "$ROOT_APK"

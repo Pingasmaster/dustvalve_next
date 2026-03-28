@@ -25,7 +25,7 @@ import kotlin.coroutines.coroutineContext
 @Singleton
 class UpdateRepositoryImpl @Inject constructor(
     private val client: OkHttpClient,
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
 ) : UpdateRepository {
 
     private val json = Json { ignoreUnknownKeys = true }

@@ -16,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 121
-        versionName = "0.1.12"
+        versionCode = 123
+        versionName = "1.2.0"
     }
 
     signingConfigs {
@@ -65,29 +65,29 @@ android {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2026.03.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.03.01")
     implementation(composeBom)
 
-    // Material 3 Expressive + compatible compose libs (all pinned to 1.11.0-beta01)
-    implementation("androidx.compose.runtime:runtime:1.11.0-beta01")
-    implementation("androidx.compose.ui:ui:1.11.0-beta01")
-    implementation("androidx.compose.ui:ui-graphics:1.11.0-beta01")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.11.0-beta01")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.11.0-beta01")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha15")
-    implementation("androidx.compose.foundation:foundation:1.11.0-beta01")
-    implementation("androidx.compose.animation:animation:1.11.0-beta01")
+    // Material 3 Expressive + compatible compose libs (all pinned to 1.11.0-beta02)
+    implementation("androidx.compose.runtime:runtime:1.11.0-beta02")
+    implementation("androidx.compose.ui:ui:1.11.0-beta02")
+    implementation("androidx.compose.ui:ui-graphics:1.11.0-beta02")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.11.0-beta02")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.11.0-beta02")
+    implementation("androidx.compose.material3:material3:1.5.0-alpha16")
+    implementation("androidx.compose.foundation:foundation:1.11.0-beta02")
+    implementation("androidx.compose.animation:animation:1.11.0-beta02")
 
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Navigation 3
-    implementation("androidx.navigation3:navigation3-runtime:1.1.0-beta01")
-    implementation("androidx.navigation3:navigation3-ui:1.1.0-beta01")
+    implementation("androidx.navigation3:navigation3-runtime:1.1.0-rc01")
+    implementation("androidx.navigation3:navigation3-ui:1.1.0-rc01")
 
     // Lifecycle
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-alpha02")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-alpha02")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-alpha03")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-alpha03")
 
     // Activity
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -98,7 +98,7 @@ dependencies {
     implementation("androidx.hilt:hilt-lifecycle-viewmodel-compose:1.3.0")
 
     // WorkManager + Hilt Work
-    implementation("androidx.work:work-runtime-ktx:2.11.1")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("androidx.hilt:hilt-work:1.3.0")
     ksp("androidx.hilt:hilt-compiler:1.3.0")
 
@@ -130,9 +130,9 @@ dependencies {
     implementation("com.materialkolor:material-kolor:4.1.1")
 
     // Media3
-    implementation("androidx.media3:media3-exoplayer:1.10.0-rc02")
-    implementation("androidx.media3:media3-session:1.10.0-rc02")
-    implementation("androidx.media3:media3-datasource-okhttp:1.10.0-rc02")
+    implementation("androidx.media3:media3-exoplayer:1.10.0")
+    implementation("androidx.media3:media3-session:1.10.0")
+    implementation("androidx.media3:media3-datasource-okhttp:1.10.0")
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
@@ -141,7 +141,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // WebKit
-    implementation("androidx.webkit:webkit:1.16.0-alpha03")
+    implementation("androidx.webkit:webkit:1.16.0-alpha04")
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.18.0")
