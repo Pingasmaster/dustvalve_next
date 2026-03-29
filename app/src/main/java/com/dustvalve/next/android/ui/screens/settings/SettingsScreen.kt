@@ -32,7 +32,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -882,7 +882,7 @@ fun SettingsScreen(
                         }
                         if (state.isExporting) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            LinearProgressIndicator(
+                            LinearWavyProgressIndicator(
                                 progress = { state.exportProgress },
                                 modifier = Modifier.fillMaxWidth(),
                             )

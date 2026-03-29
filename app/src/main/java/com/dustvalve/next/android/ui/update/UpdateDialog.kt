@@ -5,7 +5,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -13,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun UpdateDialog(
     state: UpdateUiState,
@@ -45,7 +47,7 @@ fun UpdateDialog(
                 }
                 if (state.isDownloading) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    LinearProgressIndicator(
+                    LinearWavyProgressIndicator(
                         progress = { state.downloadProgress },
                         modifier = Modifier.fillMaxWidth(),
                     )
