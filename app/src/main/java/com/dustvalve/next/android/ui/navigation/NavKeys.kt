@@ -1,5 +1,7 @@
 package com.dustvalve.next.android.ui.navigation
 
+import androidx.annotation.StringRes
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.MusicProvider
 
 sealed interface NavDestination {
@@ -23,14 +25,14 @@ sealed interface NavDestination {
 }
 
 enum class BottomNavItem(
-    val label: String,
+    @StringRes val labelRes: Int,
     val destination: NavDestination,
     val provider: MusicProvider? = null,
 ) {
-    LOCAL("Local", NavDestination.LocalHome, MusicProvider.LOCAL),
-    BANDCAMP("Bandcamp", NavDestination.BandcampHome, MusicProvider.BANDCAMP),
-    YOUTUBE("YouTube", NavDestination.YouTubeHome, MusicProvider.YOUTUBE),
-    SPOTIFY("Spotify", NavDestination.SpotifyHome, MusicProvider.SPOTIFY),
-    LIBRARY("Library", NavDestination.Library),
-    SETTINGS("Settings", NavDestination.Settings),
+    LOCAL(R.string.nav_label_local, NavDestination.LocalHome, MusicProvider.LOCAL),
+    BANDCAMP(R.string.nav_label_bandcamp, NavDestination.BandcampHome, MusicProvider.BANDCAMP),
+    YOUTUBE(R.string.nav_label_youtube, NavDestination.YouTubeHome, MusicProvider.YOUTUBE),
+    SPOTIFY(R.string.nav_label_spotify, NavDestination.SpotifyHome, MusicProvider.SPOTIFY),
+    LIBRARY(R.string.nav_label_library, NavDestination.Library),
+    SETTINGS(R.string.nav_label_settings, NavDestination.Settings),
 }

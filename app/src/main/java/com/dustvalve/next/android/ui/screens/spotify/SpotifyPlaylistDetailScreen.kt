@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -86,7 +88,7 @@ fun SpotifyPlaylistDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
@@ -121,13 +123,13 @@ fun SpotifyPlaylistDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: "Failed to load playlist",
+                            text = state.error ?: stringResource(R.string.detail_error_load_playlist),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.loadPlaylist(playlistUri, playlistName) }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.common_action_retry))
                         }
                     }
                 }
@@ -211,7 +213,7 @@ fun SpotifyPlaylistDetailScreen(
                     // Track count
                     item(key = "meta") {
                         Text(
-                            text = "${state.tracks.size} tracks",
+                            text = pluralStringResource(R.plurals.track_count, state.tracks.size, state.tracks.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
@@ -250,7 +252,7 @@ fun SpotifyPlaylistDetailScreen(
                                         modifier = Modifier.size(ButtonDefaults.IconSize),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Play All")
+                                    Text(stringResource(R.string.common_play_all))
                                 }
 
                                 FilledTonalIconButton(
@@ -264,7 +266,7 @@ fun SpotifyPlaylistDetailScreen(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_shuffle),
-                                        contentDescription = "Shuffle play",
+                                        contentDescription = stringResource(R.string.common_cd_shuffle_play),
                                     )
                                 }
 
@@ -285,8 +287,8 @@ fun SpotifyPlaylistDetailScreen(
                                             if (state.isFavorite) R.drawable.ic_favorite
                                             else R.drawable.ic_favorite_border,
                                         ),
-                                        contentDescription = if (state.isFavorite) "Remove from favorites"
-                                            else "Add to favorites",
+                                        contentDescription = if (state.isFavorite) stringResource(R.string.detail_cd_remove_favorites)
+                                            else stringResource(R.string.detail_cd_add_favorites),
                                     )
                                 }
 
@@ -300,8 +302,8 @@ fun SpotifyPlaylistDetailScreen(
                                             if (state.isImported) R.drawable.ic_check
                                             else R.drawable.ic_playlist_add,
                                         ),
-                                        contentDescription = if (state.isImported) "Already imported"
-                                            else "Import to library",
+                                        contentDescription = if (state.isImported) stringResource(R.string.detail_cd_already_imported)
+                                            else stringResource(R.string.detail_cd_import_to_library),
                                     )
                                 }
 
@@ -327,8 +329,8 @@ fun SpotifyPlaylistDetailScreen(
                                                 if (allDownloaded) R.drawable.ic_download_done
                                                 else R.drawable.ic_download,
                                             ),
-                                            contentDescription = if (allDownloaded) "Delete downloads"
-                                                else "Download all",
+                                            contentDescription = if (allDownloaded) stringResource(R.string.detail_cd_delete_downloads)
+                                                else stringResource(R.string.detail_cd_download_all),
                                         )
                                     }
                                 }
@@ -340,7 +342,7 @@ fun SpotifyPlaylistDetailScreen(
                     if (state.tracks.isNotEmpty()) {
                         item(key = "tracks_header") {
                             Text(
-                                text = "Tracks",
+                                text = stringResource(R.string.detail_tracks_label),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
                                 modifier = Modifier.padding(
                                     start = 20.dp, end = 20.dp,
@@ -396,8 +398,8 @@ fun SpotifyPlaylistDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete downloads") },
-            text = { Text("Delete all downloaded tracks from this playlist?") },
+            title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
+            text = { Text(stringResource(R.string.detail_delete_playlist_downloads_text)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -405,12 +407,12 @@ fun SpotifyPlaylistDetailScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )

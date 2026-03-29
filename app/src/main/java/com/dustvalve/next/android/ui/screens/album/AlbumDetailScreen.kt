@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -88,8 +89,9 @@ fun AlbumDetailScreen(
         viewModel.loadAlbum(albumUrl)
     }
 
-    LaunchedEffect(state.snackbarMessage) {
-        state.snackbarMessage?.let { message ->
+    val snackbarText = state.snackbarMessage?.asString()
+    LaunchedEffect(snackbarText) {
+        snackbarText?.let { message ->
             try {
                 val result = snackbarHostState.showSnackbar(
                     message = message,
@@ -107,8 +109,8 @@ fun AlbumDetailScreen(
     if (showDeleteAlbumDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAlbumDialog = false },
-            title = { Text("Delete downloads") },
-            text = { Text("Remove all downloaded tracks for '${state.album?.title}'?") },
+            title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
+            text = { Text(stringResource(R.string.detail_delete_album_downloads_text, state.album?.title ?: "")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -116,12 +118,12 @@ fun AlbumDetailScreen(
                         showDeleteAlbumDialog = false
                     },
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteAlbumDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -130,8 +132,8 @@ fun AlbumDetailScreen(
     trackToDelete?.let { track ->
         AlertDialog(
             onDismissRequest = { trackToDelete = null },
-            title = { Text("Delete download") },
-            text = { Text("Remove downloaded file for '${track.title}'?") },
+            title = { Text(stringResource(R.string.detail_delete_download_title)) },
+            text = { Text(stringResource(R.string.detail_delete_track_download_text, track.title)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -139,12 +141,12 @@ fun AlbumDetailScreen(
                         trackToDelete = null
                     },
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { trackToDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -160,7 +162,7 @@ fun AlbumDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
@@ -196,13 +198,13 @@ fun AlbumDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: "Failed to load album",
+                            text = state.error ?: stringResource(R.string.detail_error_load_album),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.loadAlbum(albumUrl) }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.common_action_retry))
                         }
                     }
                 }
@@ -332,7 +334,7 @@ fun AlbumDetailScreen(
                                         modifier = Modifier.size(ButtonDefaults.IconSize),
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Play All")
+                                    Text(stringResource(R.string.common_play_all))
                                 }
 
                                 // Shuffle
@@ -345,7 +347,7 @@ fun AlbumDetailScreen(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_shuffle),
-                                        contentDescription = "Shuffle play",
+                                        contentDescription = stringResource(R.string.common_cd_shuffle_play),
                                     )
                                 }
 
@@ -365,8 +367,8 @@ fun AlbumDetailScreen(
                                     Icon(
                                         painter = painterResource(if (album.isFavorite) R.drawable.ic_favorite
                                             else R.drawable.ic_favorite_border),
-                                        contentDescription = if (album.isFavorite) "Remove from favorites"
-                                            else "Add to favorites",
+                                        contentDescription = if (album.isFavorite) stringResource(R.string.detail_cd_remove_favorites)
+                                            else stringResource(R.string.detail_cd_add_favorites),
                                     )
                                 }
 
@@ -391,8 +393,8 @@ fun AlbumDetailScreen(
                                         Icon(
                                             painter = painterResource(if (allTracksDownloaded) R.drawable.ic_download_done
                                                 else R.drawable.ic_download),
-                                            contentDescription = if (allTracksDownloaded) "Delete album downloads"
-                                                else "Download album",
+                                            contentDescription = if (allTracksDownloaded) stringResource(R.string.detail_cd_delete_album_downloads)
+                                                else stringResource(R.string.detail_cd_download_album),
                                         )
                                     }
                                 }
@@ -413,7 +415,7 @@ fun AlbumDetailScreen(
                     if (album.tracks.isNotEmpty()) {
                         item(key = "tracks_header") {
                             Text(
-                                text = "Tracks",
+                                text = stringResource(R.string.detail_tracks_label),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
                                 modifier = Modifier.padding(
                                     start = 20.dp, end = 20.dp,
@@ -483,7 +485,7 @@ fun AlbumDetailScreen(
                                     modifier = Modifier.padding(20.dp),
                                 ) {
                                     Text(
-                                        text = "Tags",
+                                        text = stringResource(R.string.detail_tags),
                                         style = MaterialTheme.typography.titleMediumEmphasized,
                                         modifier = Modifier.padding(bottom = 12.dp),
                                     )
@@ -549,7 +551,7 @@ private fun ExpandableAbout(about: String) {
             TextButton(
                 onClick = { expanded = !expanded },
             ) {
-                Text(if (expanded) "Show less" else "Show more")
+                Text(if (expanded) stringResource(R.string.detail_show_less) else stringResource(R.string.detail_show_more))
             }
         }
     }

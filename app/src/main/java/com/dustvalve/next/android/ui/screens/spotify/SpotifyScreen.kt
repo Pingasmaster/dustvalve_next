@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -84,6 +85,8 @@ fun SpotifyScreen(
     val searchHistoryEnabled by viewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    val failedToPlayMsg = stringResource(R.string.common_failed_to_play)
 
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
@@ -123,11 +126,11 @@ fun SpotifyScreen(
             searchBarState = searchBarState,
             textFieldState = textFieldState,
             onSearch = { viewModel.onSearch() },
-            placeholder = { Text("Search Spotify...") },
+            placeholder = { Text(stringResource(R.string.spotify_search_placeholder)) },
             leadingIcon = {
                 Icon(
                     painter = painterResource(R.drawable.ic_search),
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.common_cd_search),
                 )
             },
             trailingIcon = {
@@ -137,7 +140,7 @@ fun SpotifyScreen(
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
-                            contentDescription = "Clear",
+                            contentDescription = stringResource(R.string.common_cd_clear),
                         )
                     }
                 }
@@ -169,7 +172,7 @@ fun SpotifyScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Search for tracks, albums, artists, or playlists on Spotify",
+                        text = stringResource(R.string.spotify_empty_state),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -194,27 +197,27 @@ fun SpotifyScreen(
                     FilterChip(
                         selected = state.selectedFilter == null,
                         onClick = { viewModel.onFilterSelected(null) },
-                        label = { Text("All") },
+                        label = { Text(stringResource(R.string.spotify_tab_all)) },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "tracks",
                         onClick = { viewModel.onFilterSelected("tracks") },
-                        label = { Text("Tracks") },
+                        label = { Text(stringResource(R.string.spotify_tab_tracks)) },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "albums",
                         onClick = { viewModel.onFilterSelected("albums") },
-                        label = { Text("Albums") },
+                        label = { Text(stringResource(R.string.spotify_tab_albums)) },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "artists",
                         onClick = { viewModel.onFilterSelected("artists") },
-                        label = { Text("Artists") },
+                        label = { Text(stringResource(R.string.spotify_tab_artists)) },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "playlists",
                         onClick = { viewModel.onFilterSelected("playlists") },
-                        label = { Text("Playlists") },
+                        label = { Text(stringResource(R.string.spotify_tab_playlists)) },
                     )
                 }
 
@@ -250,7 +253,7 @@ fun SpotifyScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = state.error ?: "Search failed",
+                                    text = state.error ?: stringResource(R.string.common_search_failed),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -265,13 +268,13 @@ fun SpotifyScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = "No results found",
+                                    text = stringResource(R.string.common_no_results_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Try a different search term",
+                                    text = stringResource(R.string.common_no_results_subtitle),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -307,7 +310,7 @@ fun SpotifyScreen(
                                                             playerViewModel.playTrack(track)
                                                             onExpandPlayer()
                                                         } catch (_: Exception) {
-                                                            snackbarHostState.showSnackbar("Failed to play")
+                                                            snackbarHostState.showSnackbar(failedToPlayMsg)
                                                         }
                                                     }
                                                 }
@@ -404,17 +407,18 @@ fun SpotifyScreen(
                                             },
                                             trailingContent = {
                                                 if (result.type == SearchResultType.SPOTIFY_PLAYLIST) {
+                                                    val importedMsg = stringResource(R.string.common_playlist_imported, result.name)
                                                     IconButton(
                                                         onClick = {
                                                             scope.launch {
                                                                 viewModel.importPlaylist(result.url, result.name)
-                                                                snackbarHostState.showSnackbar("Playlist imported: ${result.name}")
+                                                                snackbarHostState.showSnackbar(importedMsg)
                                                             }
                                                         },
                                                     ) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.ic_playlist_add),
-                                                            contentDescription = "Import playlist",
+                                                            contentDescription = stringResource(R.string.common_cd_import_playlist),
                                                         )
                                                     }
                                                 }

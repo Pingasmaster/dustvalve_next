@@ -53,6 +53,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import androidx.graphics.shapes.Morph
@@ -258,21 +259,21 @@ fun MiniPlayer(
                     IconButton(onClick = { playerViewModel.onPrevious() }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_previous),
-                            contentDescription = "Previous",
+                            contentDescription = stringResource(R.string.player_cd_previous),
                         )
                     }
 
                     IconButton(onClick = { playerViewModel.onPlayPause() }) {
                         Icon(
                             painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
-                            contentDescription = if (state.isPlaying) "Pause" else "Play",
+                            contentDescription = stringResource(if (state.isPlaying) R.string.player_cd_pause else R.string.player_cd_play),
                         )
                     }
 
                     IconButton(onClick = { playerViewModel.onNext() }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_next),
-                            contentDescription = "Next",
+                            contentDescription = stringResource(R.string.player_cd_next),
                         )
                     }
                 }

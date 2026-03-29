@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -93,29 +94,31 @@ fun SettingsScreen(
     var showFormatSheet by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val bandcampDisconnectedMsg = stringResource(R.string.settings_bandcamp_disconnected)
     LaunchedEffect(state.bandcampSignOutSuccess) {
         if (state.bandcampSignOutSuccess) {
             try {
-                snackbarHostState.showSnackbar("Bandcamp disconnected")
+                snackbarHostState.showSnackbar(bandcampDisconnectedMsg)
             } finally {
                 viewModel.clearSignOutSuccess()
             }
         }
     }
 
+    val ytmDisconnectedMsg = stringResource(R.string.settings_youtube_disconnected)
     LaunchedEffect(state.ytmSignOutSuccess) {
         if (state.ytmSignOutSuccess) {
             try {
-                snackbarHostState.showSnackbar("YouTube Music disconnected")
+                snackbarHostState.showSnackbar(ytmDisconnectedMsg)
             } finally {
                 viewModel.clearYtmSignOutSuccess()
             }
         }
     }
 
-    LaunchedEffect(state.exportMessage) {
-        val message = state.exportMessage
-        if (message != null) {
+    val exportText = state.exportMessage?.asString()
+    LaunchedEffect(exportText) {
+        exportText?.let { message ->
             try {
                 snackbarHostState.showSnackbar(message)
             } finally {
@@ -127,8 +130,8 @@ fun SettingsScreen(
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
-            title = { Text("Clear cache") },
-            text = { Text("This will remove all cached audio and images. Downloaded tracks will not be affected.") },
+            title = { Text(stringResource(R.string.settings_clear_cache_title)) },
+            text = { Text(stringResource(R.string.settings_clear_cache_text)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -136,12 +139,12 @@ fun SettingsScreen(
                         showClearCacheDialog = false
                     },
                 ) {
-                    Text("Clear")
+                    Text(stringResource(R.string.common_action_clear))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearCacheDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -150,8 +153,8 @@ fun SettingsScreen(
     if (showRemoveDownloadsDialog) {
         AlertDialog(
             onDismissRequest = { showRemoveDownloadsDialog = false },
-            title = { Text("Remove all downloads") },
-            text = { Text("This will remove all downloaded tracks. Cached audio and images will not be affected.") },
+            title = { Text(stringResource(R.string.settings_remove_downloads_title)) },
+            text = { Text(stringResource(R.string.settings_remove_downloads_text)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -159,12 +162,12 @@ fun SettingsScreen(
                         showRemoveDownloadsDialog = false
                     },
                 ) {
-                    Text("Remove")
+                    Text(stringResource(R.string.common_action_remove))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRemoveDownloadsDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -177,19 +180,19 @@ fun SettingsScreen(
             sheetState = rememberModalBottomSheetState(),
         ) {
             Text(
-                text = "Download Format",
+                text = stringResource(R.string.settings_download_format),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             AudioFormat.DOWNLOADABLE.forEach { format ->
                 val isSelected = format.key == state.downloadFormat
                 ListItem(
-                    headlineContent = { Text(format.displayName) },
+                    headlineContent = { Text(stringResource(format.displayNameRes)) },
                     trailingContent = {
                         if (isSelected) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_check),
-                                contentDescription = "Selected",
+                                contentDescription = stringResource(R.string.common_cd_selected),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                         }
@@ -230,7 +233,7 @@ fun SettingsScreen(
         // Title
         item {
             Text(
-                text = "Settings",
+                text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.headlineMediumEmphasized,
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
             )
@@ -260,9 +263,9 @@ fun SettingsScreen(
 
             var showSpotifySourceWarning by rememberSaveable { mutableStateOf(false) }
 
-            LaunchedEffect(state.scanMessage) {
-                val message = state.scanMessage
-                if (message != null) {
+            val scanText = state.scanMessage?.asString()
+            LaunchedEffect(scanText) {
+                scanText?.let { message ->
                     try {
                         snackbarHostState.showSnackbar(message)
                     } finally {
@@ -272,7 +275,7 @@ fun SettingsScreen(
             }
 
             SettingsSection(
-                title = "Sources",
+                title = stringResource(R.string.settings_section_sources),
                 icon = R.drawable.ic_tune,
             ) {
                 Card(
@@ -296,7 +299,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Local",
+                                    text = stringResource(R.string.settings_source_local),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                             }
@@ -329,11 +332,11 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Use individual folders",
+                                        text = stringResource(R.string.settings_use_individual_folders),
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                     Text(
-                                        text = "Pick specific folders instead of scanning all audio",
+                                        text = stringResource(R.string.settings_use_individual_folders_desc),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -360,12 +363,13 @@ fun SettingsScreen(
                                 if (state.localMusicFolderUris.isNotEmpty()) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     state.localMusicFolderUris.forEach { uri ->
+                                        val selectedFolderFallback = stringResource(R.string.common_selected_folder)
                                         val folderName = try {
                                             uri.toUri().lastPathSegment
                                                 ?.substringAfterLast(':')
-                                                ?: "Selected folder"
+                                                ?: selectedFolderFallback
                                         } catch (_: Exception) {
-                                            "Selected folder"
+                                            selectedFolderFallback
                                         }
                                         ListItem(
                                             headlineContent = {
@@ -386,7 +390,7 @@ fun SettingsScreen(
                                                 IconButton(onClick = { viewModel.removeLocalMusicFolder(uri) }) {
                                                     Icon(
                                                         painter = painterResource(R.drawable.ic_close),
-                                                        contentDescription = "Remove folder",
+                                                        contentDescription = stringResource(R.string.settings_cd_remove_folder),
                                                         modifier = Modifier.size(20.dp),
                                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                     )
@@ -418,7 +422,7 @@ fun SettingsScreen(
                                             modifier = Modifier.size(18.dp),
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Add folder")
+                                        Text(stringResource(R.string.settings_add_folder))
                                     }
 
                                     if (state.localMusicFolderUris.isNotEmpty()) {
@@ -437,7 +441,7 @@ fun SettingsScreen(
                                                 )
                                             }
                                             Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Rescan")
+                                            Text(stringResource(R.string.settings_rescan))
                                         }
                                     }
                                 }
@@ -464,7 +468,7 @@ fun SettingsScreen(
                                             )
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Rescan")
+                                        Text(stringResource(R.string.settings_rescan))
                                     }
                                 }
                             }
@@ -487,7 +491,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Bandcamp",
+                                    text = stringResource(R.string.settings_source_bandcamp),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                             }
@@ -513,7 +517,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "YouTube",
+                                    text = stringResource(R.string.settings_source_youtube),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                             }
@@ -538,7 +542,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Spotify",
+                                    text = stringResource(R.string.settings_source_spotify),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                             }
@@ -560,24 +564,21 @@ fun SettingsScreen(
             if (showSpotifySourceWarning) {
                 AlertDialog(
                     onDismissRequest = { showSpotifySourceWarning = false },
-                    title = { Text("Spotify Premium Required") },
+                    title = { Text(stringResource(R.string.settings_spotify_premium_title)) },
                     text = {
-                        Text(
-                            "Spotify streaming requires a paid Spotify Premium account. " +
-                                "Free accounts are not supported."
-                        )
+                        Text(stringResource(R.string.settings_spotify_premium_text))
                     },
                     confirmButton = {
                         TextButton(onClick = {
                             showSpotifySourceWarning = false
                             viewModel.setSpotifyEnabled(true)
                         }) {
-                            Text("Enable")
+                            Text(stringResource(R.string.common_action_enable))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showSpotifySourceWarning = false }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.common_action_cancel))
                         }
                     },
                 )
@@ -589,7 +590,7 @@ fun SettingsScreen(
             var showSpotifyWarning by rememberSaveable { mutableStateOf(false) }
 
             SettingsSection(
-                title = "Connections",
+                title = stringResource(R.string.settings_section_connections),
                 icon = R.drawable.ic_account_circle,
             ) {
                 Card(
@@ -612,7 +613,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Bandcamp",
+                                text = stringResource(R.string.settings_source_bandcamp),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                         }
@@ -624,7 +625,7 @@ fun SettingsScreen(
                                 if (state.accountState.avatarUrl != null) {
                                     AsyncImage(
                                         model = state.accountState.avatarUrl,
-                                        contentDescription = "Avatar",
+                                        contentDescription = stringResource(R.string.settings_cd_avatar),
                                         modifier = Modifier
                                             .size(40.dp)
                                             .clip(AppShapes.Avatar),
@@ -633,7 +634,7 @@ fun SettingsScreen(
                                 }
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = state.accountState.username ?: "Connected",
+                                        text = state.accountState.username ?: stringResource(R.string.common_connected),
                                         style = MaterialTheme.typography.bodyMedium,
                                     )
                                 }
@@ -644,11 +645,11 @@ fun SettingsScreen(
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Disconnect")
+                                Text(stringResource(R.string.common_action_disconnect))
                             }
                         } else {
                             Text(
-                                text = "Connect to access your Bandcamp purchases.",
+                                text = stringResource(R.string.settings_connect_bandcamp_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -658,7 +659,7 @@ fun SettingsScreen(
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Connect Bandcamp")
+                                Text(stringResource(R.string.settings_connect_bandcamp))
                             }
                         }
 
@@ -677,14 +678,14 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "YouTube Music",
+                                text = stringResource(R.string.settings_youtube_music),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         if (state.ytmAccountState.isLoggedIn) {
                             Text(
-                                text = "Connected",
+                                text = stringResource(R.string.common_connected),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -694,11 +695,11 @@ fun SettingsScreen(
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Disconnect")
+                                Text(stringResource(R.string.common_action_disconnect))
                             }
                         } else {
                             Text(
-                                text = "Connect to access your YouTube Music library.",
+                                text = stringResource(R.string.settings_connect_youtube_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -708,7 +709,7 @@ fun SettingsScreen(
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Connect YouTube Music")
+                                Text(stringResource(R.string.settings_connect_youtube))
                             }
                         }
 
@@ -727,14 +728,14 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = "Spotify",
+                                text = stringResource(R.string.settings_source_spotify),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         if (state.spotifyConnected) {
                             Text(
-                                text = "Spotify connected",
+                                text = stringResource(R.string.settings_spotify_connected),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.primary,
                             )
@@ -744,11 +745,11 @@ fun SettingsScreen(
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Disconnect")
+                                Text(stringResource(R.string.common_action_disconnect))
                             }
                         } else {
                             Text(
-                                text = "Connect to search and stream from Spotify. Requires Premium.",
+                                text = stringResource(R.string.settings_connect_spotify_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -758,7 +759,7 @@ fun SettingsScreen(
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text("Connect Spotify")
+                                Text(stringResource(R.string.settings_connect_spotify))
                             }
                         }
                     }
@@ -768,26 +769,21 @@ fun SettingsScreen(
             if (showSpotifyWarning) {
                 AlertDialog(
                     onDismissRequest = { showSpotifyWarning = false },
-                    title = { Text("Spotify Integration Warning") },
+                    title = { Text(stringResource(R.string.settings_spotify_warning_title)) },
                     text = {
-                        Text(
-                            "This feature requires a paid Spotify Premium account.\n\n" +
-                                "Using unofficial Spotify clients violates Spotify's Terms of Service. " +
-                                "Your account may be suspended or banned. Use at your own risk.\n\n" +
-                                "Dustvalve is not affiliated with Spotify."
-                        )
+                        Text(stringResource(R.string.settings_spotify_warning_text))
                     },
                     confirmButton = {
                         TextButton(onClick = {
                             showSpotifyWarning = false
                             onSpotifyLoginClick()
                         }) {
-                            Text("I understand, continue")
+                            Text(stringResource(R.string.settings_i_understand))
                         }
                     },
                     dismissButton = {
                         TextButton(onClick = { showSpotifyWarning = false }) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.common_action_cancel))
                         }
                     },
                 )
@@ -811,7 +807,7 @@ fun SettingsScreen(
             }
 
             SettingsSection(
-                title = "Storage",
+                title = stringResource(R.string.settings_section_storage),
                 icon = R.drawable.ic_storage,
             ) {
                 Card(
@@ -831,10 +827,10 @@ fun SettingsScreen(
                             mutableIntStateOf(state.storageLimitIndex)
                         }
                         val label = when (sliderIndex) {
-                            storageLimitSteps.lastIndex -> "Storage limit: Unlimited"
-                            0 -> "Storage limit: 100 MB"
-                            1 -> "Storage limit: 500 MB"
-                            else -> "Storage limit: ${storageLimitSteps[sliderIndex].toInt()} GB"
+                            storageLimitSteps.lastIndex -> stringResource(R.string.settings_storage_limit_unlimited)
+                            0 -> stringResource(R.string.settings_storage_limit_mb, 100)
+                            1 -> stringResource(R.string.settings_storage_limit_mb, 500)
+                            else -> stringResource(R.string.settings_storage_limit_gb, storageLimitSteps[sliderIndex].toInt())
                         }
                         Text(
                             text = label,
@@ -863,7 +859,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Manage downloads")
+                            Text(stringResource(R.string.settings_manage_downloads))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         FilledTonalButton(
@@ -878,7 +874,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export downloads")
+                            Text(stringResource(R.string.settings_export_downloads))
                         }
                         if (state.isExporting) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -899,7 +895,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Remove all downloads")
+                            Text(stringResource(R.string.settings_remove_all_downloads))
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         FilledTonalButton(
@@ -913,7 +909,7 @@ fun SettingsScreen(
                                 modifier = Modifier.size(18.dp),
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Clear cache")
+                            Text(stringResource(R.string.settings_clear_cache))
                         }
 
                         if (state.accountState.isLoggedIn) {
@@ -924,11 +920,11 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Auto-download purchases",
+                                        text = stringResource(R.string.settings_auto_download_purchases),
                                         style = MaterialTheme.typography.titleSmall,
                                     )
                                     Text(
-                                        text = "Automatically download your Dustvalve purchases",
+                                        text = stringResource(R.string.settings_auto_download_purchases_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -947,11 +943,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Auto-download future content",
+                                    text = stringResource(R.string.settings_auto_download_future),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Automatically download new content for downloaded playlists, albums, and artists",
+                                    text = stringResource(R.string.settings_auto_download_future_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -969,7 +965,7 @@ fun SettingsScreen(
         // Audio Quality section
         item {
                 SettingsSection(
-                    title = "Audio Quality",
+                    title = stringResource(R.string.settings_section_audio_quality),
                     icon = R.drawable.ic_high_quality,
                 ) {
                     Card(
@@ -980,11 +976,11 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Download Format",
+                                text = stringResource(R.string.settings_download_format),
                                 style = MaterialTheme.typography.titleSmall,
                             )
                             Text(
-                                text = "Format for downloaded Bandcamp purchases",
+                                text = stringResource(R.string.settings_download_format_desc),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -995,7 +991,7 @@ fun SettingsScreen(
                                 shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(currentFormat?.displayName ?: "FLAC (Lossless)")
+                                Text(stringResource(currentFormat?.displayNameRes ?: R.string.audio_format_flac))
                             }
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -1006,11 +1002,11 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "MP3 only on metered",
+                                        text = stringResource(R.string.settings_mp3_on_metered),
                                         style = MaterialTheme.typography.titleSmall,
                                     )
                                     Text(
-                                        text = "Download MP3 instead of lossless on mobile data",
+                                        text = stringResource(R.string.settings_mp3_on_metered_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1029,11 +1025,11 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Progressive download",
+                                        text = stringResource(R.string.settings_progressive_download),
                                         style = MaterialTheme.typography.titleSmall,
                                     )
                                     Text(
-                                        text = "Stream preview quality, then seamlessly upgrade to full quality",
+                                        text = stringResource(R.string.settings_progressive_download_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1052,11 +1048,11 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "Seamless quality upgrade",
+                                        text = stringResource(R.string.settings_seamless_upgrade),
                                         style = MaterialTheme.typography.titleSmall,
                                     )
                                     Text(
-                                        text = "Automatically switch to higher quality audio while playing",
+                                        text = stringResource(R.string.settings_seamless_upgrade_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1075,7 +1071,7 @@ fun SettingsScreen(
         // Appearance section
         item {
             SettingsSection(
-                title = "Appearance",
+                title = stringResource(R.string.settings_section_appearance),
                 icon = R.drawable.ic_palette,
             ) {
                 Card(
@@ -1086,13 +1082,17 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Theme",
+                            text = stringResource(R.string.settings_theme),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
                         val themeOptions = listOf("light", "dark", "system")
-                        val themeLabels = listOf("Light", "Dark", "System")
+                        val themeLabels = listOf(
+                            stringResource(R.string.settings_theme_light),
+                            stringResource(R.string.settings_theme_dark),
+                            stringResource(R.string.settings_theme_system),
+                        )
                         val selectedIndex = themeOptions.indexOf(state.themeMode).coerceAtLeast(0)
 
                         SingleChoiceSegmentedButtonRow(
@@ -1120,11 +1120,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Dynamic Color",
+                                    text = stringResource(R.string.settings_dynamic_color),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Use colors from your wallpaper",
+                                    text = stringResource(R.string.settings_dynamic_color_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1143,11 +1143,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Album art colors",
+                                    text = stringResource(R.string.settings_album_art_colors),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Theme the app using colors from the playing track's album art",
+                                    text = stringResource(R.string.settings_album_art_colors_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1173,11 +1173,11 @@ fun SettingsScreen(
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = "OLED Black",
+                                        text = stringResource(R.string.settings_oled_black),
                                         style = MaterialTheme.typography.titleSmall,
                                     )
                                     Text(
-                                        text = "Use pure black backgrounds for OLED screens",
+                                        text = stringResource(R.string.settings_oled_black_desc),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -1197,11 +1197,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Wavy progress bar",
+                                    text = stringResource(R.string.settings_wavy_progress),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Animated wavy seek bar in the music player",
+                                    text = stringResource(R.string.settings_wavy_progress_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1219,7 +1219,7 @@ fun SettingsScreen(
         // Player section
         item {
             SettingsSection(
-                title = "Player",
+                title = stringResource(R.string.settings_section_player),
                 icon = R.drawable.ic_volume_up,
             ) {
                 Card(
@@ -1235,11 +1235,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Volume slider",
+                                    text = stringResource(R.string.settings_volume_slider),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Show a volume slider next to album art in the music player",
+                                    text = stringResource(R.string.settings_volume_slider_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1258,11 +1258,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Volume button",
+                                    text = stringResource(R.string.settings_volume_button),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Show a volume button that opens a full-screen volume control",
+                                    text = stringResource(R.string.settings_volume_button_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1281,11 +1281,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Cover carousel",
+                                    text = stringResource(R.string.settings_cover_carousel),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Long-press album cover to browse upcoming tracks (disabling shows debug info instead)",
+                                    text = stringResource(R.string.settings_cover_carousel_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1304,11 +1304,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Keep screen on while open",
+                                    text = stringResource(R.string.settings_keep_screen_open),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Prevent the screen from locking while the app is open",
+                                    text = stringResource(R.string.settings_keep_screen_open_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1327,11 +1327,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Keep screen on while playing",
+                                    text = stringResource(R.string.settings_keep_screen_playing),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Prevent the screen from locking while music is playing",
+                                    text = stringResource(R.string.settings_keep_screen_playing_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1349,7 +1349,7 @@ fun SettingsScreen(
         // Search section
         item {
             SettingsSection(
-                title = "Search",
+                title = stringResource(R.string.settings_section_search),
                 icon = R.drawable.ic_search,
             ) {
                 Card(
@@ -1365,11 +1365,11 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Search history",
+                                    text = stringResource(R.string.settings_search_history),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
                                 Text(
-                                    text = "Save recent searches for quick access",
+                                    text = stringResource(R.string.settings_search_history_desc),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -1387,7 +1387,7 @@ fun SettingsScreen(
         // About section
         item {
             SettingsSection(
-                title = "About",
+                title = stringResource(R.string.settings_section_about),
                 icon = R.drawable.ic_info,
             ) {
                 Card(
@@ -1402,7 +1402,7 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
                             Text(
-                                text = "Version",
+                                text = stringResource(R.string.settings_version),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                             Text(
@@ -1413,14 +1413,14 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Licensed under GPLv3",
+                            text = stringResource(R.string.settings_license),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         val uriHandler = LocalUriHandler.current
                         Text(
-                            text = "GitHub",
+                            text = stringResource(R.string.settings_github),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 textDecoration = TextDecoration.Underline,
                             ),

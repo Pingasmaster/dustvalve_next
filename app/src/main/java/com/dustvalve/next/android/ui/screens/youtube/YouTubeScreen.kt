@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -97,6 +98,8 @@ fun YouTubeScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val failedToPlayMsg = stringResource(R.string.common_failed_to_play)
+
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
     val searchListState = rememberLazyListState()
@@ -137,7 +140,7 @@ fun YouTubeScreen(
                 playerViewModel.playTrack(track)
                 onExpandPlayer()
             } catch (_: Exception) {
-                snackbarHostState.showSnackbar("Failed to play")
+                snackbarHostState.showSnackbar(failedToPlayMsg)
             }
         }
     }
@@ -147,11 +150,11 @@ fun YouTubeScreen(
             searchBarState = searchBarState,
             textFieldState = textFieldState,
             onSearch = { viewModel.onSearch() },
-            placeholder = { Text("Search YouTube...") },
+            placeholder = { Text(stringResource(R.string.youtube_search_placeholder)) },
             leadingIcon = {
                 Icon(
                     painter = painterResource(R.drawable.ic_search),
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.common_cd_search),
                 )
             },
             trailingIcon = {
@@ -161,7 +164,7 @@ fun YouTubeScreen(
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
-                            contentDescription = "Clear",
+                            contentDescription = stringResource(R.string.common_cd_clear),
                         )
                     }
                 }
@@ -285,22 +288,22 @@ fun YouTubeScreen(
                     FilterChip(
                         selected = state.selectedFilter == null,
                         onClick = { viewModel.onFilterSelected(null) },
-                        label = { Text("All") },
+                        label = { Text(stringResource(R.string.youtube_tab_all)) },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "artists",
                         onClick = { viewModel.onFilterSelected("artists") },
-                        label = { Text("Artists") },
+                        label = { Text(stringResource(R.string.youtube_tab_artists)) },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "playlists",
                         onClick = { viewModel.onFilterSelected("playlists") },
-                        label = { Text("Playlists") },
+                        label = { Text(stringResource(R.string.youtube_tab_playlists)) },
                     )
                     FilterChip(
                         selected = state.selectedFilter == "songs",
                         onClick = { viewModel.onFilterSelected("songs") },
-                        label = { Text("Tracks") },
+                        label = { Text(stringResource(R.string.youtube_tab_tracks)) },
                     )
                 }
 
@@ -336,7 +339,7 @@ fun YouTubeScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = state.error ?: "Search failed",
+                                    text = state.error ?: stringResource(R.string.common_search_failed),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -351,13 +354,13 @@ fun YouTubeScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = "No results found",
+                                    text = stringResource(R.string.common_no_results_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Try a different search term",
+                                    text = stringResource(R.string.common_no_results_subtitle),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -393,7 +396,7 @@ fun YouTubeScreen(
                                                             playerViewModel.playTrack(track)
                                                             onExpandPlayer()
                                                         } catch (_: Exception) {
-                                                            snackbarHostState.showSnackbar("Failed to play")
+                                                            snackbarHostState.showSnackbar(failedToPlayMsg)
                                                         }
                                                     }
                                                 }
@@ -480,17 +483,18 @@ fun YouTubeScreen(
                                             trailingContent = {
                                                 if (result.type == SearchResultType.YOUTUBE_PLAYLIST ||
                                                     result.type == SearchResultType.YOUTUBE_ALBUM) {
+                                                    val importedMsg = stringResource(R.string.common_playlist_imported, result.name)
                                                     IconButton(
                                                         onClick = {
                                                             scope.launch {
                                                                 viewModel.importPlaylist(result.url, result.name)
-                                                                snackbarHostState.showSnackbar("Playlist imported: ${result.name}")
+                                                                snackbarHostState.showSnackbar(importedMsg)
                                                             }
                                                         },
                                                     ) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.ic_playlist_add),
-                                                            contentDescription = "Import playlist",
+                                                            contentDescription = stringResource(R.string.common_cd_import_playlist),
                                                         )
                                                     }
                                                 }
@@ -701,7 +705,7 @@ private fun SectionErrorState(
             if (onRetry != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(onClick = onRetry) {
-                    Text("Retry")
+                    Text(stringResource(R.string.common_action_retry))
                 }
             }
         }

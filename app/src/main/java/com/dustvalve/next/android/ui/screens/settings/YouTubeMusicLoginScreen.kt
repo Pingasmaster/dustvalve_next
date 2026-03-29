@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
@@ -76,13 +77,13 @@ fun YouTubeMusicLoginScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sign in to YouTube Music") },
+                title = { Text(stringResource(R.string.settings_sign_in_youtube)) },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },

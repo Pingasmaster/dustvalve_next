@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
@@ -83,13 +84,13 @@ fun SpotifyLoginScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sign in to Spotify") },
+                title = { Text(stringResource(R.string.settings_sign_in_spotify)) },
                 windowInsets = WindowInsets(0),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
@@ -104,7 +105,7 @@ fun SpotifyLoginScreen(
         ) {
             if (authUrl == null) {
                 Text(
-                    text = "Spotify native library not available. Please rebuild with Rust support.",
+                    text = stringResource(R.string.settings_spotify_native_unavailable),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier

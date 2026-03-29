@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.ui.res.stringResource
+import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -29,12 +31,12 @@ fun UpdateDialog(
             if (!state.isDownloading) onDismiss()
         },
         title = {
-            Text("Update available")
+            Text(stringResource(R.string.update_title))
         },
         text = {
             Column {
                 Text(
-                    text = "Version ${update.versionName} is available.",
+                    text = stringResource(R.string.update_version_available, update.versionName),
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 if (update.releaseNotes.isNotBlank()) {
@@ -53,7 +55,7 @@ fun UpdateDialog(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${(state.downloadProgress * 100).toInt()}%",
+                        text = stringResource(R.string.update_download_percent, (state.downloadProgress * 100).toInt()),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -72,18 +74,18 @@ fun UpdateDialog(
             when {
                 state.readyToInstall -> {
                     TextButton(onClick = onInstall) {
-                        Text("Install")
+                        Text(stringResource(R.string.update_install))
                     }
                 }
                 state.isDownloading -> {}
                 state.downloadError != null -> {
                     TextButton(onClick = onDownload) {
-                        Text("Retry")
+                        Text(stringResource(R.string.common_action_retry))
                     }
                 }
                 else -> {
                     TextButton(onClick = onDownload) {
-                        Text("Download")
+                        Text(stringResource(R.string.update_download))
                     }
                 }
             }
@@ -91,7 +93,7 @@ fun UpdateDialog(
         dismissButton = {
             if (!state.isDownloading) {
                 TextButton(onClick = onDismiss) {
-                    Text(if (state.readyToInstall) "Later" else "Not now")
+                    Text(stringResource(if (state.readyToInstall) R.string.update_later else R.string.update_not_now))
                 }
             }
         },

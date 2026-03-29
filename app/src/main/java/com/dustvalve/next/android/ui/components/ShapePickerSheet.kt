@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -68,7 +69,7 @@ fun ShapePickerSheet(
                 .padding(horizontal = 16.dp),
         ) {
             Text(
-                text = "Choose Shape",
+                text = stringResource(R.string.shape_choose),
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(16.dp))
@@ -124,7 +125,7 @@ fun ShapePickerSheet(
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = option.label,
+                            text = stringResource(option.labelRes),
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                         )
@@ -139,14 +140,14 @@ fun ShapePickerSheet(
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = { onConfirm(selectedShapeKey) },
                     shapes = ButtonDefaults.shapes(),
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.common_action_save))
                 }
             }
             Spacer(Modifier.height(16.dp))

@@ -40,6 +40,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -91,6 +92,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Modifier
 import android.graphics.Matrix
@@ -144,8 +146,9 @@ fun FullPlayer(
 
 
     // Snackbar handling
-    LaunchedEffect(state.snackbarMessage) {
-        state.snackbarMessage?.let { message ->
+    val snackbarText = state.snackbarMessage?.asString()
+    LaunchedEffect(snackbarText) {
+        snackbarText?.let { message ->
             try {
                 snackbarHostState.showSnackbar(message)
             } finally {
@@ -206,7 +209,7 @@ fun FullPlayer(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = "Volume",
+                    text = stringResource(R.string.player_volume),
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 Spacer(modifier = Modifier.height(32.dp))
@@ -247,7 +250,7 @@ fun FullPlayer(
                 androidx.compose.material3.HorizontalDivider()
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Output",
+                    text = stringResource(R.string.player_output),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -273,7 +276,7 @@ fun FullPlayer(
                             ),
                     ) {
                         ListItem(
-                            headlineContent = { Text("Automatic") },
+                            headlineContent = { Text(stringResource(R.string.player_automatic)) },
                             leadingContent = { RadioButton(selected = autoSelected, onClick = null) },
                             trailingContent = {
                                 Icon(
@@ -343,7 +346,7 @@ fun FullPlayer(
                                 contentDescription = null,
                             )
                         },
-                        text = { Text("Queue ($upNextCount)") },
+                        text = { Text(stringResource(R.string.player_queue_count, upNextCount)) },
                     )
                 }
             },
@@ -356,7 +359,7 @@ fun FullPlayer(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "No track playing",
+                        text = stringResource(R.string.player_no_track),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -595,7 +598,7 @@ fun FullPlayer(
                                 if (track.artUrl.isNotBlank()) {
                                     AsyncImage(
                                         model = track.artUrl,
-                                        contentDescription = track.albumTitle.ifEmpty { "Album art" },
+                                        contentDescription = track.albumTitle.ifEmpty { stringResource(R.string.player_cd_album_art) },
                                         contentScale = ContentScale.Crop,
                                         modifier = albumArtGestureModifier,
                                     )
@@ -725,7 +728,7 @@ fun FullPlayer(
                         ) {
                             Icon(
                                 painter = painterResource(if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border),
-                                contentDescription = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
+                                contentDescription = stringResource(if (track.isFavorite) R.string.player_cd_remove_from_favorites else R.string.player_cd_add_to_favorites),
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -759,11 +762,11 @@ fun FullPlayer(
                                 Icon(
                                     painter = painterResource(if (isTrackDownloaded || isLocalTrack) R.drawable.ic_download_done
                                         else R.drawable.ic_download),
-                                    contentDescription = when {
-                                        isLocalTrack -> "Local file"
-                                        isTrackDownloaded -> "Delete download"
-                                        else -> "Download track"
-                                    },
+                                    contentDescription = stringResource(when {
+                                        isLocalTrack -> R.string.player_cd_local_file
+                                        isTrackDownloaded -> R.string.player_cd_delete_download
+                                        else -> R.string.player_cd_download_track
+                                    }),
                                 )
                             }
                         }
@@ -922,7 +925,7 @@ fun FullPlayer(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_previous),
-                            contentDescription = "Previous",
+                            contentDescription = stringResource(R.string.player_cd_previous),
                             modifier = Modifier.size(28.dp),
                         )
                     }
@@ -943,7 +946,7 @@ fun FullPlayer(
                     ) {
                         Icon(
                             painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
-                            contentDescription = if (state.isPlaying) "Pause" else "Play",
+                            contentDescription = stringResource(if (state.isPlaying) R.string.player_cd_pause else R.string.player_cd_play),
                             modifier = Modifier.size(36.dp),
                         )
                     }
@@ -959,7 +962,7 @@ fun FullPlayer(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_next),
-                            contentDescription = "Next",
+                            contentDescription = stringResource(R.string.player_cd_next),
                             modifier = Modifier.size(28.dp),
                         )
                     }
@@ -983,7 +986,7 @@ fun FullPlayer(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_shuffle),
-                            contentDescription = "Shuffle",
+                            contentDescription = stringResource(R.string.player_cd_shuffle),
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -999,7 +1002,7 @@ fun FullPlayer(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_playlist_add),
-                            contentDescription = "Add to playlist",
+                            contentDescription = stringResource(R.string.player_cd_add_to_playlist),
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
@@ -1018,7 +1021,7 @@ fun FullPlayer(
                                 RepeatMode.ONE -> R.drawable.ic_repeat_one
                                 else -> R.drawable.ic_repeat
                             }),
-                            contentDescription = "Repeat",
+                            contentDescription = stringResource(R.string.player_cd_repeat),
                         )
                     }
                 }
@@ -1038,14 +1041,14 @@ fun FullPlayer(
                 IconButton(onClick = onCollapse) {
                     Icon(
                         painter = painterResource(R.drawable.ic_keyboard_arrow_down),
-                        contentDescription = "Collapse",
+                        contentDescription = stringResource(R.string.player_cd_collapse),
                     )
                 }
                 if (state.showVolumeButton) {
                     IconButton(onClick = { showVolumeSheet = true }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_volume_up),
-                            contentDescription = "Volume",
+                            contentDescription = stringResource(R.string.player_cd_volume),
                         )
                     }
                 }
@@ -1058,8 +1061,8 @@ fun FullPlayer(
     if (showDeleteDownloadDialog && track != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDownloadDialog = false },
-            title = { Text("Delete download") },
-            text = { Text("Remove downloaded file for '${track.title}'?") },
+            title = { Text(stringResource(R.string.player_delete_download_title)) },
+            text = { Text(stringResource(R.string.player_delete_download_text, track.title)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -1067,12 +1070,12 @@ fun FullPlayer(
                         showDeleteDownloadDialog = false
                     },
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDownloadDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -1084,7 +1087,7 @@ fun FullPlayer(
             onDismissRequest = { showDebugSheet = false },
         ) {
             Text(
-                text = "Playback Info",
+                text = stringResource(R.string.player_playback_info),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
@@ -1097,16 +1100,16 @@ fun FullPlayer(
                 val isTrackDownloaded = track.id in state.downloadedTrackIds
                 val isDownloading = state.downloadingTrackId == track.id
 
-                val downloadStatus = when {
-                    isLocalTrackDebug -> "Local file"
-                    isDownloading -> "Downloading..."
-                    isTrackDownloaded -> "Downloaded"
-                    isLocal -> "Cached"
-                    else -> "Not downloaded"
-                }
+                val downloadStatus = stringResource(when {
+                    isLocalTrackDebug -> R.string.player_debug_local_file
+                    isDownloading -> R.string.player_debug_downloading
+                    isTrackDownloaded -> R.string.player_debug_downloaded
+                    isLocal -> R.string.player_debug_cached
+                    else -> R.string.player_debug_not_downloaded
+                })
 
-                val formatDisplay = if (isLocalTrackDebug) "Local" else (state.currentPlaybackFormat?.displayName ?: "Unknown")
-                val sourceDisplay = if (isLocalTrackDebug || isLocal) "Local file" else "Streaming"
+                val formatDisplay = if (isLocalTrackDebug) stringResource(R.string.player_debug_local) else (state.currentPlaybackFormat?.let { stringResource(it.displayNameRes) } ?: stringResource(R.string.player_debug_unknown))
+                val sourceDisplay = stringResource(if (isLocalTrackDebug || isLocal) R.string.player_debug_local_file else R.string.player_debug_streaming)
 
                 Surface(
                     shape = segmentedItemShape(0, 6),
@@ -1114,7 +1117,7 @@ fun FullPlayer(
                 ) {
                     ListItem(
                         headlineContent = { Text(formatDisplay) },
-                        supportingContent = { Text("Audio format") },
+                        supportingContent = { Text(stringResource(R.string.player_debug_audio_format)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_audio_file), contentDescription = null)
                         },
@@ -1126,7 +1129,7 @@ fun FullPlayer(
                 ) {
                     ListItem(
                         headlineContent = { Text(sourceDisplay) },
-                        supportingContent = { Text("Source") },
+                        supportingContent = { Text(stringResource(R.string.player_debug_source)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_cloud), contentDescription = null)
                         },
@@ -1138,7 +1141,7 @@ fun FullPlayer(
                 ) {
                     ListItem(
                         headlineContent = { Text(downloadStatus) },
-                        supportingContent = { Text("Download status") },
+                        supportingContent = { Text(stringResource(R.string.player_debug_download_status)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_download), contentDescription = null)
                         },
@@ -1153,12 +1156,12 @@ fun FullPlayer(
                             Text(
                                 text = state.currentSourcePath?.let {
                                     it.substringAfterLast("/downloads/")
-                                } ?: track.streamUrl?.take(60) ?: "None",
+                                } ?: track.streamUrl?.take(60) ?: stringResource(R.string.player_debug_none),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         },
-                        supportingContent = { Text("File path") },
+                        supportingContent = { Text(stringResource(R.string.player_debug_file_path)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_storage), contentDescription = null)
                         },
@@ -1176,7 +1179,7 @@ fun FullPlayer(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         },
-                        supportingContent = { Text("Track ID") },
+                        supportingContent = { Text(stringResource(R.string.player_debug_track_id)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
@@ -1194,7 +1197,7 @@ fun FullPlayer(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         },
-                        supportingContent = { Text("Album ID") },
+                        supportingContent = { Text(stringResource(R.string.player_debug_album_id)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
@@ -1214,7 +1217,7 @@ fun FullPlayer(
             Box {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Add to playlist",
+                        text = stringResource(R.string.common_add_to_playlist),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
@@ -1245,14 +1248,14 @@ fun FullPlayer(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "No playlists yet",
+                                    text = stringResource(R.string.player_no_playlists),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Create one to get started",
+                                    text = stringResource(R.string.player_create_to_start),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     textAlign = TextAlign.Center,
@@ -1290,7 +1293,7 @@ fun FullPlayer(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_add),
-                        contentDescription = "Create playlist",
+                        contentDescription = stringResource(R.string.common_cd_create_playlist),
                     )
                 }
             }
@@ -1325,7 +1328,7 @@ fun FullPlayer(
 
             ListItem(
                 headlineContent = {
-                    Text(if (contextTrack.isFavorite) "Remove from favorites" else "Add to favorites")
+                    Text(stringResource(if (contextTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites))
                 },
                 leadingContent = {
                     Icon(
@@ -1344,7 +1347,7 @@ fun FullPlayer(
             )
 
             ListItem(
-                headlineContent = { Text("Add to playlist") },
+                headlineContent = { Text(stringResource(R.string.common_add_to_playlist)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_playlist_add),
@@ -1360,7 +1363,7 @@ fun FullPlayer(
             ListItem(
                 headlineContent = {
                     Text(
-                        text = "Remove from queue",
+                        text = stringResource(R.string.player_remove_from_queue),
                         color = MaterialTheme.colorScheme.error,
                     )
                 },
@@ -1391,7 +1394,7 @@ fun FullPlayer(
             Box {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Add to playlist",
+                        text = stringResource(R.string.common_add_to_playlist),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
@@ -1422,14 +1425,14 @@ fun FullPlayer(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "No playlists yet",
+                                    text = stringResource(R.string.player_no_playlists),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Create one to get started",
+                                    text = stringResource(R.string.player_create_to_start),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     textAlign = TextAlign.Center,
@@ -1470,7 +1473,7 @@ fun FullPlayer(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_add),
-                        contentDescription = "Create playlist",
+                        contentDescription = stringResource(R.string.common_cd_create_playlist),
                     )
                 }
             }
@@ -1544,7 +1547,7 @@ fun FullPlayer(
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
-                text = "Up next (${allUpNextTracks.size})",
+                text = stringResource(R.string.player_up_next_count, allUpNextTracks.size),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
@@ -1626,7 +1629,7 @@ fun FullPlayer(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_delete),
-                                        contentDescription = "Delete",
+                                        contentDescription = stringResource(R.string.common_cd_delete),
                                         tint = MaterialTheme.colorScheme.onErrorContainer,
                                     )
                                 }
@@ -1697,7 +1700,7 @@ fun FullPlayer(
                                         if (isDownloaded) {
                                             Icon(
                                                 painter = painterResource(R.drawable.ic_download_done),
-                                                contentDescription = "Downloaded",
+                                                contentDescription = stringResource(R.string.common_cd_downloaded),
                                                 modifier = Modifier.size(18.dp),
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -1770,7 +1773,7 @@ fun FullPlayer(
                                         ) {
                                             Icon(
                                                 painter = painterResource(R.drawable.ic_drag_handle),
-                                                contentDescription = "Reorder",
+                                                contentDescription = stringResource(R.string.common_cd_reorder),
                                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.size(24.dp),
                                             )
@@ -1855,27 +1858,28 @@ private fun formatTime(ms: Long): String {
     val totalSeconds = safeMs / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format(Locale.US, "%d:%02d", minutes, seconds)
+    return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
 }
 
+@Composable
 private fun audioDeviceDisplayName(device: android.media.AudioDeviceInfo): String {
     val productName = device.productName?.toString()?.takeIf { it.isNotBlank() }
     return productName ?: when (device.type) {
-        android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> "Speaker"
-        android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> "Earpiece"
-        android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET -> "Wired headset"
-        android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> "Wired headphones"
-        android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> "Bluetooth"
-        android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> "Bluetooth SCO"
-        android.media.AudioDeviceInfo.TYPE_USB_DEVICE -> "USB audio"
-        android.media.AudioDeviceInfo.TYPE_USB_ACCESSORY -> "USB accessory"
-        android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> "USB headset"
-        android.media.AudioDeviceInfo.TYPE_HDMI -> "HDMI"
-        android.media.AudioDeviceInfo.TYPE_DOCK -> "Dock"
-        android.media.AudioDeviceInfo.TYPE_AUX_LINE -> "Aux"
-        android.media.AudioDeviceInfo.TYPE_BLE_HEADSET -> "BLE headset"
-        android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER -> "BLE speaker"
-        else -> "Audio device"
+        android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> stringResource(R.string.player_audio_device_speaker)
+        android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE -> stringResource(R.string.player_audio_device_earpiece)
+        android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET -> stringResource(R.string.player_audio_device_wired_headset)
+        android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES -> stringResource(R.string.player_audio_device_wired_headphones)
+        android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP -> stringResource(R.string.player_audio_device_bluetooth)
+        android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO -> stringResource(R.string.player_audio_device_bluetooth_sco)
+        android.media.AudioDeviceInfo.TYPE_USB_DEVICE -> stringResource(R.string.player_audio_device_usb)
+        android.media.AudioDeviceInfo.TYPE_USB_ACCESSORY -> stringResource(R.string.player_audio_device_usb_accessory)
+        android.media.AudioDeviceInfo.TYPE_USB_HEADSET -> stringResource(R.string.player_audio_device_usb_headset)
+        android.media.AudioDeviceInfo.TYPE_HDMI -> stringResource(R.string.player_audio_device_hdmi)
+        android.media.AudioDeviceInfo.TYPE_DOCK -> stringResource(R.string.player_audio_device_dock)
+        android.media.AudioDeviceInfo.TYPE_AUX_LINE -> stringResource(R.string.player_audio_device_aux)
+        android.media.AudioDeviceInfo.TYPE_BLE_HEADSET -> stringResource(R.string.player_audio_device_ble_headset)
+        android.media.AudioDeviceInfo.TYPE_BLE_SPEAKER -> stringResource(R.string.player_audio_device_ble_speaker)
+        else -> stringResource(R.string.player_audio_device_unknown)
     }
 }
 

@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -117,7 +118,7 @@ fun LibraryScreen(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_add),
-                    contentDescription = "Create playlist",
+                    contentDescription = stringResource(R.string.common_cd_create_playlist),
                 )
             }
         },
@@ -186,27 +187,27 @@ fun LibraryScreen(
         when (item) {
             is LibraryItem.PlaylistItem -> {
                 DeleteLibraryItemDialog(
-                    title = "Delete playlist",
-                    message = "Delete \"${item.name}\"? This cannot be undone.",
-                    confirmText = "Delete",
+                    title = stringResource(R.string.library_delete_playlist_title),
+                    message = stringResource(R.string.library_delete_playlist_text, item.name),
+                    confirmText = stringResource(R.string.common_action_delete),
                     onDismiss = { viewModel.dismissDeleteDialog() },
                     onConfirm = { viewModel.deletePlaylist(item.playlist.id) },
                 )
             }
             is LibraryItem.AlbumItem -> {
                 DeleteLibraryItemDialog(
-                    title = "Remove from library",
-                    message = "Remove \"${item.name}\" from library? This will also unfavorite it.",
-                    confirmText = "Remove",
+                    title = stringResource(R.string.library_remove_title),
+                    message = stringResource(R.string.library_remove_text, item.name),
+                    confirmText = stringResource(R.string.common_action_remove),
                     onDismiss = { viewModel.dismissDeleteDialog() },
                     onConfirm = { viewModel.deleteFavorite(item.favoriteId) },
                 )
             }
             is LibraryItem.ArtistItem -> {
                 DeleteLibraryItemDialog(
-                    title = "Remove from library",
-                    message = "Remove \"${item.name}\" from library? This will also unfavorite it.",
-                    confirmText = "Remove",
+                    title = stringResource(R.string.library_remove_title),
+                    message = stringResource(R.string.library_remove_text, item.name),
+                    confirmText = stringResource(R.string.common_action_remove),
                     onDismiss = { viewModel.dismissDeleteDialog() },
                     onConfirm = { viewModel.deleteFavorite(item.favoriteId) },
                 )
@@ -261,7 +262,7 @@ private fun LibraryList(
     ) {
         item(key = "title") {
             Text(
-                text = "Library",
+                text = stringResource(R.string.library_title),
                 style = MaterialTheme.typography.headlineMediumEmphasized,
                 modifier = Modifier.padding(top = 16.dp, bottom = 12.dp),
             )
@@ -325,7 +326,7 @@ private fun LibraryList(
 
             // Pin/Unpin — available for all types
             ListItem(
-                headlineContent = { Text(if (item.isPinned) "Unpin" else "Pin") },
+                headlineContent = { Text(if (item.isPinned) stringResource(R.string.library_unpin) else stringResource(R.string.library_pin)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_push_pin),
@@ -347,7 +348,7 @@ private fun LibraryList(
                     val playlist = item.playlist
                     if (playlist.isEditable) {
                         ListItem(
-                            headlineContent = { Text("Modify") },
+                            headlineContent = { Text(stringResource(R.string.library_modify)) },
                             leadingContent = {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_edit),
@@ -365,7 +366,7 @@ private fun LibraryList(
                         ListItem(
                             headlineContent = {
                                 Text(
-                                    text = "Delete",
+                                    text = stringResource(R.string.common_action_delete),
                                     color = MaterialTheme.colorScheme.error,
                                 )
                             },
@@ -386,7 +387,7 @@ private fun LibraryList(
                 }
                 is LibraryItem.AlbumItem, is LibraryItem.ArtistItem -> {
                     ListItem(
-                        headlineContent = { Text("Change shape") },
+                        headlineContent = { Text(stringResource(R.string.library_change_shape)) },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_palette),
@@ -402,7 +403,7 @@ private fun LibraryList(
                     ListItem(
                         headlineContent = {
                             Text(
-                                text = "Remove from Library",
+                                text = stringResource(R.string.library_remove_from_library),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         },
@@ -490,7 +491,7 @@ private fun LibraryAlbumListItem(
                 if (item.isPinned) {
                     Icon(
                         painter = painterResource(R.drawable.ic_push_pin),
-                        contentDescription = "Pinned",
+                        contentDescription = stringResource(R.string.playlist_cd_pinned),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -504,7 +505,7 @@ private fun LibraryAlbumListItem(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Album · ${item.artist}",
+                    text = stringResource(R.string.library_album_label, item.artist),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -516,7 +517,7 @@ private fun LibraryAlbumListItem(
             IconButton(onClick = onMoreClick) {
                 Icon(
                     painter = painterResource(R.drawable.ic_more_vert),
-                    contentDescription = "More options",
+                    contentDescription = stringResource(R.string.common_cd_more_options),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -597,7 +598,7 @@ private fun LibraryArtistListItem(
                 if (item.isPinned) {
                     Icon(
                         painter = painterResource(R.drawable.ic_push_pin),
-                        contentDescription = "Pinned",
+                        contentDescription = stringResource(R.string.playlist_cd_pinned),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -611,7 +612,7 @@ private fun LibraryArtistListItem(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Artist",
+                    text = stringResource(R.string.library_artist_label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -622,7 +623,7 @@ private fun LibraryArtistListItem(
             IconButton(onClick = onMoreClick) {
                 Icon(
                     painter = painterResource(R.drawable.ic_more_vert),
-                    contentDescription = "More options",
+                    contentDescription = stringResource(R.string.common_cd_more_options),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -652,7 +653,7 @@ private fun DeleteLibraryItemDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.common_action_cancel))
             }
         },
     )
@@ -687,14 +688,14 @@ private fun EmptyState(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Your library is empty",
+                text = stringResource(R.string.library_empty_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Your playlists and favorites will appear here",
+                text = stringResource(R.string.library_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,

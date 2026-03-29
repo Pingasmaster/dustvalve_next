@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.annotation.StringRes
+import com.dustvalve.next.android.R
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -39,20 +41,20 @@ data class LocalUiState(
 
 enum class LocalSearchFilter { TRACKS, ARTISTS, ALBUMS }
 
-enum class LocalSortOption(val label: String) {
-    TITLE_AZ("Title A-Z"),
-    ARTIST_AZ("Artist A-Z"),
-    ALBUM_AZ("Album A-Z"),
-    SHORTEST("Shortest First"),
-    LONGEST("Longest First"),
-    DATE_ADDED("Date Added"),
-    RELEASE_YEAR("Release Year"),
+enum class LocalSortOption(@StringRes val labelRes: Int) {
+    TITLE_AZ(R.string.sort_title_az),
+    ARTIST_AZ(R.string.sort_artist_az),
+    ALBUM_AZ(R.string.sort_album_az),
+    SHORTEST(R.string.sort_shortest),
+    LONGEST(R.string.sort_longest),
+    DATE_ADDED(R.string.sort_date_added),
+    RELEASE_YEAR(R.string.sort_release_year),
 }
 
-enum class DurationRange(val label: String) {
-    UNDER_3("Under 3 min"),
-    THREE_TO_FIVE("3-5 min"),
-    OVER_5("Over 5 min"),
+enum class DurationRange(@StringRes val labelRes: Int) {
+    UNDER_3(R.string.duration_under_3),
+    THREE_TO_FIVE(R.string.duration_3_to_5),
+    OVER_5(R.string.duration_over_5),
 }
 
 data class LocalFilterState(

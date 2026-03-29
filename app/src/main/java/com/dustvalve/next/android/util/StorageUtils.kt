@@ -14,15 +14,15 @@ object StorageUtils {
             absBytes < 1024L -> "$absBytes B"
             absBytes < 1024L * 1024L -> {
                 val kb = absBytes / 1024.0
-                String.format(Locale.US, "%.1f KB", kb)
+                String.format(Locale.getDefault(), "%.1f KB", kb)
             }
             absBytes < 1024L * 1024L * 1024L -> {
                 val mb = absBytes / (1024.0 * 1024.0)
-                String.format(Locale.US, "%.1f MB", mb)
+                String.format(Locale.getDefault(), "%.1f MB", mb)
             }
             else -> {
                 val gb = absBytes / (1024.0 * 1024.0 * 1024.0)
-                String.format(Locale.US, "%.1f GB", gb)
+                String.format(Locale.getDefault(), "%.1f GB", gb)
             }
         }
     }

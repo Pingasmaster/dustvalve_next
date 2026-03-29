@@ -29,6 +29,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -200,7 +201,7 @@ fun BandcampScreen(
                     FilterChip(
                         selected = state.selectedSubTag == null,
                         onClick = { viewModel.selectSubTag(null) },
-                        label = { Text("All") },
+                        label = { Text(stringResource(R.string.bandcamp_tab_all)) },
                         colors = chipColors,
                     )
                     state.availableSubTags.forEach { subTag ->
@@ -232,13 +233,13 @@ fun BandcampScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.categoryError ?: "Something went wrong",
+                            text = state.categoryError ?: stringResource(R.string.bandcamp_something_went_wrong),
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White.copy(alpha = 0.7f),
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.retryCategory() }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.common_action_retry))
                         }
                     }
                 }
@@ -259,11 +260,11 @@ fun BandcampScreen(
             searchBarState = searchBarState,
             textFieldState = textFieldState,
             onSearch = { searchViewModel.onSearch() },
-            placeholder = { Text("Search Bandcamp...") },
+            placeholder = { Text(stringResource(R.string.bandcamp_search_placeholder)) },
             leadingIcon = {
                 Icon(
                     painter = painterResource(R.drawable.ic_search),
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.common_cd_search),
                 )
             },
             trailingIcon = {
@@ -273,7 +274,7 @@ fun BandcampScreen(
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
-                            contentDescription = "Clear",
+                            contentDescription = stringResource(R.string.common_cd_clear),
                         )
                     }
                 }
@@ -309,7 +310,7 @@ fun BandcampScreen(
                     item(key = "discover_header") {
                         StaggeredAnimatedItem(index = 0) {
                             Text(
-                                text = "Discover",
+                                text = stringResource(R.string.bandcamp_discover),
                                 style = MaterialTheme.typography.headlineMediumEmphasized,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                             )
@@ -384,7 +385,7 @@ fun BandcampScreen(
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     Text(
-                                        text = "view more",
+                                        text = stringResource(R.string.bandcamp_view_more),
                                         style = MaterialTheme.typography.titleMediumEmphasized,
                                         modifier = Modifier
                                             .align(Alignment.CenterStart)
@@ -420,22 +421,22 @@ fun BandcampScreen(
                     FilterChip(
                         selected = searchState.selectedType == null,
                         onClick = { searchViewModel.onTypeSelected(null) },
-                        label = { Text("All") },
+                        label = { Text(stringResource(R.string.bandcamp_tab_all)) },
                     )
                     FilterChip(
                         selected = searchState.selectedType == SearchResultType.ARTIST,
                         onClick = { searchViewModel.onTypeSelected(SearchResultType.ARTIST) },
-                        label = { Text("Artists") },
+                        label = { Text(stringResource(R.string.bandcamp_tab_artists)) },
                     )
                     FilterChip(
                         selected = searchState.selectedType == SearchResultType.ALBUM,
                         onClick = { searchViewModel.onTypeSelected(SearchResultType.ALBUM) },
-                        label = { Text("Albums") },
+                        label = { Text(stringResource(R.string.bandcamp_tab_albums)) },
                     )
                     FilterChip(
                         selected = searchState.selectedType == SearchResultType.TRACK,
                         onClick = { searchViewModel.onTypeSelected(SearchResultType.TRACK) },
-                        label = { Text("Tracks") },
+                        label = { Text(stringResource(R.string.bandcamp_tab_tracks)) },
                     )
                 }
 
@@ -466,7 +467,7 @@ fun BandcampScreen(
                         }
                         searchState.error != null && searchState.results.isEmpty() -> {
                             Text(
-                                text = searchState.error ?: "Search failed",
+                                text = searchState.error ?: stringResource(R.string.common_search_failed),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.align(Alignment.Center),
@@ -480,13 +481,13 @@ fun BandcampScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = "No results found",
+                                    text = stringResource(R.string.common_no_results_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Try a different search term",
+                                    text = stringResource(R.string.common_no_results_subtitle),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -601,6 +602,8 @@ private fun SearchResultItem(
         SearchResultType.SPOTIFY_ARTIST -> AppShapes.SearchResultArtist
     }
 
+    val artistLabel = stringResource(R.string.bandcamp_type_artist)
+    val localLabel = stringResource(R.string.bandcamp_type_local)
     ListItem(
         headlineContent = {
             Text(
@@ -612,7 +615,7 @@ private fun SearchResultItem(
         supportingContent = {
             val supporting = buildString {
                 when (result.type) {
-                    SearchResultType.ARTIST -> append("Artist")
+                    SearchResultType.ARTIST -> append(artistLabel)
                     SearchResultType.ALBUM -> {
                         result.artist?.let { append(it) }
                     }
@@ -624,7 +627,7 @@ private fun SearchResultItem(
                         }
                     }
                     SearchResultType.LOCAL_TRACK -> {
-                        append("Local")
+                        append(localLabel)
                         result.artist?.let {
                             append(" \u00B7 ")
                             append(it)
@@ -729,7 +732,7 @@ private fun CategorySheetContent(
         if (listAlbums.isNotEmpty()) {
             item(key = "more_header") {
                 Text(
-                    text = "More",
+                    text = stringResource(R.string.bandcamp_more),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White.copy(alpha = 0.8f),
                     modifier = Modifier.padding(

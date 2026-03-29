@@ -30,6 +30,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -129,15 +131,14 @@ fun PlaylistListItem(
         },
         supportingContent = {
             val subtitle = when {
-                playlist.isSystem -> "Auto playlist"
-                playlist.trackCount == 1 -> "1 song"
-                else -> "${playlist.trackCount} songs"
+                playlist.isSystem -> stringResource(R.string.playlist_auto)
+                else -> pluralStringResource(R.plurals.song_count, playlist.trackCount, playlist.trackCount)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (playlist.isPinned) {
                     Icon(
                         painter = painterResource(R.drawable.ic_push_pin),
-                        contentDescription = "Pinned",
+                        contentDescription = stringResource(R.string.playlist_cd_pinned),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -146,7 +147,7 @@ fun PlaylistListItem(
                 if (isFullyDownloaded) {
                     Icon(
                         painter = painterResource(R.drawable.ic_download_done),
-                        contentDescription = "All tracks downloaded",
+                        contentDescription = stringResource(R.string.playlist_cd_all_downloaded),
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -165,7 +166,7 @@ fun PlaylistListItem(
                 IconButton(onClick = onMoreClick) {
                     Icon(
                         painter = painterResource(R.drawable.ic_more_vert),
-                        contentDescription = "More options",
+                        contentDescription = stringResource(R.string.common_cd_more_options),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

@@ -8,6 +8,8 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +29,7 @@ data class PlaylistDetailUiState(
     val isDownloading: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
     val error: String? = null,
-    val snackbarMessage: String? = null,
+    val snackbarMessage: UiText? = null,
     val isSnackbarError: Boolean = false,
 )
 
@@ -116,7 +118,7 @@ class PlaylistDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
-                        snackbarMessage = "Downloaded all tracks in ${playlist?.name ?: "playlist"}",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded_all_in, listOf(playlist?.name ?: "playlist")),
                         isSnackbarError = false,
                     )
                 }
@@ -126,7 +128,7 @@ class PlaylistDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
-                        snackbarMessage = e.message ?: "Download failed",
+                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
                         isSnackbarError = true,
                     )
                 }

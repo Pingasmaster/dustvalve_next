@@ -19,7 +19,9 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.util.StorageUtils
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +68,7 @@ fun StorageIndicator(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "Downloads: ${StorageUtils.formatFileSize(cacheInfo.downloadSizeBytes)}, Cache: ${StorageUtils.formatFileSize(cacheSizeBytes)}, Free: ${StorageUtils.formatFileSize(freeBytes)}",
+                text = stringResource(R.string.storage_info, StorageUtils.formatFileSize(cacheInfo.downloadSizeBytes), StorageUtils.formatFileSize(cacheSizeBytes), StorageUtils.formatFileSize(freeBytes)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

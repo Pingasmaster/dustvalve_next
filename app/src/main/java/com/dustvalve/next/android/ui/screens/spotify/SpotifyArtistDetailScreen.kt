@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -95,7 +96,7 @@ fun SpotifyArtistDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
@@ -130,7 +131,7 @@ fun SpotifyArtistDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: "Failed to load artist",
+                            text = state.error ?: stringResource(R.string.detail_error_load_artist),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -138,7 +139,7 @@ fun SpotifyArtistDetailScreen(
                         Button(onClick = {
                             viewModel.loadArtist(artistUri, artistName, artistImageUrl)
                         }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.common_action_retry))
                         }
                     }
                 }
@@ -250,7 +251,7 @@ fun SpotifyArtistDetailScreen(
                                         modifier = Modifier.size(ButtonDefaults.IconSize),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Play Mix")
+                                    Text(stringResource(R.string.common_play_mix))
                                 }
 
                                 FilledTonalIconToggleButton(
@@ -270,8 +271,8 @@ fun SpotifyArtistDetailScreen(
                                             if (state.isFavorite) R.drawable.ic_favorite
                                             else R.drawable.ic_favorite_border,
                                         ),
-                                        contentDescription = if (state.isFavorite) "Remove from favorites"
-                                            else "Add to favorites",
+                                        contentDescription = if (state.isFavorite) stringResource(R.string.detail_cd_remove_favorites)
+                                            else stringResource(R.string.detail_cd_add_favorites),
                                     )
                                 }
 
@@ -297,8 +298,8 @@ fun SpotifyArtistDetailScreen(
                                                 if (allDownloaded) R.drawable.ic_download_done
                                                 else R.drawable.ic_download,
                                             ),
-                                            contentDescription = if (allDownloaded) "Delete downloads"
-                                                else "Download all",
+                                            contentDescription = if (allDownloaded) stringResource(R.string.detail_cd_delete_downloads)
+                                                else stringResource(R.string.detail_cd_download_all),
                                         )
                                     }
                                 }
@@ -310,7 +311,7 @@ fun SpotifyArtistDetailScreen(
                     if (state.topTracks.isNotEmpty()) {
                         item(key = "tracks_header") {
                             Text(
-                                text = "Top Tracks",
+                                text = stringResource(R.string.detail_top_tracks),
                                 style = MaterialTheme.typography.titleLargeEmphasized,
                                 modifier = Modifier.padding(
                                     start = 20.dp, end = 20.dp,
@@ -358,7 +359,7 @@ fun SpotifyArtistDetailScreen(
                     if (state.albums.isNotEmpty()) {
                         item(key = "albums_header") {
                             Text(
-                                text = "Albums",
+                                text = stringResource(R.string.detail_albums),
                                 style = MaterialTheme.typography.titleLargeEmphasized,
                                 modifier = Modifier.padding(
                                     start = 20.dp, end = 20.dp,
@@ -446,8 +447,8 @@ fun SpotifyArtistDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete downloads") },
-            text = { Text("Delete all downloaded tracks from this artist?") },
+            title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
+            text = { Text(stringResource(R.string.detail_delete_artist_source_downloads_text)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -455,12 +456,12 @@ fun SpotifyArtistDetailScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.common_action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )

@@ -22,6 +22,8 @@ import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.NetworkUtils
+import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +53,7 @@ data class PlayerUiState(
     val downloadedTrackIds: Set<String> = emptySet(),
     val downloadingTrackId: String? = null,
     val playlists: List<Playlist> = emptyList(),
-    val snackbarMessage: String? = null,
+    val snackbarMessage: UiText? = null,
     val isSnackbarError: Boolean = false,
     val currentPlaybackFormat: AudioFormat? = null,
     val currentSourcePath: String? = null,
@@ -86,7 +88,7 @@ class PlayerViewModel @Inject constructor(
         val downloadedTrackIds: Set<String> = emptySet(),
         val downloadingTrackId: String? = null,
         val playlists: List<Playlist> = emptyList(),
-        val snackbarMessage: String? = null,
+        val snackbarMessage: UiText? = null,
         val isSnackbarError: Boolean = false,
         val currentPlaybackFormat: AudioFormat? = null,
         val currentSourcePath: String? = null,
@@ -189,7 +191,7 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = "Couldn't load Spotify audio",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_spotify_audio_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -224,7 +226,7 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = "Couldn't load audio stream",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -670,7 +672,7 @@ class PlayerViewModel @Inject constructor(
                 _extraState.update {
                     it.copy(
                         downloadingTrackId = null,
-                        snackbarMessage = "Downloaded '${track.title}'",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)),
                         isSnackbarError = false,
                     )
                 }
@@ -679,7 +681,7 @@ class PlayerViewModel @Inject constructor(
                 _extraState.update {
                     it.copy(
                         downloadingTrackId = null,
-                        snackbarMessage = e.message ?: "Download failed",
+                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -694,7 +696,7 @@ class PlayerViewModel @Inject constructor(
                 downloadAlbumUseCase.deleteTrackDownload(track.id)
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = "Deleted '${track.title}'",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_deleted, listOf(track.title)),
                         isSnackbarError = false,
                     )
                 }
@@ -702,7 +704,7 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message ?: "Delete failed",
+                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -718,7 +720,7 @@ class PlayerViewModel @Inject constructor(
                 val playlist = _extraState.value.playlists.find { it.id == playlistId }
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = "Added to ${playlist?.name ?: "playlist"}",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist?.name ?: "playlist")),
                         isSnackbarError = false,
                     )
                 }
@@ -726,7 +728,7 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message ?: "Failed to add to playlist",
+                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -742,7 +744,7 @@ class PlayerViewModel @Inject constructor(
                 playlistRepository.addTrackToPlaylist(playlist.id, track.id)
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = "Added to ${playlist.name}",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist.name)),
                         isSnackbarError = false,
                     )
                 }
@@ -750,7 +752,7 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message ?: "Failed to create playlist",
+                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -791,7 +793,7 @@ class PlayerViewModel @Inject constructor(
         queueManager.playNext(track)
         _extraState.update {
             it.copy(
-                snackbarMessage = "'${track.title}' will play next",
+                snackbarMessage = UiText.StringResource(R.string.snackbar_playing_next, listOf(track.title)),
                 isSnackbarError = false,
             )
         }
@@ -804,7 +806,7 @@ class PlayerViewModel @Inject constructor(
                 val playlist = _extraState.value.playlists.find { it.id == playlistId }
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = "Added to ${playlist?.name ?: "playlist"}",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist?.name ?: "playlist")),
                         isSnackbarError = false,
                     )
                 }
@@ -812,7 +814,7 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message ?: "Failed to add to playlist",
+                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -827,7 +829,7 @@ class PlayerViewModel @Inject constructor(
                 playlistRepository.addTrackToPlaylist(playlist.id, trackId)
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = "Added to ${playlist.name}",
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist.name)),
                         isSnackbarError = false,
                     )
                 }
@@ -835,7 +837,7 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message ?: "Failed to create playlist",
+                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
                         isSnackbarError = true,
                     )
                 }

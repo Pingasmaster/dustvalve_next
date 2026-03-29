@@ -71,6 +71,8 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.dustvalve.next.android.R
@@ -116,8 +118,9 @@ fun PlaylistDetailScreen(
         }
     }
 
-    LaunchedEffect(state.snackbarMessage) {
-        state.snackbarMessage?.let { message ->
+    val snackbarText = state.snackbarMessage?.asString()
+    LaunchedEffect(snackbarText) {
+        snackbarText?.let { message ->
             try {
                 val result = snackbarHostState.showSnackbar(
                     message = message,
@@ -138,7 +141,7 @@ fun PlaylistDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = state.playlist?.name ?: "Playlist",
+                        text = state.playlist?.name ?: stringResource(R.string.playlist_default_title),
                         style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -148,7 +151,7 @@ fun PlaylistDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
@@ -174,7 +177,7 @@ fun PlaylistDetailScreen(
             }
             state.error != null && state.playlist == null -> {
                 ErrorState(
-                    message = state.error ?: "Failed to load playlist",
+                    message = state.error ?: stringResource(R.string.playlist_error_load),
                     onRetry = { viewModel.refreshPlaylist() },
                     modifier = Modifier.padding(paddingValues),
                 )
@@ -354,7 +357,7 @@ private fun PlaylistContent(
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_delete),
-                                        contentDescription = "Delete",
+                                        contentDescription = stringResource(R.string.common_cd_delete),
                                         tint = MaterialTheme.colorScheme.onErrorContainer,
                                     )
                                 }
@@ -603,9 +606,10 @@ private fun PlaylistHeader(
         )
 
         // Subtitle
+        val songCountText = pluralStringResource(R.plurals.song_count, trackCount, trackCount)
         val subtitle = when {
-            playlist.isSystem -> "Auto playlist \u00B7 $trackCount ${if (trackCount == 1) "song" else "songs"}"
-            else -> "$trackCount ${if (trackCount == 1) "song" else "songs"}"
+            playlist.isSystem -> "${stringResource(R.string.playlist_auto)} \u00B7 $songCountText"
+            else -> songCountText
         }
         Text(
             text = subtitle,
@@ -629,7 +633,7 @@ private fun PlaylistHeader(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_play_arrow),
-                    contentDescription = "Play all",
+                    contentDescription = stringResource(R.string.playlist_cd_play_all),
                 )
             }
 
@@ -640,7 +644,7 @@ private fun PlaylistHeader(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_shuffle),
-                    contentDescription = "Shuffle play",
+                    contentDescription = stringResource(R.string.common_cd_shuffle_play),
                 )
             }
 
@@ -658,8 +662,8 @@ private fun PlaylistHeader(
                         Icon(
                             painter = painterResource(if (allTracksDownloaded) R.drawable.ic_download_done
                                 else R.drawable.ic_download),
-                            contentDescription = if (allTracksDownloaded) "All downloaded"
-                                else "Download all",
+                            contentDescription = if (allTracksDownloaded) stringResource(R.string.playlist_cd_all_downloaded)
+                                else stringResource(R.string.playlist_cd_download_all),
                         )
                     }
                 }
@@ -715,7 +719,7 @@ private fun TrackListItem(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_graphic_eq),
-                            contentDescription = "Now playing",
+                            contentDescription = stringResource(R.string.common_cd_now_playing),
                             modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -742,7 +746,7 @@ private fun TrackListItem(
         },
         supportingContent = {
             Text(
-                text = "${track.artist} · ${track.albumTitle}",
+                text = stringResource(R.string.playlist_artist_separator, track.artist, track.albumTitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -768,7 +772,7 @@ private fun TrackListItem(
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_drag_handle),
-                    contentDescription = "Reorder",
+                    contentDescription = stringResource(R.string.common_cd_reorder),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(24.dp),
                 )
@@ -807,16 +811,16 @@ private fun EmptyPlaylistState(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = if (isSystem) "No tracks yet" else "Empty playlist",
+                text = if (isSystem) stringResource(R.string.playlist_empty_system_title) else stringResource(R.string.playlist_empty_custom_title),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = if (isSystem) {
-                    "Tracks will appear here automatically"
+                    stringResource(R.string.playlist_empty_system_subtitle)
                 } else {
-                    "Add songs to get started"
+                    stringResource(R.string.playlist_empty_custom_subtitle)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
@@ -848,7 +852,7 @@ private fun ErrorState(
             )
             Spacer(modifier = Modifier.height(16.dp))
             androidx.compose.material3.TextButton(onClick = onRetry) {
-                Text("Retry")
+                Text(stringResource(R.string.common_action_retry))
             }
         }
     }

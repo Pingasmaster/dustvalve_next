@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -111,7 +112,7 @@ fun TrackRow(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_graphic_eq),
-                            contentDescription = "Now playing",
+                            contentDescription = stringResource(R.string.common_cd_now_playing),
                             modifier = Modifier.size(22.dp),
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -145,7 +146,7 @@ fun TrackRow(
                         IconButton(onClick = onFavoriteClick) {
                             Icon(
                                 painter = painterResource(if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border),
-                                contentDescription = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
+                                contentDescription = stringResource(if (track.isFavorite) R.string.player_cd_remove_from_favorites else R.string.player_cd_add_to_favorites),
                                 tint = if (track.isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -164,7 +165,7 @@ fun TrackRow(
                             } else {
                                 Icon(
                                     painter = painterResource(if (isDownloaded) R.drawable.ic_download_done else R.drawable.ic_download),
-                                    contentDescription = if (isDownloaded) "Delete download" else "Download track",
+                                    contentDescription = stringResource(if (isDownloaded) R.string.player_cd_delete_download else R.string.player_cd_download_track),
                                     modifier = Modifier.size(18.dp),
                                 )
                             }

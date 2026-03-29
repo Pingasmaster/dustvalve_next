@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -87,8 +88,9 @@ fun ArtistDetailScreen(
         viewModel.loadArtist(artistUrl)
     }
 
-    LaunchedEffect(state.snackbarMessage) {
-        state.snackbarMessage?.let { message ->
+    val snackbarText = state.snackbarMessage?.asString()
+    LaunchedEffect(snackbarText) {
+        snackbarText?.let { message ->
             try {
                 val result = snackbarHostState.showSnackbar(
                     message = message,
@@ -106,8 +108,8 @@ fun ArtistDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete downloads") },
-            text = { Text("Remove all downloaded tracks by ${state.artist?.name}?") },
+            title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
+            text = { Text(stringResource(R.string.detail_delete_artist_downloads_text, state.artist?.name ?: "")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -115,12 +117,12 @@ fun ArtistDetailScreen(
                         showDeleteDialog = false
                     },
                 ) {
-                    Text("Delete")
+                    Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
@@ -136,7 +138,7 @@ fun ArtistDetailScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
@@ -172,13 +174,13 @@ fun ArtistDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: "Failed to load artist",
+                            text = state.error ?: stringResource(R.string.detail_error_load_artist),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { viewModel.loadArtist(artistUrl) }) {
-                            Text("Retry")
+                            Text(stringResource(R.string.common_action_retry))
                         }
                     }
                 }
@@ -299,7 +301,7 @@ fun ArtistDetailScreen(
                                             modifier = Modifier.size(18.dp),
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Loading...")
+                                        Text(stringResource(R.string.common_loading))
                                     } else {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_shuffle),
@@ -307,7 +309,7 @@ fun ArtistDetailScreen(
                                             modifier = Modifier.size(ButtonDefaults.IconSize),
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Play Mix")
+                                        Text(stringResource(R.string.common_play_mix))
                                     }
                                 }
 
@@ -326,8 +328,8 @@ fun ArtistDetailScreen(
                                     Icon(
                                         painter = painterResource(if (artist.isFavorite) R.drawable.ic_favorite
                                             else R.drawable.ic_favorite_border),
-                                        contentDescription = if (artist.isFavorite) "Remove from favorites"
-                                            else "Add to favorites",
+                                        contentDescription = if (artist.isFavorite) stringResource(R.string.detail_cd_remove_favorites)
+                                            else stringResource(R.string.detail_cd_add_favorites),
                                     )
                                 }
 
@@ -351,8 +353,8 @@ fun ArtistDetailScreen(
                                         Icon(
                                             painter = painterResource(if (allAlbumsDownloaded) R.drawable.ic_download_done
                                                 else R.drawable.ic_download),
-                                            contentDescription = if (allAlbumsDownloaded) "Delete all downloads"
-                                                else "Download all",
+                                            contentDescription = if (allAlbumsDownloaded) stringResource(R.string.detail_cd_delete_all_downloads)
+                                                else stringResource(R.string.detail_cd_download_all),
                                         )
                                     }
                                 }
@@ -371,7 +373,7 @@ fun ArtistDetailScreen(
                         // Discography header
                         item(key = "discography_header", span = { GridItemSpan(2) }) {
                             Text(
-                                text = "Discography",
+                                text = stringResource(R.string.detail_discography),
                                 style = MaterialTheme.typography.titleLargeEmphasized,
                                 modifier = Modifier.padding(
                                     start = 20.dp,
@@ -430,7 +432,7 @@ fun ArtistDetailScreen(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "No releases yet",
+                                    text = stringResource(R.string.detail_no_releases),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -478,7 +480,7 @@ private fun ExpandableBio(bio: String) {
             TextButton(
                 onClick = { expanded = !expanded },
             ) {
-                Text(if (expanded) "Show less" else "Show more")
+                Text(if (expanded) stringResource(R.string.detail_show_less) else stringResource(R.string.detail_show_more))
             }
         }
     }

@@ -13,6 +13,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.dustvalve.next.android.R
 
@@ -29,14 +30,14 @@ fun RecentSearchesList(
             ListItem(
                 headlineContent = {
                     Text(
-                        text = "Recent searches",
+                        text = stringResource(R.string.search_recent),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
                 trailingContent = {
                     TextButton(onClick = onClearAllClick) {
-                        Text("Clear all")
+                        Text(stringResource(R.string.search_clear_all))
                     }
                 },
             )
@@ -64,7 +65,7 @@ fun RecentSearchesList(
                     IconButton(onClick = { onRemoveClick(query) }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_close),
-                            contentDescription = "Remove",
+                            contentDescription = stringResource(R.string.search_cd_remove),
                         )
                     }
                 },

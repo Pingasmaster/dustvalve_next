@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -82,7 +83,7 @@ fun PlaylistEditSheet(
                 .padding(horizontal = 16.dp),
         ) {
             Text(
-                text = if (isCreate) "New Playlist" else "Edit Playlist",
+                text = stringResource(if (isCreate) R.string.playlist_new else R.string.playlist_edit),
                 style = MaterialTheme.typography.titleLarge,
             )
             Spacer(Modifier.height(16.dp))
@@ -90,14 +91,14 @@ fun PlaylistEditSheet(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Name") },
+                label = { Text(stringResource(R.string.playlist_name_label)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(20.dp))
 
             Text(
-                text = "Shape",
+                text = stringResource(R.string.playlist_shape),
                 style = MaterialTheme.typography.titleSmall,
             )
             Spacer(Modifier.height(8.dp))
@@ -153,7 +154,7 @@ fun PlaylistEditSheet(
                         }
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            text = option.label,
+                            text = stringResource(option.labelRes),
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
                         )
@@ -168,7 +169,7 @@ fun PlaylistEditSheet(
             if (!isCreate && artOptions.isNotEmpty()) {
                 Spacer(Modifier.height(20.dp))
                 Text(
-                    text = "Cover",
+                    text = stringResource(R.string.playlist_cover),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Spacer(Modifier.height(8.dp))
@@ -197,7 +198,7 @@ fun PlaylistEditSheet(
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_music_note),
-                                contentDescription = "No cover",
+                                contentDescription = stringResource(R.string.playlist_cd_no_cover),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -206,7 +207,7 @@ fun PlaylistEditSheet(
                         val isSelected = selectedIconUrl == artUrl
                         AsyncImage(
                             model = artUrl,
-                            contentDescription = "Album art",
+                            contentDescription = stringResource(R.string.playlist_cd_album_art),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(64.dp)
@@ -233,7 +234,7 @@ fun PlaylistEditSheet(
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.common_action_cancel))
                 }
                 Spacer(Modifier.width(8.dp))
                 Button(
@@ -243,7 +244,7 @@ fun PlaylistEditSheet(
                     enabled = name.isNotBlank(),
                     shapes = ButtonDefaults.shapes(),
                 ) {
-                    Text(if (isCreate) "Create" else "Save")
+                    Text(stringResource(if (isCreate) R.string.common_action_create else R.string.common_action_save))
                 }
             }
             Spacer(Modifier.height(16.dp))

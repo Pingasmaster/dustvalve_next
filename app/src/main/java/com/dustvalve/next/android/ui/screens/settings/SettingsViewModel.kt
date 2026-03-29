@@ -12,6 +12,8 @@ import com.dustvalve.next.android.domain.repository.CacheRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.usecase.ManageCacheUseCase
+import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,7 +49,7 @@ data class SettingsUiState(
     val localMusicFolderUris: List<String> = emptyList(),
     val localMusicUseMediaStore: Boolean = true,
     val isScanning: Boolean = false,
-    val scanMessage: String? = null,
+    val scanMessage: UiText? = null,
     val bandcampEnabled: Boolean = false,
     val youtubeEnabled: Boolean = false,
     val spotifyEnabled: Boolean = false,
@@ -59,7 +61,7 @@ data class SettingsUiState(
     val keepScreenOnWhilePlaying: Boolean = false,
     val isExporting: Boolean = false,
     val exportProgress: Float = 0f,
-    val exportMessage: String? = null,
+    val exportMessage: UiText? = null,
 )
 
 @HiltViewModel
@@ -492,7 +494,7 @@ class SettingsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isScanning = false,
-                            scanMessage = "Found ${result.total} songs",
+                            scanMessage = UiText.StringResource(R.string.snackbar_scan_found, listOf(result.total)),
                         )
                     }
                     localMusicRepository.scheduleSyncWork()
@@ -502,7 +504,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = "Scan failed: ${e.message}",
+                        scanMessage = e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
                     )
                 }
             }
@@ -519,7 +521,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = "Found ${result.total} songs",
+                        scanMessage = UiText.StringResource(R.string.snackbar_scan_found, listOf(result.total)),
                     )
                 }
                 localMusicRepository.scheduleSyncWork()
@@ -528,7 +530,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = "Scan failed: ${e.message}",
+                        scanMessage = e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
                     )
                 }
             }
@@ -558,7 +560,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = "Found ${result.total} songs (${result.added} new, ${result.removed} removed)",
+                        scanMessage = UiText.StringResource(R.string.snackbar_scan_found_detailed, listOf(result.total, result.added, result.removed)),
                     )
                 }
             } catch (e: Exception) {
@@ -566,7 +568,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = "Scan failed: ${e.message}",
+                        scanMessage = e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
                     )
                 }
             }
@@ -710,7 +712,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isExporting = false,
-                        exportMessage = "Exported $count track${if (count != 1) "s" else ""} successfully",
+                        exportMessage = UiText.StringResource(R.string.snackbar_export_complete, listOf(count)),
                     )
                 }
             } catch (e: Exception) {
@@ -718,7 +720,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isExporting = false,
-                        exportMessage = "Export failed: ${e.message}",
+                        exportMessage = e.message?.let { UiText.StringResource(R.string.snackbar_export_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_export_failed, listOf("Unknown error")),
                     )
                 }
             }

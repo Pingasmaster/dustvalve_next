@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.ui.navigation
 
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -28,10 +29,10 @@ fun BottomNavBar(
                 icon = {
                     Icon(
                         painter = painterResource(if (selected) item.selectedIcon else item.unselectedIcon),
-                        contentDescription = item.label,
+                        contentDescription = stringResource(item.labelRes),
                     )
                 },
-                label = { Text(item.label) },
+                label = { Text(stringResource(item.labelRes)) },
             )
         }
     }
@@ -53,10 +54,10 @@ fun SideNavRail(
                 icon = {
                     Icon(
                         painter = painterResource(if (selected) item.selectedIcon else item.unselectedIcon),
-                        contentDescription = item.label,
+                        contentDescription = stringResource(item.labelRes),
                     )
                 },
-                label = { Text(item.label) },
+                label = { Text(stringResource(item.labelRes)) },
             )
         }
     }

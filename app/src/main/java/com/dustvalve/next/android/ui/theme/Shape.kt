@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.theme
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -9,6 +10,7 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import com.dustvalve.next.android.R
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 object AppShapes {
@@ -148,24 +150,24 @@ object AppShapes {
 
 data class PlaylistShapeOption(
     val key: String,
-    val label: String,
+    @StringRes val labelRes: Int,
 )
 
 val PlaylistShapeOptions: List<PlaylistShapeOption> = listOf(
-    PlaylistShapeOption("clover4leaf", "Clover"),
-    PlaylistShapeOption("heart", "Heart"),
-    PlaylistShapeOption("cookie9sided", "Cookie"),
-    PlaylistShapeOption("softburst", "Burst"),
-    PlaylistShapeOption("pentagon", "Pentagon"),
-    PlaylistShapeOption("gem", "Gem"),
-    PlaylistShapeOption("flower", "Flower"),
-    PlaylistShapeOption("pill", "Pill"),
-    PlaylistShapeOption("ghostish", "Ghost"),
-    PlaylistShapeOption("slanted", "Slanted"),
-    PlaylistShapeOption("pixelcircle", "Circle"),
-    PlaylistShapeOption("pixeltriangle", "Triangle"),
-    PlaylistShapeOption("sunny", "Sunny"),
-    PlaylistShapeOption("arch", "Arch"),
+    PlaylistShapeOption("clover4leaf", R.string.shape_clover),
+    PlaylistShapeOption("heart", R.string.shape_heart),
+    PlaylistShapeOption("cookie9sided", R.string.shape_cookie),
+    PlaylistShapeOption("softburst", R.string.shape_burst),
+    PlaylistShapeOption("pentagon", R.string.shape_pentagon),
+    PlaylistShapeOption("gem", R.string.shape_gem),
+    PlaylistShapeOption("flower", R.string.shape_flower),
+    PlaylistShapeOption("pill", R.string.shape_pill),
+    PlaylistShapeOption("ghostish", R.string.shape_ghost),
+    PlaylistShapeOption("slanted", R.string.shape_slanted),
+    PlaylistShapeOption("pixelcircle", R.string.shape_circle),
+    PlaylistShapeOption("pixeltriangle", R.string.shape_triangle),
+    PlaylistShapeOption("sunny", R.string.shape_sunny),
+    PlaylistShapeOption("arch", R.string.shape_arch),
 )
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

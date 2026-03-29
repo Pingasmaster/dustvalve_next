@@ -35,6 +35,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -155,11 +157,11 @@ fun LocalScreen(
             searchBarState = searchBarState,
             textFieldState = textFieldState,
             onSearch = { viewModel.onSearch() },
-            placeholder = { Text("Search local music...") },
+            placeholder = { Text(stringResource(R.string.local_search_placeholder)) },
             leadingIcon = {
                 Icon(
                     painter = painterResource(R.drawable.ic_search),
-                    contentDescription = "Search",
+                    contentDescription = stringResource(R.string.common_cd_search),
                 )
             },
             trailingIcon = {
@@ -169,7 +171,7 @@ fun LocalScreen(
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
-                            contentDescription = "Clear",
+                            contentDescription = stringResource(R.string.common_cd_clear),
                         )
                     }
                 }
@@ -189,7 +191,7 @@ fun LocalScreen(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_shuffle),
-                        contentDescription = "Mix",
+                        contentDescription = stringResource(R.string.local_cd_mix),
                     )
                 }
             }
@@ -235,13 +237,13 @@ fun LocalScreen(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Scan your music",
+                                    text = stringResource(R.string.local_scan_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Find and play music stored on your device",
+                                    text = stringResource(R.string.local_scan_subtitle),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -268,7 +270,7 @@ fun LocalScreen(
                                         modifier = Modifier.size(18.dp),
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Enable local music")
+                                    Text(stringResource(R.string.local_enable))
                                 }
                             }
                         } else if (isScanning) {
@@ -277,7 +279,7 @@ fun LocalScreen(
                                 ContainedLoadingIndicator()
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "Scanning your music...",
+                                    text = stringResource(R.string.local_scanning),
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                 )
@@ -301,13 +303,13 @@ fun LocalScreen(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "No local music",
+                                    text = stringResource(R.string.local_no_local_music),
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Choose a folder in Settings to scan your music files",
+                                    text = stringResource(R.string.local_no_local_music_subtitle),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -319,9 +321,9 @@ fun LocalScreen(
                     // Track count
                     Text(
                         text = if (filterState.hasActiveFilters) {
-                            "${filteredTracks.size} of ${allTracks.size} songs"
+                            pluralStringResource(R.plurals.song_count_filtered, filteredTracks.size, filteredTracks.size, allTracks.size)
                         } else {
-                            "${allTracks.size} songs"
+                            pluralStringResource(R.plurals.song_count, allTracks.size, allTracks.size)
                         },
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -341,7 +343,7 @@ fun LocalScreen(
                         FilterChip(
                             selected = filterState.sortOption != LocalSortOption.TITLE_AZ,
                             onClick = { showSortSheet = true },
-                            label = { Text(filterState.sortOption.label) },
+                            label = { Text(stringResource(filterState.sortOption.labelRes)) },
                             trailingIcon = {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_keyboard_arrow_down),
@@ -358,9 +360,9 @@ fun LocalScreen(
                             label = {
                                 Text(
                                     when (filterState.selectedArtists.size) {
-                                        0 -> "Artist"
+                                        0 -> stringResource(R.string.local_filter_artist)
                                         1 -> filterState.selectedArtists.first()
-                                        else -> "Artist (${filterState.selectedArtists.size})"
+                                        else -> stringResource(R.string.local_filter_artist_count, filterState.selectedArtists.size)
                                     },
                                 )
                             },
@@ -380,9 +382,9 @@ fun LocalScreen(
                             label = {
                                 Text(
                                     when (filterState.selectedAlbums.size) {
-                                        0 -> "Album"
+                                        0 -> stringResource(R.string.local_filter_album)
                                         1 -> filterState.selectedAlbums.first()
-                                        else -> "Album (${filterState.selectedAlbums.size})"
+                                        else -> stringResource(R.string.local_filter_album_count, filterState.selectedAlbums.size)
                                     },
                                 )
                             },
@@ -399,7 +401,7 @@ fun LocalScreen(
                         FilterChip(
                             selected = filterState.favoritesOnly,
                             onClick = { viewModel.toggleFavoritesFilter() },
-                            label = { Text("Favorites") },
+                            label = { Text(stringResource(R.string.local_tab_favorites)) },
                             leadingIcon = {
                                 Icon(
                                     painter = painterResource(
@@ -420,10 +422,10 @@ fun LocalScreen(
                                 label = {
                                     Text(
                                         when (filterState.selectedFolders.size) {
-                                            0 -> "Folder"
+                                            0 -> stringResource(R.string.local_filter_folder)
                                             1 -> filterState.selectedFolders.first()
-                                                .toUri().lastPathSegment?.substringAfterLast(':') ?: "Folder"
-                                            else -> "Folder (${filterState.selectedFolders.size})"
+                                                .toUri().lastPathSegment?.substringAfterLast(':') ?: stringResource(R.string.local_filter_folder)
+                                            else -> stringResource(R.string.local_filter_folder_count, filterState.selectedFolders.size)
                                         },
                                     )
                                 },
@@ -493,22 +495,22 @@ fun LocalScreen(
                     FilterChip(
                         selected = state.searchFilter == null,
                         onClick = { viewModel.onSearchFilterSelected(null) },
-                        label = { Text("All") },
+                        label = { Text(stringResource(R.string.local_tab_all)) },
                     )
                     FilterChip(
                         selected = state.searchFilter == LocalSearchFilter.ARTISTS,
                         onClick = { viewModel.onSearchFilterSelected(LocalSearchFilter.ARTISTS) },
-                        label = { Text("Artists") },
+                        label = { Text(stringResource(R.string.local_tab_artists)) },
                     )
                     FilterChip(
                         selected = state.searchFilter == LocalSearchFilter.ALBUMS,
                         onClick = { viewModel.onSearchFilterSelected(LocalSearchFilter.ALBUMS) },
-                        label = { Text("Albums") },
+                        label = { Text(stringResource(R.string.local_tab_albums)) },
                     )
                     FilterChip(
                         selected = state.searchFilter == LocalSearchFilter.TRACKS,
                         onClick = { viewModel.onSearchFilterSelected(LocalSearchFilter.TRACKS) },
-                        label = { Text("Tracks") },
+                        label = { Text(stringResource(R.string.local_tab_tracks)) },
                     )
                 }
 
@@ -544,13 +546,13 @@ fun LocalScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = "No results found",
+                                    text = stringResource(R.string.common_no_results_title),
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Try a different search term",
+                                    text = stringResource(R.string.common_no_results_subtitle),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -604,7 +606,7 @@ fun LocalScreen(
             )
 
             ListItem(
-                headlineContent = { Text("Play next") },
+                headlineContent = { Text(stringResource(R.string.local_play_next)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_skip_next),
@@ -620,7 +622,7 @@ fun LocalScreen(
 
             ListItem(
                 headlineContent = {
-                    Text(if (menuTrack.isFavorite) "Remove from favorites" else "Add to favorites")
+                    Text(stringResource(if (menuTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites))
                 },
                 leadingContent = {
                     Icon(
@@ -639,7 +641,7 @@ fun LocalScreen(
             )
 
             ListItem(
-                headlineContent = { Text("Add to playlist") },
+                headlineContent = { Text(stringResource(R.string.common_add_to_playlist)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_playlist_add),
@@ -655,7 +657,7 @@ fun LocalScreen(
             ListItem(
                 headlineContent = {
                     Text(
-                        text = "Delete",
+                        text = stringResource(R.string.common_action_delete),
                         color = MaterialTheme.colorScheme.error,
                     )
                 },
@@ -681,8 +683,8 @@ fun LocalScreen(
         contextMenuTrack?.let { menuTrack ->
             AlertDialog(
                 onDismissRequest = { showDeleteTrackDialog = false },
-                title = { Text("Delete song") },
-                text = { Text("Delete '${menuTrack.title}'? This cannot be undone.") },
+                title = { Text(stringResource(R.string.local_delete_song_title)) },
+                text = { Text(stringResource(R.string.local_delete_song_text, menuTrack.title)) },
                 confirmButton = {
                     TextButton(
                         onClick = {
@@ -691,12 +693,12 @@ fun LocalScreen(
                             contextMenuTrack = null
                         },
                     ) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                        Text(stringResource(R.string.common_action_delete), color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showDeleteTrackDialog = false }) {
-                        Text("Cancel")
+                        Text(stringResource(R.string.common_action_cancel))
                     }
                 },
             )
@@ -712,7 +714,7 @@ fun LocalScreen(
             Box {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Add to playlist",
+                        text = stringResource(R.string.local_add_to_playlist),
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
@@ -743,14 +745,14 @@ fun LocalScreen(
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))
                                 Text(
-                                    text = "No playlists yet",
+                                    text = stringResource(R.string.player_no_playlists),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Create one to get started",
+                                    text = stringResource(R.string.player_create_to_start),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     textAlign = TextAlign.Center,
@@ -791,7 +793,7 @@ fun LocalScreen(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_add),
-                        contentDescription = "Create playlist",
+                        contentDescription = stringResource(R.string.common_cd_create_playlist),
                     )
                 }
             }
@@ -822,7 +824,7 @@ fun LocalScreen(
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
-                text = "Sort by",
+                text = stringResource(R.string.local_sort_by),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
@@ -851,7 +853,7 @@ fun LocalScreen(
                         ),
                     ) {
                         ListItem(
-                            headlineContent = { Text(option.label) },
+                            headlineContent = { Text(stringResource(option.labelRes)) },
                             leadingContent = { RadioButton(selected = isSelected, onClick = null) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         )
@@ -862,7 +864,7 @@ fun LocalScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             ListItem(
-                headlineContent = { Text("Reverse order") },
+                headlineContent = { Text(stringResource(R.string.local_reverse_order)) },
                 trailingContent = {
                     androidx.compose.material3.Switch(
                         checked = filterState.reverseOrder,
@@ -885,7 +887,7 @@ fun LocalScreen(
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
-                text = "Filter by artist",
+                text = stringResource(R.string.local_filter_by_artist),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
@@ -925,7 +927,7 @@ fun LocalScreen(
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
-                text = "Filter by album",
+                text = stringResource(R.string.local_filter_by_album),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
@@ -965,7 +967,7 @@ fun LocalScreen(
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
-                text = "Filter by folder",
+                text = stringResource(R.string.local_filter_by_folder),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
