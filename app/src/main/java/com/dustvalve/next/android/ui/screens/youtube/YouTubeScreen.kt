@@ -1,6 +1,12 @@
 package com.dustvalve.next.android.ui.screens.youtube
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,8 +26,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -29,8 +33,6 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.res.painterResource
 import com.dustvalve.next.android.R
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +51,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberSearchBarState
@@ -71,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -102,7 +106,7 @@ fun YouTubeScreen(
             .collect { viewModel.onQueryChange(it) }
     }
 
-    // Pagination
+    // Search pagination
     LaunchedEffect(searchListState) {
         snapshotFlow {
             val last = searchListState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -122,6 +126,18 @@ fun YouTubeScreen(
                 snackbarHostState.showSnackbar(error)
             } finally {
                 viewModel.clearError()
+            }
+        }
+    }
+
+    val onPlayItem: (SearchResult) -> Unit = { item ->
+        scope.launch {
+            try {
+                val track = viewModel.getTrackInfo(item.url)
+                playerViewModel.playTrack(track)
+                onExpandPlayer()
+            } catch (_: Exception) {
+                snackbarHostState.showSnackbar("Failed to play")
             }
         }
     }
@@ -171,128 +187,81 @@ fun YouTubeScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
 
+                // Mood chips — pinned below search bar
+                MoodChipRow(
+                    selectedMood = state.selectedMood,
+                    onMoodSelected = viewModel::onMoodSelected,
+                )
+
+                // Discovery feed
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 80.dp),
                 ) {
-                    // Recommendations carousel
-                    if (state.recommendations.isNotEmpty()) {
-                        item(key = "reco_header") {
-                            Text(
-                                text = "Recommendations",
-                                style = MaterialTheme.typography.headlineMediumEmphasized,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    if (state.selectedMood != null) {
+                        // ── Mood results ────────────────────────────────
+                        item(key = "mood_section") {
+                            val moodSection = DiscoverSection(
+                                title = "${state.selectedMood} music",
+                                items = state.moodResults,
+                                isLoading = state.isMoodLoading,
+                                error = state.moodError,
+                            )
+                            DiscoverCarouselSection(
+                                section = moodSection,
+                                onItemClick = onPlayItem,
+                                onRetry = { viewModel.onMoodSelected(state.selectedMood) },
                             )
                         }
-                        item(key = "reco_carousel") {
-                            val carouselState = rememberCarouselState { state.recommendations.size }
-                            HorizontalMultiBrowseCarousel(
-                                state = carouselState,
-                                preferredItemWidth = 200.dp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                                itemSpacing = 8.dp,
-                            ) { index ->
-                                val item = state.recommendations[index]
-                                Box(
-                                    modifier = Modifier
-                                        .aspectRatio(16f / 9f)
-                                        .maskClip(AppShapes.SearchResultTrack)
-                                        .clickable {
-                                            scope.launch {
-                                                try {
-                                                    val track = viewModel.getTrackInfo(item.url)
-                                                    playerViewModel.playTrack(track)
-                                                    onExpandPlayer()
-                                                } catch (_: Exception) {
-                                                    snackbarHostState.showSnackbar("Failed to play")
-                                                }
-                                            }
-                                        },
-                                ) {
-                                    AsyncImage(
-                                        model = item.imageUrl,
-                                        contentDescription = item.name,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop,
-                                    )
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(64.dp)
-                                            .align(Alignment.BottomCenter)
-                                            .graphicsLayer {
-                                                // Gradient scrim
-                                                alpha = 0.7f
-                                            },
-                                    )
-                                    Column(
-                                        modifier = Modifier
-                                            .align(Alignment.BottomStart)
-                                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-                                    ) {
-                                        Text(
-                                            text = item.name,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = Color.White,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                        item.artist?.let {
-                                            Text(
-                                                text = it,
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = Color.White.copy(alpha = 0.8f),
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                            )
-                                        }
-                                    }
-                                }
+                    } else {
+                        // ── Default discovery feed ──────────────────────
+
+                        // Recommendations (skip if no history)
+                        val recoSection = state.recommendationsSection
+                        if (recoSection.isLoading || recoSection.items.isNotEmpty()) {
+                            item(key = "reco_section") {
+                                DiscoverCarouselSection(
+                                    section = recoSection,
+                                    onItemClick = onPlayItem,
+                                    onRetry = { viewModel.retrySection("recommendations") },
+                                )
                             }
                         }
-                    }
 
-                    // Categories section
-                    item(key = "categories_header") {
-                        Text(
-                            text = "Browse",
-                            style = MaterialTheme.typography.headlineMediumEmphasized,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                    }
+                        // Trending
+                        item(key = "trending_section") {
+                            DiscoverCarouselSection(
+                                section = state.trendingSection,
+                                onItemClick = onPlayItem,
+                                onRetry = { viewModel.retrySection("trending") },
+                            )
+                        }
 
-                    item(key = "categories") {
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            items(
-                                items = viewModel.categories,
-                                key = { it.id },
-                            ) { category ->
-                                Card(
-                                    onClick = { /* TODO: Browse category */ },
+                        // Genre sections
+                        itemsIndexed(
+                            items = state.genreSections,
+                            key = { index, _ -> "genre_$index" },
+                        ) { index, section ->
+                            DiscoverCarouselSection(
+                                section = section,
+                                onItemClick = onPlayItem,
+                                onRetry = { viewModel.retrySection("genre_$index") },
+                            )
+                        }
+
+                        // Infinite scroll trigger
+                        if (!state.genresExhausted) {
+                            item(key = "genre_loader") {
+                                LaunchedEffect(state.genreSections.size) {
+                                    viewModel.loadMoreGenres()
+                                }
+                                Box(
                                     modifier = Modifier
-                                        .width(160.dp)
-                                        .height(100.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    ),
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center,
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(16.dp),
-                                        contentAlignment = Alignment.BottomStart,
-                                    ) {
-                                        Text(
-                                            text = category.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                    }
+                                    CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
                                 }
                             }
                         }
@@ -552,6 +521,187 @@ fun YouTubeScreen(
                         hostState = snackbarHostState,
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
+                }
+            }
+        }
+    }
+}
+
+// ── Reusable composables ────────────────────────────────────────────────
+
+@Composable
+private fun MoodChipRow(
+    selectedMood: String?,
+    onMoodSelected: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        moodChips.forEach { chip ->
+            val isSelected = selectedMood == chip.label
+            FilterChip(
+                selected = isSelected,
+                onClick = { onMoodSelected(if (isSelected) null else chip.label) },
+                label = { Text(chip.label) },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun DiscoverCarouselSection(
+    section: DiscoverSection,
+    onItemClick: (SearchResult) -> Unit,
+    onRetry: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        if (section.title.isNotBlank()) {
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.headlineMediumEmphasized,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        when {
+            section.isLoading -> {
+                ShimmerCarouselPlaceholder()
+            }
+            section.error != null -> {
+                SectionErrorState(
+                    message = section.error,
+                    onRetry = onRetry,
+                )
+            }
+            section.items.isNotEmpty() -> {
+                val carouselState = rememberCarouselState { section.items.size }
+                HorizontalMultiBrowseCarousel(
+                    state = carouselState,
+                    preferredItemWidth = 240.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    itemSpacing = 8.dp,
+                ) { index ->
+                    val item = section.items[index]
+                    Box(
+                        modifier = Modifier
+                            .aspectRatio(16f / 9f)
+                            .maskClip(AppShapes.SearchResultTrack)
+                            .clickable { onItemClick(item) },
+                    ) {
+                        AsyncImage(
+                            model = item.imageUrl,
+                            contentDescription = item.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(64.dp)
+                                .align(Alignment.BottomCenter)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
+                                    )
+                                ),
+                        )
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                        ) {
+                            Text(
+                                text = item.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            item.artist?.let {
+                                Text(
+                                    text = it,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShimmerCarouselPlaceholder(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "shimmerAlpha",
+    )
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        repeat(3) {
+            Box(
+                modifier = Modifier
+                    .width(240.dp)
+                    .aspectRatio(16f / 9f)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = alpha)
+                    ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SectionErrorState(
+    message: String,
+    onRetry: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(120.dp)
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            if (onRetry != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(onClick = onRetry) {
+                    Text("Retry")
                 }
             }
         }
