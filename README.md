@@ -19,14 +19,35 @@
 
 ---
 
+<p align="center">
+  <img src="screenshots/screenshot1.png" width="160"/>
+  <img src="screenshots/screenshot2.png" width="160"/>
+  <img src="screenshots/screenshot3.png" width="160"/>
+  <img src="screenshots/screenshot4.png" width="160"/>
+  <img src="screenshots/screenshot5.png" width="160"/>
+  <img src="screenshots/screenshot6.png" width="160"/>
+  <img src="screenshots/screenshot7.png" width="160"/>
+  <img src="screenshots/screenshot8.png" width="160"/>
+  <img src="screenshots/screenshot9.png" width="160"/>
+  <img src="screenshots/screenshot10.png" width="160"/>
+  <img src="screenshots/screenshot11.png" width="160"/>
+  <img src="screenshots/screenshot12.png" width="160"/>
+  <img src="screenshots/screenshot13.png" width="160"/>
+  <img src="screenshots/screenshot14.png" width="160"/>
+  <img src="screenshots/screenshot15.png" width="160"/>
+  <img src="screenshots/screenshot16.png" width="160"/>
+  <img src="screenshots/screenshot17.png" width="160"/>
+  <img src="screenshots/screenshot18.png" width="160"/>
+</p>
+
 ## About
 
 Play your music from a single, snappy and emotional interface no matter the source: bandcamp, youtube music, or just your local music folder.
 See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from, all in a nicely designed, lightweight (4mb), extremely fast and no-nonsense GPLv3 Material you 3 Expressive app.
 
-> **Pre-alpha**. Report any bugs. We will add more sources once we get out of alpha and have unified the player features.
+> **Pre-alpha**. Report any bugs. We will add more sources once we get out of alpha and have unified the player features. Spotify is currently broken as is account link for any platforms.
 
-Download the app [here](https://github.com/Pingasmaster/dustvalve_next/releases).
+Download the app [here](https://github.com/Pingasmaster/dustvalve_next/releases/download/v0.2.0/app-release.apk) the latest release can be found [here](https://github.com/Pingasmaster/dustvalve_next/releases). Thank you so much for trying it!
 
 ## Features
 

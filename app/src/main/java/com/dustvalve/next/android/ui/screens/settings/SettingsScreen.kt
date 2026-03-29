@@ -67,6 +67,8 @@ import android.net.Uri
 import android.os.Build
 import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -1414,6 +1416,18 @@ fun SettingsScreen(
                             text = "Licensed under GPLv3",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val uriHandler = LocalUriHandler.current
+                        Text(
+                            text = "GitHub",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                textDecoration = TextDecoration.Underline,
+                            ),
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.clickable {
+                                uriHandler.openUri("https://github.com/Pingasmaster/dustvalve_next")
+                            },
                         )
                     }
                 }
