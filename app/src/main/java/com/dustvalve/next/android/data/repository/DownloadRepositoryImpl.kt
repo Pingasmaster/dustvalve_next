@@ -113,9 +113,16 @@ class DownloadRepositoryImpl @Inject constructor(
             resolveHqDownloadUrl(purchaseInfo, preferredFormat)
                 ?: (track.streamUrl to AudioFormat.MP3_128)
         } else if (track.source == TrackSource.YOUTUBE) {
-            // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream
-            val videoUrl = track.streamUrl
+            // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream.
+            // Queue tracks may have resolved googlevideo.com URLs — reconstruct the watch URL.
+            val streamUrl = track.streamUrl
                 ?: throw IOException("Track '${track.title}' has no video URL")
+            val videoUrl = if (streamUrl.contains("youtube.com") || streamUrl.contains("youtu.be")) {
+                streamUrl
+            } else {
+                val videoId = track.id.removePrefix("yt_")
+                "https://www.youtube.com/watch?v=$videoId"
+            }
             youtubeRepository.getDownloadableStream(videoUrl)
         } else if (track.source == TrackSource.SPOTIFY) {
             // Spotify: native bridge handles download directly — use placeholder URL

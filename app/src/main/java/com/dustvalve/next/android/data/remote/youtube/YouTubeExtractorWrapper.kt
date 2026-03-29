@@ -100,7 +100,9 @@ class YouTubeExtractorWrapper @Inject constructor() {
 
         val videoId = extractVideoId(videoUrl) ?: extractor.id
         val audioStreams = extractor.audioStreams ?: emptyList()
-        val bestStream = pickBestAudioStream(audioStreams)
+        if (pickBestAudioStream(audioStreams) == null) {
+            throw IllegalStateException("No audio streams available for $videoUrl")
+        }
 
         Track(
             id = "yt_$videoId",
@@ -110,8 +112,7 @@ class YouTubeExtractorWrapper @Inject constructor() {
             artistUrl = extractor.uploaderUrl,
             trackNumber = 0,
             duration = extractor.length.toFloat(),
-            streamUrl = bestStream?.content
-                ?: throw IllegalStateException("No audio streams available for $videoUrl"),
+            streamUrl = videoUrl,
             artUrl = pickBestThumbnail(extractor.thumbnails) ?: "",
             albumTitle = "",
             source = TrackSource.YOUTUBE,
