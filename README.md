@@ -17,7 +17,13 @@
   <img src="https://img.shields.io/badge/License-GPLv3-blue" alt="GPLv3"/>
 </p>
 
+<p align="center">
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/download/v0.2.0/app-release.apk"><img src="./download.svg" width="300"/></a>
+</p>
 ---
+
+<details>
+<summary><h2>Screenshots</h2></summary>
 
 <p align="center">
   <img src="screenshots/screenshot1.png" width="160"/>
@@ -40,6 +46,8 @@
   <img src="screenshots/screenshot18.png" width="160"/>
 </p>
 
+</details>
+
 ## About
 
 Play your music from a single, snappy and emotional interface no matter the source: bandcamp, youtube music, or just your local music folder.
@@ -47,7 +55,7 @@ See your favorite artists, albums, playlists and songs in a single page and add 
 
 > **Pre-alpha**. Report any bugs. We will add more sources once we get out of alpha and have unified the player features. Spotify is currently broken as is account link for any platforms.
 
-Download the app [here](https://github.com/Pingasmaster/dustvalve_next/releases/download/v0.2.0/app-release.apk) the latest release can be found [here](https://github.com/Pingasmaster/dustvalve_next/releases). Thank you so much for trying it!
+The latest release can be found [here](https://github.com/Pingasmaster/dustvalve_next/releases). Thank you so much for trying it!
 
 ## Features
 
