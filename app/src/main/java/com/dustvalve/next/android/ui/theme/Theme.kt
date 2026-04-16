@@ -1,8 +1,6 @@
 package com.dustvalve.next.android.ui.theme
 
-import android.os.Build
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -34,7 +32,7 @@ fun DustvalveNextTheme(
                 style = PaletteStyle.TonalSpot,
             )
         }
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
@@ -67,10 +65,10 @@ fun DustvalveNextTheme(
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ColorScheme.animated(): ColorScheme {
-    // Spring spec matching M3E fastEffectsSpec (for color/opacity transitions)
-    val spec = spring<Color>(dampingRatio = 1.0f, stiffness = 1400f)
+    val spec = MotionScheme.expressive().fastEffectsSpec<Color>()
 
     return copy(
         primary = animateColorAsState(primary, spec).value,

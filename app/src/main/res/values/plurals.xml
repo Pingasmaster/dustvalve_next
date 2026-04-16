@@ -12,4 +12,16 @@
         <item quantity="one">%1$d of %2$d song</item>
         <item quantity="other">%1$d of %2$d songs</item>
     </plurals>
+    <plurals name="scan_found">
+        <item quantity="one">Found %1$d song</item>
+        <item quantity="other">Found %1$d songs</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="one">Found %1$d song (%2$d new, %3$d removed)</item>
+        <item quantity="other">Found %1$d songs (%2$d new, %3$d removed)</item>
+    </plurals>
+    <plurals name="export_complete">
+        <item quantity="one">Exported %1$d track successfully</item>
+        <item quantity="other">Exported %1$d tracks successfully</item>
+    </plurals>
 </resources>

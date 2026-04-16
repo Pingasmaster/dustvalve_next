@@ -193,7 +193,8 @@ fun PlaylistEditSheet(
                                         )
                                     else Modifier
                                 )
-                                .clickable { selectedIconUrl = null },
+                                .clickable { selectedIconUrl = null }
+                                .animateItem(),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -221,7 +222,8 @@ fun PlaylistEditSheet(
                                         )
                                     else Modifier
                                 )
-                                .clickable { selectedIconUrl = artUrl },
+                                .clickable { selectedIconUrl = artUrl }
+                                .animateItem(),
                         )
                     }
                 }
@@ -233,7 +235,7 @@ fun PlaylistEditSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
                 Spacer(Modifier.width(8.dp))

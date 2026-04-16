@@ -139,7 +139,7 @@ fun ShapePickerSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
                 Spacer(Modifier.width(8.dp))

@@ -494,7 +494,7 @@ class SettingsViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isScanning = false,
-                            scanMessage = UiText.StringResource(R.string.snackbar_scan_found, listOf(result.total)),
+                            scanMessage = UiText.PluralsResource(R.plurals.scan_found, result.total),
                         )
                     }
                     localMusicRepository.scheduleSyncWork()
@@ -521,7 +521,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = UiText.StringResource(R.string.snackbar_scan_found, listOf(result.total)),
+                        scanMessage = UiText.PluralsResource(R.plurals.scan_found, result.total),
                     )
                 }
                 localMusicRepository.scheduleSyncWork()
@@ -560,7 +560,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = UiText.StringResource(R.string.snackbar_scan_found_detailed, listOf(result.total, result.added, result.removed)),
+                        scanMessage = UiText.PluralsResource(R.plurals.scan_found_detailed, result.total, listOf(result.total, result.added, result.removed)),
                     )
                 }
             } catch (e: Exception) {
@@ -712,7 +712,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isExporting = false,
-                        exportMessage = UiText.StringResource(R.string.snackbar_export_complete, listOf(count)),
+                        exportMessage = UiText.PluralsResource(R.plurals.export_complete, count),
                     )
                 }
             } catch (e: Exception) {

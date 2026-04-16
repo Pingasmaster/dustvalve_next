@@ -17,6 +17,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -163,7 +164,7 @@ fun PlaylistListItem(
         },
         trailingContent = if (onMoreClick != null) {
             {
-                IconButton(onClick = onMoreClick) {
+                IconButton(onClick = onMoreClick, shapes = IconButtonDefaults.shapes()) {
                     Icon(
                         painter = painterResource(R.drawable.ic_more_vert),
                         contentDescription = stringResource(R.string.common_cd_more_options),

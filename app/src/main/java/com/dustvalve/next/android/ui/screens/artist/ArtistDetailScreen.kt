@@ -38,13 +38,14 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -116,36 +117,40 @@ fun ArtistDetailScreen(
                         viewModel.deleteAllDownloads()
                         showDeleteDialog = false
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
     }
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
+            LargeFlexibleTopAppBar(
+                title = {
+                    Text(
+                        text = state.artist?.name ?: "",
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                subtitle = null,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
                 scrollBehavior = scrollBehavior,
                 windowInsets = WindowInsets(0),
             )
@@ -179,7 +184,7 @@ fun ArtistDetailScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.loadArtist(artistUrl) }) {
+                        Button(onClick = { viewModel.loadArtist(artistUrl) }, shapes = ButtonDefaults.shapes()) {
                             Text(stringResource(R.string.common_action_retry))
                         }
                     }
@@ -199,7 +204,8 @@ fun ArtistDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1f),
+                                .aspectRatio(1f)
+                                .animateItem(),
                         ) {
                             if (artist.imageUrl != null) {
                                 AsyncImage(
@@ -276,7 +282,8 @@ fun ArtistDetailScreen(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .animateItem(),
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
@@ -295,6 +302,7 @@ fun ArtistDetailScreen(
                                     },
                                     enabled = !state.isLoadingMix && artist.albums.isNotEmpty(),
                                     modifier = Modifier.weight(1f),
+                                    shapes = ButtonDefaults.shapes(),
                                 ) {
                                     if (state.isLoadingMix) {
                                         CircularWavyProgressIndicator(
@@ -344,6 +352,7 @@ fun ArtistDetailScreen(
                                         }
                                     },
                                     enabled = !state.isDownloading && artist.albums.isNotEmpty(),
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     if (state.isDownloading) {
                                         CircularWavyProgressIndicator(
@@ -375,12 +384,14 @@ fun ArtistDetailScreen(
                             Text(
                                 text = stringResource(R.string.detail_discography),
                                 style = MaterialTheme.typography.titleLargeEmphasized,
-                                modifier = Modifier.padding(
-                                    start = 20.dp,
-                                    end = 20.dp,
-                                    top = 20.dp,
-                                    bottom = 4.dp,
-                                ),
+                                modifier = Modifier
+                                    .padding(
+                                        start = 20.dp,
+                                        end = 20.dp,
+                                        top = 20.dp,
+                                        bottom = 4.dp,
+                                    )
+                                    .animateItem(),
                             )
                         }
 
@@ -413,7 +424,8 @@ fun ArtistDetailScreen(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 32.dp, vertical = 48.dp),
+                                    .padding(horizontal = 32.dp, vertical = 48.dp)
+                                    .animateItem(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 Box(
@@ -479,6 +491,7 @@ private fun ExpandableBio(bio: String) {
         if (hasOverflow || expanded) {
             TextButton(
                 onClick = { expanded = !expanded },
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text(if (expanded) stringResource(R.string.detail_show_less) else stringResource(R.string.detail_show_more))
             }

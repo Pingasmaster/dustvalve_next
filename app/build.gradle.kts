@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -10,27 +8,14 @@ plugins {
 
 android {
     namespace = "com.dustvalve.next.android"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
-        minSdk = 26
-        targetSdk = 36
-        versionCode = 140
-        versionName = "0.2.10"
-    }
-
-    signingConfigs {
-        create("release") {
-            val passwordFile = rootProject.file(".password-signing-keys")
-            val signingPassword = if (passwordFile.exists()) {
-                passwordFile.readText().trim()
-            } else ""
-            storeFile = file("../release-keystore.jks")
-            storePassword = signingPassword
-            keyAlias = "dustvalve"
-            keyPassword = signingPassword
-        }
+        minSdk = 33
+        targetSdk = 37
+        versionCode = 150
+        versionName = "0.3.0"
     }
 
     buildTypes {
@@ -41,12 +26,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 
     compileOptions {
-        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
@@ -61,6 +45,14 @@ android {
         compose = true
         buildConfig = true
     }
+
+    packaging {
+        resources {
+            // Rhino (pulled transitively by NewPipe Extractor) ships a service file
+            // referencing javax.script, which is not available on Android.
+            excludes += "META-INF/services/javax.script.ScriptEngineFactory"
+        }
+    }
 }
 
 dependencies {
@@ -68,22 +60,22 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.03.01")
     implementation(composeBom)
 
-    // Material 3 Expressive + compatible compose libs (all pinned to 1.11.0-beta02)
-    implementation("androidx.compose.runtime:runtime:1.11.0-beta02")
-    implementation("androidx.compose.ui:ui:1.11.0-beta02")
-    implementation("androidx.compose.ui:ui-graphics:1.11.0-beta02")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.11.0-beta02")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.11.0-beta02")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha16")
-    implementation("androidx.compose.foundation:foundation:1.11.0-beta02")
-    implementation("androidx.compose.animation:animation:1.11.0-beta02")
+    // Material 3 Expressive + compatible compose libs (all pinned to 1.11.0-rc01)
+    implementation("androidx.compose.runtime:runtime:1.11.0-rc01")
+    implementation("androidx.compose.ui:ui:1.11.0-rc01")
+    implementation("androidx.compose.ui:ui-graphics:1.11.0-rc01")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.11.0-rc01")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.11.0-rc01")
+    implementation("androidx.compose.material3:material3:1.5.0-alpha17")
+    implementation("androidx.compose.foundation:foundation:1.11.0-rc01")
+    implementation("androidx.compose.animation:animation:1.11.0-rc01")
 
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Navigation 3
-    implementation("androidx.navigation3:navigation3-runtime:1.1.0-rc01")
-    implementation("androidx.navigation3:navigation3-ui:1.1.0-rc01")
+    implementation("androidx.navigation3:navigation3-runtime:1.1.0")
+    implementation("androidx.navigation3:navigation3-ui:1.1.0")
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-alpha03")
@@ -135,20 +127,17 @@ dependencies {
     implementation("androidx.media3:media3-datasource-okhttp:1.10.0")
 
     // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // WebKit
-    implementation("androidx.webkit:webkit:1.16.0-alpha04")
+    implementation("androidx.webkit:webkit:1.16.0-beta01")
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.18.0")
 
     // NewPipe Extractor (YouTube scraping)
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.0")
-
-    // Desugaring (required for NewPipe Extractor on minSdk < 33)
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.1")
 }

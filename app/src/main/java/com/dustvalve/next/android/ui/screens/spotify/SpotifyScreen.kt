@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -31,6 +30,7 @@ import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -135,9 +135,12 @@ fun SpotifyScreen(
             },
             trailingIcon = {
                 if (textFieldState.text.isNotEmpty()) {
-                    IconButton(onClick = {
-                        textFieldState.setTextAndPlaceCursorAtEnd("")
-                    }) {
+                    IconButton(
+                        onClick = {
+                            textFieldState.setTextAndPlaceCursorAtEnd("")
+                        },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
                             contentDescription = stringResource(R.string.common_cd_clear),
@@ -415,6 +418,7 @@ fun SpotifyScreen(
                                                                 snackbarHostState.showSnackbar(importedMsg)
                                                             }
                                                         },
+                                                        shapes = IconButtonDefaults.shapes(),
                                                     ) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.ic_playlist_add),
@@ -434,10 +438,11 @@ fun SpotifyScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp),
+                                                .padding(16.dp)
+                                                .animateItem(),
                                             contentAlignment = Alignment.Center,
                                         ) {
-                                            CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
+                                            ContainedLoadingIndicator()
                                         }
                                     }
                                 }

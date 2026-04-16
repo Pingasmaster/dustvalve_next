@@ -150,7 +150,7 @@ object AppShapes {
 
 data class PlaylistShapeOption(
     val key: String,
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
 )
 
 val PlaylistShapeOptions: List<PlaylistShapeOption> = listOf(

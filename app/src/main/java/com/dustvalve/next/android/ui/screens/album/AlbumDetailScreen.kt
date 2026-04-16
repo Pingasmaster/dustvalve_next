@@ -35,6 +35,7 @@ import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -44,8 +45,8 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -117,12 +118,13 @@ fun AlbumDetailScreen(
                         viewModel.deleteAlbumDownloads()
                         showDeleteAlbumDialog = false
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteAlbumDialog = false }) {
+                TextButton(onClick = { showDeleteAlbumDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },
@@ -140,36 +142,48 @@ fun AlbumDetailScreen(
                         viewModel.deleteTrackDownload(track)
                         trackToDelete = null
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { trackToDelete = null }) {
+                TextButton(onClick = { trackToDelete = null }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },
         )
     }
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
+            LargeFlexibleTopAppBar(
+                title = {
+                    Text(
+                        text = state.album?.title ?: "",
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                subtitle = state.album?.artist?.takeIf { it.isNotBlank() }?.let { artist ->
+                    {
+                        Text(
+                            text = artist,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
                 scrollBehavior = scrollBehavior,
                 windowInsets = WindowInsets(0),
             )
@@ -203,7 +217,7 @@ fun AlbumDetailScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.loadAlbum(albumUrl) }) {
+                        Button(onClick = { viewModel.loadAlbum(albumUrl) }, shapes = ButtonDefaults.shapes()) {
                             Text(stringResource(R.string.common_action_retry))
                         }
                     }
@@ -222,7 +236,8 @@ fun AlbumDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1f),
+                                .aspectRatio(1f)
+                                .animateItem(),
                         ) {
                             AsyncImage(
                                 model = album.artUrl,
@@ -282,7 +297,8 @@ fun AlbumDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp),
+                                .padding(horizontal = 20.dp)
+                                .animateItem(),
                         ) {
                             Text(
                                 text = album.artist,
@@ -308,7 +324,8 @@ fun AlbumDetailScreen(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .animateItem(),
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
@@ -327,6 +344,7 @@ fun AlbumDetailScreen(
                                         }
                                     },
                                     modifier = Modifier.weight(1f),
+                                    shapes = ButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_play_arrow),
@@ -344,6 +362,7 @@ fun AlbumDetailScreen(
                                             playerViewModel.playAlbum(album.tracks.shuffled(), 0)
                                         }
                                     },
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_shuffle),
@@ -384,6 +403,7 @@ fun AlbumDetailScreen(
                                         }
                                     },
                                     enabled = !state.isDownloading,
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     if (state.isDownloading) {
                                         CircularWavyProgressIndicator(
@@ -417,10 +437,12 @@ fun AlbumDetailScreen(
                             Text(
                                 text = stringResource(R.string.detail_tracks_label),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
-                                modifier = Modifier.padding(
-                                    start = 20.dp, end = 20.dp,
-                                    top = 16.dp, bottom = 4.dp,
-                                ),
+                                modifier = Modifier
+                                    .padding(
+                                        start = 20.dp, end = 20.dp,
+                                        top = 16.dp, bottom = 4.dp,
+                                    )
+                                    .animateItem(),
                             )
                         }
 
@@ -477,7 +499,8 @@ fun AlbumDetailScreen(
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .animateItem(),
                                 shape = MaterialTheme.shapes.extraLarge,
                                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                             ) {
@@ -550,6 +573,7 @@ private fun ExpandableAbout(about: String) {
         if (hasOverflow || expanded) {
             TextButton(
                 onClick = { expanded = !expanded },
+                shapes = ButtonDefaults.shapes(),
             ) {
                 Text(if (expanded) stringResource(R.string.detail_show_less) else stringResource(R.string.detail_show_more))
             }

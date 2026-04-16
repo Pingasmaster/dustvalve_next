@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -73,18 +74,18 @@ fun UpdateDialog(
         confirmButton = {
             when {
                 state.readyToInstall -> {
-                    TextButton(onClick = onInstall) {
+                    TextButton(onClick = onInstall, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(R.string.update_install))
                     }
                 }
                 state.isDownloading -> {}
                 state.downloadError != null -> {
-                    TextButton(onClick = onDownload) {
+                    TextButton(onClick = onDownload, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(R.string.common_action_retry))
                     }
                 }
                 else -> {
-                    TextButton(onClick = onDownload) {
+                    TextButton(onClick = onDownload, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(R.string.update_download))
                     }
                 }
@@ -92,7 +93,7 @@ fun UpdateDialog(
         },
         dismissButton = {
             if (!state.isDownloading) {
-                TextButton(onClick = onDismiss) {
+                TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(if (state.readyToInstall) R.string.update_later else R.string.update_not_now))
                 }
             }

@@ -26,13 +26,14 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -76,24 +77,39 @@ fun YouTubePlaylistDetailScreen(
         viewModel.loadPlaylist(playlistUrl, playlistName)
     }
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
+            LargeFlexibleTopAppBar(
+                title = {
+                    Text(
+                        text = state.playlistName,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                subtitle = if (state.tracks.isNotEmpty()) {
+                    {
+                        Text(
+                            text = pluralStringResource(
+                                R.plurals.track_count,
+                                state.tracks.size,
+                                state.tracks.size,
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                } else null,
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
                 scrollBehavior = scrollBehavior,
                 windowInsets = WindowInsets(0),
             )
@@ -126,7 +142,10 @@ fun YouTubePlaylistDetailScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.loadPlaylist(playlistUrl, playlistName) }) {
+                        Button(
+                            onClick = { viewModel.loadPlaylist(playlistUrl, playlistName) },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
                             Text(stringResource(R.string.common_action_retry))
                         }
                     }
@@ -145,7 +164,8 @@ fun YouTubePlaylistDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1f),
+                                .aspectRatio(1f)
+                                .animateItem(),
                         ) {
                             if (!heroArtUrl.isNullOrBlank()) {
                                 AsyncImage(
@@ -214,7 +234,9 @@ fun YouTubePlaylistDetailScreen(
                             text = pluralStringResource(R.plurals.track_count, state.tracks.size, state.tracks.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp, vertical = 4.dp)
+                                .animateItem(),
                         )
                     }
 
@@ -223,7 +245,8 @@ fun YouTubePlaylistDetailScreen(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .animateItem(),
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
@@ -242,6 +265,7 @@ fun YouTubePlaylistDetailScreen(
                                     },
                                     modifier = Modifier.weight(1f),
                                     enabled = state.tracks.isNotEmpty(),
+                                    shapes = ButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_play_arrow),
@@ -259,6 +283,7 @@ fun YouTubePlaylistDetailScreen(
                                         }
                                     },
                                     enabled = state.tracks.isNotEmpty(),
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_shuffle),
@@ -299,6 +324,7 @@ fun YouTubePlaylistDetailScreen(
                                         }
                                     },
                                     enabled = !state.isDownloading,
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     if (state.isDownloading) {
                                         CircularWavyProgressIndicator(
@@ -325,10 +351,12 @@ fun YouTubePlaylistDetailScreen(
                             Text(
                                 text = stringResource(R.string.detail_tracks_label),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
-                                modifier = Modifier.padding(
-                                    start = 20.dp, end = 20.dp,
-                                    top = 16.dp, bottom = 4.dp,
-                                ),
+                                modifier = Modifier
+                                    .padding(
+                                        start = 20.dp, end = 20.dp,
+                                        top = 16.dp, bottom = 4.dp,
+                                    )
+                                    .animateItem(),
                             )
                         }
 
@@ -386,12 +414,13 @@ fun YouTubePlaylistDetailScreen(
                         viewModel.deleteAllDownloads()
                         showDeleteDialog = false
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },

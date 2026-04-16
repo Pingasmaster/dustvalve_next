@@ -33,6 +33,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -65,7 +66,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import androidx.core.net.toUri
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalUriHandler
@@ -138,12 +138,13 @@ fun SettingsScreen(
                         viewModel.clearCache()
                         showClearCacheDialog = false
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_clear))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearCacheDialog = false }) {
+                TextButton(onClick = { showClearCacheDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },
@@ -161,12 +162,13 @@ fun SettingsScreen(
                         viewModel.removeAllDownloads()
                         showRemoveDownloadsDialog = false
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_remove))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showRemoveDownloadsDialog = false }) {
+                TextButton(onClick = { showRemoveDownloadsDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },
@@ -235,7 +237,9 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.headlineMediumEmphasized,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp)
+                    .animateItem(),
             )
         }
 
@@ -308,12 +312,7 @@ fun SettingsScreen(
                                 onCheckedChange = { enabled ->
                                     viewModel.setLocalMusicEnabled(enabled)
                                     if (enabled && state.localMusicUseMediaStore) {
-                                        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            Manifest.permission.READ_MEDIA_AUDIO
-                                        } else {
-                                            Manifest.permission.READ_EXTERNAL_STORAGE
-                                        }
-                                        audioPermissionLauncher.launch(permission)
+                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
                                     } else if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
                                         folderPickerLauncher.launch(null)
                                     }
@@ -347,12 +346,7 @@ fun SettingsScreen(
                                         if (useIndividualFolders) {
                                             viewModel.setLocalMusicUseMediaStore(false)
                                         } else {
-                                            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                                Manifest.permission.READ_MEDIA_AUDIO
-                                            } else {
-                                                Manifest.permission.READ_EXTERNAL_STORAGE
-                                            }
-                                            audioPermissionLauncher.launch(permission)
+                                            audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
                                         }
                                     },
                                 )
@@ -387,7 +381,10 @@ fun SettingsScreen(
                                                 )
                                             },
                                             trailingContent = {
-                                                IconButton(onClick = { viewModel.removeLocalMusicFolder(uri) }) {
+                                                IconButton(
+                                                    onClick = { viewModel.removeLocalMusicFolder(uri) },
+                                                    shapes = IconButtonDefaults.shapes(),
+                                                ) {
                                                     Icon(
                                                         painter = painterResource(R.drawable.ic_close),
                                                         contentDescription = stringResource(R.string.settings_cd_remove_folder),
@@ -569,15 +566,18 @@ fun SettingsScreen(
                         Text(stringResource(R.string.settings_spotify_premium_text))
                     },
                     confirmButton = {
-                        TextButton(onClick = {
-                            showSpotifySourceWarning = false
-                            viewModel.setSpotifyEnabled(true)
-                        }) {
+                        TextButton(
+                            onClick = {
+                                showSpotifySourceWarning = false
+                                viewModel.setSpotifyEnabled(true)
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
                             Text(stringResource(R.string.common_action_enable))
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showSpotifySourceWarning = false }) {
+                        TextButton(onClick = { showSpotifySourceWarning = false }, shapes = ButtonDefaults.shapes()) {
                             Text(stringResource(R.string.common_action_cancel))
                         }
                     },
@@ -774,15 +774,18 @@ fun SettingsScreen(
                         Text(stringResource(R.string.settings_spotify_warning_text))
                     },
                     confirmButton = {
-                        TextButton(onClick = {
-                            showSpotifyWarning = false
-                            onSpotifyLoginClick()
-                        }) {
+                        TextButton(
+                            onClick = {
+                                showSpotifyWarning = false
+                                onSpotifyLoginClick()
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
                             Text(stringResource(R.string.settings_i_understand))
                         }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showSpotifyWarning = false }) {
+                        TextButton(onClick = { showSpotifyWarning = false }, shapes = ButtonDefaults.shapes()) {
                             Text(stringResource(R.string.common_action_cancel))
                         }
                     },

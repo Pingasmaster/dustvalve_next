@@ -3,9 +3,11 @@ package com.dustvalve.next.android.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,10 +38,11 @@ fun RecentSearchesList(
                     )
                 },
                 trailingContent = {
-                    TextButton(onClick = onClearAllClick) {
+                    TextButton(onClick = onClearAllClick, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(R.string.search_clear_all))
                     }
                 },
+                modifier = Modifier.animateItem(),
             )
         }
         items(
@@ -62,7 +65,7 @@ fun RecentSearchesList(
                     )
                 },
                 trailingContent = {
-                    IconButton(onClick = { onRemoveClick(query) }) {
+                    IconButton(onClick = { onRemoveClick(query) }, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_close),
                             contentDescription = stringResource(R.string.search_cd_remove),

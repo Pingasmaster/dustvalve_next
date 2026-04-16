@@ -27,6 +27,7 @@ import com.dustvalve.next.android.ui.components.getPlaylistIconRes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -44,9 +45,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -135,34 +137,43 @@ fun PlaylistDetailScreen(
         }
     }
 
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val trackCount = state.tracks.size
+    val trackCountText = pluralStringResource(R.plurals.track_count, trackCount, trackCount)
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            TopAppBar(
+            LargeFlexibleTopAppBar(
                 title = {
                     Text(
                         text = state.playlist?.name ?: stringResource(R.string.playlist_default_title),
-                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                subtitle = {
+                    Text(
+                        text = trackCountText,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                scrollBehavior = scrollBehavior,
                 windowInsets = WindowInsets(0),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { paddingValues ->
         when {
             state.isLoading -> {
@@ -172,7 +183,7 @@ fun PlaylistDetailScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center,
                 ) {
-                    androidx.compose.material3.ContainedLoadingIndicator()
+                    ContainedLoadingIndicator()
                 }
             }
             state.error != null && state.playlist == null -> {
@@ -334,14 +345,13 @@ private fun PlaylistContent(
                 val canSwipeToDelete = !playlist.isSystem
 
                 if (canSwipeToDelete) {
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { value ->
-                            if (value == SwipeToDismissBoxValue.EndToStart) {
-                                onRemoveTrack(track.id)
-                                true
-                            } else false
-                        },
-                    )
+                    val dismissState = rememberSwipeToDismissBoxState()
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                            onRemoveTrack(track.id)
+                        }
+                    }
                     SwipeToDismissBox(
                         state = dismissState,
                         modifier = itemModifier,
@@ -851,7 +861,7 @@ private fun ErrorState(
                 color = MaterialTheme.colorScheme.error,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            androidx.compose.material3.TextButton(onClick = onRetry) {
+            androidx.compose.material3.TextButton(onClick = onRetry, shapes = androidx.compose.material3.ButtonDefaults.shapes()) {
                 Text(stringResource(R.string.common_action_retry))
             }
         }

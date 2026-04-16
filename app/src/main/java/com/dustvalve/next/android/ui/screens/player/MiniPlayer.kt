@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialShapes
@@ -256,21 +257,21 @@ fun MiniPlayer(
 
                     Spacer(modifier = Modifier.width(4.dp))
 
-                    IconButton(onClick = { playerViewModel.onPrevious() }) {
+                    IconButton(onClick = { playerViewModel.onPrevious() }, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_previous),
                             contentDescription = stringResource(R.string.player_cd_previous),
                         )
                     }
 
-                    IconButton(onClick = { playerViewModel.onPlayPause() }) {
+                    IconButton(onClick = { playerViewModel.onPlayPause() }, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
                             contentDescription = stringResource(if (state.isPlaying) R.string.player_cd_pause else R.string.player_cd_play),
                         )
                     }
 
-                    IconButton(onClick = { playerViewModel.onNext() }) {
+                    IconButton(onClick = { playerViewModel.onNext() }, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_next),
                             contentDescription = stringResource(R.string.player_cd_next),
