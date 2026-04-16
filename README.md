@@ -78,7 +78,7 @@ We heavily follow all Material you 3 Expressive guidelines and recommendations w
 
 ## Building from source
 
-**Requirements:** Java 21, Android SDK 36
+**Requirements:** Java 21, Android SDK 37
 
 If you just want an apk to install to your device:
 
