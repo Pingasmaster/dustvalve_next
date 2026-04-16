@@ -24,4 +24,8 @@
         <item quantity="one">Exported %1$d track successfully</item>
         <item quantity="other">Exported %1$d tracks successfully</item>
     </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="one">Added %1$d track to queue</item>
+        <item quantity="other">Added %1$d tracks to queue</item>
+    </plurals>
 </resources>

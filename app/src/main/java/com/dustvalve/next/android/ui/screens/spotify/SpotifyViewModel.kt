@@ -168,4 +168,12 @@ class SpotifyViewModel @Inject constructor(
     suspend fun getTrackInfo(uri: String): Track {
         return spotifyRepository.getTrackInfo(uri)
     }
+
+    suspend fun resolveAlbumTracks(uri: String): List<Track> {
+        return spotifyRepository.getAlbumTracks(uri).first
+    }
+
+    suspend fun resolvePlaylistTracks(uri: String): List<Track> {
+        return spotifyRepository.getPlaylistTracks(uri).first
+    }
 }

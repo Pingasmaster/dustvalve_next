@@ -21,6 +21,15 @@
     <string name="common_failed_to_play">Failed to play</string>
     <string name="common_playlist_imported">Playlist imported: %1$s</string>
     <string name="common_add_to_playlist">Add to playlist</string>
+    <string name="common_play_next">Play next</string>
+    <string name="common_add_to_queue">Add to queue</string>
+    <string name="common_enqueue_all">Enqueue all</string>
+    <string name="common_share">Share</string>
+    <string name="common_open_in_browser">Open in browser</string>
+    <string name="common_loading_track">Loading track…</string>
+    <string name="common_loading_album">Loading album…</string>
+    <string name="common_loading_playlist">Loading playlist…</string>
+    <string name="snackbar_failed_load">Failed to load</string>
 
     <!-- Common content descriptions -->
     <string name="common_cd_back">Back</string>
@@ -190,7 +199,7 @@
     <string name="settings_storage_limit_unlimited">Storage limit: Unlimited</string>
     <string name="settings_storage_limit_mb">Storage limit: %1$d MB</string>
     <string name="settings_storage_limit_gb">Storage limit: %1$d GB</string>
-    <string name="settings_sign_in_bandcamp">Sign in to Dustvalve</string>
+    <string name="settings_sign_in_bandcamp">Sign in to Bandcamp</string>
     <string name="settings_sign_in_youtube">Sign in to YouTube Music</string>
     <string name="settings_sign_in_spotify">Sign in to Spotify</string>
     <string name="settings_spotify_native_unavailable">Spotify native library not available. Please rebuild with Rust support.</string>
