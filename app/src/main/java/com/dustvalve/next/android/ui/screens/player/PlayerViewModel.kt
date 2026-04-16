@@ -799,6 +799,27 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    fun addToQueue(track: Track) {
+        queueManager.addToQueue(track)
+        _extraState.update {
+            it.copy(
+                snackbarMessage = UiText.PluralsResource(R.plurals.snackbar_added_n_to_queue, 1),
+                isSnackbarError = false,
+            )
+        }
+    }
+
+    fun addAllToQueue(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        for (t in tracks) queueManager.addToQueue(t)
+        _extraState.update {
+            it.copy(
+                snackbarMessage = UiText.PluralsResource(R.plurals.snackbar_added_n_to_queue, tracks.size),
+                isSnackbarError = false,
+            )
+        }
+    }
+
     fun addTrackToPlaylist(playlistId: String, trackId: String) {
         viewModelScope.launch {
             try {

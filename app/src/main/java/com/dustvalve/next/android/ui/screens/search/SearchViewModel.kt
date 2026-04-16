@@ -162,6 +162,16 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    suspend fun resolveBandcampTrack(trackUrl: String, trackName: String): Track? {
+        val album = getAlbumDetailUseCase(trackUrl)
+        return album.tracks.find { it.title.equals(trackName, ignoreCase = true) }
+            ?: album.tracks.firstOrNull()
+    }
+
+    suspend fun resolveBandcampAlbumTracks(albumUrl: String): List<Track> {
+        return getAlbumDetailUseCase(albumUrl).tracks
+    }
+
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }

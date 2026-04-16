@@ -2,8 +2,11 @@ package com.dustvalve.next.android.ui.screens.bandcamp
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -70,7 +73,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,8 +87,12 @@ import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.components.RecentSearchesList
+import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
+import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
+import com.dustvalve.next.android.util.openInBrowser
+import com.dustvalve.next.android.util.shareUrl
 import com.dustvalve.next.android.ui.theme.AppMotion
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -110,7 +120,7 @@ private val discoverCategories = listOf(
     GenreCategory("r&b/soul", "r-b-soul", Color(0xFFB0C846)),
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun BandcampScreen(
     onAlbumClick: (String) -> Unit,
@@ -122,6 +132,7 @@ fun BandcampScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
+    val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val recentSearches by searchViewModel.recentSearches.collectAsStateWithLifecycle()
     val searchHistoryEnabled by searchViewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -131,6 +142,14 @@ fun BandcampScreen(
     val textFieldState = rememberTextFieldState()
     val searchListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
+
+    var contextResult by remember { mutableStateOf<SearchResult?>(null) }
+    var addToPlaylistTrackId by remember { mutableStateOf<String?>(null) }
+    val loadingTrackMsg = stringResource(R.string.common_loading_track)
+    val loadingAlbumMsg = stringResource(R.string.common_loading_album)
+    val failedLoadMsg = stringResource(R.string.snackbar_failed_load)
 
     // Bridge TextFieldState changes to SearchViewModel
     LaunchedEffect(textFieldState) {
@@ -517,27 +536,6 @@ fun BandcampScreen(
                                     )
 
                                     Surface(
-                                        onClick = {
-                                            scope.launch { searchBarState.animateToCollapsed() }
-                                            when (result.type) {
-                                                SearchResultType.ALBUM -> onAlbumClick(result.url)
-                                                SearchResultType.ARTIST -> onArtistClick(result.url)
-                                                SearchResultType.TRACK -> {
-                                                    searchViewModel.playBandcampTrack(result.url, result.name, playerViewModel)
-                                                    onExpandPlayer()
-                                                }
-                                                SearchResultType.LOCAL_TRACK -> {
-                                                    val trackId = result.url.removePrefix("local://")
-                                                    searchViewModel.playLocalTrack(trackId, playerViewModel)
-                                                    onExpandPlayer()
-                                                }
-                                                SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                                                SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
-                                                SearchResultType.SPOTIFY_TRACK, SearchResultType.SPOTIFY_ALBUM,
-                                                SearchResultType.SPOTIFY_ARTIST, SearchResultType.SPOTIFY_PLAYLIST -> { /* not applicable */ }
-                                            }
-                                        },
-                                        interactionSource = interactionSource,
                                         shape = segmentedItemShape(index, searchState.results.size),
                                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                                         modifier = Modifier
@@ -555,7 +553,37 @@ fun BandcampScreen(
                                             .graphicsLayer {
                                                 scaleX = pressScale
                                                 scaleY = pressScale
-                                            },
+                                            }
+                                            .combinedClickable(
+                                                interactionSource = interactionSource,
+                                                indication = LocalIndication.current,
+                                                onClick = {
+                                                    scope.launch { searchBarState.animateToCollapsed() }
+                                                    when (result.type) {
+                                                        SearchResultType.ALBUM -> onAlbumClick(result.url)
+                                                        SearchResultType.ARTIST -> onArtistClick(result.url)
+                                                        SearchResultType.TRACK -> {
+                                                            searchViewModel.playBandcampTrack(result.url, result.name, playerViewModel)
+                                                            onExpandPlayer()
+                                                        }
+                                                        SearchResultType.LOCAL_TRACK -> {
+                                                            val trackId = result.url.removePrefix("local://")
+                                                            searchViewModel.playLocalTrack(trackId, playerViewModel)
+                                                            onExpandPlayer()
+                                                        }
+                                                        SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
+                                                        SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
+                                                        SearchResultType.SPOTIFY_TRACK, SearchResultType.SPOTIFY_ALBUM,
+                                                        SearchResultType.SPOTIFY_ARTIST, SearchResultType.SPOTIFY_PLAYLIST -> { /* not applicable */ }
+                                                    }
+                                                },
+                                                onLongClick = {
+                                                    if (result.type != SearchResultType.LOCAL_TRACK) {
+                                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        contextResult = result
+                                                    }
+                                                },
+                                            ),
                                     ) {
                                         SearchResultItem(result = result)
                                     }
@@ -587,6 +615,102 @@ fun BandcampScreen(
                 }
             }
         }
+    }
+
+    contextResult?.let { result ->
+        RemoteResultActionSheet(
+            result = result,
+            onDismiss = { contextResult = null },
+            onPlayNext = {
+                contextResult = null
+                scope.launch {
+                    snackbarHostState.showSnackbar(loadingTrackMsg)
+                }
+                scope.launch {
+                    try {
+                        val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
+                        if (track != null) playerViewModel.playNext(track)
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onAddToQueue = {
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                scope.launch {
+                    try {
+                        val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
+                        if (track != null) playerViewModel.addToQueue(track)
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onAddToPlaylist = {
+                val ctx = result
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                scope.launch {
+                    try {
+                        val track = searchViewModel.resolveBandcampTrack(ctx.url, ctx.name)
+                        if (track != null) addToPlaylistTrackId = track.id
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onPlayAll = {
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
+                scope.launch {
+                    try {
+                        val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
+                        if (tracks.isNotEmpty()) {
+                            playerViewModel.playAlbum(tracks, 0)
+                            onExpandPlayer()
+                        }
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onEnqueueAll = {
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
+                scope.launch {
+                    try {
+                        val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
+                        playerViewModel.addAllToQueue(tracks)
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onShare = {
+                contextResult = null
+                context.shareUrl(result.url, result.name)
+            },
+            onOpenInBrowser = {
+                contextResult = null
+                context.openInBrowser(result.url)
+            },
+        )
+    }
+
+    addToPlaylistTrackId?.let { trackId ->
+        AddToPlaylistSheet(
+            playlists = playerState.playlists,
+            onDismiss = { addToPlaylistTrackId = null },
+            onPlaylistSelected = { playlistId ->
+                playerViewModel.addTrackToPlaylist(playlistId, trackId)
+                addToPlaylistTrackId = null
+            },
+            onCreatePlaylist = { name, shapeKey, iconUrl ->
+                playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, trackId)
+                addToPlaylistTrackId = null
+            },
+        )
     }
 }
 

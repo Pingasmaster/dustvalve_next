@@ -6,8 +6,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -60,8 +63,10 @@ import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +74,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -79,12 +87,16 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.components.RecentSearchesList
+import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
+import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.util.openInBrowser
+import com.dustvalve.next.android.util.shareUrl
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun YouTubeScreen(
     playerViewModel: PlayerViewModel,
@@ -94,12 +106,21 @@ fun YouTubeScreen(
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val searchHistoryEnabled by viewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
+
+    var contextResult by remember { mutableStateOf<SearchResult?>(null) }
+    var addToPlaylistTrackId by remember { mutableStateOf<String?>(null) }
 
     val failedToPlayMsg = stringResource(R.string.common_failed_to_play)
+    val loadingTrackMsg = stringResource(R.string.common_loading_track)
+    val loadingPlaylistMsg = stringResource(R.string.common_loading_playlist)
+    val failedLoadMsg = stringResource(R.string.snackbar_failed_load)
 
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
@@ -395,33 +416,6 @@ fun YouTubeScreen(
                                     )
 
                                     Surface(
-                                        onClick = {
-                                            when (result.type) {
-                                                SearchResultType.YOUTUBE_TRACK -> {
-                                                    scope.launch {
-                                                        try {
-                                                            val track = viewModel.getTrackInfo(result.url)
-                                                            searchBarState.animateToCollapsed()
-                                                            playerViewModel.playTrack(track)
-                                                            onExpandPlayer()
-                                                        } catch (_: Exception) {
-                                                            snackbarHostState.showSnackbar(failedToPlayMsg)
-                                                        }
-                                                    }
-                                                }
-                                                SearchResultType.YOUTUBE_PLAYLIST,
-                                                SearchResultType.YOUTUBE_ALBUM -> {
-                                                    scope.launch { searchBarState.animateToCollapsed() }
-                                                    onPlaylistClick(result.url, result.name)
-                                                }
-                                                SearchResultType.YOUTUBE_ARTIST -> {
-                                                    scope.launch { searchBarState.animateToCollapsed() }
-                                                    onArtistClick(result.url, result.name, result.imageUrl)
-                                                }
-                                                else -> { /* not applicable */ }
-                                            }
-                                        },
-                                        interactionSource = interactionSource,
                                         shape = segmentedItemShape(index, state.results.size),
                                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                                         modifier = Modifier
@@ -439,7 +433,41 @@ fun YouTubeScreen(
                                             .graphicsLayer {
                                                 scaleX = pressScale
                                                 scaleY = pressScale
-                                            },
+                                            }
+                                            .combinedClickable(
+                                                interactionSource = interactionSource,
+                                                indication = LocalIndication.current,
+                                                onClick = {
+                                                    when (result.type) {
+                                                        SearchResultType.YOUTUBE_TRACK -> {
+                                                            scope.launch {
+                                                                try {
+                                                                    val track = viewModel.getTrackInfo(result.url)
+                                                                    searchBarState.animateToCollapsed()
+                                                                    playerViewModel.playTrack(track)
+                                                                    onExpandPlayer()
+                                                                } catch (_: Exception) {
+                                                                    snackbarHostState.showSnackbar(failedToPlayMsg)
+                                                                }
+                                                            }
+                                                        }
+                                                        SearchResultType.YOUTUBE_PLAYLIST,
+                                                        SearchResultType.YOUTUBE_ALBUM -> {
+                                                            scope.launch { searchBarState.animateToCollapsed() }
+                                                            onPlaylistClick(result.url, result.name)
+                                                        }
+                                                        SearchResultType.YOUTUBE_ARTIST -> {
+                                                            scope.launch { searchBarState.animateToCollapsed() }
+                                                            onArtistClick(result.url, result.name, result.imageUrl)
+                                                        }
+                                                        else -> { /* not applicable */ }
+                                                    }
+                                                },
+                                                onLongClick = {
+                                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    contextResult = result
+                                                },
+                                            ),
                                     ) {
                                         ListItem(
                                             headlineContent = {
@@ -539,6 +567,100 @@ fun YouTubeScreen(
                 }
             }
         }
+    }
+
+    contextResult?.let { result ->
+        RemoteResultActionSheet(
+            result = result,
+            onDismiss = { contextResult = null },
+            onPlayNext = {
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                scope.launch {
+                    try {
+                        val track = viewModel.getTrackInfo(result.url)
+                        playerViewModel.playNext(track)
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onAddToQueue = {
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                scope.launch {
+                    try {
+                        val track = viewModel.getTrackInfo(result.url)
+                        playerViewModel.addToQueue(track)
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onAddToPlaylist = {
+                val ctx = result
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                scope.launch {
+                    try {
+                        val track = viewModel.getTrackInfo(ctx.url)
+                        addToPlaylistTrackId = track.id
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onPlayAll = {
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
+                scope.launch {
+                    try {
+                        val tracks = viewModel.resolvePlaylistTracks(result.url)
+                        if (tracks.isNotEmpty()) {
+                            playerViewModel.playAlbum(tracks, 0)
+                            onExpandPlayer()
+                        }
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onEnqueueAll = {
+                contextResult = null
+                scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
+                scope.launch {
+                    try {
+                        val tracks = viewModel.resolvePlaylistTracks(result.url)
+                        playerViewModel.addAllToQueue(tracks)
+                    } catch (_: Exception) {
+                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    }
+                }
+            },
+            onShare = {
+                contextResult = null
+                context.shareUrl(result.url, result.name)
+            },
+            onOpenInBrowser = {
+                contextResult = null
+                context.openInBrowser(result.url)
+            },
+        )
+    }
+
+    addToPlaylistTrackId?.let { trackId ->
+        AddToPlaylistSheet(
+            playlists = playerState.playlists,
+            onDismiss = { addToPlaylistTrackId = null },
+            onPlaylistSelected = { playlistId ->
+                playerViewModel.addTrackToPlaylist(playlistId, trackId)
+                addToPlaylistTrackId = null
+            },
+            onCreatePlaylist = { name, shapeKey, iconUrl ->
+                playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, trackId)
+                addToPlaylistTrackId = null
+            },
+        )
     }
 }
 

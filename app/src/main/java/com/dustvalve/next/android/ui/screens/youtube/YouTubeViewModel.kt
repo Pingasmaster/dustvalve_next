@@ -509,4 +509,8 @@ class YouTubeViewModel @Inject constructor(
     suspend fun getTrackInfo(videoUrl: String): Track {
         return youtubeRepository.getTrackInfo(videoUrl)
     }
+
+    suspend fun resolvePlaylistTracks(playlistUrl: String): List<Track> {
+        return youtubeRepository.getPlaylistTracks(playlistUrl).first
+    }
 }
