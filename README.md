@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 26"/>
+  <img src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 33"/>
   <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin"/>
   <img src="https://img.shields.io/badge/Jetpack_Compose-1.11-4285F4?logo=jetpackcompose&logoColor=white" alt="Compose"/>
   <img src="https://img.shields.io/badge/Material_3-Expressive-E8DEF8" alt="M3 Expressive"/>
@@ -110,13 +110,3 @@ Dustvalve Next is licensed under the [GNU General Public License v3.0](https://w
   <img src="gplv3.png" alt="GPLv3"/>
 </p>
 
-<details>
-<summary><h2>Automated releases (for forks)</h2></summary>
-
-This repository includes a GitHub Actions workflow that builds a release APK and attaches it to GitHub Releases automatically. Release APKs are signed with the Android debug keystore (auto-generated during the build), so no secrets or keystore setup is required.
-
-Go to **Releases > Draft a new release**, create a tag (e.g. `v1.0.0`), write release notes, and click **Publish release**. The workflow will build the release APK and attach it as a downloadable asset.
-
-> **Note:** The workflow only triggers on published releases, not on pushes or pull requests. You can monitor builds in the **Actions** tab.
-
-</details>
