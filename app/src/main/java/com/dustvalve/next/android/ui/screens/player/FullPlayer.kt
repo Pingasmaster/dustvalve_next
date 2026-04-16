@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
@@ -63,6 +64,7 @@ import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -707,6 +709,7 @@ fun FullPlayer(
                             onClick = { onArtistClick(track) },
                             enabled = track.artistUrl.isNotEmpty() || track.isLocal,
                             modifier = Modifier.weight(1f, fill = false),
+                            shapes = ButtonDefaults.shapes(),
                         ) {
                             Text(
                                 text = track.artist,
@@ -1038,14 +1041,14 @@ fun FullPlayer(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = onCollapse) {
+                IconButton(onClick = onCollapse, shapes = IconButtonDefaults.shapes()) {
                     Icon(
                         painter = painterResource(R.drawable.ic_keyboard_arrow_down),
                         contentDescription = stringResource(R.string.player_cd_collapse),
                     )
                 }
                 if (state.showVolumeButton) {
-                    IconButton(onClick = { showVolumeSheet = true }) {
+                    IconButton(onClick = { showVolumeSheet = true }, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_volume_up),
                             contentDescription = stringResource(R.string.player_cd_volume),
@@ -1069,12 +1072,13 @@ fun FullPlayer(
                         playerViewModel.onDeleteTrackDownload()
                         showDeleteDownloadDialog = false
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDownloadDialog = false }) {
+                TextButton(onClick = { showDeleteDownloadDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },
@@ -1594,16 +1598,16 @@ fun FullPlayer(
                         segmentedItemShape(upNextIndex, queueReorderableTracks.size)
                     }
 
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { value ->
-                            if (value == SwipeToDismissBoxValue.EndToStart) {
-                                playerViewModel.removeFromQueue(queueIndex)
-                                true
-                            } else false
-                        },
-                    )
+                    val dismissState = rememberSwipeToDismissBoxState()
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                            playerViewModel.removeFromQueue(queueIndex)
+                        }
+                    }
                     SwipeToDismissBox(
                         state = dismissState,
+                        enableDismissFromStartToEnd = false,
                         gesturesEnabled = queueDraggedIndex == -1,
                         modifier = Modifier
                             .padding(
@@ -1635,7 +1639,6 @@ fun FullPlayer(
                                 }
                             }
                         },
-                        enableDismissFromStartToEnd = false,
                     ) {
                         Surface(
                             shape = itemShape,
@@ -1792,10 +1795,11 @@ fun FullPlayer(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(16.dp)
+                                .animateItem(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
+                            ContainedLoadingIndicator()
                         }
                     }
                 }

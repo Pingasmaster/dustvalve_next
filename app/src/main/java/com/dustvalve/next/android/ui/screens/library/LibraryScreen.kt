@@ -25,12 +25,14 @@ import androidx.compose.foundation.lazy.items
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.ShapePickerSheet
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -514,7 +516,7 @@ private fun LibraryAlbumListItem(
             }
         },
         trailingContent = {
-            IconButton(onClick = onMoreClick) {
+            IconButton(onClick = onMoreClick, shapes = IconButtonDefaults.shapes()) {
                 Icon(
                     painter = painterResource(R.drawable.ic_more_vert),
                     contentDescription = stringResource(R.string.common_cd_more_options),
@@ -620,7 +622,7 @@ private fun LibraryArtistListItem(
             }
         },
         trailingContent = {
-            IconButton(onClick = onMoreClick) {
+            IconButton(onClick = onMoreClick, shapes = IconButtonDefaults.shapes()) {
                 Icon(
                     painter = painterResource(R.drawable.ic_more_vert),
                     contentDescription = stringResource(R.string.common_cd_more_options),
@@ -631,6 +633,7 @@ private fun LibraryArtistListItem(
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DeleteLibraryItemDialog(
     title: String,
@@ -644,7 +647,7 @@ private fun DeleteLibraryItemDialog(
         title = { Text(title) },
         text = { Text(message) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
+            TextButton(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
                 Text(
                     text = confirmText,
                     color = MaterialTheme.colorScheme.error,
@@ -652,7 +655,7 @@ private fun DeleteLibraryItemDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
                 Text(stringResource(R.string.common_action_cancel))
             }
         },

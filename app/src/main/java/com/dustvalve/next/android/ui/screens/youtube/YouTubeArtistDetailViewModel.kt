@@ -83,10 +83,9 @@ class YouTubeArtistDetailViewModel @Inject constructor(
             try {
                 // Check cache first
                 val cachedArtist = artistDao.getByUrl(url)
-                val isCacheFresh = cachedArtist != null &&
+                if (cachedArtist != null &&
                     (System.currentTimeMillis() - cachedArtist.cachedAt) < CACHE_TTL_MS
-
-                if (isCacheFresh && cachedArtist != null) {
+                ) {
                     val channelAlbumId = "yt_channel_${md5Hash(url).take(12)}"
                     val cachedTracks = trackDao.getByAlbumId(channelAlbumId)
                     if (cachedTracks.isNotEmpty()) {

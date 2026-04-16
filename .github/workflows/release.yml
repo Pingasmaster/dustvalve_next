@@ -27,12 +27,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
-
-      - name: Write signing password
-        run: echo "${{ secrets.KEYSTORE_PASSWORD }}" > .password-signing-keys
-
+      # Release APK is signed with the Android debug keystore (auto-generated
+      # by the Android Gradle plugin on first build). No release keystore setup.
       - name: Build release APK
         run: ./gradlew assembleRelease
 

@@ -34,14 +34,15 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -159,9 +160,12 @@ fun YouTubeScreen(
             },
             trailingIcon = {
                 if (textFieldState.text.isNotEmpty()) {
-                    IconButton(onClick = {
-                        textFieldState.setTextAndPlaceCursorAtEnd("")
-                    }) {
+                    IconButton(
+                        onClick = {
+                            textFieldState.setTextAndPlaceCursorAtEnd("")
+                        },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
                             contentDescription = stringResource(R.string.common_cd_clear),
@@ -214,6 +218,7 @@ fun YouTubeScreen(
                                 section = moodSection,
                                 onItemClick = onPlayItem,
                                 onRetry = { viewModel.onMoodSelected(state.selectedMood) },
+                                modifier = Modifier.animateItem(),
                             )
                         }
                     } else {
@@ -227,6 +232,7 @@ fun YouTubeScreen(
                                     section = recoSection,
                                     onItemClick = onPlayItem,
                                     onRetry = { viewModel.retrySection("recommendations") },
+                                    modifier = Modifier.animateItem(),
                                 )
                             }
                         }
@@ -237,6 +243,7 @@ fun YouTubeScreen(
                                 section = state.trendingSection,
                                 onItemClick = onPlayItem,
                                 onRetry = { viewModel.retrySection("trending") },
+                                modifier = Modifier.animateItem(),
                             )
                         }
 
@@ -249,6 +256,7 @@ fun YouTubeScreen(
                                 section = section,
                                 onItemClick = onPlayItem,
                                 onRetry = { viewModel.retrySection("genre_$index") },
+                                modifier = Modifier.animateItem(),
                             )
                         }
 
@@ -261,10 +269,11 @@ fun YouTubeScreen(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(24.dp),
+                                        .padding(24.dp)
+                                        .animateItem(),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
+                                    ContainedLoadingIndicator()
                                 }
                             }
                         }
@@ -491,6 +500,7 @@ fun YouTubeScreen(
                                                                 snackbarHostState.showSnackbar(importedMsg)
                                                             }
                                                         },
+                                                        shapes = IconButtonDefaults.shapes(),
                                                     ) {
                                                         Icon(
                                                             painter = painterResource(R.drawable.ic_playlist_add),
@@ -510,10 +520,11 @@ fun YouTubeScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp),
+                                                .padding(16.dp)
+                                                .animateItem(),
                                             contentAlignment = Alignment.Center,
                                         ) {
-                                            CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
+                                            ContainedLoadingIndicator()
                                         }
                                     }
                                 }
@@ -562,8 +573,8 @@ private fun MoodChipRow(
 private fun DiscoverCarouselSection(
     section: DiscoverSection,
     onItemClick: (SearchResult) -> Unit,
-    onRetry: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier) {
         if (section.title.isNotBlank()) {
@@ -682,6 +693,7 @@ private fun ShimmerCarouselPlaceholder(modifier: Modifier = Modifier) {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SectionErrorState(
     message: String,
@@ -704,7 +716,7 @@ private fun SectionErrorState(
             )
             if (onRetry != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onRetry) {
+                TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_retry))
                 }
             }

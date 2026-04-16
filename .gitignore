@@ -36,7 +36,6 @@ out/
 # OS
 .DS_Store
 Thumbs.db
-.password-signing-keys
 .claude
 CLAUDE.md
 todo.txt

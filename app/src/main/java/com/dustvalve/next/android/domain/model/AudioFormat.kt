@@ -6,7 +6,7 @@ import com.dustvalve.next.android.R
 enum class AudioFormat(
     val key: String,
     val extension: String,
-    @StringRes val displayNameRes: Int,
+    @param:StringRes val displayNameRes: Int,
     val qualityRank: Int,
 ) {
     FLAC("flac", "flac", R.string.audio_format_flac, 100),

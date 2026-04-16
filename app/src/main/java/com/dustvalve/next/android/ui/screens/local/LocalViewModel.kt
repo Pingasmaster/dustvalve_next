@@ -41,7 +41,7 @@ data class LocalUiState(
 
 enum class LocalSearchFilter { TRACKS, ARTISTS, ALBUMS }
 
-enum class LocalSortOption(@StringRes val labelRes: Int) {
+enum class LocalSortOption(@param:StringRes val labelRes: Int) {
     TITLE_AZ(R.string.sort_title_az),
     ARTIST_AZ(R.string.sort_artist_az),
     ALBUM_AZ(R.string.sort_album_az),
@@ -51,7 +51,7 @@ enum class LocalSortOption(@StringRes val labelRes: Int) {
     RELEASE_YEAR(R.string.sort_release_year),
 }
 
-enum class DurationRange(@StringRes val labelRes: Int) {
+enum class DurationRange(@param:StringRes val labelRes: Int) {
     UNDER_3(R.string.duration_under_3),
     THREE_TO_FIVE(R.string.duration_3_to_5),
     OVER_5(R.string.duration_over_5),

@@ -26,13 +26,14 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -79,24 +80,35 @@ fun SpotifyAlbumDetailScreen(
         viewModel.loadAlbum(albumUri, albumName, albumImageUrl)
     }
 
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { },
+            LargeFlexibleTopAppBar(
+                title = {
+                    Text(
+                        text = state.albumName,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                subtitle = state.artistName.takeIf { it.isNotBlank() }?.let { artist ->
+                    {
+                        Text(
+                            text = artist,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
                             painter = painterResource(R.drawable.ic_arrow_back),
                             contentDescription = stringResource(R.string.common_cd_back),
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.0f),
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
-                ),
                 scrollBehavior = scrollBehavior,
                 windowInsets = WindowInsets(0),
             )
@@ -129,9 +141,12 @@ fun SpotifyAlbumDetailScreen(
                             color = MaterialTheme.colorScheme.error,
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = {
-                            viewModel.loadAlbum(albumUri, albumName, albumImageUrl)
-                        }) {
+                        Button(
+                            onClick = {
+                                viewModel.loadAlbum(albumUri, albumName, albumImageUrl)
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
                             Text(stringResource(R.string.common_action_retry))
                         }
                     }
@@ -148,7 +163,8 @@ fun SpotifyAlbumDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1f),
+                                .aspectRatio(1f)
+                                .animateItem(),
                         ) {
                             val heroArtUrl = state.imageUrl
                             if (!heroArtUrl.isNullOrBlank()) {
@@ -216,6 +232,7 @@ fun SpotifyAlbumDetailScreen(
                                             }
                                         },
                                         contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
+                                        shapes = ButtonDefaults.shapes(),
                                     ) {
                                         Text(
                                             text = state.artistName,
@@ -231,7 +248,9 @@ fun SpotifyAlbumDetailScreen(
                     // Meta info
                     item(key = "meta") {
                         Column(
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp, vertical = 4.dp)
+                                .animateItem(),
                         ) {
                             Text(
                                 text = pluralStringResource(R.plurals.track_count, state.tracks.size, state.tracks.size),
@@ -253,7 +272,8 @@ fun SpotifyAlbumDetailScreen(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .animateItem(),
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
@@ -273,6 +293,7 @@ fun SpotifyAlbumDetailScreen(
                                     },
                                     modifier = Modifier.weight(1f),
                                     enabled = state.tracks.isNotEmpty(),
+                                    shapes = ButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_play_arrow),
@@ -291,6 +312,7 @@ fun SpotifyAlbumDetailScreen(
                                         }
                                     },
                                     enabled = state.tracks.isNotEmpty(),
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_shuffle),
@@ -331,6 +353,7 @@ fun SpotifyAlbumDetailScreen(
                                         }
                                     },
                                     enabled = !state.isDownloading,
+                                    shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     if (state.isDownloading) {
                                         CircularWavyProgressIndicator(
@@ -357,10 +380,12 @@ fun SpotifyAlbumDetailScreen(
                             Text(
                                 text = stringResource(R.string.detail_tracks_label),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
-                                modifier = Modifier.padding(
-                                    start = 20.dp, end = 20.dp,
-                                    top = 16.dp, bottom = 4.dp,
-                                ),
+                                modifier = Modifier
+                                    .padding(
+                                        start = 20.dp, end = 20.dp,
+                                        top = 16.dp, bottom = 4.dp,
+                                    )
+                                    .animateItem(),
                             )
                         }
 
@@ -419,12 +444,13 @@ fun SpotifyAlbumDetailScreen(
                         viewModel.deleteAllDownloads()
                         showDeleteDialog = false
                     },
+                    shapes = ButtonDefaults.shapes(),
                 ) {
                     Text(stringResource(R.string.common_action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = false }, shapes = ButtonDefaults.shapes()) {
                     Text(stringResource(R.string.common_action_cancel))
                 }
             },

@@ -95,9 +95,9 @@ class SpotifyExtractorWrapper @Inject constructor() {
                     type = SearchResultType.SPOTIFY_TRACK,
                     name = item.optString("name"),
                     url = item.optString("uri"),
-                    imageUrl = item.optString("imageUrl", null),
-                    artist = item.optString("artist", null),
-                    album = item.optString("album", null),
+                    imageUrl = item.optString("imageUrl").takeIf { it.isNotEmpty() },
+                    artist = item.optString("artist").takeIf { it.isNotEmpty() },
+                    album = item.optString("album").takeIf { it.isNotEmpty() },
                     genre = null,
                     releaseDate = null,
                 ))
@@ -111,11 +111,11 @@ class SpotifyExtractorWrapper @Inject constructor() {
                     type = SearchResultType.SPOTIFY_ALBUM,
                     name = item.optString("name"),
                     url = item.optString("uri"),
-                    imageUrl = item.optString("imageUrl", null),
-                    artist = item.optString("artist", null),
+                    imageUrl = item.optString("imageUrl").takeIf { it.isNotEmpty() },
+                    artist = item.optString("artist").takeIf { it.isNotEmpty() },
                     album = null,
                     genre = null,
-                    releaseDate = item.optString("releaseDate", null),
+                    releaseDate = item.optString("releaseDate").takeIf { it.isNotEmpty() },
                 ))
             }
         }
@@ -127,7 +127,7 @@ class SpotifyExtractorWrapper @Inject constructor() {
                     type = SearchResultType.SPOTIFY_ARTIST,
                     name = item.optString("name"),
                     url = item.optString("uri"),
-                    imageUrl = item.optString("imageUrl", null),
+                    imageUrl = item.optString("imageUrl").takeIf { it.isNotEmpty() },
                     artist = null,
                     album = null,
                     genre = null,
@@ -143,8 +143,8 @@ class SpotifyExtractorWrapper @Inject constructor() {
                     type = SearchResultType.SPOTIFY_PLAYLIST,
                     name = item.optString("name"),
                     url = item.optString("uri"),
-                    imageUrl = item.optString("imageUrl", null),
-                    artist = item.optString("owner", null),
+                    imageUrl = item.optString("imageUrl").takeIf { it.isNotEmpty() },
+                    artist = item.optString("owner").takeIf { it.isNotEmpty() },
                     album = null,
                     genre = null,
                     releaseDate = null,
@@ -188,7 +188,7 @@ class SpotifyExtractorWrapper @Inject constructor() {
             artist = json.optString("artist", "Unknown"),
             artistUri = json.optString("artistUri", ""),
             imageUrl = json.optString("imageUrl"),
-            releaseDate = json.optString("releaseDate", null),
+            releaseDate = json.optString("releaseDate").takeIf { it.isNotEmpty() },
         )
         return tracks to albumInfo
     }
@@ -204,8 +204,8 @@ class SpotifyExtractorWrapper @Inject constructor() {
                     name = item.optString("name"),
                     artist = json.optString("name"),
                     artistUri = json.optString("uri"),
-                    imageUrl = item.optString("imageUrl", null),
-                    releaseDate = item.optString("releaseDate", null),
+                    imageUrl = item.optString("imageUrl").takeIf { it.isNotEmpty() },
+                    releaseDate = item.optString("releaseDate").takeIf { it.isNotEmpty() },
                 ))
             }
         }

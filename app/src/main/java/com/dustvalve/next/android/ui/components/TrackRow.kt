@@ -18,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -143,7 +144,7 @@ fun TrackRow(
             {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (onFavoriteClick != null) {
-                        IconButton(onClick = onFavoriteClick) {
+                        IconButton(onClick = onFavoriteClick, shapes = IconButtonDefaults.shapes()) {
                             Icon(
                                 painter = painterResource(if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border),
                                 contentDescription = stringResource(if (track.isFavorite) R.string.player_cd_remove_from_favorites else R.string.player_cd_add_to_favorites),
@@ -157,6 +158,7 @@ fun TrackRow(
                             onClick = onDownloadClick,
                             enabled = !isDownloading,
                             modifier = Modifier.size(40.dp),
+                            shapes = IconButtonDefaults.shapes(),
                         ) {
                             if (isDownloading) {
                                 CircularWavyProgressIndicator(

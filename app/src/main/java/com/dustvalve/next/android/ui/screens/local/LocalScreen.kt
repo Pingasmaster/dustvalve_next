@@ -1,7 +1,6 @@
 package com.dustvalve.next.android.ui.screens.local
 
 import android.Manifest
-import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
@@ -51,6 +50,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -166,9 +166,12 @@ fun LocalScreen(
             },
             trailingIcon = {
                 if (textFieldState.text.isNotEmpty()) {
-                    IconButton(onClick = {
-                        textFieldState.setTextAndPlaceCursorAtEnd("")
-                    }) {
+                    IconButton(
+                        onClick = {
+                            textFieldState.setTextAndPlaceCursorAtEnd("")
+                        },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
                             contentDescription = stringResource(R.string.common_cd_clear),
@@ -252,12 +255,7 @@ fun LocalScreen(
                                 Button(
                                     onClick = {
                                         viewModel.enableLocalMusic()
-                                        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                            Manifest.permission.READ_MEDIA_AUDIO
-                                        } else {
-                                            Manifest.permission.READ_EXTERNAL_STORAGE
-                                        }
-                                        audioPermissionLauncher.launch(permission)
+                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
                                     },
                                     shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier
@@ -692,12 +690,13 @@ fun LocalScreen(
                             showDeleteTrackDialog = false
                             contextMenuTrack = null
                         },
+                        shapes = ButtonDefaults.shapes(),
                     ) {
                         Text(stringResource(R.string.common_action_delete), color = MaterialTheme.colorScheme.error)
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showDeleteTrackDialog = false }) {
+                    TextButton(onClick = { showDeleteTrackDialog = false }, shapes = ButtonDefaults.shapes()) {
                         Text(stringResource(R.string.common_action_cancel))
                     }
                 },
@@ -906,6 +905,7 @@ fun LocalScreen(
                     Surface(
                         shape = segmentedItemShape(index, availableArtists.size),
                         color = artistItemColor,
+                        modifier = Modifier.animateItem(),
                     ) {
                         ListItem(
                             headlineContent = { Text(artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -946,6 +946,7 @@ fun LocalScreen(
                     Surface(
                         shape = segmentedItemShape(index, availableAlbums.size),
                         color = albumItemColor,
+                        modifier = Modifier.animateItem(),
                     ) {
                         ListItem(
                             headlineContent = { Text(album, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -991,6 +992,7 @@ fun LocalScreen(
                     Surface(
                         shape = segmentedItemShape(index, availableFolders.size),
                         color = folderItemColor,
+                        modifier = Modifier.animateItem(),
                     ) {
                         ListItem(
                             headlineContent = { Text(displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },

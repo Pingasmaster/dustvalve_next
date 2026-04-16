@@ -32,7 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -41,6 +41,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -238,7 +239,7 @@ fun BandcampScreen(
                             color = Color.White.copy(alpha = 0.7f),
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.retryCategory() }) {
+                        Button(onClick = { viewModel.retryCategory() }, shapes = ButtonDefaults.shapes()) {
                             Text(stringResource(R.string.common_action_retry))
                         }
                     }
@@ -269,9 +270,12 @@ fun BandcampScreen(
             },
             trailingIcon = {
                 if (textFieldState.text.isNotEmpty()) {
-                    IconButton(onClick = {
-                        textFieldState.setTextAndPlaceCursorAtEnd("")
-                    }) {
+                    IconButton(
+                        onClick = {
+                            textFieldState.setTextAndPlaceCursorAtEnd("")
+                        },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_clear),
                             contentDescription = stringResource(R.string.common_cd_clear),
@@ -563,10 +567,11 @@ fun BandcampScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp),
+                                                .padding(16.dp)
+                                                .animateItem(),
                                             contentAlignment = Alignment.Center,
                                         ) {
-                                            CircularWavyProgressIndicator(modifier = Modifier.size(24.dp))
+                                            ContainedLoadingIndicator()
                                         }
                                     }
                                 }
@@ -715,7 +720,8 @@ private fun CategorySheetContent(
                     preferredItemWidth = 200.dp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .animateItem(),
                     itemSpacing = 8.dp,
                 ) { index ->
                     val album = carouselAlbums[index]
@@ -735,10 +741,12 @@ private fun CategorySheetContent(
                     text = stringResource(R.string.bandcamp_more),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White.copy(alpha = 0.8f),
-                    modifier = Modifier.padding(
-                        start = 20.dp, end = 20.dp,
-                        top = 16.dp, bottom = 8.dp,
-                    ),
+                    modifier = Modifier
+                        .padding(
+                            start = 20.dp, end = 20.dp,
+                            top = 16.dp, bottom = 8.dp,
+                        )
+                        .animateItem(),
                 )
             }
         }

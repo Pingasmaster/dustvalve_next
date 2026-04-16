@@ -25,7 +25,7 @@ sealed interface NavDestination {
 }
 
 enum class BottomNavItem(
-    @StringRes val labelRes: Int,
+    @param:StringRes val labelRes: Int,
     val destination: NavDestination,
     val provider: MusicProvider? = null,
 ) {
