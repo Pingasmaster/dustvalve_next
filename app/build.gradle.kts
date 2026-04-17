@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 156
-        versionName = "0.3.6"
+        versionCode = 157
+        versionName = "0.3.7"
     }
 
     buildTypes {
@@ -52,6 +52,11 @@ android {
             // referencing javax.script, which is not available on Android.
             excludes += "META-INF/services/javax.script.ScriptEngineFactory"
         }
+    }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+        unitTests.isReturnDefaultValues = true
     }
 }
 
@@ -140,4 +145,17 @@ dependencies {
 
     // NewPipe Extractor (YouTube scraping)
     implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.1")
+
+    // --- Unit test dependencies ---
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("com.google.truth:truth:1.4.4")
+    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("androidx.room:room-testing:2.8.4")
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
+    testImplementation("com.squareup.okhttp3:okhttp-tls:5.3.2")
+    testImplementation("app.cash.turbine:turbine:1.2.0")
 }

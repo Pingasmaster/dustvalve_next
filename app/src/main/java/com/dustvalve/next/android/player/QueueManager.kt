@@ -57,11 +57,13 @@ class QueueManager @Inject constructor() {
     }
 
     fun setQueue(tracks: List<Track>, startIndex: Int = 0) {
+        originalQueue = null
         val newIndex = if (tracks.isNotEmpty()) startIndex.coerceIn(0, tracks.lastIndex) else -1
         _state.value = QueueState(tracks = tracks, currentIndex = newIndex)
     }
 
     fun addToQueue(track: Track) {
+        originalQueue = null
         _state.update { s ->
             val newTracks = s.tracks + track
             val newIndex = if (s.currentIndex == -1 && newTracks.isNotEmpty()) 0 else s.currentIndex
@@ -70,6 +72,7 @@ class QueueManager @Inject constructor() {
     }
 
     fun playNext(track: Track) {
+        originalQueue = null
         _state.update { s ->
             if (s.tracks.isEmpty() || s.currentIndex < 0) {
                 QueueState(tracks = listOf(track), currentIndex = 0)
@@ -84,6 +87,10 @@ class QueueManager @Inject constructor() {
     fun removeFromQueue(index: Int) {
         _state.update { s ->
             if (index !in s.tracks.indices) return@update s
+
+            // Clear the pre-shuffle snapshot: once the queue diverges from it,
+            // restoring that order would discard the user's edits.
+            originalQueue = null
 
             val ci = s.currentIndex
             val newTracks = s.tracks.toMutableList().apply { removeAt(index) }
@@ -102,6 +109,10 @@ class QueueManager @Inject constructor() {
     fun moveItem(from: Int, to: Int) {
         _state.update { s ->
             if (from !in s.tracks.indices || to !in s.tracks.indices) return@update s
+
+            // Same rationale as removeFromQueue: the shuffled order has been edited,
+            // so the pre-shuffle snapshot is no longer the right thing to restore.
+            originalQueue = null
 
             val ci = s.currentIndex
             val newTracks = s.tracks.toMutableList()
