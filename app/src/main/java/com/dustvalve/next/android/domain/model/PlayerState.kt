@@ -1,5 +1,8 @@
 package com.dustvalve.next.android.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class PlayerState(
     val currentTrack: Track? = null,
     val queue: List<Track> = emptyList(),

@@ -142,7 +142,15 @@ fun ArtistDetailScreen(
                         overflow = TextOverflow.Ellipsis,
                     )
                 },
-                subtitle = null,
+                subtitle = state.artist?.location?.takeIf { it.isNotBlank() }?.let { location ->
+                    {
+                        Text(
+                            text = location,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(

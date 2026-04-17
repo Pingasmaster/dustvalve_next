@@ -1,5 +1,8 @@
 package com.dustvalve.next.android.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 sealed interface LibraryItem {
     val id: String
     val name: String

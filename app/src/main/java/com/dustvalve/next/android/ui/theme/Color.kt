@@ -1,8 +1,8 @@
 package com.dustvalve.next.android.ui.theme
 
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.ui.graphics.Color
 
 // Seed color from Dustvalve branding
@@ -95,7 +95,9 @@ val LightColorScheme = expressiveLightColorScheme().copy(
     onErrorContainer = md_theme_light_onErrorContainer,
 )
 
-// Dark scheme with teal-tinted surfaces
+// Dark scheme: M3 1.5.0-alpha17 exposes expressiveLightColorScheme() only; no dark equivalent yet.
+// Stick with darkColorScheme() (which already populates M3 surface-container roles) until the
+// expressive dark variant ships.
 val DarkColorScheme = darkColorScheme(
     primary = md_theme_dark_primary,
     onPrimary = md_theme_dark_onPrimary,

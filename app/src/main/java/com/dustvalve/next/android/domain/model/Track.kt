@@ -1,5 +1,8 @@
 package com.dustvalve.next.android.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class Track(
     val id: String,
     val albumId: String,
