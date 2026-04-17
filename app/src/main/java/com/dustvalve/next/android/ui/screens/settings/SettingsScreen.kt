@@ -26,6 +26,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,15 +40,13 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -1098,17 +1098,21 @@ fun SettingsScreen(
                         )
                         val selectedIndex = themeOptions.indexOf(state.themeMode).coerceAtLeast(0)
 
-                        SingleChoiceSegmentedButtonRow(
+                        ButtonGroup(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             themeOptions.forEachIndexed { index, mode ->
-                                SegmentedButton(
-                                    selected = index == selectedIndex,
-                                    onClick = { viewModel.setThemeMode(mode) },
-                                    shape = SegmentedButtonDefaults.itemShape(
-                                        index = index,
-                                        count = themeOptions.size,
-                                    ),
+                                ToggleButton(
+                                    checked = index == selectedIndex,
+                                    onCheckedChange = { isChecked ->
+                                        if (isChecked) viewModel.setThemeMode(mode)
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shapes = when (index) {
+                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                        themeOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                    },
                                 ) {
                                     Text(themeLabels[index])
                                 }
