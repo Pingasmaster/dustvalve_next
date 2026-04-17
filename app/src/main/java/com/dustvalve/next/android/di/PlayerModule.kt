@@ -208,7 +208,7 @@ object PlayerModule {
         return mediaSession
     }
 
-    @Suppress("deprecation")
+    @OptIn(UnstableApi::class)
     private fun updateFavoriteLayout(session: MediaSession, isFavorite: Boolean) {
         val iconType = if (isFavorite) {
             CommandButton.ICON_HEART_FILLED
@@ -218,7 +218,8 @@ object PlayerModule {
         val favoriteButton = CommandButton.Builder(iconType)
             .setSessionCommand(MediaSessionConstants.COMMAND_TOGGLE_FAVORITE)
             .setDisplayName(if (isFavorite) "Remove from favorites" else "Add to favorites")
+            .setSlots(CommandButton.SLOT_CENTRAL)
             .build()
-        session.setCustomLayout(listOf(favoriteButton))
+        session.setMediaButtonPreferences(listOf(favoriteButton))
     }
 }

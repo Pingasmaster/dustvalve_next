@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExpandedFullScreenSearchBar
@@ -462,18 +463,15 @@ fun SpotifyScreen(
                                     }
                                 }
 
-                                // Loading indicator at bottom
+                                // Pagination footer (M3E wavy linear indicator)
                                 if (state.isLoading && state.results.isNotEmpty()) {
                                     item {
-                                        Box(
+                                        LinearWavyProgressIndicator(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .padding(horizontal = 16.dp, vertical = 12.dp)
                                                 .animateItem(),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            ContainedLoadingIndicator()
-                                        }
+                                        )
                                     }
                                 }
                             }

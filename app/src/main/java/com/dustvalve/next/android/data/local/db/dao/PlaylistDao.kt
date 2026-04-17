@@ -156,11 +156,9 @@ interface PlaylistDao {
 
         if (fromPosition < toPosition) {
             // Moving down: decrement positions of tracks between from and to
-            @Suppress("SqlSourceToSinkFlow")
             shiftTrackPositionsRange(playlistId, fromPosition + 1, toPosition, -1)
         } else {
             // Moving up: increment positions of tracks between to and from
-            @Suppress("SqlSourceToSinkFlow")
             shiftTrackPositionsRange(playlistId, toPosition, fromPosition - 1, 1)
         }
 

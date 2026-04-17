@@ -127,8 +127,7 @@ import com.dustvalve.next.android.domain.model.RepeatMode
 import androidx.compose.foundation.background
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
-import com.dustvalve.next.android.ui.components.PlaylistEditSheet
-import com.dustvalve.next.android.ui.components.PlaylistListItem
+import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import kotlinx.coroutines.delay
@@ -177,7 +176,6 @@ fun FullPlayer(
     // Dialog and sheet state
     var showDeleteDownloadDialog by remember { mutableStateOf(false) }
     var showPlaylistSheet by remember { mutableStateOf(false) }
-    var showCreatePlaylistSheet by remember { mutableStateOf(false) }
     var showDebugSheet by remember { mutableStateOf(false) }
     var showVolumeSheet by remember { mutableStateOf(false) }
     var showQueueSheet by remember { mutableStateOf(false) }
@@ -185,7 +183,6 @@ fun FullPlayer(
     val albumSwipeOffsetX = remember { Animatable(0f) }
     var upNextContextTrack by remember { mutableStateOf<Pair<Track, Int>?>(null) }
     var showUpNextPlaylistSheet by remember { mutableStateOf(false) }
-    var showUpNextCreatePlaylistSheet by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
 
     // Full-screen volume control sheet
@@ -1212,108 +1209,19 @@ fun FullPlayer(
         }
     }
 
-    // Add to playlist bottom sheet
+    // Add to playlist bottom sheet (shared component; handles create flow internally)
     if (showPlaylistSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showPlaylistSheet = false },
-        ) {
-            val userPlaylists = state.playlists.filter { !it.isSystem }
-            Box {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.common_add_to_playlist),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                    if (userPlaylists.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(horizontal = 32.dp),
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(96.dp)
-                                        .clip(AppShapes.EmptyStateIcon)
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_queue_music),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = stringResource(R.string.player_no_playlists),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(R.string.player_create_to_start),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                    } else {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        ) {
-                            userPlaylists.forEachIndexed { index, playlist ->
-                                Surface(
-                                    shape = segmentedItemShape(index, userPlaylists.size),
-                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                ) {
-                                    PlaylistListItem(
-                                        playlist = playlist,
-                                        onClick = {
-                                            showPlaylistSheet = false
-                                            playerViewModel.addToPlaylist(playlist.id)
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(72.dp))
-                }
-                FloatingActionButton(
-                    onClick = { showCreatePlaylistSheet = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 16.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add),
-                        contentDescription = stringResource(R.string.common_cd_create_playlist),
-                    )
-                }
-            }
-        }
-    }
-
-    // Create playlist sheet (from add-to-playlist context)
-    if (showCreatePlaylistSheet) {
-        PlaylistEditSheet(
-            onDismiss = { showCreatePlaylistSheet = false },
-            onConfirm = { name, shapeKey, iconUrl ->
-                showCreatePlaylistSheet = false
+        AddToPlaylistSheet(
+            playlists = state.playlists,
+            onDismiss = { showPlaylistSheet = false },
+            onPlaylistSelected = { playlistId ->
+                showPlaylistSheet = false
+                playerViewModel.addToPlaylist(playlistId)
+            },
+            onCreatePlaylist = { name, shapeKey, iconUrl ->
                 showPlaylistSheet = false
                 playerViewModel.createPlaylistAndAddTrack(name, shapeKey, iconUrl)
             },
-            isCreate = true,
         )
     }
 
@@ -1391,112 +1299,23 @@ fun FullPlayer(
 
     // Up Next — add to playlist sheet
     if (showUpNextPlaylistSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showUpNextPlaylistSheet = false },
-        ) {
-            val userPlaylists = state.playlists.filter { !it.isSystem }
-            Box {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = stringResource(R.string.common_add_to_playlist),
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                    if (userPlaylists.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 32.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.padding(horizontal = 32.dp),
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(96.dp)
-                                        .clip(AppShapes.EmptyStateIcon)
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_queue_music),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = stringResource(R.string.player_no_playlists),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = stringResource(R.string.player_create_to_start),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                    } else {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(2.dp),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        ) {
-                            userPlaylists.forEachIndexed { index, playlist ->
-                                Surface(
-                                    shape = segmentedItemShape(index, userPlaylists.size),
-                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
-                                ) {
-                                    PlaylistListItem(
-                                        playlist = playlist,
-                                        onClick = {
-                                            showUpNextPlaylistSheet = false
-                                            upNextContextTrack?.let { (ctxTrack, _) ->
-                                                playerViewModel.addTrackToPlaylist(playlist.id, ctxTrack.id)
-                                            }
-                                            upNextContextTrack = null
-                                        },
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(72.dp))
+        AddToPlaylistSheet(
+            playlists = state.playlists,
+            onDismiss = { showUpNextPlaylistSheet = false },
+            onPlaylistSelected = { playlistId ->
+                showUpNextPlaylistSheet = false
+                upNextContextTrack?.let { (ctxTrack, _) ->
+                    playerViewModel.addTrackToPlaylist(playlistId, ctxTrack.id)
                 }
-                FloatingActionButton(
-                    onClick = { showUpNextCreatePlaylistSheet = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 16.dp),
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add),
-                        contentDescription = stringResource(R.string.common_cd_create_playlist),
-                    )
-                }
-            }
-        }
-    }
-
-    // Up Next — create playlist sheet
-    if (showUpNextCreatePlaylistSheet) {
-        PlaylistEditSheet(
-            onDismiss = { showUpNextCreatePlaylistSheet = false },
-            onConfirm = { name, shapeKey, iconUrl ->
-                showUpNextCreatePlaylistSheet = false
+                upNextContextTrack = null
+            },
+            onCreatePlaylist = { name, shapeKey, iconUrl ->
                 showUpNextPlaylistSheet = false
                 upNextContextTrack?.let { (ctxTrack, _) ->
                     playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, ctxTrack.id)
                 }
                 upNextContextTrack = null
             },
-            isCreate = true,
         )
     }
 
