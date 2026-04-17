@@ -16,8 +16,9 @@ GRADLE_APK="app/build/outputs/apk/release/app-release.apk"
 ROOT_APK="app-release.apk"
 BUILD_GRADLE="app/build.gradle.kts"
 
-# Clean + Build
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew clean lint assembleDebug assembleRelease
+# Clean + Test + Build
+# Tests run first so a test failure aborts the pipeline before lint/assemble.
+JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew clean testDebugUnitTest lint assembleDebug assembleRelease
 
 # Replace root APK with fresh build
 rm -f "$ROOT_APK"

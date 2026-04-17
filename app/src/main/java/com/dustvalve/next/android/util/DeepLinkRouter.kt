@@ -24,7 +24,10 @@ object DeepLinkRouter {
 
     private val VIDEO_ID_REGEX = Regex("[?&]v=([a-zA-Z0-9_-]{11})")
     private val SHORTS_PATH_REGEX = Regex("^/shorts/([a-zA-Z0-9_-]{11})")
-    private val PLAYLIST_ID_REGEX = Regex("[?&]list=([a-zA-Z0-9_-]+)")
+    // Matches "list=..." at the start of a query string OR after a "&".
+    // Previously anchored with "[?&]list=" and then applied to uri.rawQuery, which has no
+    // leading "?", so single-param URLs like "/playlist?list=PLxyz" never matched.
+    private val PLAYLIST_ID_REGEX = Regex("(?:^|&)list=([a-zA-Z0-9_-]+)")
 
     fun route(url: String): DeepLinkAction? {
         val uri = try { URI(url) } catch (_: Exception) { return null }
