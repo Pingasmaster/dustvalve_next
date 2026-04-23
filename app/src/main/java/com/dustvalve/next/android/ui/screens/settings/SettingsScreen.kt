@@ -1010,7 +1010,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                                 Text(
                                     text = stringResource(R.string.settings_auto_download_future),
                                     style = MaterialTheme.typography.titleSmall,
@@ -1025,6 +1025,37 @@ fun SettingsScreen(
                                 checked = state.autoDownloadFutureContent,
                                 onCheckedChange = { viewModel.setAutoDownloadFutureContent(it) },
                             )
+                        }
+
+                        // Sub-toggle: Auto-download favorites — only shown when
+                        // the parent "future content" toggle is on.
+                        AnimatedVisibility(
+                            visible = state.autoDownloadFutureContent,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 12.dp, start = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_auto_download_favorites),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_auto_download_favorites_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.autoDownloadFavorites,
+                                    onCheckedChange = { viewModel.setAutoDownloadFavorites(it) },
+                                )
+                            }
                         }
                     }
                 }
@@ -1283,24 +1314,65 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.settings_wavy_progress),
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                                Text(
-                                    text = stringResource(R.string.settings_wavy_progress_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = stringResource(R.string.settings_progress_bar_style),
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Connected ButtonGroup [Wavy | Linear].
+                            val styleOptions = listOf("wavy", "linear")
+                            val styleLabels = listOf(
+                                stringResource(R.string.settings_progress_bar_style_wavy),
+                                stringResource(R.string.settings_progress_bar_style_linear),
+                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                styleOptions.forEachIndexed { i, opt ->
+                                    val shapes = when (i) {
+                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                        styleOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                    }
+                                    ToggleButton(
+                                        checked = state.progressBarStyle == opt,
+                                        onCheckedChange = { if (it) viewModel.setProgressBarStyle(opt) },
+                                        shapes = shapes,
+                                        modifier = Modifier.weight(1f),
+                                    ) {
+                                        Text(styleLabels[i])
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Size slider — discrete 4..32 dp in 4 dp steps.
+                            val sizeSteps = listOf(4, 8, 12, 16, 20, 24, 28, 32)
+                            var sizeIndex by remember(state.progressBarSizeDp) {
+                                mutableIntStateOf(
+                                    sizeSteps.indexOf(state.progressBarSizeDp).coerceAtLeast(0)
                                 )
                             }
-                            Switch(
-                                checked = state.wavyProgressBar,
-                                onCheckedChange = { viewModel.setWavyProgressBar(it) },
+                            Text(
+                                text = stringResource(
+                                    R.string.settings_progress_bar_size,
+                                    sizeSteps[sizeIndex],
+                                ),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Slider(
+                                value = sizeIndex.toFloat(),
+                                onValueChange = { sizeIndex = it.toInt() },
+                                onValueChangeFinished = {
+                                    viewModel.setProgressBarSizeDp(sizeSteps[sizeIndex])
+                                },
+                                valueRange = 0f..(sizeSteps.lastIndex).toFloat(),
+                                steps = sizeSteps.size - 2,
                             )
                         }
                     }
@@ -1325,7 +1397,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                                 Text(
                                     text = stringResource(R.string.settings_volume_slider),
                                     style = MaterialTheme.typography.titleSmall,
@@ -1403,7 +1475,7 @@ fun SettingsScreen(
                                     .padding(top = 12.dp, start = 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                                     Text(
                                         text = stringResource(R.string.settings_keep_screen_only_playing),
                                         style = MaterialTheme.typography.bodyMedium,

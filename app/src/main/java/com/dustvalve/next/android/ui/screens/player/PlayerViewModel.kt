@@ -57,7 +57,8 @@ data class PlayerUiState(
     val isSnackbarError: Boolean = false,
     val currentPlaybackFormat: AudioFormat? = null,
     val currentSourcePath: String? = null,
-    val wavyProgressBar: Boolean = true,
+    val progressBarStyle: String = "wavy",
+    val progressBarSizeDp: Int = 24,
     val userPlaylistTrackIds: Set<String> = emptySet(),
     val volumeLevel: Float = 1f,
     val maxVolumeLevel: Int = 15,
@@ -428,8 +429,13 @@ class PlayerViewModel @Inject constructor(
             userPlaylistTrackIds = extra.userPlaylistTrackIds,
             isLoadingTrack = extra.isLoadingTrack,
         )
-    }.combine(settingsDataStore.wavyProgressBar) { state, wavy ->
-        state.copy(wavyProgressBar = wavy)
+    }.combine(
+        combine(
+            settingsDataStore.progressBarStyle,
+            settingsDataStore.progressBarSizeDp,
+        ) { style, sizeDp -> style to sizeDp }
+    ) { state, (style, sizeDp) ->
+        state.copy(progressBarStyle = style, progressBarSizeDp = sizeDp)
     }.combine(
         combine(
             settingsDataStore.showInlineVolumeSlider,

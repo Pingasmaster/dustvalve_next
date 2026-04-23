@@ -153,6 +153,54 @@ class DustvalveArtistScraperTest {
         assertThat(bio).doesNotContain("...")
     }
 
+    @Test fun `scrapeArtist sends a desktop User-Agent to bandcamp (not the shared mobile UA)`() = runTest {
+        // Bandcamp serves a heavily-stripped HTML to mobile UAs (no
+        // band-name-location / band-photo / bio markup) — see the
+        // `artist_taylor_moore_mobile_layout.html` fixture for proof. The
+        // shared OkHttpClient injected app-wide carries a mobile UA via
+        // NetworkModule's userAgentInterceptor, so the artist scraper
+        // MUST override it. Assert the override survives the interceptor
+        // chain by inspecting the request MockWebServer received.
+        setup.server.enqueue(MockResponse().setBody("<html><body></body></html>"))
+        scraper.scrapeArtist(setup.url(""))
+        val recorded = setup.server.takeRequest()
+        val ua = recorded.headers["User-Agent"] ?: ""
+        // A "Mobile" UA fragment is the giveaway — Bandcamp gates the stripped
+        // layout on its presence. We send a desktop Chrome string instead.
+        assertThat(ua).doesNotContain("Mobile")
+        assertThat(ua).contains("Chrome")
+    }
+
+    @Test fun `scrapes single-album artist (Taylor Moore Music) without dropping name+photo+bio`() = runTest {
+        // Captured directly from https://taylormooremusic.bandcamp.com/ — that
+        // root URL redirects to the artist's only album page, and our /music
+        // re-fetch then redirects to the same album page. The rendered HTML
+        // still carries band-name-location, band-photo, and the bio block —
+        // so the scraper must extract them even when the album list is empty
+        // (no `.music-grid-item` because the discography is the very page
+        // we're parsing).
+        val classLoader = checkNotNull(this::class.java.classLoader)
+        val html = checkNotNull(
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html")
+        ).bufferedReader().use { it.readText() }
+        setup.server.enqueue(MockResponse().setBody(html))
+        // Our scraper might trigger the "/music" re-fetch on this URL because
+        // its path matches /album/... — enqueue the same fixture again so the
+        // re-fetch succeeds.
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val artist = scraper.scrapeArtist(setup.url("/album/single-thing"))
+
+        assertThat(artist.name).isEqualTo("Taylor Moore")
+        assertThat(artist.location).isEqualTo("Brooklyn, New York")
+        assertThat(artist.imageUrl).isEqualTo("https://f4.bcbits.com/img/0044448040_21.jpg")
+        assertThat(artist.bio).isNotNull()
+        assertThat(artist.bio!!).isNotEmpty()
+        // No music-grid in the page — the empty-state UI is acceptable, but
+        // the band metadata must still be there.
+        assertThat(artist.albums).isEmpty()
+    }
+
     @Test fun `stable id deterministic`() = runTest {
         val html = """<html><body>
             <p id="band-name-location"><span class="title">N</span></p>

@@ -26,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
@@ -279,20 +280,36 @@ fun MiniPlayer(
                     }
                 }
 
+                // Mini-player uses the same wavy/linear style preference as the full
+                // player but stays slim — the user-configurable height applies only
+                // to the seek bar in the full player.
+                val miniIsWavy = state.progressBarStyle == "wavy"
+                val miniMod = Modifier.fillMaxWidth().height(2.dp)
                 if (state.isLoadingTrack) {
+                    if (miniIsWavy) {
+                        LinearWavyProgressIndicator(
+                            modifier = miniMod,
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    } else {
+                        LinearProgressIndicator(
+                            modifier = miniMod,
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
+                } else if (miniIsWavy) {
                     LinearWavyProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp),
+                        progress = { animatedProgress },
+                        modifier = miniMod,
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )
                 } else {
-                    LinearWavyProgressIndicator(
+                    LinearProgressIndicator(
                         progress = { animatedProgress },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(2.dp),
+                        modifier = miniMod,
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                     )

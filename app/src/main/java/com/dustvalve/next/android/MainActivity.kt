@@ -360,6 +360,12 @@ private fun MainContent(accountRepository: AccountRepository, spotifyRepository:
                             else -> navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
                         }
                     },
+                    onAlbumClick = { track ->
+                        if (track.albumUrl.isNotBlank()) {
+                            navViewModel.collapsePlayer()
+                            navViewModel.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
+                        }
+                    },
                 )
             }
         }

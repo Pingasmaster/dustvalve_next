@@ -19,6 +19,12 @@ data class Track(
     val folderUri: String = "",
     val dateAdded: Long = 0,
     val year: Int = 0,
+    /**
+     * Album page URL for navigation (used by the player's Album button).
+     * Only populated for tracks that came from an album scrape (Bandcamp);
+     * empty for streaming sources where there is no canonical album URL.
+     */
+    val albumUrl: String = "",
 ) {
     val isLocal: Boolean get() = source == TrackSource.LOCAL
 }

@@ -41,7 +41,9 @@ class SettingsDataStore @Inject constructor(
         val SEAMLESS_QUALITY_UPGRADE = booleanPreferencesKey("seamless_quality_upgrade")
         val OLED_BLACK = booleanPreferencesKey("oled_black")
         val ALBUM_ART_THEME = booleanPreferencesKey("album_art_theme")
-        val WAVY_PROGRESS_BAR = booleanPreferencesKey("wavy_progress_bar")
+        val PROGRESS_BAR_STYLE = stringPreferencesKey("progress_bar_style")
+        val PROGRESS_BAR_SIZE_DP = androidx.datastore.preferences.core.intPreferencesKey("progress_bar_size_dp")
+        val AUTO_DOWNLOAD_FAVORITES = booleanPreferencesKey("auto_download_favorites")
         val LOCAL_MUSIC_ENABLED = booleanPreferencesKey("local_music_enabled")
         val LOCAL_MUSIC_FOLDER_URIS = stringPreferencesKey("local_music_folder_uris")
         val LOCAL_MUSIC_USE_MEDIASTORE = booleanPreferencesKey("local_music_use_mediastore")
@@ -125,7 +127,7 @@ class SettingsDataStore @Inject constructor(
     }
 
     val seamlessQualityUpgrade: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.SEAMLESS_QUALITY_UPGRADE] ?: true
+        prefs[Keys.SEAMLESS_QUALITY_UPGRADE] ?: false
     }
 
     val oledBlack: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -136,8 +138,23 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.ALBUM_ART_THEME] ?: false
     }
 
-    val wavyProgressBar: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.WAVY_PROGRESS_BAR] ?: true
+    /** "wavy" or "linear". Replaces the legacy boolean wavyProgressBar. */
+    val progressBarStyle: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.PROGRESS_BAR_STYLE] ?: "wavy"
+    }
+
+    /** Stroke height of the player progress bar in dp; default 24. */
+    val progressBarSizeDp: Flow<Int> = context.dataStore.data.map { prefs ->
+        prefs[Keys.PROGRESS_BAR_SIZE_DP] ?: 24
+    }
+
+    /**
+     * Sub-toggle of [autoDownloadFutureContent]: when on, every favorited
+     * track is downloaded in the background and the Favorites playlist
+     * hides its manual Download button (no point — it'd be redundant).
+     */
+    val autoDownloadFavorites: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.AUTO_DOWNLOAD_FAVORITES] ?: false
     }
 
     suspend fun setThemeMode(mode: String) {
@@ -270,10 +287,16 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun setWavyProgressBar(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.WAVY_PROGRESS_BAR] = enabled
-        }
+    suspend fun setProgressBarStyle(style: String) {
+        context.dataStore.edit { prefs -> prefs[Keys.PROGRESS_BAR_STYLE] = style }
+    }
+
+    suspend fun setProgressBarSizeDp(sizeDp: Int) {
+        context.dataStore.edit { prefs -> prefs[Keys.PROGRESS_BAR_SIZE_DP] = sizeDp }
+    }
+
+    suspend fun setAutoDownloadFavorites(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.AUTO_DOWNLOAD_FAVORITES] = enabled }
     }
 
     suspend fun getDownloadFormatSync(): String {
@@ -285,7 +308,7 @@ class SettingsDataStore @Inject constructor(
     }
 
     suspend fun getSeamlessQualityUpgradeSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.SEAMLESS_QUALITY_UPGRADE) ?: true
+        return context.dataStore.data.firstOrNull()?.get(Keys.SEAMLESS_QUALITY_UPGRADE) ?: false
     }
 
     suspend fun getSaveDataOnMeteredSync(): Boolean {

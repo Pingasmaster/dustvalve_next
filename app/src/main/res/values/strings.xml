@@ -10,7 +10,6 @@
     <string name="common_action_save">Save</string>
     <string name="common_action_create">Create</string>
     <string name="common_action_remove">Remove</string>
-    <string name="common_action_clear">Clear</string>
     <string name="common_action_enable">Enable</string>
     <string name="common_action_disconnect">Disconnect</string>
     <string name="common_play_all">Play All</string>
@@ -173,7 +172,7 @@
     <string name="settings_progressive_download">Progressive download</string>
     <string name="settings_progressive_download_desc">Stream preview quality, then seamlessly upgrade to full quality</string>
     <string name="settings_seamless_upgrade">Seamless quality upgrade</string>
-    <string name="settings_seamless_upgrade_desc">Automatically switch to higher quality audio while playing</string>
+    <string name="settings_seamless_upgrade_desc">Stream first, download in the background, then swap in. May cause a single brief stutter the moment the swap happens.</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
@@ -184,8 +183,14 @@
     <string name="settings_album_art_colors_desc">Theme the app using colors from the playing track\'s album art</string>
     <string name="settings_oled_black">OLED Black</string>
     <string name="settings_oled_black_desc">Use pure black backgrounds for OLED screens</string>
-    <string name="settings_wavy_progress">Wavy progress bar</string>
-    <string name="settings_wavy_progress_desc">Animated wavy seek bar in the music player</string>
+    <string name="settings_progress_bar_style">Player progress bar</string>
+    <string name="settings_progress_bar_style_wavy">Wavy</string>
+    <string name="settings_progress_bar_style_linear">Linear</string>
+    <string name="settings_progress_bar_size">Bar size: %1$d dp</string>
+    <string name="settings_auto_download_favorites">Auto-download favorites</string>
+    <string name="settings_auto_download_favorites_desc">Also download every favorited track in the background</string>
+    <string name="player_cd_open_artist">Open artist page</string>
+    <string name="player_cd_open_album">Open album page</string>
     <string name="settings_volume_slider">Volume slider</string>
     <string name="settings_volume_slider_desc">Show a volume slider next to album art in the music player</string>
     <string name="settings_volume_button">Volume button</string>
@@ -351,8 +356,6 @@
     <string name="detail_show_more">Show more</string>
     <string name="detail_show_less">Show less</string>
     <string name="detail_buy_on_bandcamp">Buy on Bandcamp</string>
-    <string name="detail_buy_more_options">More buy options</string>
-    <string name="detail_send_as_gift">Send as a gift</string>
     <string name="detail_cd_open_artist">Open artist page</string>
     <string name="detail_tags">Tags</string>
     <string name="detail_top_tracks">Top Tracks</string>
@@ -406,15 +409,6 @@
     <string name="duration_under_3">Under 3 min</string>
     <string name="duration_3_to_5">3–5 min</string>
     <string name="duration_over_5">Over 5 min</string>
-
-    <!-- Update dialog -->
-    <string name="update_title">Update available</string>
-    <string name="update_version_available">Version %1$s is available.</string>
-    <string name="update_download_percent">%1$d%%</string>
-    <string name="update_install">Install</string>
-    <string name="update_download">Download</string>
-    <string name="update_later">Later</string>
-    <string name="update_not_now">Not now</string>
 
     <!-- Storage indicator -->
     <string name="storage_info">Downloads: %1$s, Cache: %2$s, Free: %3$s</string>

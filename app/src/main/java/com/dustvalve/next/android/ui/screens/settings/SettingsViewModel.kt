@@ -49,7 +49,9 @@ data class SettingsUiState(
     val seamlessQualityUpgrade: Boolean = true,
     val oledBlack: Boolean = false,
     val albumArtTheme: Boolean = false,
-    val wavyProgressBar: Boolean = true,
+    val progressBarStyle: String = "wavy",
+    val progressBarSizeDp: Int = 24,
+    val autoDownloadFavorites: Boolean = false,
     val localMusicEnabled: Boolean = false,
     val localMusicFolderUris: List<String> = emptyList(),
     val localMusicUseMediaStore: Boolean = true,
@@ -128,7 +130,7 @@ class SettingsViewModel @Inject constructor(
         collectSeamlessQualityUpgrade()
         collectOledBlack()
         collectAlbumArtTheme()
-        collectWavyProgressBar()
+        collectProgressBar()
         collectLocalMusicEnabled()
         collectLocalMusicFolderUris()
         collectLocalMusicUseMediaStore()
@@ -184,13 +186,24 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setWavyProgressBar(enabled: Boolean) {
+    fun setProgressBarStyle(style: String) {
         viewModelScope.launch {
-            try {
-                settingsDataStore.setWavyProgressBar(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
+            try { settingsDataStore.setProgressBarStyle(style) }
+            catch (e: Exception) { if (e is CancellationException) throw e }
+        }
+    }
+
+    fun setProgressBarSizeDp(sizeDp: Int) {
+        viewModelScope.launch {
+            try { settingsDataStore.setProgressBarSizeDp(sizeDp) }
+            catch (e: Exception) { if (e is CancellationException) throw e }
+        }
+    }
+
+    fun setAutoDownloadFavorites(enabled: Boolean) {
+        viewModelScope.launch {
+            try { settingsDataStore.setAutoDownloadFavorites(enabled) }
+            catch (e: Exception) { if (e is CancellationException) throw e }
         }
     }
 
@@ -487,13 +500,21 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun collectWavyProgressBar() {
+    private fun collectProgressBar() {
         viewModelScope.launch {
-            settingsDataStore.wavyProgressBar
-                .catch { /* ignore collection errors */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(wavyProgressBar = enabled) }
-                }
+            settingsDataStore.progressBarStyle
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(progressBarStyle = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.progressBarSizeDp
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(progressBarSizeDp = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.autoDownloadFavorites
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(autoDownloadFavorites = v) } }
         }
     }
 
