@@ -29,8 +29,13 @@ class YouTubeMusicParser @Inject constructor() {
         val shelves = flatShelves.mapNotNull { parseShelf(it) }
 
         if (chips.isEmpty() && shelves.isEmpty()) {
-            // Build a nested type-tree of what came back so the next failure
-            // points at the exact renderer we still don't handle.
+            // Surface the actual API rejection text if we got a messageRenderer
+            // (e.g. "YouTube Music isn't available in your country", "Sign in
+            // to see your home feed"). Falls back to a renderer type-tree so
+            // unhandled cases still print a useful diagnostic.
+            extractMessageRendererText(rawShelves)?.let { msg ->
+                throw IllegalStateException("YouTube Music: $msg")
+            }
             val typeTree = rawShelves.joinToString(",") { describeRenderer(it) }
                 .ifEmpty { "(none)" }
             throw IllegalStateException(
@@ -38,6 +43,33 @@ class YouTubeMusicParser @Inject constructor() {
             )
         }
         return YouTubeMusicHomeFeed(chips = chips, shelves = shelves)
+    }
+
+    /**
+     * Walks the raw shelf list (recursing through itemSectionRenderer
+     * wrappers) and returns the first messageRenderer's user-facing text.
+     */
+    private fun extractMessageRendererText(rawShelves: List<JsonElement>): String? {
+        for (raw in rawShelves) {
+            val expanded = if ((raw as? kotlinx.serialization.json.JsonObject)
+                    ?.keys?.firstOrNull() == "itemSectionRenderer"
+            ) {
+                raw.path("itemSectionRenderer")?.path("contents")?.arr().orEmpty()
+            } else {
+                listOf(raw)
+            }
+            for (item in expanded) {
+                val mr = item.path("messageRenderer") ?: continue
+                val text = mr.runsText("text") ?: mr.path("text")?.str()
+                val sub = mr.path("subtext")?.path("messageSubtextRenderer")?.runsText("text")
+                    ?: mr.path("subtext")?.runsText("text")
+                val combined = listOfNotNull(text, sub)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" — ")
+                if (combined.isNotBlank()) return combined
+            }
+        }
+        return null
     }
 
     /**

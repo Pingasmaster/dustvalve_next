@@ -1,0 +1,71 @@
+{
+  "contents": {
+    "twoColumnBrowseResultsRenderer": {
+      "tabs": [
+        {
+          "tabRenderer": {
+            "content": {
+              "sectionListRenderer": {
+                "header": {
+                  "chipCloudRenderer": {
+                    "chips": [
+                      {
+                        "chipCloudChipRenderer": {
+                          "text": { "runs": [ { "text": "Energize" } ] },
+                          "navigationEndpoint": {
+                            "browseEndpoint": {
+                              "browseId": "FEmusic_home",
+                              "params": "AAA"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "contents": [
+                  {
+                    "musicCarouselShelfRenderer": {
+                      "header": {
+                        "musicCarouselShelfBasicHeaderRenderer": {
+                          "title": { "runs": [ { "text": "Two-Column Test" } ] }
+                        }
+                      },
+                      "contents": [
+                        {
+                          "musicTwoRowItemRenderer": {
+                            "title": { "runs": [ { "text": "Album Title" } ] },
+                            "subtitle": { "runs": [ { "text": "Artist X" } ] },
+                            "thumbnailRenderer": {
+                              "musicThumbnailRenderer": {
+                                "thumbnail": {
+                                  "thumbnails": [
+                                    { "url": "https://yt3.example/img=w226-h226-l90-rj", "width": 226, "height": 226 }
+                                  ]
+                                }
+                              }
+                            },
+                            "navigationEndpoint": {
+                              "browseEndpoint": {
+                                "browseId": "MPREb_album_id",
+                                "browseEndpointContextSupportedConfigs": {
+                                  "browseEndpointContextMusicConfig": {
+                                    "pageType": "MUSIC_PAGE_TYPE_ALBUM"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
