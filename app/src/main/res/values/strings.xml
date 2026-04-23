@@ -149,6 +149,13 @@
     <string name="settings_connect_spotify">Connect Spotify</string>
     <string name="settings_connect_spotify_desc">Connect to search and stream from Spotify. Requires Premium.</string>
     <string name="settings_youtube_music">YouTube Music</string>
+    <string name="settings_youtube_default_source_title">Default view</string>
+    <string name="settings_youtube_default_source_desc">Which view opens when you tap the YouTube tab</string>
+    <string name="common_play">Play</string>
+    <string name="common_retry">Retry</string>
+    <string name="ytm_artist_spotlight">Artist spotlight</string>
+    <string name="youtube_tab_source_yt">YouTube</string>
+    <string name="youtube_tab_source_ytm">YouTube Music</string>
     <string name="settings_spotify_connected">Spotify connected</string>
     <string name="settings_spotify_premium_title">Spotify Premium Required</string>
     <string name="settings_spotify_premium_text">Spotify streaming requires a paid Spotify Premium account. Free accounts are not supported.</string>

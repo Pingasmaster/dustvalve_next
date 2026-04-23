@@ -53,6 +53,7 @@ class SettingsDataStore @Inject constructor(
         val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
         val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
         val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
+        val YOUTUBE_DEFAULT_SOURCE = stringPreferencesKey("youtube_default_source")
         val SPOTIFY_ENABLED = booleanPreferencesKey("spotify_enabled")
         val SPOTIFY_CONNECTED = booleanPreferencesKey("spotify_connected")
         val KEEP_SCREEN_ON_IN_APP = booleanPreferencesKey("keep_screen_on_in_app")
@@ -464,6 +465,16 @@ class SettingsDataStore @Inject constructor(
     suspend fun setYtmConnected(connected: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.YTM_CONNECTED] = connected
+        }
+    }
+
+    val youtubeDefaultSource: Flow<String> = context.dataStore.data.map { prefs ->
+        prefs[Keys.YOUTUBE_DEFAULT_SOURCE] ?: "youtube"
+    }
+
+    suspend fun setYoutubeDefaultSource(source: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.YOUTUBE_DEFAULT_SOURCE] = source
         }
     }
 

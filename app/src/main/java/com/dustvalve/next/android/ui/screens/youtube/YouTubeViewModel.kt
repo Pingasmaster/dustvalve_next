@@ -13,7 +13,9 @@ import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -41,7 +43,12 @@ data class MoodChip(val label: String, val query: String)
 
 data class GenreQuery(val displayName: String, val searchQuery: String)
 
+enum class YouTubeSource { YouTube, YouTubeMusic }
+
 data class YouTubeUiState(
+    // Active source sub-tab
+    val activeSource: YouTubeSource = YouTubeSource.YouTube,
+
     // Search state
     val query: String = "",
     val results: List<SearchResult> = emptyList(),
@@ -57,12 +64,18 @@ data class YouTubeUiState(
     val isMoodLoading: Boolean = false,
     val moodError: String? = null,
 
-    // Discovery feed sections
+    // Discovery feed sections (YouTube sub-tab)
     val recommendationsSection: DiscoverSection = DiscoverSection(title = ""),
     val lastPlayedTrackTitle: String? = null,
     val trendingSection: DiscoverSection = DiscoverSection(title = "Trending now"),
     val genreSections: List<DiscoverSection> = emptyList(),
     val genresExhausted: Boolean = false,
+
+    // YouTube Music sub-tab home
+    val ytmHome: YouTubeMusicHomeFeed? = null,
+    val ytmHomeLoading: Boolean = false,
+    val ytmHomeError: String? = null,
+    val ytmSelectedChipParams: String? = null,
 )
 
 val moodChips = listOf(
@@ -141,6 +154,7 @@ private const val GENRE_LOAD_BATCH = 4
 class YouTubeViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
+    private val youtubeMusicRepository: YouTubeMusicRepository,
     private val playlistRepository: PlaylistRepository,
     private val trackDao: TrackDao,
     private val database: DustvalveNextDatabase,
@@ -164,14 +178,93 @@ class YouTubeViewModel @Inject constructor(
     private var searchJob: Job? = null
     private var nextPage: Any? = null
     private var moodJob: Job? = null
+    private var ytmHomeJob: Job? = null
     private val discoveryJobs = mutableListOf<Job>()
 
     private val shuffledGenres = allGenres.shuffled()
     private var loadedGenreCount = 0
 
     init {
+        viewModelScope.launch {
+            val default = settingsDataStore.youtubeDefaultSource.firstOrNull()
+            val source = if (default == "youtube_music") YouTubeSource.YouTubeMusic else YouTubeSource.YouTube
+            _uiState.update { it.copy(activeSource = source) }
+            if (source == YouTubeSource.YouTubeMusic) loadYtmHome()
+        }
         loadDiscoveryFeed()
     }
+
+    // ── Source sub-tab switching ────────────────────────────────────────
+
+    fun setActiveSource(source: YouTubeSource) {
+        if (_uiState.value.activeSource == source) return
+        // Cancel in-flight search because the filter vocabulary changes between sources.
+        searchJob?.cancel()
+        nextPage = null
+        _uiState.update {
+            it.copy(
+                activeSource = source,
+                results = emptyList(),
+                isLoading = false,
+                hasMore = true,
+                error = null,
+                selectedFilter = null,
+                searchGeneration = it.searchGeneration + 1,
+            )
+        }
+        if (source == YouTubeSource.YouTubeMusic && _uiState.value.ytmHome == null) {
+            loadYtmHome()
+        }
+    }
+
+    private fun loadYtmHome(params: String? = null) {
+        ytmHomeJob?.cancel()
+        _uiState.update { it.copy(ytmHomeLoading = true, ytmHomeError = null) }
+        ytmHomeJob = viewModelScope.launch {
+            try {
+                val feed = if (params == null) youtubeMusicRepository.getHome()
+                else youtubeMusicRepository.getMoodHome(params)
+                _uiState.update {
+                    it.copy(
+                        ytmHome = feed,
+                        ytmHomeLoading = false,
+                        ytmSelectedChipParams = params,
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(ytmHomeLoading = false, ytmHomeError = e.message ?: "Failed to load")
+                }
+            }
+        }
+    }
+
+    fun onYtmChipSelected(params: String?) {
+        if (params == _uiState.value.ytmSelectedChipParams) {
+            loadYtmHome(params = null)
+        } else {
+            loadYtmHome(params = params)
+        }
+    }
+
+    fun retryYtmHome() {
+        loadYtmHome(_uiState.value.ytmSelectedChipParams)
+    }
+
+    private fun resolveFilterForSource(source: YouTubeSource, uiFilter: String?): String? =
+        when (source) {
+            YouTubeSource.YouTube -> uiFilter
+            YouTubeSource.YouTubeMusic -> when (uiFilter) {
+                null -> "music_songs"
+                "songs" -> "music_songs"
+                "playlists" -> "music_playlists"
+                "artists" -> "music_artists"
+                "videos" -> "music_videos"
+                "albums" -> "music_albums"
+                else -> uiFilter
+            }
+        }
 
     // ── Discovery feed ──────────────────────────────────────────────────
 
@@ -458,9 +551,10 @@ class YouTubeViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, error = null) }
         try {
             val page = if (resetResults) null else nextPage
+            val filter = resolveFilterForSource(_uiState.value.activeSource, _uiState.value.selectedFilter)
             val (results, newNextPage) = youtubeRepository.search(
                 query = query,
-                filter = _uiState.value.selectedFilter,
+                filter = filter,
                 page = page,
             )
             nextPage = newNextPage
