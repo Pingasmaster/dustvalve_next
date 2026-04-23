@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -256,81 +257,30 @@ fun AlbumDetailScreen(
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
                             )
-                            // Top scrim so status bar icons remain readable
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(80.dp)
-                                    .align(Alignment.TopCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f),
-                                                Color.Transparent,
-                                            ),
-                                        ),
-                                    ),
-                            )
-                            // Bottom gradient into surface
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
-                                    .align(Alignment.BottomCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                                                MaterialTheme.colorScheme.surface,
-                                            ),
-                                        ),
-                                    ),
-                            )
-                            Column(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                            ) {
-                                Text(
-                                    text = album.title,
-                                    style = MaterialTheme.typography.headlineLargeEmphasized,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
                         }
                     }
 
-                    // Artist + release date
-                    item(key = "album_meta") {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                                .animateItem(),
-                        ) {
+                    // Optional release date — name + artist live in the
+                    // LargeFlexibleTopAppBar above, so we drop the overlay
+                    // text and the artist link here. The "Artist" icon button
+                    // in the action group below handles navigation to the
+                    // artist page.
+                    album.releaseDate?.takeIf { it.isNotBlank() }?.let { date ->
+                        item(key = "album_release_date") {
                             Text(
-                                text = album.artist,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = if (album.artistUrl.isNotBlank()) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface,
+                                text = date,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
-                                    .clickable(enabled = album.artistUrl.isNotBlank()) { onArtistClick(album.artistUrl) }
-                                    .padding(vertical = 4.dp),
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 4.dp)
+                                    .animateItem(),
                             )
-                            album.releaseDate?.let { date ->
-                                Text(
-                                    text = date,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
                         }
                     }
 
-                    // Action bar — connected M3E button group
+                    // Action bar — connected M3E button group, offset so its
+                    // vertical centre lands on the cover's bottom edge.
                     item(key = "actions") {
                         val allTracksDownloaded = album.tracks.isNotEmpty() &&
                             album.tracks.all { it.id in state.downloadedTrackIds }
@@ -338,6 +288,7 @@ fun AlbumDetailScreen(
                             isFavorite = album.isFavorite,
                             isDownloading = state.isDownloading,
                             allTracksDownloaded = allTracksDownloaded,
+                            artistEnabled = album.artistUrl.isNotBlank(),
                             onPlayAll = {
                                 if (album.tracks.isNotEmpty()) {
                                     playerViewModel.playAlbum(album.tracks, 0)
@@ -356,9 +307,11 @@ fun AlbumDetailScreen(
                                     viewModel.downloadAlbum()
                                 }
                             },
+                            onOpenArtist = { onArtistClick(album.artistUrl) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .padding(horizontal = 16.dp)
+                                .offset(y = (-28).dp)
                                 .animateItem(),
                         )
                     }
@@ -434,32 +387,19 @@ fun AlbumDetailScreen(
                         }
                     }
 
-                    // Bandcamp-only "Buy" CTA — opens the album's page in the default
-                    // browser (no in-app webview), per the user's spec.
+                    // Bandcamp-only "Buy" split CTA — opens the album page in the
+                    // default browser (no in-app webview). The trailing chevron
+                    // exposes "Send as a gift" which routes to the same page
+                    // (Bandcamp's gift flow lives in the page's own buy widget).
                     if (album.url.contains("bandcamp.com", ignoreCase = true)) {
                         item(key = "buy_on_bandcamp") {
                             val uriHandler = LocalUriHandler.current
-                            FilledTonalButton(
-                                onClick = { uriHandler.openUri(album.url) },
-                                shapes = ButtonDefaults.shapes(),
-                                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 16.dp)
-                                    .heightIn(min = 64.dp)
-                                    .animateItem(),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_open_in_new),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = stringResource(R.string.detail_buy_on_bandcamp),
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                            }
+                            BuyOnBandcampSplitButton(
+                                price = album.price,
+                                onBuy = { uriHandler.openUri(album.url) },
+                                onSendAsGift = { uriHandler.openUri(album.url) },
+                                modifier = Modifier.animateItem(),
+                            )
                         }
                     }
 
@@ -523,10 +463,11 @@ private fun ExpandableAbout(about: String) {
 
 /**
  * Connected M3E button-group action bar for album detail. Layout:
- * [Play all (weighted, primary filled)] · [Shuffle] · [Favorite (toggle)] · [Download].
- * Spacing follows ButtonGroupDefaults.ConnectedSpaceBetween (2dp); the first +
- * last button get connected leading/trailing shapes, the two middles get the
- * connected middle shape so the row reads as one piece on screen.
+ * [Play all (weighted, primary filled)] · [Shuffle] · [Favorite (toggle)]
+ *  · [Artist] · [Download].
+ * Items are spaced by 8dp (wider than the default 2dp) so each button's
+ * connected shape morphs are clearly distinct visually; first + last carry
+ * the connected leading/trailing shapes, middles share the middle shape.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -534,18 +475,20 @@ private fun AlbumActionBar(
     isFavorite: Boolean,
     isDownloading: Boolean,
     allTracksDownloaded: Boolean,
+    artistEnabled: Boolean,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
+    onOpenArtist: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Order: Play all | Shuffle | Artist | Favorite (toggle) | Download (toggle).
     Row(
         modifier = modifier.heightIn(min = 56.dp),
-        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+        horizontalArrangement = Arrangement.spacedBy(ActionBarSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Leading: weighted Play all (primary filled).
         Button(
             onClick = onPlayAll,
             shape = ButtonGroupDefaults.connectedLeadingButtonShapes().shape,
@@ -553,16 +496,17 @@ private fun AlbumActionBar(
                 .weight(1f)
                 .heightIn(min = 56.dp),
         ) {
+            // 24 dp icon (default) — the legacy `ButtonDefaults.IconSize` (18 dp)
+            // sized this smaller than every other action-bar icon, breaking
+            // visual parity with the icon-only siblings.
             Icon(
                 painter = painterResource(R.drawable.ic_play_arrow),
                 contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.IconSize),
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(stringResource(R.string.common_play_all))
         }
 
-        // Middle 1: Shuffle (one-shot, tonal).
         FilledTonalButton(
             onClick = onShuffle,
             shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
@@ -575,9 +519,20 @@ private fun AlbumActionBar(
             )
         }
 
-        // Middle 2: Favorite toggle. ToggleButton's checked-shape morph + the
-        // connected middle shapes give the M3E "expand on press / pill on
-        // checked" feel automatically.
+        // Artist navigation — between Shuffle and Favorite, icon-only.
+        FilledTonalButton(
+            onClick = onOpenArtist,
+            enabled = artistEnabled,
+            shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.heightIn(min = 56.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_person),
+                contentDescription = stringResource(R.string.detail_cd_open_artist),
+            )
+        }
+
         ToggleButton(
             checked = isFavorite,
             onCheckedChange = { onToggleFavorite() },
@@ -598,12 +553,16 @@ private fun AlbumActionBar(
             )
         }
 
-        // Trailing: Download / delete-when-fully-downloaded. Tonal so the row
-        // hierarchy reads "primary action · supporting · supporting · supporting".
-        FilledTonalButton(
-            onClick = onDownload,
+        // Download is a toggle (not a one-shot button) so it picks up the
+        // M3E shape morph + tonal-on-checked container styling — matches the
+        // Favorite button's interaction language. While the download is in
+        // flight, swap the icon for a circular wavy progress indicator.
+        ToggleButton(
+            checked = allTracksDownloaded,
+            onCheckedChange = { onDownload() },
             enabled = !isDownloading,
-            shape = ButtonGroupDefaults.connectedTrailingButtonShapes().shape,
+            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {
@@ -625,6 +584,14 @@ private fun AlbumActionBar(
         }
     }
 }
+
+/**
+ * Inter-button spacing for both album + artist action bars. Wider than the
+ * 2 dp ButtonGroupDefaults.ConnectedSpaceBetween so the connected-shape
+ * morphs read clearly on press; still narrow enough for the row to be
+ * understood as one logical group.
+ */
+private val ActionBarSpacing = 8.dp
 
 /**
  * M3E-idiomatic "expand to show more text" pattern (no first-party component
@@ -697,5 +664,106 @@ internal fun ExpandableDescription(
                 )
             }
         }
+    }
+}
+
+/**
+ * M3E SplitButtonLayout wrapping [SplitButtonDefaults.LeadingButton] (the
+ * actual "Buy" CTA showing the formatted price + add-circle icon) and
+ * [SplitButtonDefaults.TrailingButton] (the chevron that opens a tiny
+ * DropdownMenu with "Send as a gift").
+ *
+ * Both actions route through the caller's [LocalUriHandler] to the album's
+ * Bandcamp page in the user's default browser; the gift flow is on the page
+ * itself, so we don't try to deep-link into it.
+ *
+ * The whole composable centres horizontally so it doesn't span the full
+ * screen width — matches the screenshot the user supplied.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi::class)
+@Composable
+private fun BuyOnBandcampSplitButton(
+    price: com.dustvalve.next.android.domain.model.AlbumPrice?,
+    onBuy: () -> Unit,
+    onSendAsGift: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val label = price?.let { formatPrice(it) }
+        ?: stringResource(R.string.detail_buy_on_bandcamp)
+
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        androidx.compose.material3.SplitButtonLayout(
+            modifier = Modifier.padding(vertical = 16.dp),
+            leadingButton = {
+                androidx.compose.material3.SplitButtonDefaults.LeadingButton(
+                    onClick = onBuy,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_add_circle),
+                        contentDescription = null,
+                        modifier = Modifier.size(androidx.compose.material3.SplitButtonDefaults.LeadingIconSize),
+                    )
+                    Spacer(Modifier.width(androidx.compose.material3.ButtonDefaults.IconSpacing))
+                    Text(text = label, style = MaterialTheme.typography.labelLarge)
+                }
+            },
+            trailingButton = {
+                androidx.compose.material3.SplitButtonDefaults.TrailingButton(
+                    checked = menuOpen,
+                    onCheckedChange = { menuOpen = it },
+                ) {
+                    val rotation by androidx.compose.animation.core.animateFloatAsState(
+                        targetValue = if (menuOpen) 180f else 0f,
+                        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+                        label = "buy_chevron",
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.ic_expand_more),
+                        contentDescription = stringResource(R.string.detail_buy_more_options),
+                        modifier = Modifier
+                            .size(androidx.compose.material3.SplitButtonDefaults.TrailingIconSize)
+                            .rotate(rotation),
+                    )
+                }
+            },
+        )
+
+        androidx.compose.material3.DropdownMenu(
+            expanded = menuOpen,
+            onDismissRequest = { menuOpen = false },
+        ) {
+            androidx.compose.material3.DropdownMenuItem(
+                text = { Text(stringResource(R.string.detail_send_as_gift)) },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_add_circle),
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    menuOpen = false
+                    onSendAsGift()
+                },
+            )
+        }
+    }
+}
+
+/**
+ * Formats an [com.dustvalve.next.android.domain.model.AlbumPrice] using the
+ * platform's `NumberFormat.getCurrencyInstance(Locale.ENGLISH)` with the
+ * supplied ISO currency code, yielding "$8.00", "£9.99", "CA$11.11", etc.
+ *
+ * Falls back to "<symbol> <amount>" if the currency code isn't recognized
+ * by the JVM's `java.util.Currency` (defensive — bandcamp ships ISO codes).
+ */
+private fun formatPrice(price: com.dustvalve.next.android.domain.model.AlbumPrice): String {
+    return try {
+        val nf = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.ENGLISH)
+        nf.currency = java.util.Currency.getInstance(price.currency)
+        nf.format(price.amount)
+    } catch (_: Throwable) {
+        "${price.currency} ${"%.2f".format(java.util.Locale.ENGLISH, price.amount)}"
     }
 }

@@ -426,8 +426,14 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.KEEP_SCREEN_ON_IN_APP] ?: false
     }
 
+    /**
+     * Sub-mode of [keepScreenOnInApp]: when the parent is on AND this is on,
+     * the screen only stays awake while music is actively playing. Defaults
+     * to true so that flipping the parent on yields the lower-impact
+     * "only-while-playing" behaviour out of the box.
+     */
     val keepScreenOnWhilePlaying: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.KEEP_SCREEN_ON_WHILE_PLAYING] ?: false
+        prefs[Keys.KEEP_SCREEN_ON_WHILE_PLAYING] ?: true
     }
 
     val searchHistoryEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
@@ -484,8 +490,13 @@ class SettingsDataStore @Inject constructor(
         context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_LOCAL] = enabled }
     }
 
+    /**
+     * Repurposed from "long-press cover for carousel": when on, the player
+     * shows a debug overlay instead of the cover carousel. Off by default.
+     * Surfaced as the "Show debug info" toggle in Settings → Debug.
+     */
     val albumCoverLongPressCarousel: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] ?: true
+        prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] ?: false
     }
 
     suspend fun setAlbumCoverLongPressCarousel(enabled: Boolean) {

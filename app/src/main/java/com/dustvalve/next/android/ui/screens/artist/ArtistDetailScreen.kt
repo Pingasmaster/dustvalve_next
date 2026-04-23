@@ -396,7 +396,9 @@ private fun ArtistActionBar(
 ) {
     Row(
         modifier = modifier.heightIn(min = 56.dp),
-        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+        // 8 dp matches the album action bar — wider than the 2 dp default so
+        // the connected-shape press morph reads clearly between buttons.
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Button(

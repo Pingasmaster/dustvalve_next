@@ -17,4 +17,6 @@ data class Album(
     val isFavorite: Boolean = false,
     val autoDownload: Boolean = false,
     val purchaseInfo: PurchaseInfo? = null,
+    /** Bandcamp album price scraped from JSON-LD; null on free / unknown / non-Bandcamp. */
+    val price: AlbumPrice? = null,
 )

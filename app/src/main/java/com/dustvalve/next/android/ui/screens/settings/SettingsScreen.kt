@@ -1373,29 +1373,6 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = stringResource(R.string.settings_cover_carousel),
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                                Text(
-                                    text = stringResource(R.string.settings_cover_carousel_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(
-                                checked = state.albumCoverLongPressCarousel,
-                                onCheckedChange = { viewModel.setAlbumCoverLongPressCarousel(it) },
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
                                     text = stringResource(R.string.settings_keep_screen_open),
                                     style = MaterialTheme.typography.titleSmall,
                                 )
@@ -1411,27 +1388,37 @@ fun SettingsScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
+                        // Sub-toggle: only shown when the parent is on. When
+                        // checked, restricts wake-lock to "app open AND
+                        // playing". Defaults to true so the parent's
+                        // first-flip yields the lower-impact behaviour.
+                        AnimatedVisibility(
+                            visible = state.keepScreenOnInApp,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.settings_keep_screen_playing),
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                                Text(
-                                    text = stringResource(R.string.settings_keep_screen_playing_desc),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 12.dp, start = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_keep_screen_only_playing),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_keep_screen_only_playing_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.keepScreenOnWhilePlaying,
+                                    onCheckedChange = { viewModel.setKeepScreenOnWhilePlaying(it) },
                                 )
                             }
-                            Switch(
-                                checked = state.keepScreenOnWhilePlaying,
-                                onCheckedChange = { viewModel.setKeepScreenOnWhilePlaying(it) },
-                            )
                         }
                     }
                 }
@@ -1603,6 +1590,46 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.settings_check_for_updates))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Debug section — hidden behind a single explicit toggle, off by
+        // default. Kept at the very bottom so it doesn't clutter day-to-day
+        // settings.
+        item {
+            SettingsSection(
+                title = stringResource(R.string.settings_section_debug),
+                icon = R.drawable.ic_info,
+            ) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    ),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.settings_show_debug_info),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_show_debug_info_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.albumCoverLongPressCarousel,
+                                onCheckedChange = { viewModel.setAlbumCoverLongPressCarousel(it) },
+                            )
                         }
                     }
                 }

@@ -39,3 +39,8 @@ Thumbs.db
 .claude
 CLAUDE.md
 todo.txt
+
+# Stray local logs / scratch dumps (logcat captures, build logs, etc.)
+log*.txt
+log*.md
+ideas

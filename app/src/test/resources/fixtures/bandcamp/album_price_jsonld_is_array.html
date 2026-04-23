@@ -1,0 +1,23 @@
+<html><head>
+<!-- Some Bandcamp pages emit a JSON-LD whose root is an array of MusicRecording per
+     track plus one MusicAlbum. We shouldn't pick price from MusicRecording. -->
+<script type="application/ld+json">
+{ "@type": "MusicRecording", "name": "Track 1" }
+</script>
+<script type="application/ld+json">
+{
+  "@type": "MusicAlbum",
+  "name": "Real album",
+  "albumRelease": [
+    {
+      "@type": "MusicRelease",
+      "offers": {
+        "@type": "Offer",
+        "price": 4.20,
+        "priceCurrency": "AUD"
+      }
+    }
+  ]
+}
+</script>
+</head><body></body></html>
