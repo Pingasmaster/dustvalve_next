@@ -112,7 +112,12 @@ class DustvalveArtistScraper @Inject constructor(
             cleaned.text().trim().takeIf { it.isNotEmpty() }
         }
 
-        val imageUrl = document.selectFirst(".band-photo img")?.attr("abs:src")
+        // Band photos are wrapped in an <a class="popupImage" href="..._10.jpg">
+        // (~480x480) around the small `<img class="band-photo" src="..._21.jpg">`
+        // (100-ish px). Prefer the popupImage href so we don't show a blurry
+        // thumbnail. Fall back to the small img src if the wrapper is missing.
+        val imageUrl = document.selectFirst("a.popupImage:has(img.band-photo)")?.attr("abs:href")?.takeIf { it.isNotBlank() }
+            ?: document.selectFirst(".band-photo img")?.attr("abs:src")
             ?: document.selectFirst("img.band-photo")?.attr("abs:src")
 
         val location = document.selectFirst("#band-name-location .location")?.text()?.trim()
@@ -178,6 +183,34 @@ class DustvalveArtistScraper @Inject constructor(
                 } catch (_: Exception) {
                     // JSON parsing failed — continue with whatever art URLs we have
                 }
+            }
+        }
+
+        // Single-album / single-track artists: the artist root URL redirects
+        // to the album/track page and Bandcamp doesn't render a music-grid for
+        // them on /music either. Fall back to the OpenGraph metadata so the
+        // artist screen still surfaces the one item instead of looking empty.
+        if (albums.isEmpty()) {
+            val ogUrl = document.selectFirst("meta[property=og:url]")?.attr("content")
+            if (!ogUrl.isNullOrBlank() && (ogUrl.contains("/album/") || ogUrl.contains("/track/"))) {
+                val ogTitle = document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty()
+                // Bandcamp formats og:title as "Album Title, by Artist Name".
+                val albumTitle = ogTitle.substringBefore(", by ").trim().takeIf { it.isNotEmpty() } ?: "Untitled"
+                val albumArt = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
+                albums.add(
+                    Album(
+                        id = stableId(ogUrl),
+                        url = ogUrl,
+                        title = albumTitle,
+                        artist = bandName,
+                        artistUrl = artistUrl,
+                        artUrl = albumArt,
+                        releaseDate = null,
+                        about = null,
+                        tracks = emptyList(),
+                        tags = emptyList(),
+                    )
+                )
             }
         }
 
