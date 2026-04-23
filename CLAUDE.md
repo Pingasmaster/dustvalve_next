@@ -46,6 +46,10 @@ IMPORTANT: Before any design actions, make sure to fully understand material you
 
 - **hiltViewModel**: Use `androidx.hilt:hilt-lifecycle-viewmodel-compose` (not `hilt-navigation-compose`). Import from `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`. The navigation-compose variant is deprecated as of 1.3.0.
 
+## Future improvements
+
+- **YT player JS / nsig support (deferred)**: We deliberately ship without a JS engine. The `ANDROID_VR_NO_AUTH` + `IOS` cascade in `data/remote/youtube/innertube` returns playback URLs that need no sig/nsig deciphering, but loses Premium 256 kbps Opus and age-gated playback. Adding `com.github.gedoor:rhino-android` (~1 MB) for nsig only (sig can be hand-translated) would unlock both. Not urgent today: track the yt-dlp `web_music` config and the yt-dlp PoToken Guide; revisit when ANDROID_VR / IOS clients start failing or when Premium quality becomes a goal.
+
 # Important
 
 If any agents launched report inconclusive results, research more and  if youre unsure how to do something, confirm by launhcing an agent to deep dive the web.

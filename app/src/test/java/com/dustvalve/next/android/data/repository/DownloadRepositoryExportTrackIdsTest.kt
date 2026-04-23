@@ -8,7 +8,6 @@ import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
-import com.dustvalve.next.android.data.local.db.dao.CacheEntryDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
@@ -55,7 +54,6 @@ class DownloadRepositoryExportTrackIdsTest {
     private lateinit var trackDao: TrackDao
     private lateinit var albumDao: AlbumDao
     private lateinit var favoriteDao: FavoriteDao
-    private lateinit var cacheEntryDao: CacheEntryDao
     private lateinit var database: DustvalveNextDatabase
     private lateinit var storageTracker: StorageTracker
     private lateinit var downloadScraper: DustvalveDownloadScraper
@@ -79,7 +77,6 @@ class DownloadRepositoryExportTrackIdsTest {
         trackDao = mockk(relaxed = true)
         albumDao = mockk(relaxed = true)
         favoriteDao = mockk(relaxed = true)
-        cacheEntryDao = mockk(relaxed = true)
         database = mockk(relaxed = true)
         storageTracker = mockk(relaxed = true)
         downloadScraper = mockk(relaxed = true)
@@ -95,7 +92,6 @@ class DownloadRepositoryExportTrackIdsTest {
             favoriteDao = favoriteDao,
             albumDao = albumDao,
             client = client,
-            cacheEntryDao = cacheEntryDao,
             storageTracker = storageTracker,
             downloadScraper = downloadScraper,
             settingsDataStore = settingsDataStore,

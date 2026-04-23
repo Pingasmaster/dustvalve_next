@@ -10,6 +10,7 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import com.dustvalve.next.android.data.asset.StoragePaths
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
@@ -50,9 +51,15 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
                     .build()
             }
             .diskCache {
+                // Coil's image cache lives inside the unified downloads pool
+                // (filesDir/downloads/images) so its size shows up in the
+                // single storage indicator and "Remove all downloads" wipes
+                // it alongside audio. Coil manages its own LRU within the
+                // configured maxSizeBytes; pinned audio downloads are
+                // tracked in Room and not affected by Coil.
                 DiskCache.Builder()
-                    .directory(cacheDir.resolve("coil_image_cache"))
-                    .maxSizeBytes(50L * 1024 * 1024)
+                    .directory(StoragePaths.imagesDir(this))
+                    .maxSizeBytes(256L * 1024 * 1024)
                     .build()
             }
             .build()

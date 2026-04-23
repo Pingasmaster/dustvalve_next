@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.ui.screens.settings
 
 import app.cash.turbine.test
+import com.dustvalve.next.android.cache.StorageTracker
+import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.AudioFormat
@@ -11,10 +13,8 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.domain.repository.AccountRepository
-import com.dustvalve.next.android.domain.repository.CacheRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
-import com.dustvalve.next.android.domain.usecase.ManageCacheUseCase
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -40,9 +40,9 @@ class SettingsViewModelExportTest {
     private val dispatcher = StandardTestDispatcher()
 
     private lateinit var accountRepository: AccountRepository
-    private lateinit var cacheRepository: CacheRepository
+    private lateinit var storageTracker: StorageTracker
+    private lateinit var assetEvictionPolicy: AssetEvictionPolicy
     private lateinit var settingsDataStore: SettingsDataStore
-    private lateinit var manageCacheUseCase: ManageCacheUseCase
     private lateinit var localMusicRepository: LocalMusicRepository
     private lateinit var downloadRepository: DownloadRepository
     private lateinit var exportableFlow: MutableStateFlow<List<ExportableTrack>>
@@ -55,8 +55,8 @@ class SettingsViewModelExportTest {
         every { accountRepository.getYouTubeMusicAccountState() } returns flowOf(YouTubeMusicAccountState())
         every { accountRepository.getSpotifyAccountState() } returns flowOf(SpotifyAccountState())
 
-        cacheRepository = mockk(relaxed = true)
-        every { cacheRepository.getCacheInfo() } returns flowOf(CacheInfo(0, 0, 0, 0, 0, 0f))
+        storageTracker = mockk(relaxed = true)
+        every { storageTracker.getCacheInfo() } returns flowOf(CacheInfo(0, 0, 0, 0, 0, 0f))
 
         // Stub every settings flow getter the SettingsViewModel collects on init.
         settingsDataStore = mockk(relaxed = true) {
@@ -87,7 +87,7 @@ class SettingsViewModelExportTest {
             every { keepScreenOnWhilePlaying } returns flowOf(false)
         }
 
-        manageCacheUseCase = mockk(relaxed = true)
+        assetEvictionPolicy = mockk(relaxed = true)
         localMusicRepository = mockk(relaxed = true)
 
         downloadRepository = mockk(relaxed = true)
@@ -101,9 +101,9 @@ class SettingsViewModelExportTest {
 
     private fun newViewModel(): SettingsViewModel = SettingsViewModel(
         accountRepository = accountRepository,
-        cacheRepository = cacheRepository,
+        storageTracker = storageTracker,
+        assetEvictionPolicy = assetEvictionPolicy,
         settingsDataStore = settingsDataStore,
-        manageCacheUseCase = manageCacheUseCase,
         localMusicRepository = localMusicRepository,
         downloadRepository = downloadRepository,
     )

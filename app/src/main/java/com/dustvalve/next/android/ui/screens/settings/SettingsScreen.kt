@@ -89,7 +89,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showClearCacheDialog by rememberSaveable { mutableStateOf(false) }
     var showRemoveDownloadsDialog by rememberSaveable { mutableStateOf(false) }
     var showFormatSheet by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -127,29 +126,6 @@ fun SettingsScreen(
         }
     }
 
-    if (showClearCacheDialog) {
-        AlertDialog(
-            onDismissRequest = { showClearCacheDialog = false },
-            title = { Text(stringResource(R.string.settings_clear_cache_title)) },
-            text = { Text(stringResource(R.string.settings_clear_cache_text)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.clearCache()
-                        showClearCacheDialog = false
-                    },
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(stringResource(R.string.common_action_clear))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearCacheDialog = false }, shapes = ButtonDefaults.shapes()) {
-                    Text(stringResource(R.string.common_action_cancel))
-                }
-            },
-        )
-    }
 
     if (showRemoveDownloadsDialog) {
         AlertDialog(
@@ -976,20 +952,6 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.settings_remove_all_downloads))
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FilledTonalButton(
-                            onClick = { showClearCacheDialog = true },
-                            shapes = ButtonDefaults.shapes(),
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_delete_sweep),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.settings_clear_cache))
                         }
 
                         if (state.accountState.isLoggedIn) {

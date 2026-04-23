@@ -8,11 +8,11 @@ import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.model.ExportableTrack
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
+import com.dustvalve.next.android.cache.StorageTracker
+import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.domain.repository.AccountRepository
-import com.dustvalve.next.android.domain.repository.CacheRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
-import com.dustvalve.next.android.domain.usecase.ManageCacheUseCase
 import com.dustvalve.next.android.util.UiText
 import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -71,9 +71,9 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
-    private val cacheRepository: CacheRepository,
+    private val storageTracker: StorageTracker,
+    private val assetEvictionPolicy: AssetEvictionPolicy,
     private val settingsDataStore: SettingsDataStore,
-    private val manageCacheUseCase: ManageCacheUseCase,
     private val localMusicRepository: LocalMusicRepository,
     private val downloadRepository: DownloadRepository,
 ) : ViewModel() {
@@ -181,7 +181,14 @@ class SettingsViewModel @Inject constructor(
                     gb < 0f -> Long.MAX_VALUE // unlimited
                     else -> (gb * 1024 * 1024 * 1024).toLong()
                 }
-                manageCacheUseCase.setStorageLimit(bytes)
+                settingsDataStore.setStorageLimit(bytes)
+                // Trim the unified pool's unpinned (auto-cached) entries down
+                // to the new limit. Pinned user downloads are never evicted.
+                val overage = storageTracker.getOverageBytes()
+                if (overage > 0L) {
+                    assetEvictionPolicy.evict(overage)
+                    storageTracker.notifyChanged()
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -242,16 +249,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 settingsDataStore.setSeamlessQualityUpgrade(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
-    fun clearCache() {
-        viewModelScope.launch {
-            try {
-                cacheRepository.clearCache()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
@@ -362,7 +359,7 @@ class SettingsViewModel @Inject constructor(
 
     private fun collectCacheInfo() {
         viewModelScope.launch {
-            cacheRepository.getCacheInfo()
+            storageTracker.getCacheInfo()
                 .catch { /* ignore collection errors */ }
                 .collect { info ->
                     _uiState.update { it.copy(cacheInfo = info) }
@@ -788,10 +785,7 @@ class SettingsViewModel @Inject constructor(
     fun removeAllDownloads() {
         viewModelScope.launch {
             try {
-                val tracks = downloadRepository.getDownloadedTracks().first()
-                for (track in tracks) {
-                    downloadRepository.deleteDownload(track.id)
-                }
+                downloadRepository.clearAll()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }

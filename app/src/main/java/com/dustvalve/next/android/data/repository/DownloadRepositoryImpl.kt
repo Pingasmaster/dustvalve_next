@@ -3,11 +3,9 @@ package com.dustvalve.next.android.data.repository
 import android.content.Context
 import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.CacheEntryDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.entity.CacheEntryEntity
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
@@ -57,7 +55,6 @@ class DownloadRepositoryImpl @Inject constructor(
     private val favoriteDao: FavoriteDao,
     private val albumDao: AlbumDao,
     private val client: OkHttpClient,
-    private val cacheEntryDao: CacheEntryDao,
     private val storageTracker: StorageTracker,
     private val downloadScraper: DustvalveDownloadScraper,
     private val settingsDataStore: SettingsDataStore,
@@ -195,7 +192,7 @@ class DownloadRepositoryImpl @Inject constructor(
 
         val fileSize = targetFile.length()
 
-        // Atomically insert track, download record, and cache entry
+        // Atomically insert the track row + the unified-pool download record.
         database.withTransaction {
             if (trackDao.getById(track.id) == null) {
                 trackDao.insertAll(listOf(track.toEntity()))
@@ -208,22 +205,12 @@ class DownloadRepositoryImpl @Inject constructor(
                     filePath = targetFile.absolutePath,
                     sizeBytes = fileSize,
                     format = format.key,
-                )
-            )
-
-            cacheEntryDao.insert(
-                CacheEntryEntity(
-                    key = "download_${track.id}",
-                    type = "download",
-                    sizeBytes = fileSize,
-                    lastAccessed = System.currentTimeMillis(),
-                    isUserDownload = true,
-                    filePath = targetFile.absolutePath,
+                    pinned = true,
                 )
             )
         }
 
-        storageTracker.notifyCacheChanged()
+        storageTracker.notifyChanged()
     }
 
     private suspend fun resolvePurchaseInfo(track: Track): PurchaseInfo? {
@@ -505,13 +492,24 @@ class DownloadRepositoryImpl @Inject constructor(
             // Best-effort file deletion
         }
 
-        // Remove from database atomically
-        database.withTransaction {
-            downloadDao.delete(trackId)
-            cacheEntryDao.deleteByKey("download_$trackId")
-        }
+        downloadDao.delete(trackId)
+        storageTracker.notifyChanged()
+    }
 
-        storageTracker.notifyCacheChanged()
+    override suspend fun clearAll() = withContext(Dispatchers.IO) {
+        // Drop every DB row + every file under downloads/ (including the
+        // images subdir managed by Coil). ExoPlayer's media_cache lives in
+        // cacheDir/media_cache and is wiped here too — Media3's SimpleCache
+        // tolerates a directory wipe between sessions because we don't
+        // delete it while the cache is open.
+        val all = downloadDao.getAllSync()
+        for (row in all) {
+            try { File(row.filePath).delete() } catch (_: Exception) {}
+            try { downloadDao.delete(row.trackId) } catch (_: Exception) {}
+        }
+        try { com.dustvalve.next.android.data.asset.StoragePaths.imagesDir(context).deleteRecursively() } catch (_: Exception) {}
+        try { com.dustvalve.next.android.data.asset.StoragePaths.mediaCacheDir(context).deleteRecursively() } catch (_: Exception) {}
+        storageTracker.notifyChanged()
     }
 
     /**

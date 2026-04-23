@@ -130,10 +130,8 @@
     <string name="settings_source_spotify">Spotify</string>
     <string name="settings_use_individual_folders">Use individual folders</string>
     <string name="settings_use_individual_folders_desc">Pick specific folders instead of scanning all audio</string>
-    <string name="settings_clear_cache_title">Clear cache</string>
-    <string name="settings_clear_cache_text">This will remove all cached audio and images. Downloaded tracks will not be affected.</string>
     <string name="settings_remove_downloads_title">Remove all downloads</string>
-    <string name="settings_remove_downloads_text">This will remove all downloaded tracks. Cached audio and images will not be affected.</string>
+    <string name="settings_remove_downloads_text">This wipes the entire downloads pool: explicit downloads, auto-cached audio, album covers, and artist images.</string>
     <string name="settings_download_format">Download Format</string>
     <string name="settings_download_format_desc">Format for downloaded Bandcamp purchases</string>
     <string name="settings_bandcamp_disconnected">Bandcamp disconnected</string>
@@ -165,7 +163,6 @@
     <string name="settings_manage_downloads">Manage downloads</string>
     <string name="settings_export_downloads">Export downloads</string>
     <string name="settings_remove_all_downloads">Remove all downloads</string>
-    <string name="settings_clear_cache">Clear cache</string>
     <string name="settings_auto_download_purchases">Auto-download purchases</string>
     <string name="settings_auto_download_purchases_desc">Automatically download your Dustvalve purchases</string>
     <string name="settings_auto_download_future">Auto-download future content</string>

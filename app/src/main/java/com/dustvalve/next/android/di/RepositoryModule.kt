@@ -3,7 +3,6 @@ package com.dustvalve.next.android.di
 import com.dustvalve.next.android.data.repository.AccountRepositoryImpl
 import com.dustvalve.next.android.data.repository.AlbumRepositoryImpl
 import com.dustvalve.next.android.data.repository.ArtistRepositoryImpl
-import com.dustvalve.next.android.data.repository.CacheRepositoryImpl
 import com.dustvalve.next.android.data.repository.DiscoverRepositoryImpl
 import com.dustvalve.next.android.data.repository.DownloadRepositoryImpl
 import com.dustvalve.next.android.data.repository.LibraryRepositoryImpl
@@ -14,7 +13,6 @@ import com.dustvalve.next.android.data.repository.UpdateRepositoryImpl
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
-import com.dustvalve.next.android.domain.repository.CacheRepository
 import com.dustvalve.next.android.domain.repository.DiscoverRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
@@ -42,9 +40,6 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindDiscoverRepository(impl: DiscoverRepositoryImpl): DiscoverRepository
-
-    @Binds
-    abstract fun bindCacheRepository(impl: CacheRepositoryImpl): CacheRepository
 
     @Binds
     abstract fun bindDownloadRepository(impl: DownloadRepositoryImpl): DownloadRepository

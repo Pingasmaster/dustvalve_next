@@ -21,6 +21,13 @@ interface DownloadRepository {
     suspend fun getDownloadInfo(trackId: String): DownloadInfo?
     suspend fun deleteDownload(trackId: String)
     suspend fun deleteAlbumDownloads(albumId: String)
+
+    /**
+     * Wipes the entire downloads pool: every track audio file, the Coil
+     * image disk cache, and ExoPlayer's media_cache. Safe to call multiple
+     * times; never throws on missing files.
+     */
+    suspend fun clearAll()
     fun getDownloadedTrackIds(): Flow<List<String>>
     fun getDownloadedAlbumIds(): Flow<List<String>>
     suspend fun exportDownloads(
