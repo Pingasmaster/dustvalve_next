@@ -64,6 +64,10 @@ IMPORTANT: Before any design actions, make sure to fully understand material you
 
 - **hiltViewModel**: Use `androidx.hilt:hilt-lifecycle-viewmodel-compose` (not `hilt-navigation-compose`). Import from `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`. The navigation-compose variant is deprecated as of 1.3.0.
 
+## Android-runtime gotchas (host JVM != device)
+
+- **Regex strictness**: Android's `java.util.regex.Pattern` is backed by ICU and is stricter than OpenJDK's. A literal `}` outside a `{n,m}` quantifier throws `PatternSyntaxException` on-device while compiling fine on the host JVM (so JVM unit tests do NOT catch it). Always escape both braces in regex literals: write `\{...\}`, never `\{...}`. Same caution for `]`, `(`, `)` when used literally.
+
 ## Future improvements
 
 - **YT player JS / nsig support (deferred)**: We deliberately ship without a JS engine. The `ANDROID_VR_NO_AUTH` + `IOS` cascade in `data/remote/youtube/innertube` returns playback URLs that need no sig/nsig deciphering, but loses Premium 256 kbps Opus and age-gated playback. Adding `com.github.gedoor:rhino-android` (~1 MB) for nsig only (sig can be hand-translated) would unlock both. Not urgent today: track the yt-dlp `web_music` config and the yt-dlp PoToken Guide; revisit when ANDROID_VR / IOS clients start failing or when Premium quality becomes a goal.

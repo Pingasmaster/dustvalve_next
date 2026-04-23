@@ -107,6 +107,21 @@ class YouTubeMusicVisitorDataFetcherTest {
         assertThat(ex!!.message).contains("HTTP 503")
     }
 
+    @Test fun `ytcfg pattern keeps closing brace escaped (Android ICU)`() {
+        // Android's ICU-backed java.util.regex rejects a literal `}` outside a
+        // `{n,m}` quantifier; OpenJDK's regex engine tolerates it. The bug
+        // therefore never fires in JVM unit tests, only in the on-device app.
+        // Guard the fix by asserting the source string explicitly escapes the
+        // closing brace — this regresses the moment someone "simplifies" it.
+        assertThat(YouTubeMusicVisitorDataFetcher.YTCFG_PATTERN).contains("\\{.+?\\}")
+        // Also sanity-check the regex still matches a representative ytcfg block.
+        val sample = """ytcfg.set({"VISITOR_DATA":"x","INNERTUBE_CLIENT_VERSION":"1.0.0"});"""
+        assertThat(
+            Regex(YouTubeMusicVisitorDataFetcher.YTCFG_PATTERN, RegexOption.DOT_MATCHES_ALL)
+                .containsMatchIn(sample)
+        ).isTrue()
+    }
+
     private class TestableFetcher(
         client: OkHttpClient,
         override val landingUrl: String,

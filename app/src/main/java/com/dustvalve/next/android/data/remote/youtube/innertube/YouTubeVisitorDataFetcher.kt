@@ -93,8 +93,14 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
         const val DEFAULT_CLIENT_VERSION = "2.20260421.00.00"
 
         // Matches `ytcfg.set({...});` and captures the JSON object body.
+        // Both braces are escaped: Android's ICU-backed regex engine rejects
+        // a literal `}` outside `{n,m}` — the JVM-tolerated unescaped form
+        // crashes with PatternSyntaxException at class init on-device.
+        // (Visible to tests.)
+        internal const val YTCFG_PATTERN = """ytcfg\.set\s*\(\s*(\{.+?\})\s*\)\s*;"""
+
         private val YTCFG_REGEX = Regex(
-            """ytcfg\.set\s*\(\s*(\{.+?})\s*\)\s*;""",
+            YTCFG_PATTERN,
             RegexOption.DOT_MATCHES_ALL,
         )
     }
