@@ -252,20 +252,6 @@ class YouTubeViewModel @Inject constructor(
         loadYtmHome(_uiState.value.ytmSelectedChipParams)
     }
 
-    private fun resolveFilterForSource(source: YouTubeSource, uiFilter: String?): String? =
-        when (source) {
-            YouTubeSource.YouTube -> uiFilter
-            YouTubeSource.YouTubeMusic -> when (uiFilter) {
-                null -> "music_songs"
-                "songs" -> "music_songs"
-                "playlists" -> "music_playlists"
-                "artists" -> "music_artists"
-                "videos" -> "music_videos"
-                "albums" -> "music_albums"
-                else -> uiFilter
-            }
-        }
-
     // ── Discovery feed ──────────────────────────────────────────────────
 
     private fun loadDiscoveryFeed() {
@@ -550,13 +536,25 @@ class YouTubeViewModel @Inject constructor(
     private suspend fun performSearch(query: String, resetResults: Boolean) {
         _uiState.update { it.copy(isLoading = true, error = null) }
         try {
+            val source = _uiState.value.activeSource
+            val uiFilter = _uiState.value.selectedFilter
             val page = if (resetResults) null else nextPage
-            val filter = resolveFilterForSource(_uiState.value.activeSource, _uiState.value.selectedFilter)
-            val (results, newNextPage) = youtubeRepository.search(
-                query = query,
-                filter = filter,
-                page = page,
-            )
+
+            val results: List<SearchResult>
+            val newNextPage: Any?
+            when (source) {
+                YouTubeSource.YouTube -> {
+                    val (r, np) = youtubeRepository.search(query = query, filter = uiFilter, page = page)
+                    results = r
+                    newNextPage = np
+                }
+                YouTubeSource.YouTubeMusic -> {
+                    // YT Music Innertube search returns no opaque page token in this pass,
+                    // so we always fetch the first page and disable pagination.
+                    results = youtubeMusicRepository.search(query = query, filter = uiFilter)
+                    newNextPage = null
+                }
+            }
             nextPage = newNextPage
 
             _uiState.update {
