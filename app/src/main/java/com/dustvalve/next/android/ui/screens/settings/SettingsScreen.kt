@@ -844,6 +844,11 @@ fun SettingsScreen(
         // Storage section
         item {
             val exportContext = LocalContext.current
+            // Tracks selected via the Export Tracks sheet; null while the user is
+            // exporting the entire library (the "Export downloads" button).
+            var pendingExportIds by remember { mutableStateOf<Set<String>?>(null) }
+            var showExportSheet by remember { mutableStateOf(false) }
+            val exportableTracks by viewModel.exportableTracks.collectAsStateWithLifecycle()
             val exportFolderPickerLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocumentTree(),
             ) { uri: Uri? ->
@@ -853,7 +858,16 @@ fun SettingsScreen(
                     try {
                         exportContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
                     } catch (_: Exception) { /* Best effort */ }
-                    viewModel.exportDownloads(uri.toString())
+                    val ids = pendingExportIds
+                    if (ids != null) {
+                        viewModel.exportSelectedDownloads(uri.toString(), ids)
+                        pendingExportIds = null
+                        showExportSheet = false
+                    } else {
+                        viewModel.exportDownloads(uri.toString())
+                    }
+                } else {
+                    pendingExportIds = null
                 }
             }
 
@@ -936,6 +950,21 @@ fun SettingsScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         FilledTonalButton(
+                            onClick = { showExportSheet = true },
+                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !state.isExporting && exportableTracks.isNotEmpty(),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_folder_open),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.export_tracks_button))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
                             onClick = { showRemoveDownloadsDialog = true },
                             shapes = ButtonDefaults.shapes(),
                             modifier = Modifier.fillMaxWidth(),
@@ -1010,6 +1039,19 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+
+            if (showExportSheet) {
+                com.dustvalve.next.android.ui.components.sheet.ExportTracksSheet(
+                    tracks = exportableTracks,
+                    onDismiss = { showExportSheet = false },
+                    onExport = { ids ->
+                        if (ids.isNotEmpty()) {
+                            pendingExportIds = ids
+                            exportFolderPickerLauncher.launch(null)
+                        }
+                    },
+                )
             }
         }
 

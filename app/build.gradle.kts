@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 166
-        versionName = "0.3.16"
+        versionCode = 167
+        versionName = "0.3.17"
     }
 
     buildTypes {
@@ -158,4 +158,6 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("com.squareup.okhttp3:okhttp-tls:5.3.2")
     testImplementation("app.cash.turbine:turbine:1.2.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4:1.11.0")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.11.0")
 }

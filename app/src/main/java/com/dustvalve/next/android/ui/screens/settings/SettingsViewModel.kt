@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
+import com.dustvalve.next.android.domain.model.ExportableTrack
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.CacheRepository
@@ -16,10 +17,12 @@ import com.dustvalve.next.android.util.UiText
 import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -77,6 +80,15 @@ class SettingsViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    /**
+     * All currently downloaded tracks, surfaced to the Export Tracks bottom sheet
+     * with their format / quality metadata.
+     */
+    val exportableTracks: StateFlow<List<ExportableTrack>> = downloadRepository
+        .getExportableTracks()
+        .catch { /* ignore collection errors */ }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), emptyList())
 
     private var scanJob: Job? = null
 
@@ -733,6 +745,36 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         isExporting = false,
                         exportMessage = e.message?.let { UiText.StringResource(R.string.snackbar_export_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_export_failed, listOf("Unknown error")),
+                    )
+                }
+            }
+        }
+    }
+
+    fun exportSelectedDownloads(destinationUri: String, trackIds: Set<String>) {
+        if (trackIds.isEmpty()) return
+        exportJob?.cancel()
+        exportJob = viewModelScope.launch {
+            _uiState.update { it.copy(isExporting = true, exportProgress = 0f) }
+            try {
+                val count = downloadRepository.exportDownloads(destinationUri, trackIds) { exported, total ->
+                    _uiState.update {
+                        it.copy(exportProgress = if (total == 0) 0f else exported.toFloat() / total.toFloat())
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        exportMessage = UiText.PluralsResource(R.plurals.export_complete, count),
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        isExporting = false,
+                        exportMessage = e.message?.let { UiText.StringResource(R.string.snackbar_export_failed, listOf(it)) }
+                            ?: UiText.StringResource(R.string.snackbar_export_failed, listOf("Unknown error")),
                     )
                 }
             }
