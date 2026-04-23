@@ -10,6 +10,8 @@ import com.dustvalve.next.android.domain.model.ExportableTrack
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
+import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
+import com.dustvalve.next.android.update.AppUpdateService
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
@@ -59,6 +61,11 @@ data class SettingsUiState(
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
+    val searchHistoryBandcamp: Boolean = true,
+    val searchHistoryYoutube: Boolean = true,
+    val searchHistorySpotify: Boolean = true,
+    val searchHistoryLocal: Boolean = true,
+    val searchHistoryClearedMessage: UiText? = null,
     val albumCoverLongPressCarousel: Boolean = true,
     val youtubeDefaultSource: String = "youtube",
     val keepScreenOnInApp: Boolean = false,
@@ -66,7 +73,18 @@ data class SettingsUiState(
     val isExporting: Boolean = false,
     val exportProgress: Float = 0f,
     val exportMessage: UiText? = null,
+    val updateState: UpdateUiState = UpdateUiState.Idle,
+    val updateMessage: UiText? = null,
 )
+
+sealed interface UpdateUiState {
+    object Idle : UpdateUiState
+    object Checking : UpdateUiState
+    /** API said an update is available; awaiting user confirmation. */
+    data class Available(val versionName: String, val apkUrl: String) : UpdateUiState
+    /** Downloading the APK. [progress] is 0f..1f or `null` when the server didn't send Content-Length. */
+    data class Downloading(val versionName: String, val progress: Float?) : UpdateUiState
+}
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -76,6 +94,8 @@ class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val localMusicRepository: LocalMusicRepository,
     private val downloadRepository: DownloadRepository,
+    private val recentSearchDao: RecentSearchDao,
+    private val appUpdateService: AppUpdateService,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -680,6 +700,121 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSearchHistorySource(source: String, enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                when (source) {
+                    "bandcamp" -> settingsDataStore.setSearchHistoryBandcamp(enabled)
+                    "youtube" -> settingsDataStore.setSearchHistoryYoutube(enabled)
+                    "spotify" -> settingsDataStore.setSearchHistorySpotify(enabled)
+                    "local" -> settingsDataStore.setSearchHistoryLocal(enabled)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun clearAllSearchHistory() {
+        viewModelScope.launch {
+            try {
+                for (source in listOf("bandcamp", "youtube", "spotify", "local")) {
+                    recentSearchDao.clearAll(source)
+                }
+                _uiState.update {
+                    it.copy(searchHistoryClearedMessage = UiText.StringResource(R.string.settings_search_history_cleared))
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
+    fun clearSearchHistoryClearedMessage() {
+        _uiState.update { it.copy(searchHistoryClearedMessage = null) }
+    }
+
+    // ─── App update ────────────────────────────────────────────────────────
+
+    fun checkForAppUpdate() {
+        if (_uiState.value.updateState is UpdateUiState.Downloading) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(updateState = UpdateUiState.Checking) }
+            try {
+                val available = appUpdateService.checkForUpdate()
+                if (available == null) {
+                    _uiState.update {
+                        it.copy(
+                            updateState = UpdateUiState.Idle,
+                            updateMessage = UiText.StringResource(R.string.settings_update_no_update),
+                        )
+                    }
+                } else {
+                    _uiState.update {
+                        it.copy(
+                            updateState = UpdateUiState.Available(
+                                versionName = available.versionName,
+                                apkUrl = available.apkDownloadUrl,
+                            ),
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        updateState = UpdateUiState.Idle,
+                        updateMessage = UiText.StringResource(R.string.settings_update_check_failed),
+                    )
+                }
+            }
+        }
+    }
+
+    fun confirmAppUpdate() {
+        val current = _uiState.value.updateState
+        if (current !is UpdateUiState.Available) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(updateState = UpdateUiState.Downloading(current.versionName, 0f))
+            }
+            try {
+                appUpdateService.downloadApk(current.apkUrl).collect { p ->
+                    val frac = if (p.totalBytes > 0L) p.fraction else null
+                    _uiState.update {
+                        it.copy(updateState = UpdateUiState.Downloading(current.versionName, frac))
+                    }
+                }
+                // Download finished — hand off to the system installer.
+                try {
+                    appUpdateService.launchInstaller()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    _uiState.update {
+                        it.copy(updateMessage = UiText.StringResource(R.string.settings_update_install_failed))
+                    }
+                }
+                _uiState.update { it.copy(updateState = UpdateUiState.Idle) }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        updateState = UpdateUiState.Idle,
+                        updateMessage = UiText.StringResource(R.string.settings_update_download_failed),
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissAppUpdate() {
+        _uiState.update { it.copy(updateState = UpdateUiState.Idle) }
+    }
+
+    fun clearUpdateMessage() {
+        _uiState.update { it.copy(updateMessage = null) }
+    }
+
     fun setYoutubeDefaultSource(source: String) {
         viewModelScope.launch {
             try {
@@ -849,6 +984,26 @@ class SettingsViewModel @Inject constructor(
                 .collect { enabled ->
                     _uiState.update { it.copy(searchHistoryEnabled = enabled) }
                 }
+        }
+        viewModelScope.launch {
+            settingsDataStore.searchHistoryBandcamp
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(searchHistoryBandcamp = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.searchHistoryYoutube
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(searchHistoryYoutube = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.searchHistorySpotify
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(searchHistorySpotify = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.searchHistoryLocal
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(searchHistoryLocal = v) } }
         }
     }
 

@@ -51,6 +51,10 @@ class SettingsDataStore @Inject constructor(
         val SHOW_VOLUME_BUTTON = booleanPreferencesKey("show_volume_button")
         val LAST_YOUTUBE_VIDEO_ID = stringPreferencesKey("last_youtube_video_id")
         val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
+        val SEARCH_HISTORY_BANDCAMP = booleanPreferencesKey("search_history_bandcamp")
+        val SEARCH_HISTORY_YOUTUBE = booleanPreferencesKey("search_history_youtube")
+        val SEARCH_HISTORY_SPOTIFY = booleanPreferencesKey("search_history_spotify")
+        val SEARCH_HISTORY_LOCAL = booleanPreferencesKey("search_history_local")
         val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
         val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
         val YOUTUBE_DEFAULT_SOURCE = stringPreferencesKey("youtube_default_source")
@@ -430,6 +434,22 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.SEARCH_HISTORY_ENABLED] ?: true
     }
 
+    val searchHistoryBandcamp: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SEARCH_HISTORY_BANDCAMP] ?: true
+    }
+
+    val searchHistoryYoutube: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SEARCH_HISTORY_YOUTUBE] ?: true
+    }
+
+    val searchHistorySpotify: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SEARCH_HISTORY_SPOTIFY] ?: true
+    }
+
+    val searchHistoryLocal: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.SEARCH_HISTORY_LOCAL] ?: true
+    }
+
     suspend fun setKeepScreenOnInApp(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.KEEP_SCREEN_ON_IN_APP] = enabled
@@ -446,6 +466,22 @@ class SettingsDataStore @Inject constructor(
         context.dataStore.edit { prefs ->
             prefs[Keys.SEARCH_HISTORY_ENABLED] = enabled
         }
+    }
+
+    suspend fun setSearchHistoryBandcamp(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_BANDCAMP] = enabled }
+    }
+
+    suspend fun setSearchHistoryYoutube(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_YOUTUBE] = enabled }
+    }
+
+    suspend fun setSearchHistorySpotify(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_SPOTIFY] = enabled }
+    }
+
+    suspend fun setSearchHistoryLocal(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_LOCAL] = enabled }
     }
 
     val albumCoverLongPressCarousel: Flow<Boolean> = context.dataStore.data.map { prefs ->

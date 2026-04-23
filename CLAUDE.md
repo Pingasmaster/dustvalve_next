@@ -16,6 +16,24 @@ Always use `run_in_background: true` when launching builds so you can continue w
 
 Do NOT commit or push unless the user explicitly asks you to. Never commit/push proactively after completing changes.
 
+**When the user says "commit and push", always update the README download badge first.** Before staging:
+
+1. Read the current `versionName` from `app/build.gradle.kts` (e.g. `0.3.20`).
+2. Edit `README.md`: replace the `releases/download/v<old>/app-release.apk` URL fragment AND the `alt="Download APK v<old>"` text with `v<new>`.
+3. Edit `download.svg`: replace BOTH `aria-label="Download APK v<old>"` and the `Download APK v<old>` text node body with `v<new>`.
+4. Stage README.md + download.svg in the same commit.
+
+Skip this step ONLY if the user explicitly says not to bump the badge.
+
+## Pre-alpha update policy
+
+This project is **pre-alpha**. Until beta:
+
+- DB schema is wiped on every install (Room `fallbackToDestructiveMigration(dropAllTables = true)`); schema version stays at 1; no migration code, ever.
+- No "in-place upgrade" support of any kind: no SharedPreferences migrations, no DataStore version-bump handlers, no on-disk file-format upgraders.
+- If you find any such code, **delete it** without asking — it is debt that the user has no plans to keep.
+- The only self-update path is the user-triggered "Search for updates" button in Settings → About (driven by `AppUpdateService`). Do not add startup auto-checks; do not add background WorkManager update jobs.
+
 ## Known Non-Bugs (Do NOT Fix)
 
 - **Bug #1 (Missing `org.jetbrains.kotlin.android` plugin)**: This is NOT a real bug. The `org.jetbrains.kotlin.plugin.compose` plugin already applies the Kotlin Android plugin internally. Adding `id("org.jetbrains.kotlin.android")` to `app/build.gradle.kts` causes a build failure: "Cannot add extension with name 'kotlin', as there is an extension already registered with that name." Do NOT add this plugin.

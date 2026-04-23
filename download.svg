@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 68" width="300" height="68" role="img" aria-label="Download APK v0.3.19">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 68" width="300" height="68" role="img" aria-label="Download APK v0.3.20">
   <rect width="300" height="68" rx="34" fill="#4DD4F0"/>
   <g transform="translate(22 22)" fill="none" stroke="#002E38" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 3v10.5"/>
     <path d="M7 9l5 5 5-5"/>
     <path d="M5 19.5h14"/>
   </g>
-  <text x="54" y="43" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="600" fill="#002E38">Download APK v0.3.19</text>
+  <text x="54" y="43" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="19" font-weight="600" fill="#002E38">Download APK v0.3.20</text>
 </svg>
