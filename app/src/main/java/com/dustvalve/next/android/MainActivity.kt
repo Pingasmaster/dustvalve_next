@@ -201,7 +201,11 @@ private fun MainContent(accountRepository: AccountRepository, spotifyRepository:
         activity.settingsDataStore.keepScreenOnWhilePlaying
     }.collectAsStateWithLifecycle(initialValue = false)
 
-    val shouldKeepScreenOn = keepScreenOnInApp || (keepScreenOnWhilePlaying && isPlaying)
+    // keepScreenOnWhilePlaying is a sub-toggle of keepScreenOnInApp:
+    // - parent off            → never keep screen on
+    // - parent on, sub off    → screen on whenever the app is open
+    // - parent on, sub on     → screen on only while the app is open AND playing
+    val shouldKeepScreenOn = keepScreenOnInApp && (!keepScreenOnWhilePlaying || isPlaying)
 
     DisposableEffect(shouldKeepScreenOn) {
         if (shouldKeepScreenOn) {

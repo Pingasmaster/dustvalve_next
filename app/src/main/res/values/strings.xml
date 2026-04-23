@@ -124,6 +124,7 @@
     <string name="settings_section_player">Player</string>
     <string name="settings_section_search">Search</string>
     <string name="settings_section_about">About</string>
+    <string name="settings_section_debug">Debug</string>
     <string name="settings_source_local">Local</string>
     <string name="settings_source_bandcamp">Bandcamp</string>
     <string name="settings_source_youtube">YouTube</string>
@@ -189,12 +190,12 @@
     <string name="settings_volume_slider_desc">Show a volume slider next to album art in the music player</string>
     <string name="settings_volume_button">Volume button</string>
     <string name="settings_volume_button_desc">Show a volume button that opens a full-screen volume control</string>
-    <string name="settings_cover_carousel">Cover carousel</string>
-    <string name="settings_cover_carousel_desc">Long-press album cover to browse upcoming tracks (disabling shows debug info instead)</string>
+    <string name="settings_show_debug_info">Show debug info</string>
+    <string name="settings_show_debug_info_desc">Replace the player\'s cover carousel with a debug overlay</string>
     <string name="settings_keep_screen_open">Keep screen on while open</string>
     <string name="settings_keep_screen_open_desc">Prevent the screen from locking while the app is open</string>
-    <string name="settings_keep_screen_playing">Keep screen on while playing</string>
-    <string name="settings_keep_screen_playing_desc">Prevent the screen from locking while music is playing</string>
+    <string name="settings_keep_screen_only_playing">Only while playing</string>
+    <string name="settings_keep_screen_only_playing_desc">Restrict the wake-lock to moments when music is actively playing</string>
     <string name="settings_search_history">Search history</string>
     <string name="settings_search_history_desc">Save recent searches for quick access</string>
     <string name="settings_search_history_per_source">Per-source toggles</string>
@@ -350,6 +351,9 @@
     <string name="detail_show_more">Show more</string>
     <string name="detail_show_less">Show less</string>
     <string name="detail_buy_on_bandcamp">Buy on Bandcamp</string>
+    <string name="detail_buy_more_options">More buy options</string>
+    <string name="detail_send_as_gift">Send as a gift</string>
+    <string name="detail_cd_open_artist">Open artist page</string>
     <string name="detail_tags">Tags</string>
     <string name="detail_top_tracks">Top Tracks</string>
     <string name="detail_albums">Albums</string>

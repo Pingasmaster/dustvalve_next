@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.remote
 
 import com.dustvalve.next.android.domain.model.Album
+import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.util.HtmlUtils
 import com.dustvalve.next.android.util.NetworkUtils
@@ -11,6 +12,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -132,7 +134,61 @@ class DustvalveAlbumScraper @Inject constructor(
             about = tralbumData.current.about,
             tracks = tracks,
             tags = tags,
+            price = extractAlbumPrice(html),
         )
+    }
+
+    /**
+     * Extracts the album's headline buy price from the page's
+     * `<script type="application/ld+json">` MusicAlbum block.
+     *
+     * Bandcamp's JSON-LD ships a `MusicAlbum` object whose `albumRelease`
+     * array enumerates each purchase option (the album itself plus any
+     * bundles or merch). The first entry is the album proper; we return
+     * its `offers.price` + `offers.priceCurrency`. Falls back to null on:
+     *   - free albums (offer present but missing price)
+     *   - "name your price" with no minimum (price = 0 OR missing)
+     *   - non-Bandcamp / non-MusicAlbum pages
+     *   - parse failures (defensive — bad HTML never crashes the scraper)
+     *
+     * Public + open so unit tests can drive it from the captured fixtures
+     * under `app/src/test/resources/fixtures/bandcamp/` without spinning
+     * up a MockWebServer.
+     */
+    fun extractAlbumPrice(html: String): AlbumPrice? {
+        val scriptRegex = Regex(
+            """<script type="application/ld\+json"[^>]*>(.+?)</script>""",
+            RegexOption.DOT_MATCHES_ALL,
+        )
+        for (m in scriptRegex.findAll(html)) {
+            val body = m.groupValues[1].trim()
+            val root = try {
+                json.parseToJsonElement(body)
+            } catch (_: Throwable) {
+                continue
+            }
+            val obj = root as? kotlinx.serialization.json.JsonObject ?: continue
+            // Only the MusicAlbum block carries albumRelease[].offers; bandcamp also
+            // emits a sibling MusicRecording block per track which we want to skip.
+            val type = obj["@type"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }?.contentOrNull
+            if (type != "MusicAlbum") continue
+
+            val releases = obj["albumRelease"] as? kotlinx.serialization.json.JsonArray ?: continue
+            for (release in releases) {
+                val offer = (release as? kotlinx.serialization.json.JsonObject)
+                    ?.get("offers") as? kotlinx.serialization.json.JsonObject
+                    ?: continue
+                val priceNum = offer["price"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+                    ?.contentOrNull?.toDoubleOrNull()
+                val currency = offer["priceCurrency"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+                    ?.contentOrNull
+                if (priceNum != null && priceNum > 0.0 && !currency.isNullOrBlank()) {
+                    return AlbumPrice(amount = priceNum, currency = currency)
+                }
+            }
+            return null  // Found MusicAlbum but no usable offer — don't keep scanning.
+        }
+        return null
     }
 
     private fun extractArtistFromHtml(html: String): String? {
