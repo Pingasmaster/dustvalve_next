@@ -77,6 +77,7 @@ class PlayerViewModel @Inject constructor(
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadRepository: DownloadRepository,
     private val playlistRepository: PlaylistRepository,
+    private val favoriteDao: com.dustvalve.next.android.data.local.db.dao.FavoriteDao,
     private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
     private val spotifyRepository: com.dustvalve.next.android.domain.repository.SpotifyRepository,
@@ -133,7 +134,20 @@ class PlayerViewModel @Inject constructor(
         collectDownloadedTrackIds()
         collectPlaylists()
         collectUserPlaylistTrackIds()
+        collectFavoriteTrackIds()
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, Handler(Looper.getMainLooper()))
+    }
+
+    // Reactively patch the queue's per-track isFavorite from the DB so
+    // toggles done from album view / favorites tab show up on the player.
+    private fun collectFavoriteTrackIds() {
+        viewModelScope.launch {
+            favoriteDao.getAllByType("track")
+                .catch { /* ignore */ }
+                .collect { entities ->
+                    queueManager.applyFavoriteIds(entities.map { it.id }.toSet())
+                }
+        }
     }
 
     override fun onCleared() {

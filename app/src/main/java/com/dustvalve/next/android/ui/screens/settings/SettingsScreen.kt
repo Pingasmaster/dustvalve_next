@@ -83,6 +83,7 @@ import com.dustvalve.next.android.domain.model.AudioFormat
 import androidx.compose.ui.platform.LocalContext
 import com.dustvalve.next.android.ui.components.StorageIndicator
 import com.dustvalve.next.android.ui.theme.AppShapes
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -1321,30 +1322,36 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
 
-                            // Connected ButtonGroup [Wavy | Linear].
+                            // Connected ButtonGroup [Wavy | Linear] — uses the same
+                            // M3E ButtonGroup component as the theme selector above
+                            // so the inter-button gap matches.
                             val styleOptions = listOf("wavy", "linear")
                             val styleLabels = listOf(
                                 stringResource(R.string.settings_progress_bar_style_wavy),
                                 stringResource(R.string.settings_progress_bar_style_linear),
                             )
-                            Row(
+                            ButtonGroup(
+                                overflowIndicator = {},
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(2.dp),
                             ) {
                                 styleOptions.forEachIndexed { i, opt ->
-                                    val shapes = when (i) {
-                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                        styleOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                                    }
-                                    ToggleButton(
-                                        checked = state.progressBarStyle == opt,
-                                        onCheckedChange = { if (it) viewModel.setProgressBarStyle(opt) },
-                                        shapes = shapes,
-                                        modifier = Modifier.weight(1f),
-                                    ) {
-                                        Text(styleLabels[i])
-                                    }
+                                    customItem(
+                                        buttonGroupContent = {
+                                            ToggleButton(
+                                                checked = state.progressBarStyle == opt,
+                                                onCheckedChange = { if (it) viewModel.setProgressBarStyle(opt) },
+                                                modifier = Modifier.weight(1f),
+                                                shapes = when (i) {
+                                                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                                    styleOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                                },
+                                            ) {
+                                                Text(styleLabels[i])
+                                            }
+                                        },
+                                        menuContent = {},
+                                    )
                                 }
                             }
 
@@ -1367,7 +1374,9 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Slider(
                                 value = sizeIndex.toFloat(),
-                                onValueChange = { sizeIndex = it.toInt() },
+                                onValueChange = {
+                                    sizeIndex = it.roundToInt().coerceIn(0, sizeSteps.lastIndex)
+                                },
                                 onValueChangeFinished = {
                                     viewModel.setProgressBarSizeDp(sizeSteps[sizeIndex])
                                 },

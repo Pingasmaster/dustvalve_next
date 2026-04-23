@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.ToggleFavoriteUseCase
@@ -41,6 +44,7 @@ class AlbumDetailViewModel @Inject constructor(
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
+    private val favoriteDao: FavoriteDao,
     private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
 
@@ -55,6 +59,7 @@ class AlbumDetailViewModel @Inject constructor(
 
     init {
         collectDownloadedTrackIds()
+        collectFavoriteIds()
     }
 
     private fun collectDownloadedTrackIds() {
@@ -63,6 +68,31 @@ class AlbumDetailViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { ids ->
                     _uiState.update { it.copy(downloadedTrackIds = ids.toSet()) }
+                }
+        }
+    }
+
+    // Reactively merge favorite state from the DB into the displayed album so
+    // toggles done elsewhere (player, favorites tab) update the heart icons
+    // here without a re-scrape.
+    private fun collectFavoriteIds() {
+        viewModelScope.launch {
+            combine(
+                favoriteDao.getAllByType("track").map { list -> list.map { it.id }.toSet() },
+                favoriteDao.getAllByType("album").map { list -> list.map { it.id }.toSet() },
+            ) { trackFavs, albumFavs -> trackFavs to albumFavs }
+                .catch { /* ignore */ }
+                .collect { (trackFavs, albumFavs) ->
+                    _uiState.update { state ->
+                        val a = state.album ?: return@update state
+                        val newAlbumFav = a.id in albumFavs
+                        val newTracks = a.tracks.map { t ->
+                            val fav = t.id in trackFavs
+                            if (t.isFavorite == fav) t else t.copy(isFavorite = fav)
+                        }
+                        if (newAlbumFav == a.isFavorite && newTracks === a.tracks) state
+                        else state.copy(album = a.copy(isFavorite = newAlbumFav, tracks = newTracks))
+                    }
                 }
         }
     }

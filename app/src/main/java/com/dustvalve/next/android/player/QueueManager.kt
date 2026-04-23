@@ -62,6 +62,32 @@ class QueueManager @Inject constructor() {
         _state.value = QueueState(tracks = tracks, currentIndex = newIndex)
     }
 
+    /**
+     * Patches every queue entry whose id is in [trackFavoriteIds] (or absent)
+     * with the new isFavorite value, in-place. Preserves the originalQueue
+     * shuffle snapshot — unlike [setQueue] — so it's safe to call from a
+     * favorite-state observer without breaking shuffle restore.
+     */
+    fun applyFavoriteIds(trackFavoriteIds: Set<String>) {
+        _state.update { s ->
+            if (s.tracks.isEmpty()) return@update s
+            var changed = false
+            val patched = s.tracks.map { t ->
+                val newFav = t.id in trackFavoriteIds
+                if (t.isFavorite == newFav) t else { changed = true; t.copy(isFavorite = newFav) }
+            }
+            if (!changed) s else s.copy(tracks = patched)
+        }
+        // Keep originalQueue (shuffle snapshot) in sync so a later "unshuffle"
+        // restore reflects the new favorite state.
+        originalQueue?.let { snap ->
+            originalQueue = snap.map { t ->
+                val newFav = t.id in trackFavoriteIds
+                if (t.isFavorite == newFav) t else t.copy(isFavorite = newFav)
+            }
+        }
+    }
+
     fun addToQueue(track: Track) {
         originalQueue = null
         _state.update { s ->
