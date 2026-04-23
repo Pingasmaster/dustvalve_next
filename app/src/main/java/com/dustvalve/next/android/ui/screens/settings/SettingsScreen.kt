@@ -524,6 +524,54 @@ fun SettingsScreen(
                             )
                         }
 
+                        if (state.youtubeEnabled) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Column(modifier = Modifier.padding(start = 36.dp)) {
+                                Text(
+                                    text = stringResource(R.string.settings_youtube_default_source_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_youtube_default_source_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                val ytSourceOptions = listOf("youtube", "youtube_music")
+                                val ytSourceLabels = listOf(
+                                    stringResource(R.string.settings_source_youtube),
+                                    stringResource(R.string.settings_youtube_music),
+                                )
+                                val ytSourceSelected = ytSourceOptions.indexOf(state.youtubeDefaultSource).coerceAtLeast(0)
+                                ButtonGroup(
+                                    overflowIndicator = {},
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    ytSourceOptions.forEachIndexed { index, value ->
+                                        customItem(
+                                            buttonGroupContent = {
+                                                ToggleButton(
+                                                    checked = index == ytSourceSelected,
+                                                    onCheckedChange = { isChecked ->
+                                                        if (isChecked) viewModel.setYoutubeDefaultSource(value)
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                    shapes = when (index) {
+                                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                                        ytSourceOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                                    },
+                                                ) {
+                                                    Text(ytSourceLabels[index])
+                                                }
+                                            },
+                                            menuContent = {},
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Row(
@@ -1099,23 +1147,29 @@ fun SettingsScreen(
                         val selectedIndex = themeOptions.indexOf(state.themeMode).coerceAtLeast(0)
 
                         ButtonGroup(
+                            overflowIndicator = {},
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             themeOptions.forEachIndexed { index, mode ->
-                                ToggleButton(
-                                    checked = index == selectedIndex,
-                                    onCheckedChange = { isChecked ->
-                                        if (isChecked) viewModel.setThemeMode(mode)
+                                customItem(
+                                    buttonGroupContent = {
+                                        ToggleButton(
+                                            checked = index == selectedIndex,
+                                            onCheckedChange = { isChecked ->
+                                                if (isChecked) viewModel.setThemeMode(mode)
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            shapes = when (index) {
+                                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                                themeOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                            },
+                                        ) {
+                                            Text(themeLabels[index])
+                                        }
                                     },
-                                    modifier = Modifier.weight(1f),
-                                    shapes = when (index) {
-                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
-                                        themeOptions.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
-                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
-                                    },
-                                ) {
-                                    Text(themeLabels[index])
-                                }
+                                    menuContent = {},
+                                )
                             }
                         }
 

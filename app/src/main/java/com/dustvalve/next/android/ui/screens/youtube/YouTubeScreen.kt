@@ -36,6 +36,8 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroup
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -52,6 +54,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberSearchBarState
@@ -162,6 +166,23 @@ fun YouTubeScreen(
         }
     }
 
+    val onPlayVideoId: (String) -> Unit = { videoId ->
+        scope.launch {
+            try {
+                val track = viewModel.getTrackInfo("https://www.youtube.com/watch?v=$videoId")
+                playerViewModel.playTrack(track)
+                onExpandPlayer()
+            } catch (_: Exception) {
+                snackbarHostState.showSnackbar(failedToPlayMsg)
+            }
+        }
+    }
+
+    val openPlaylistById: (String, String) -> Unit = { id, name ->
+        val stripped = id.removePrefix("VL")
+        onPlaylistClick("https://www.youtube.com/playlist?list=$stripped", name)
+    }
+
     val inputField = @Composable {
         SearchBarDefaults.InputField(
             searchBarState = searchBarState,
@@ -210,91 +231,87 @@ fun YouTubeScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
 
-                // Mood chips — pinned below search bar
-                MoodChipRow(
-                    selectedMood = state.selectedMood,
-                    onMoodSelected = viewModel::onMoodSelected,
+                // YouTube / YouTube Music sub-tab toggle
+                val ytSources = listOf(YouTubeSource.YouTube, YouTubeSource.YouTubeMusic)
+                val ytSourceLabels = listOf(
+                    stringResource(R.string.youtube_tab_source_yt),
+                    stringResource(R.string.youtube_tab_source_ytm),
                 )
-
-                // Discovery feed
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 80.dp),
+                ButtonGroup(
+                    overflowIndicator = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
                 ) {
-                    if (state.selectedMood != null) {
-                        // ── Mood results ────────────────────────────────
-                        item(key = "mood_section") {
-                            val moodSection = DiscoverSection(
-                                title = "${state.selectedMood} music",
-                                items = state.moodResults,
-                                isLoading = state.isMoodLoading,
-                                error = state.moodError,
-                            )
-                            DiscoverCarouselSection(
-                                section = moodSection,
-                                onItemClick = onPlayItem,
-                                onRetry = { viewModel.onMoodSelected(state.selectedMood) },
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
-                    } else {
-                        // ── Default discovery feed ──────────────────────
-
-                        // Recommendations (skip if no history)
-                        val recoSection = state.recommendationsSection
-                        if (recoSection.isLoading || recoSection.items.isNotEmpty()) {
-                            item(key = "reco_section") {
-                                DiscoverCarouselSection(
-                                    section = recoSection,
-                                    onItemClick = onPlayItem,
-                                    onRetry = { viewModel.retrySection("recommendations") },
-                                    modifier = Modifier.animateItem(),
-                                )
-                            }
-                        }
-
-                        // Trending
-                        item(key = "trending_section") {
-                            DiscoverCarouselSection(
-                                section = state.trendingSection,
-                                onItemClick = onPlayItem,
-                                onRetry = { viewModel.retrySection("trending") },
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
-
-                        // Genre sections
-                        itemsIndexed(
-                            items = state.genreSections,
-                            key = { index, _ -> "genre_$index" },
-                        ) { index, section ->
-                            DiscoverCarouselSection(
-                                section = section,
-                                onItemClick = onPlayItem,
-                                onRetry = { viewModel.retrySection("genre_$index") },
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
-
-                        // Infinite scroll trigger
-                        if (!state.genresExhausted) {
-                            item(key = "genre_loader") {
-                                LaunchedEffect(state.genreSections.size) {
-                                    viewModel.loadMoreGenres()
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(24.dp)
-                                        .animateItem(),
-                                    contentAlignment = Alignment.Center,
+                    ytSources.forEachIndexed { index, src ->
+                        customItem(
+                            buttonGroupContent = {
+                                ToggleButton(
+                                    checked = state.activeSource == src,
+                                    onCheckedChange = { isChecked ->
+                                        if (isChecked) viewModel.setActiveSource(src)
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shapes = when (index) {
+                                        0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                        ytSources.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                        else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                                    },
                                 ) {
-                                    ContainedLoadingIndicator()
+                                    Text(ytSourceLabels[index])
                                 }
-                            }
-                        }
+                            },
+                            menuContent = {},
+                        )
                     }
                 }
+
+                AnimatedContent(
+                    targetState = state.activeSource,
+                    label = "youtube_source_switch",
+                    modifier = Modifier.fillMaxSize(),
+                ) { source ->
+                    when (source) {
+                        YouTubeSource.YouTubeMusic -> YouTubeMusicHome(
+                            state = state,
+                            onChipSelected = viewModel::onYtmChipSelected,
+                            onPlaySong = { song -> onPlayVideoId(song.videoId) },
+                            onPlayHero = { hero ->
+                                when {
+                                    hero.videoId != null -> onPlayVideoId(hero.videoId)
+                                    hero.playlistId != null -> openPlaylistById(hero.playlistId, hero.title)
+                                    else -> scope.launch { snackbarHostState.showSnackbar(failedLoadMsg) }
+                                }
+                            },
+                            onOpenTile = { tile ->
+                                when (tile.kind) {
+                                    com.dustvalve.next.android.domain.model.TileKind.SONG,
+                                    com.dustvalve.next.android.domain.model.TileKind.VIDEO ->
+                                        onPlayVideoId(tile.id)
+                                    com.dustvalve.next.android.domain.model.TileKind.ALBUM,
+                                    com.dustvalve.next.android.domain.model.TileKind.PLAYLIST ->
+                                        openPlaylistById(tile.id, tile.title)
+                                }
+                            },
+                            onOpenArtist = { artist ->
+                                onArtistClick(
+                                    "https://www.youtube.com/channel/${artist.browseId}",
+                                    artist.name,
+                                    artist.thumbnailUrl,
+                                )
+                            },
+                            onRetry = { viewModel.retryYtmHome() },
+                        )
+                        YouTubeSource.YouTube -> YouTubeSourceContent(
+                            state = state,
+                            onMoodSelected = viewModel::onMoodSelected,
+                            onPlayItem = onPlayItem,
+                            onRetrySection = viewModel::retrySection,
+                            onLoadMoreGenres = { viewModel.loadMoreGenres() },
+                        )
+                    }
+                }
+
             }
 
             // Expanded search overlay
@@ -657,6 +674,96 @@ fun YouTubeScreen(
 }
 
 // ── Reusable composables ────────────────────────────────────────────────
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun YouTubeSourceContent(
+    state: YouTubeUiState,
+    onMoodSelected: (String?) -> Unit,
+    onPlayItem: (SearchResult) -> Unit,
+    onRetrySection: (String) -> Unit,
+    onLoadMoreGenres: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxSize()) {
+        MoodChipRow(
+            selectedMood = state.selectedMood,
+            onMoodSelected = onMoodSelected,
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 80.dp),
+        ) {
+            if (state.selectedMood != null) {
+                item(key = "mood_section") {
+                    val moodSection = DiscoverSection(
+                        title = "${state.selectedMood} music",
+                        items = state.moodResults,
+                        isLoading = state.isMoodLoading,
+                        error = state.moodError,
+                    )
+                    DiscoverCarouselSection(
+                        section = moodSection,
+                        onItemClick = onPlayItem,
+                        onRetry = { onMoodSelected(state.selectedMood) },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+            } else {
+                val recoSection = state.recommendationsSection
+                if (recoSection.isLoading || recoSection.items.isNotEmpty()) {
+                    item(key = "reco_section") {
+                        DiscoverCarouselSection(
+                            section = recoSection,
+                            onItemClick = onPlayItem,
+                            onRetry = { onRetrySection("recommendations") },
+                            modifier = Modifier.animateItem(),
+                        )
+                    }
+                }
+
+                item(key = "trending_section") {
+                    DiscoverCarouselSection(
+                        section = state.trendingSection,
+                        onItemClick = onPlayItem,
+                        onRetry = { onRetrySection("trending") },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+
+                itemsIndexed(
+                    items = state.genreSections,
+                    key = { index, _ -> "genre_$index" },
+                ) { index, section ->
+                    DiscoverCarouselSection(
+                        section = section,
+                        onItemClick = onPlayItem,
+                        onRetry = { onRetrySection("genre_$index") },
+                        modifier = Modifier.animateItem(),
+                    )
+                }
+
+                if (!state.genresExhausted) {
+                    item(key = "genre_loader") {
+                        LaunchedEffect(state.genreSections.size) {
+                            onLoadMoreGenres()
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp)
+                                .animateItem(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            ContainedLoadingIndicator()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun MoodChipRow(

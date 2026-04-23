@@ -57,6 +57,7 @@ data class SettingsUiState(
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
     val albumCoverLongPressCarousel: Boolean = true,
+    val youtubeDefaultSource: String = "youtube",
     val keepScreenOnInApp: Boolean = false,
     val keepScreenOnWhilePlaying: Boolean = false,
     val isExporting: Boolean = false,
@@ -105,6 +106,7 @@ class SettingsViewModel @Inject constructor(
         collectShowInlineVolumeSlider()
         collectShowVolumeButton()
         collectSearchHistoryEnabled()
+        collectYoutubeDefaultSource()
         collectAlbumCoverLongPressCarousel()
         collectKeepScreenOnInApp()
         collectKeepScreenOnWhilePlaying()
@@ -669,6 +671,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setYoutubeDefaultSource(source: String) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setYoutubeDefaultSource(source)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     fun setAlbumCoverLongPressCarousel(enabled: Boolean) {
         viewModelScope.launch {
             try {
@@ -800,6 +812,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(searchHistoryEnabled = enabled) }
+                }
+        }
+    }
+
+    private fun collectYoutubeDefaultSource() {
+        viewModelScope.launch {
+            settingsDataStore.youtubeDefaultSource
+                .catch { /* ignore */ }
+                .collect { source ->
+                    _uiState.update { it.copy(youtubeDefaultSource = source) }
                 }
         }
     }

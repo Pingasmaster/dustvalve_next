@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 159
-        versionName = "0.3.9"
+        versionCode = 162
+        versionName = "0.3.12"
     }
 
     buildTypes {
@@ -62,29 +62,29 @@ android {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2026.03.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)
 
-    // Material 3 Expressive + compatible compose libs (all pinned to 1.11.0-rc01)
-    implementation("androidx.compose.runtime:runtime:1.11.0-rc01")
-    implementation("androidx.compose.ui:ui:1.11.0-rc01")
-    implementation("androidx.compose.ui:ui-graphics:1.11.0-rc01")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.11.0-rc01")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.11.0-rc01")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha17")
-    implementation("androidx.compose.foundation:foundation:1.11.0-rc01")
-    implementation("androidx.compose.animation:animation:1.11.0-rc01")
+    // Material 3 Expressive + compatible compose libs (all pinned to 1.11.0)
+    implementation("androidx.compose.runtime:runtime:1.11.0")
+    implementation("androidx.compose.ui:ui:1.11.0")
+    implementation("androidx.compose.ui:ui-graphics:1.11.0")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.11.0")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.11.0")
+    implementation("androidx.compose.material3:material3:1.5.0-alpha18")
+    implementation("androidx.compose.foundation:foundation:1.11.0")
+    implementation("androidx.compose.animation:animation:1.11.0")
 
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Navigation 3
-    implementation("androidx.navigation3:navigation3-runtime:1.1.0")
-    implementation("androidx.navigation3:navigation3-ui:1.1.0")
+    implementation("androidx.navigation3:navigation3-runtime:1.1.1")
+    implementation("androidx.navigation3:navigation3-ui:1.1.1")
 
     // Lifecycle
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-alpha03")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-alpha03")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-beta01")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-beta01")
 
     // Activity
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -105,7 +105,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.3.0-alpha07")
+    implementation("androidx.datastore:datastore-preferences:1.3.0-alpha08")
 
     // DocumentFile (SAF directory/file creation for export)
     implementation("androidx.documentfile:documentfile:1.1.0")
@@ -114,7 +114,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
 
     // Jsoup
-    implementation("org.jsoup:jsoup:1.22.1")
+    implementation("org.jsoup:jsoup:1.22.2")
 
     // Coil 3
     implementation("io.coil-kt.coil3:coil-compose:3.4.0")
@@ -138,7 +138,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
     // WebKit
-    implementation("androidx.webkit:webkit:1.16.0-beta01")
+    implementation("androidx.webkit:webkit:1.16.0-rc01")
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.18.0")
@@ -149,13 +149,13 @@ dependencies {
     // --- Unit test dependencies ---
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
-    testImplementation("com.google.truth:truth:1.4.4")
-    testImplementation("io.mockk:mockk:1.13.13")
+    testImplementation("com.google.truth:truth:1.4.5")
+    testImplementation("io.mockk:mockk:1.14.9")
     testImplementation("org.robolectric:robolectric:4.16.1")
-    testImplementation("androidx.test:core:1.6.1")
-    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("androidx.test:core:1.7.0")
+    testImplementation("androidx.test.ext:junit:1.3.0")
     testImplementation("androidx.room:room-testing:2.8.4")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("com.squareup.okhttp3:okhttp-tls:5.3.2")
-    testImplementation("app.cash.turbine:turbine:1.2.0")
+    testImplementation("app.cash.turbine:turbine:1.2.1")
 }
