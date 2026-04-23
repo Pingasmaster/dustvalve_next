@@ -10,10 +10,7 @@ import com.dustvalve.next.android.domain.model.TileKind
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,18 +18,75 @@ import javax.inject.Singleton
 class YouTubeMusicParser @Inject constructor() {
 
     fun parseHome(root: JsonElement): YouTubeMusicHomeFeed {
-        val sectionList = root.path("contents")
-            ?.path("singleColumnBrowseResultsRenderer")
-            ?.path("tabs")?.arr()?.firstOrNull()
-            ?.path("tabRenderer")?.path("content")?.path("sectionListRenderer")
-            ?: return YouTubeMusicHomeFeed(emptyList(), emptyList())
+        val sectionList = resolveSectionListRenderer(root)
+            ?: throw IllegalStateException("YouTube Music returned an unrecognized home response")
 
         val chips = parseChips(sectionList.path("header")?.path("chipCloudRenderer"))
-        val shelves = sectionList.path("contents")?.arr()
-            ?.mapNotNull { parseShelf(it) }
-            ?: emptyList()
+        val rawShelves = sectionList.path("contents")?.arr() ?: emptyList<JsonElement>()
+        // Flatten itemSectionRenderer wrappers - YT sometimes nests the real
+        // shelves one level deeper, especially for mobile-UA WEB_REMIX.
+        val flatShelves = rawShelves.flatMap { flattenShelf(it) }
+        val shelves = flatShelves.mapNotNull { parseShelf(it) }
 
+        if (chips.isEmpty() && shelves.isEmpty()) {
+            // Build a nested type-tree of what came back so the next failure
+            // points at the exact renderer we still don't handle.
+            val typeTree = rawShelves.joinToString(",") { describeRenderer(it) }
+                .ifEmpty { "(none)" }
+            throw IllegalStateException(
+                "YouTube Music returned an empty home response (raw shelves: $typeTree)"
+            )
+        }
         return YouTubeMusicHomeFeed(chips = chips, shelves = shelves)
+    }
+
+    /**
+     * itemSectionRenderer is a transparent wrapper YT uses to nest real
+     * shelves; expose its contents as if they were top-level shelves.
+     * musicTastebuilderShelfRenderer / musicNotifierShelfRenderer are
+     * "tell us what you like" / promo banners — skip silently.
+     */
+    private fun flattenShelf(section: JsonElement): List<JsonElement> {
+        val obj = section as? kotlinx.serialization.json.JsonObject ?: return listOf(section)
+        val key = obj.keys.firstOrNull() ?: return listOf(section)
+        return when (key) {
+            "itemSectionRenderer" -> {
+                val inner = section.path(key)?.path("contents")?.arr() ?: return emptyList()
+                inner.flatMap { flattenShelf(it) }
+            }
+            "musicTastebuilderShelfRenderer", "musicNotifierShelfRenderer" -> emptyList()
+            else -> listOf(section)
+        }
+    }
+
+    private fun describeRenderer(section: JsonElement): String {
+        val obj = section as? kotlinx.serialization.json.JsonObject ?: return "?"
+        val key = obj.keys.firstOrNull() ?: return "?"
+        if (key == "itemSectionRenderer") {
+            val inner = section.path(key)?.path("contents")?.arr().orEmpty()
+            val innerDesc = inner.joinToString(",") { describeRenderer(it) }.ifEmpty { "empty" }
+            return "itemSectionRenderer[$innerDesc]"
+        }
+        return key
+    }
+
+    /**
+     * YT Music wraps the feed in either `singleColumnBrowseResultsRenderer`
+     * (mobile/anon web) or `twoColumnBrowseResultsRenderer` (desktop, some
+     * logged-in cases). Walk every tab and return the first sectionListRenderer
+     * we find.
+     */
+    private fun resolveSectionListRenderer(root: JsonElement): JsonElement? {
+        val contents = root.path("contents") ?: return null
+        val tabs = (contents.path("singleColumnBrowseResultsRenderer")?.path("tabs")?.arr())
+            ?: (contents.path("twoColumnBrowseResultsRenderer")?.path("tabs")?.arr())
+            ?: return null
+
+        for (tab in tabs) {
+            val slr = tab.path("tabRenderer")?.path("content")?.path("sectionListRenderer")
+            if (slr != null) return slr
+        }
+        return null
     }
 
     private fun parseChips(chipCloud: JsonElement?): List<MoodChip> {
@@ -133,7 +187,7 @@ class YouTubeMusicParser @Inject constructor() {
                 ?.contains("ALBUM") == true
         }?.str("text")
 
-        val thumbnail = item.extractThumbnail()
+        val thumbnail = item.extractMusicThumbnail()
 
         return SongItem(
             videoId = videoId,
@@ -148,7 +202,7 @@ class YouTubeMusicParser @Inject constructor() {
         val item = wrapper.path("musicTwoRowItemRenderer") ?: return null
         val title = item.runsText("title") ?: return null
         val subtitle = item.runsText("subtitle") ?: ""
-        val thumbnail = item.extractThumbnail()
+        val thumbnail = item.extractMusicThumbnail()
 
         val nav = item.path("navigationEndpoint") ?: return null
         val watchVideo = nav.path("watchEndpoint")?.path("videoId")?.str()
@@ -185,40 +239,9 @@ class YouTubeMusicParser @Inject constructor() {
         )
     }
 
-    // Shape helpers operating on JsonElement in a null-safe way.
-
-    private fun JsonElement.path(key: String): JsonElement? =
-        (this as? JsonObject)?.get(key)
-
-    private fun JsonElement.arr(): JsonArray? = this as? JsonArray
-
-    private fun JsonElement.str(): String? =
-        (this as? JsonPrimitive)?.let { if (it.isString) it.content else null }
-
-    private fun JsonElement.str(key: String): String? = path(key)?.str()
-
-    private fun JsonElement.runsText(key: String): String? {
-        val runs = path(key)?.path("runs")?.arr()
-        val fromRuns = runs?.firstOrNull()?.str("text")
-        if (fromRuns != null) return fromRuns
-        return path(key)?.path("simpleText")?.str()
-    }
-
     private fun JsonElement.carouselTitle(): String? {
         return path("header")?.path("musicCarouselShelfBasicHeaderRenderer")
             ?.runsText("title")
-    }
-
-    private fun JsonElement.extractThumbnail(): String? {
-        val thumbnails = path("thumbnail")?.path("musicThumbnailRenderer")
-            ?.path("thumbnail")?.path("thumbnails")?.arr()
-            ?: path("thumbnailRenderer")?.path("musicThumbnailRenderer")
-                ?.path("thumbnail")?.path("thumbnails")?.arr()
-            ?: return null
-
-        return thumbnails.maxByOrNull { it.path("width")?.jsonPrimitive?.content?.toIntOrNull() ?: 0 }
-            ?.str("url")
-            ?.replace(Regex("=w\\d+-h\\d+.*$"), "=w544-h544-l90-rj")
     }
 
     private data class RawTile(

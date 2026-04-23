@@ -23,8 +23,6 @@ class YouTubeRepositoryImpl @Inject constructor(
             "songs" -> listOf("videos")
             "playlists" -> listOf("playlists")
             "artists" -> listOf("channels")
-            "music_songs", "music_videos", "music_albums",
-            "music_playlists", "music_artists" -> listOf(filter)
             else -> emptyList()
         }
         val npPage = page as? Page
