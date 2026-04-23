@@ -2,6 +2,7 @@ package com.dustvalve.next.android.domain.repository
 
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
+import com.dustvalve.next.android.domain.model.ExportableTrack
 import com.dustvalve.next.android.domain.model.Track
 import kotlinx.coroutines.flow.Flow
 
@@ -15,6 +16,7 @@ interface DownloadRepository {
     suspend fun downloadTrack(track: Track, formatOverride: AudioFormat? = null)
     fun getDownloadedAlbums(): Flow<List<Album>>
     fun getDownloadedTracks(): Flow<List<Track>>
+    fun getExportableTracks(): Flow<List<ExportableTrack>>
     suspend fun isTrackDownloaded(trackId: String): Boolean
     suspend fun getDownloadInfo(trackId: String): DownloadInfo?
     suspend fun deleteDownload(trackId: String)
@@ -23,6 +25,7 @@ interface DownloadRepository {
     fun getDownloadedAlbumIds(): Flow<List<String>>
     suspend fun exportDownloads(
         destinationUri: String,
+        trackIds: Set<String>? = null,
         onProgress: (exported: Int, total: Int) -> Unit,
     ): Int
 }
