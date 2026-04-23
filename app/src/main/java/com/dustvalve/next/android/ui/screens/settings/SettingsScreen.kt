@@ -1,5 +1,10 @@
 package com.dustvalve.next.android.ui.screens.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -122,6 +127,28 @@ fun SettingsScreen(
                 snackbarHostState.showSnackbar(message)
             } finally {
                 viewModel.clearExportMessage()
+            }
+        }
+    }
+
+    val historyClearedText = state.searchHistoryClearedMessage?.asString()
+    LaunchedEffect(historyClearedText) {
+        historyClearedText?.let { message ->
+            try {
+                snackbarHostState.showSnackbar(message)
+            } finally {
+                viewModel.clearSearchHistoryClearedMessage()
+            }
+        }
+    }
+
+    val updateText = state.updateMessage?.asString()
+    LaunchedEffect(updateText) {
+        updateText?.let { message ->
+            try {
+                snackbarHostState.showSnackbar(message)
+            } finally {
+                viewModel.clearUpdateMessage()
             }
         }
     }
@@ -1444,6 +1471,66 @@ fun SettingsScreen(
                                 onCheckedChange = { viewModel.setSearchHistoryEnabled(it) },
                             )
                         }
+
+                        // Per-source sub-toggles, only when the global toggle is on
+                        // and only for sources the user has enabled.
+                        AnimatedVisibility(
+                            visible = state.searchHistoryEnabled,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
+                        ) {
+                            Column(modifier = Modifier.padding(top = 12.dp, start = 8.dp)) {
+                                Text(
+                                    text = stringResource(R.string.settings_search_history_per_source),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                if (state.bandcampEnabled) {
+                                    SearchHistorySourceRow(
+                                        labelRes = R.string.settings_search_history_source_bandcamp,
+                                        checked = state.searchHistoryBandcamp,
+                                        onCheckedChange = { viewModel.setSearchHistorySource("bandcamp", it) },
+                                    )
+                                }
+                                if (state.youtubeEnabled) {
+                                    SearchHistorySourceRow(
+                                        labelRes = R.string.settings_search_history_source_youtube,
+                                        checked = state.searchHistoryYoutube,
+                                        onCheckedChange = { viewModel.setSearchHistorySource("youtube", it) },
+                                    )
+                                }
+                                if (state.spotifyEnabled) {
+                                    SearchHistorySourceRow(
+                                        labelRes = R.string.settings_search_history_source_spotify,
+                                        checked = state.searchHistorySpotify,
+                                        onCheckedChange = { viewModel.setSearchHistorySource("spotify", it) },
+                                    )
+                                }
+                                if (state.localMusicEnabled) {
+                                    SearchHistorySourceRow(
+                                        labelRes = R.string.settings_search_history_source_local,
+                                        checked = state.searchHistoryLocal,
+                                        onCheckedChange = { viewModel.setSearchHistorySource("local", it) },
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FilledTonalButton(
+                            onClick = { viewModel.clearAllSearchHistory() },
+                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete_sweep),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_search_history_clear_all))
+                        }
                     }
                 }
             }
@@ -1451,6 +1538,7 @@ fun SettingsScreen(
 
         // About section
         item {
+            val uriHandler = LocalUriHandler.current
             SettingsSection(
                 title = stringResource(R.string.settings_section_about),
                 icon = R.drawable.ic_info,
@@ -1482,18 +1570,40 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val uriHandler = LocalUriHandler.current
-                        Text(
-                            text = stringResource(R.string.settings_github),
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                textDecoration = TextDecoration.Underline,
-                            ),
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable {
-                                uriHandler.openUri("https://github.com/Pingasmaster/dustvalve_next")
+                        Spacer(modifier = Modifier.height(12.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                uriHandler.openUri(
+                                    com.dustvalve.next.android.update.AppUpdateService.REPO_URL
+                                )
                             },
-                        )
+                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_info),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_open_repository))
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = { viewModel.checkForAppUpdate() },
+                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = state.updateState !is UpdateUiState.Checking &&
+                                state.updateState !is UpdateUiState.Downloading,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_cloud_download),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_check_for_updates))
+                        }
                     }
                 }
             }
@@ -1501,6 +1611,13 @@ fun SettingsScreen(
         }
 
     }
+
+    // Update flow: Available -> confirm dialog; Downloading -> progress dialog
+    AppUpdateDialog(
+        state = state.updateState,
+        onConfirmDownload = { viewModel.confirmAppUpdate() },
+        onDismiss = { viewModel.dismissAppUpdate() },
+    )
 
     } // end Scaffold
 }
@@ -1541,5 +1658,92 @@ private fun SettingsSection(
             )
         }
         content()
+    }
+}
+
+@Composable
+private fun SearchHistorySourceRow(
+    labelRes: Int,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(labelRes),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun AppUpdateDialog(
+    state: UpdateUiState,
+    onConfirmDownload: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    when (state) {
+        is UpdateUiState.Available -> {
+            AlertDialog(
+                onDismissRequest = onDismiss,
+                title = { Text(stringResource(R.string.settings_update_available_title)) },
+                text = {
+                    Text(
+                        stringResource(
+                            R.string.settings_update_available_text,
+                            state.versionName,
+                        )
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = onConfirmDownload,
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(R.string.settings_update_download_action))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
+                        Text(stringResource(R.string.common_action_cancel))
+                    }
+                },
+            )
+        }
+        is UpdateUiState.Downloading -> {
+            AlertDialog(
+                onDismissRequest = { /* not dismissable while downloading */ },
+                title = {
+                    Text(
+                        stringResource(
+                            R.string.settings_update_downloading,
+                            state.versionName,
+                        )
+                    )
+                },
+                text = {
+                    if (state.progress != null) {
+                        LinearWavyProgressIndicator(
+                            progress = { state.progress },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    } else {
+                        // Indeterminate when the server didn't send Content-Length.
+                        LinearWavyProgressIndicator(
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                },
+                confirmButton = {},
+            )
+        }
+        else -> Unit
     }
 }

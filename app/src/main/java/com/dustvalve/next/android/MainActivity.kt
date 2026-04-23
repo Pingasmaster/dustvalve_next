@@ -45,8 +45,6 @@ import com.dustvalve.next.android.ui.navigation.SideNavRail
 import com.dustvalve.next.android.ui.screens.player.FullPlayer
 import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.update.UpdateDialog
-import com.dustvalve.next.android.ui.update.UpdateViewModel
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
 import androidx.compose.ui.graphics.Color
@@ -186,13 +184,11 @@ private data class ThemeConfig(
 private fun MainContent(accountRepository: AccountRepository, spotifyRepository: com.dustvalve.next.android.domain.repository.SpotifyRepository, activity: MainActivity) {
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val navViewModel: NavigationViewModel = hiltViewModel()
-    val updateViewModel: UpdateViewModel = hiltViewModel()
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val dragProgress by navViewModel.playerDragProgress.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
-    val updateState by updateViewModel.uiState.collectAsStateWithLifecycle()
 
     // Screen wake lock
     val isPlaying by remember {
@@ -218,19 +214,8 @@ private fun MainContent(accountRepository: AccountRepository, spotifyRepository:
         }
     }
 
-    // Auto-update check
-    LaunchedEffect(Unit) {
-        updateViewModel.checkForUpdate()
-    }
-
-    if (updateState.showDialog) {
-        UpdateDialog(
-            state = updateState,
-            onDismiss = { updateViewModel.dismissDialog() },
-            onDownload = { updateViewModel.startDownload() },
-            onInstall = { updateViewModel.installApk() },
-        )
-    }
+    // Update checks are now opt-in from Settings → About → "Search for updates"
+    // (Pre-alpha: no auto-update at startup.)
 
     // Deep link handling
     val deepLinkUrl by activity.deepLinkUrl.collectAsStateWithLifecycle()

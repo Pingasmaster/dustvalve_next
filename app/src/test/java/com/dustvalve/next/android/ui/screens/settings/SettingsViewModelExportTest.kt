@@ -4,6 +4,8 @@ import app.cash.turbine.test
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
+import com.dustvalve.next.android.update.AppUpdateService
 import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.CacheInfo
@@ -45,6 +47,8 @@ class SettingsViewModelExportTest {
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var localMusicRepository: LocalMusicRepository
     private lateinit var downloadRepository: DownloadRepository
+    private lateinit var recentSearchDao: RecentSearchDao
+    private lateinit var appUpdateService: AppUpdateService
     private lateinit var exportableFlow: MutableStateFlow<List<ExportableTrack>>
 
     @Before fun setUp() {
@@ -93,6 +97,9 @@ class SettingsViewModelExportTest {
         downloadRepository = mockk(relaxed = true)
         exportableFlow = MutableStateFlow(emptyList())
         every { downloadRepository.getExportableTracks() } returns exportableFlow
+
+        recentSearchDao = mockk(relaxed = true)
+        appUpdateService = mockk(relaxed = true)
     }
 
     @After fun tearDown() {
@@ -106,6 +113,8 @@ class SettingsViewModelExportTest {
         settingsDataStore = settingsDataStore,
         localMusicRepository = localMusicRepository,
         downloadRepository = downloadRepository,
+        recentSearchDao = recentSearchDao,
+        appUpdateService = appUpdateService,
     )
 
     private fun makeTrack(

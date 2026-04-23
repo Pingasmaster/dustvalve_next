@@ -91,7 +91,10 @@ class LocalViewModel @Inject constructor(
         .map { entities -> entities.map { it.query } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val searchHistoryEnabled: StateFlow<Boolean> = settingsDataStore.searchHistoryEnabled
+    val searchHistoryEnabled: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(
+        settingsDataStore.searchHistoryEnabled,
+        settingsDataStore.searchHistoryLocal,
+    ) { global, perSource -> global && perSource }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val localMusicEnabled: StateFlow<Boolean> = settingsDataStore.localMusicEnabled

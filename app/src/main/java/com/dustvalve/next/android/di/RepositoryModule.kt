@@ -9,7 +9,6 @@ import com.dustvalve.next.android.data.repository.LibraryRepositoryImpl
 import com.dustvalve.next.android.data.repository.LocalMusicRepositoryImpl
 import com.dustvalve.next.android.data.repository.PlaylistRepositoryImpl
 import com.dustvalve.next.android.data.repository.SearchRepositoryImpl
-import com.dustvalve.next.android.data.repository.UpdateRepositoryImpl
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
@@ -19,7 +18,6 @@ import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SearchRepository
-import com.dustvalve.next.android.domain.repository.UpdateRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -55,7 +53,4 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindLocalMusicRepository(impl: LocalMusicRepositoryImpl): LocalMusicRepository
-
-    @Binds
-    abstract fun bindUpdateRepository(impl: UpdateRepositoryImpl): UpdateRepository
 }
