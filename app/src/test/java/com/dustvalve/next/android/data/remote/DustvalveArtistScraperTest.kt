@@ -126,6 +126,33 @@ class DustvalveArtistScraperTest {
         assertThat(artist.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a999_10.jpg")
     }
 
+    @Test fun `bio strips peekaboo show-more overlay (Angine de Poitrine fixture)`() = runTest {
+        // Real captured /music page snippet from anginedepoitrine.bandcamp.com.
+        // Bandcamp's bcTruncate JS plugin renders a "...more" overlay
+        // (`peekaboo-link` + `peekaboo-ellipsis`) inside `<p id="bio-text">`;
+        // a naive `.text()` includes both the hidden long-form text AND the
+        // literal "...more" link tail, which surfaced in the artist screen.
+        val classLoader = checkNotNull(this::class.java.classLoader)
+        val html = checkNotNull(
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_angine_de_poitrine.html")
+        ).bufferedReader().use { it.readText() }
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val artist = scraper.scrapeArtist(setup.url(""))
+
+        assertThat(artist.name).isEqualTo("Angine de Poitrine")
+        val bio = checkNotNull(artist.bio)
+        // The full bio (including the previously-hidden peekaboo-text portion)
+        // must round-trip without the show-more overlay tail.
+        assertThat(bio).contains("crise cardiaque")
+        // The "...more" overlay must be gone — neither the literal word "more"
+        // tail nor the leading ellipsis from peekaboo-ellipsis.
+        assertThat(bio).doesNotContain("...more")
+        assertThat(bio).doesNotContain("... more")
+        assertThat(bio.trimEnd()).doesNotMatch(".*\\bmore\\s*$")
+        assertThat(bio).doesNotContain("...")
+    }
+
     @Test fun `stable id deterministic`() = runTest {
         val html = """<html><body>
             <p id="band-name-location"><span class="title">N</span></p>
