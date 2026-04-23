@@ -15,6 +15,7 @@ import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
+import com.dustvalve.next.android.domain.model.ExportableTrack
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
@@ -368,6 +369,30 @@ class DownloadRepositoryImpl @Inject constructor(
         }.flowOn(Dispatchers.IO)
     }
 
+    override fun getExportableTracks(): Flow<List<ExportableTrack>> {
+        return downloadDao.getAll().map { downloads ->
+            if (downloads.isEmpty()) return@map emptyList()
+
+            val allTrackIds = downloads.map { it.trackId }
+            val favoriteIds = favoriteDao.getFavoriteIds(allTrackIds).toSet()
+            val trackEntitiesById = trackDao.getByIds(allTrackIds).associateBy { it.id }
+
+            downloads.mapNotNull { download ->
+                if (!File(download.filePath).exists()) return@mapNotNull null
+                val entity = trackEntitiesById[download.trackId] ?: return@mapNotNull null
+                val track = entity.toDomain(isFavorite = download.trackId in favoriteIds)
+                    .copy(streamUrl = android.net.Uri.fromFile(File(download.filePath)).toString())
+                val format = AudioFormat.fromKey(download.format) ?: AudioFormat.MP3_128
+                ExportableTrack(
+                    track = track,
+                    format = format,
+                    sizeBytes = download.sizeBytes,
+                    qualityLabel = qualityLabelFor(format),
+                )
+            }
+        }.flowOn(Dispatchers.IO)
+    }
+
     override suspend fun isTrackDownloaded(trackId: String): Boolean {
         return downloadDao.getByTrackId(trackId) != null
     }
@@ -396,9 +421,12 @@ class DownloadRepositoryImpl @Inject constructor(
 
     override suspend fun exportDownloads(
         destinationUri: String,
+        trackIds: Set<String>?,
         onProgress: (exported: Int, total: Int) -> Unit,
     ): Int = withContext(Dispatchers.IO) {
-        val downloads = downloadDao.getAllSync()
+        val allDownloads = downloadDao.getAllSync()
+        val downloads = if (trackIds == null) allDownloads
+            else allDownloads.filter { it.trackId in trackIds }
         if (downloads.isEmpty()) return@withContext 0
 
         val trackIds = downloads.map { it.trackId }
@@ -484,5 +512,20 @@ class DownloadRepositoryImpl @Inject constructor(
         }
 
         storageTracker.notifyCacheChanged()
+    }
+
+    /**
+     * Maps an [AudioFormat] to a short, localizable quality label used by the
+     * Export Tracks UI (e.g. "FLAC", "320 kbps", "V0").
+     */
+    private fun qualityLabelFor(format: AudioFormat): String = when (format) {
+        AudioFormat.FLAC -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_flac)
+        AudioFormat.OGG_VORBIS_320 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 320)
+        AudioFormat.MP3_320 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 320)
+        AudioFormat.MP3_V0 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_v0)
+        AudioFormat.AAC -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 256)
+        AudioFormat.OPUS -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 256)
+        AudioFormat.OGG_VORBIS -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 192)
+        AudioFormat.MP3_128 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 128)
     }
 }
