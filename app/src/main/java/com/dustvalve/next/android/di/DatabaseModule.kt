@@ -5,7 +5,6 @@ import androidx.room.Room
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
-import com.dustvalve.next.android.data.local.db.dao.CacheEntryDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
@@ -51,12 +50,6 @@ object DatabaseModule {
     @Singleton
     fun provideArtistDao(database: DustvalveNextDatabase): ArtistDao {
         return database.artistDao()
-    }
-
-    @Provides
-    @Singleton
-    fun provideCacheEntryDao(database: DustvalveNextDatabase): CacheEntryDao {
-        return database.cacheEntryDao()
     }
 
     @Provides

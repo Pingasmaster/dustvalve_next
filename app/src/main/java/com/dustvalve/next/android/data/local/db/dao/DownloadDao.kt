@@ -28,6 +28,9 @@ interface DownloadDao {
     @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM downloads")
     suspend fun getTotalSize(): Long
 
+    @Query("SELECT COALESCE(SUM(sizeBytes), 0) FROM downloads WHERE pinned = 1")
+    suspend fun getPinnedSize(): Long
+
     @Query("SELECT trackId FROM downloads")
     fun getAllTrackIds(): Flow<List<String>>
 
@@ -36,4 +39,14 @@ interface DownloadDao {
 
     @Query("SELECT DISTINCT albumId FROM downloads")
     fun getDownloadedAlbumIds(): Flow<List<String>>
+
+    /**
+     * Eviction candidates: unpinned (auto-cached) entries, oldest first by
+     * lastAccessed. Pinned (explicit user) downloads are never returned.
+     */
+    @Query("SELECT * FROM downloads WHERE pinned = 0 ORDER BY lastAccessed ASC")
+    suspend fun getEvictionCandidates(): List<DownloadEntity>
+
+    @Query("UPDATE downloads SET lastAccessed = :timestamp WHERE trackId = :trackId")
+    suspend fun updateLastAccessed(trackId: String, timestamp: Long = System.currentTimeMillis())
 }
