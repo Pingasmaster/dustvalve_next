@@ -989,53 +989,33 @@ fun FullPlayer(
                     }
                 }
 
-                // Bottom control row: Shuffle / Add to Playlist / Repeat
+                // Bottom control row: Shuffle | Repeat — same connected
+                // ButtonGroup styling as the top action row above (8 dp gap,
+                // connected leading/trailing shapes, weight(1f) per button,
+                // ~40 dp tall). Repeat is tri-state (OFF/ON/ONE): checked is
+                // "any-on", icon swaps to repeat_one when in ONE mode.
+                // (Add-to-playlist lives in the top action ButtonGroup now.)
                 Row(
-                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 ) {
                     TonalToggleButton(
                         checked = state.shuffleEnabled,
                         onCheckedChange = { playerViewModel.onToggleShuffle() },
-                        colors = ToggleButtonDefaults.tonalToggleButtonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                            checkedContainerColor = MaterialTheme.colorScheme.tertiary,
-                            checkedContentColor = MaterialTheme.colorScheme.onTertiary,
-                        ),
+                        shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_shuffle),
                             contentDescription = stringResource(R.string.player_cd_shuffle),
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    TonalToggleButton(
-                        checked = track.id in state.userPlaylistTrackIds,
-                        onCheckedChange = { showPlaylistSheet = true },
-                        colors = ToggleButtonDefaults.tonalToggleButtonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                            checkedContainerColor = MaterialTheme.colorScheme.tertiary,
-                            checkedContentColor = MaterialTheme.colorScheme.onTertiary,
-                        ),
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_playlist_add),
-                            contentDescription = stringResource(R.string.player_cd_add_to_playlist),
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
                     TonalToggleButton(
                         checked = state.repeatMode != RepeatMode.OFF,
                         onCheckedChange = { playerViewModel.onToggleRepeat() },
-                        colors = ToggleButtonDefaults.tonalToggleButtonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                            checkedContainerColor = MaterialTheme.colorScheme.tertiary,
-                            checkedContentColor = MaterialTheme.colorScheme.onTertiary,
-                        ),
+                        shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(
                             painter = painterResource(when (state.repeatMode) {
