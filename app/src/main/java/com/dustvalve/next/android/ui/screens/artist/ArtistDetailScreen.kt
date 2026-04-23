@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -26,7 +28,10 @@ import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -207,7 +212,10 @@ fun ArtistDetailScreen(
                         .fillMaxSize()
                         .padding(innerPadding),
                 ) {
-                    // Hero image with gradient and artist name overlay
+                    // Hero image — name + location are already in the LargeFlexibleTopAppBar
+                    // so we drop the legacy bottom-overlay text and the bottom-fade gradient.
+                    // The connected action button group below sits half over / half under
+                    // the cover edge (negative top padding on the next item).
                     item(key = "artist_hero", span = { GridItemSpan(2) }) {
                         Box(
                             modifier = Modifier
@@ -229,154 +237,41 @@ fun ArtistDetailScreen(
                                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 )
                             }
-                            // Top scrim so status bar icons remain readable
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(80.dp)
-                                    .align(Alignment.TopCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f),
-                                                Color.Transparent,
-                                            ),
-                                        ),
-                                    ),
-                            )
-                            // Bottom gradient scrim
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .align(Alignment.BottomCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                                                MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
-                                                MaterialTheme.colorScheme.surface,
-                                            ),
-                                        ),
-                                    ),
-                            )
-                            // Artist name and location overlaid
-                            Column(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                            ) {
-                                Text(
-                                    text = artist.name,
-                                    style = MaterialTheme.typography.displaySmallEmphasized,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                if (artist.location != null) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = artist.location,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                            }
                         }
                     }
 
-                    // Action row: Favorite + Play Mix — contained in a surface
+                    // Connected M3E button group: Play mix · Favorite · Download.
+                    // Negative top padding pulls the row up so its vertical centre
+                    // sits on the cover's bottom edge ("half inside, half outside").
                     item(key = "actions", span = { GridItemSpan(2) }) {
-                        Surface(
+                        val allAlbumsDownloaded = artist.albums.isNotEmpty() &&
+                            artist.albums.all { it.id in state.downloadedAlbumIds }
+                        ArtistActionBar(
+                            isFavorite = artist.isFavorite,
+                            isDownloading = state.isDownloading,
+                            isLoadingMix = state.isLoadingMix,
+                            allAlbumsDownloaded = allAlbumsDownloaded,
+                            playMixEnabled = !state.isLoadingMix && artist.albums.isNotEmpty(),
+                            downloadEnabled = !state.isDownloading && artist.albums.isNotEmpty(),
+                            onPlayMix = {
+                                viewModel.loadMixTracks { tracks ->
+                                    playerViewModel.playAlbum(tracks, 0)
+                                }
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite() },
+                            onDownload = {
+                                if (allAlbumsDownloaded) {
+                                    showDeleteDialog = true
+                                } else {
+                                    viewModel.downloadAll()
+                                }
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .padding(start = 16.dp, end = 16.dp)
+                                .offset(y = (-28).dp)
                                 .animateItem(),
-                            shape = MaterialTheme.shapes.large,
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                FilledTonalButton(
-                                    onClick = {
-                                        viewModel.loadMixTracks { tracks ->
-                                            playerViewModel.playAlbum(tracks, 0)
-                                        }
-                                    },
-                                    enabled = !state.isLoadingMix && artist.albums.isNotEmpty(),
-                                    modifier = Modifier.weight(1f),
-                                    shapes = ButtonDefaults.shapes(),
-                                ) {
-                                    if (state.isLoadingMix) {
-                                        CircularWavyProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(stringResource(R.string.common_loading))
-                                    } else {
-                                        Icon(
-                                            painter = painterResource(R.drawable.ic_shuffle),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(ButtonDefaults.IconSize),
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(stringResource(R.string.common_play_mix))
-                                    }
-                                }
-
-                                FilledTonalIconToggleButton(
-                                    checked = artist.isFavorite,
-                                    onCheckedChange = { viewModel.toggleFavorite() },
-                                    colors = IconToggleButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        checkedContentColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(if (artist.isFavorite) R.drawable.ic_favorite
-                                            else R.drawable.ic_favorite_border),
-                                        contentDescription = if (artist.isFavorite) stringResource(R.string.detail_cd_remove_favorites)
-                                            else stringResource(R.string.detail_cd_add_favorites),
-                                    )
-                                }
-
-                                val allAlbumsDownloaded = artist.albums.isNotEmpty() &&
-                                    artist.albums.all { it.id in state.downloadedAlbumIds }
-                                FilledTonalIconButton(
-                                    onClick = {
-                                        if (allAlbumsDownloaded) {
-                                            showDeleteDialog = true
-                                        } else {
-                                            viewModel.downloadAll()
-                                        }
-                                    },
-                                    enabled = !state.isDownloading && artist.albums.isNotEmpty(),
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    if (state.isDownloading) {
-                                        CircularWavyProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                        )
-                                    } else {
-                                        Icon(
-                                            painter = painterResource(if (allAlbumsDownloaded) R.drawable.ic_download_done
-                                                else R.drawable.ic_download),
-                                            contentDescription = if (allAlbumsDownloaded) stringResource(R.string.detail_cd_delete_all_downloads)
-                                                else stringResource(R.string.detail_cd_download_all),
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        )
                     }
 
                     // Bio with expandable content
@@ -474,34 +369,100 @@ fun ArtistDetailScreen(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ExpandableBio(bio: String) {
-    var expanded by rememberSaveable(bio) { mutableStateOf(false) }
-    var hasOverflow by remember(bio) { mutableStateOf(false) }
+    com.dustvalve.next.android.ui.screens.album.ExpandableDescription(
+        text = bio,
+        collapsedMaxLines = 3,
+    )
+}
 
-    Column(
-        modifier = Modifier
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-            .animateContentSize(
-                animationSpec = MaterialTheme.motionScheme.slowSpatialSpec(),
-            ),
+/**
+ * Connected M3E button-group action bar for artist detail. Layout:
+ * [Play mix (weighted, primary filled)] · [Favorite (toggle)] · [Download].
+ * Sits half-overlapping the cover via a negative offset on the call site.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ArtistActionBar(
+    isFavorite: Boolean,
+    isDownloading: Boolean,
+    isLoadingMix: Boolean,
+    allAlbumsDownloaded: Boolean,
+    playMixEnabled: Boolean,
+    downloadEnabled: Boolean,
+    onPlayMix: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onDownload: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.heightIn(min = 56.dp),
+        horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = bio,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = if (expanded) Int.MAX_VALUE else 3,
-            overflow = TextOverflow.Ellipsis,
-            onTextLayout = { result ->
-                if (!expanded) {
-                    hasOverflow = result.hasVisualOverflow
-                }
-            },
-        )
-        if (hasOverflow || expanded) {
-            TextButton(
-                onClick = { expanded = !expanded },
-                shapes = ButtonDefaults.shapes(),
-            ) {
-                Text(if (expanded) stringResource(R.string.detail_show_less) else stringResource(R.string.detail_show_more))
+        Button(
+            onClick = onPlayMix,
+            enabled = playMixEnabled,
+            shape = ButtonGroupDefaults.connectedLeadingButtonShapes().shape,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 56.dp),
+        ) {
+            if (isLoadingMix) {
+                CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.common_loading))
+            } else {
+                Icon(
+                    painter = painterResource(R.drawable.ic_shuffle),
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.common_play_mix))
+            }
+        }
+
+        ToggleButton(
+            checked = isFavorite,
+            onCheckedChange = { onToggleFavorite() },
+            shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.heightIn(min = 56.dp),
+        ) {
+            Icon(
+                painter = painterResource(
+                    if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border
+                ),
+                contentDescription = if (isFavorite) {
+                    stringResource(R.string.detail_cd_remove_favorites)
+                } else {
+                    stringResource(R.string.detail_cd_add_favorites)
+                },
+            )
+        }
+
+        FilledTonalButton(
+            onClick = onDownload,
+            enabled = downloadEnabled,
+            shape = ButtonGroupDefaults.connectedTrailingButtonShapes().shape,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.heightIn(min = 56.dp),
+        ) {
+            if (isDownloading) {
+                CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
+            } else {
+                Icon(
+                    painter = painterResource(
+                        if (allAlbumsDownloaded) R.drawable.ic_download_done
+                        else R.drawable.ic_download
+                    ),
+                    contentDescription = if (allAlbumsDownloaded) {
+                        stringResource(R.string.detail_cd_delete_all_downloads)
+                    } else {
+                        stringResource(R.string.detail_cd_download_all)
+                    },
+                )
             }
         }
     }
