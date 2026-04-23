@@ -22,6 +22,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -128,17 +131,120 @@ class LocalViewModel @Inject constructor(
             .sortedWith(comparator)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // We keep blank values in the available lists so the UI can render
+    // "Unknown artist" / "Unknown album" filter chips. Sorting puts blank
+    // (unknown) at the bottom by treating it as the highest string.
     val availableArtists: StateFlow<List<String>> = allLocalTracks
-        .map { tracks -> tracks.map { it.artist }.distinct().sorted() }
+        .map { tracks ->
+            tracks.map { it.artist }.distinct().sortedWith(blankLastComparator())
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val availableAlbums: StateFlow<List<String>> = allLocalTracks
-        .map { tracks -> tracks.map { it.albumTitle }.filter { it.isNotBlank() }.distinct().sorted() }
+        .map { tracks ->
+            tracks.map { it.albumTitle }.distinct().sortedWith(blankLastComparator())
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun blankLastComparator(): Comparator<String> = Comparator { a, b ->
+        when {
+            a.isBlank() && b.isBlank() -> 0
+            a.isBlank() -> 1
+            b.isBlank() -> -1
+            else -> String.CASE_INSENSITIVE_ORDER.compare(a, b)
+        }
+    }
 
     val availableFolders: StateFlow<List<String>> = allLocalTracks
         .map { tracks -> tracks.map { it.folderUri }.filter { it.isNotBlank() }.distinct().sorted() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    init {
+        // One-shot restore at construction. Sort + filters are independently
+        // gated by their own toggles in Settings.
+        viewModelScope.launch {
+            try {
+                if (settingsDataStore.keepLocalSort.first()) {
+                    val sortName = settingsDataStore.localSortOption.first()
+                    val reverse = settingsDataStore.localReverseOrder.first()
+                    val parsed = sortName?.let { name ->
+                        runCatching { LocalSortOption.valueOf(name) }.getOrNull()
+                    }
+                    if (parsed != null) {
+                        _filterState.update { it.copy(sortOption = parsed, reverseOrder = reverse) }
+                    }
+                }
+                if (settingsDataStore.keepLocalFilters.first()) {
+                    val artists = settingsDataStore.localSelectedArtists.first()
+                    val albums = settingsDataStore.localSelectedAlbums.first()
+                    val durations = settingsDataStore.localSelectedDurations.first()
+                        .mapNotNull { runCatching { DurationRange.valueOf(it) }.getOrNull() }
+                        .toSet()
+                    val favoritesOnly = settingsDataStore.localFavoritesOnly.first()
+                    val folders = settingsDataStore.localSelectedFolders.first()
+                    _filterState.update {
+                        it.copy(
+                            selectedArtists = artists,
+                            selectedAlbums = albums,
+                            selectedDurations = durations,
+                            favoritesOnly = favoritesOnly,
+                            selectedFolders = folders,
+                        )
+                    }
+                }
+            } catch (_: Throwable) { /* best-effort restore */ }
+        }
+        // Persist sort changes when the toggle is on. drop(1) skips the
+        // initial state (we don't want to overwrite restored values with the
+        // pre-restore default).
+        viewModelScope.launch {
+            _filterState
+                .map { it.sortOption.name to it.reverseOrder }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { (name, reverse) ->
+                    if (settingsDataStore.keepLocalSort.first()) {
+                        try { settingsDataStore.setLocalSort(name, reverse) }
+                        catch (_: Throwable) { }
+                    }
+                }
+        }
+        viewModelScope.launch {
+            _filterState
+                .map {
+                    FilterSnapshot(
+                        artists = it.selectedArtists,
+                        albums = it.selectedAlbums,
+                        durations = it.selectedDurations.map { d -> d.name }.toSet(),
+                        favoritesOnly = it.favoritesOnly,
+                        folders = it.selectedFolders,
+                    )
+                }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { snap ->
+                    if (settingsDataStore.keepLocalFilters.first()) {
+                        try {
+                            settingsDataStore.setLocalFilters(
+                                artists = snap.artists,
+                                albums = snap.albums,
+                                durations = snap.durations,
+                                favoritesOnly = snap.favoritesOnly,
+                                folders = snap.folders,
+                            )
+                        } catch (_: Throwable) { }
+                    }
+                }
+        }
+    }
+
+    private data class FilterSnapshot(
+        val artists: Set<String>,
+        val albums: Set<String>,
+        val durations: Set<String>,
+        val favoritesOnly: Boolean,
+        val folders: Set<String>,
+    )
 
     // Filter mutation functions
 

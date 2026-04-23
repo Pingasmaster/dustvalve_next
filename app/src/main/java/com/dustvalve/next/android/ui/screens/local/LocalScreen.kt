@@ -444,7 +444,6 @@ fun LocalScreen(
                         LazyColumn(
                             state = localListState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 80.dp),
                         ) {
                             itemsIndexed(
                                 items = filteredTracks,
@@ -558,7 +557,6 @@ fun LocalScreen(
                         }
                         else -> {
                             LazyColumn(
-                                contentPadding = PaddingValues(bottom = 80.dp),
                                 modifier = Modifier.fillMaxSize(),
                             ) {
                                 itemsIndexed(
@@ -817,8 +815,10 @@ fun LocalScreen(
                         color = artistItemColor,
                         modifier = Modifier.animateItem(),
                     ) {
+                        val artistLabel = if (artist.isBlank())
+                            stringResource(R.string.local_filter_unknown_artist) else artist
                         ListItem(
-                            headlineContent = { Text(artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            headlineContent = { Text(artistLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
                             modifier = Modifier.clickable { viewModel.toggleArtist(artist) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
@@ -858,8 +858,10 @@ fun LocalScreen(
                         color = albumItemColor,
                         modifier = Modifier.animateItem(),
                     ) {
+                        val albumLabel = if (album.isBlank())
+                            stringResource(R.string.local_filter_unknown_album) else album
                         ListItem(
-                            headlineContent = { Text(album, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            headlineContent = { Text(albumLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
                             modifier = Modifier.clickable { viewModel.toggleAlbum(album) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),

@@ -356,10 +356,6 @@ fun ArtistDetailScreen(
                         }
                     }
 
-                    // Bottom spacer
-                    item(key = "bottom_spacer", span = { GridItemSpan(2) }) {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
                 }
             }
         }

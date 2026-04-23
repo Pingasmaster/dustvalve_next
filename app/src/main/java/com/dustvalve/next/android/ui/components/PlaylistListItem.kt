@@ -59,7 +59,6 @@ fun PlaylistListItem(
         Playlist.SystemPlaylistType.DOWNLOADS -> AppShapes.PlaylistDownloads
         Playlist.SystemPlaylistType.RECENT -> AppShapes.PlaylistRecent
         Playlist.SystemPlaylistType.COLLECTION -> AppShapes.PlaylistCollection
-        Playlist.SystemPlaylistType.LOCAL -> AppShapes.PlaylistLocal
         else -> resolvePlaylistShape(playlist.shapeKey)
     }
 
@@ -184,7 +183,6 @@ fun getPlaylistIconRes(playlist: Playlist): Int {
         Playlist.SystemPlaylistType.DOWNLOADS -> R.drawable.ic_cloud_download
         Playlist.SystemPlaylistType.RECENT -> R.drawable.ic_history
         Playlist.SystemPlaylistType.COLLECTION -> R.drawable.ic_library_music
-        Playlist.SystemPlaylistType.LOCAL -> R.drawable.ic_phone_android
         else -> R.drawable.ic_music_note
     }
 }

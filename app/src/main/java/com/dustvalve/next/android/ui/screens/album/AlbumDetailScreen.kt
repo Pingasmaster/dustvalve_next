@@ -35,7 +35,6 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
@@ -387,14 +386,16 @@ fun AlbumDetailScreen(
                         }
                     }
 
-                    // Bandcamp-only "Buy" CTA — opens the album page in the
-                    // default browser (no in-app webview).
+                    // Bandcamp-only "Buy" split CTA — opens the album page in
+                    // the default browser. Trailing chevron exposes "Send as
+                    // a gift" which routes to the same page.
                     if (album.url.contains("bandcamp.com", ignoreCase = true)) {
                         item(key = "buy_on_bandcamp") {
                             val uriHandler = LocalUriHandler.current
-                            BuyOnBandcampFab(
+                            BuyOnBandcampSplitButton(
                                 price = album.price,
                                 onBuy = { uriHandler.openUri(album.url) },
+                                onSendAsGift = { uriHandler.openUri(album.url) },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -442,10 +443,6 @@ fun AlbumDetailScreen(
                         }
                     }
 
-                    // Bottom spacer for mini player clearance
-                    item(key = "bottom_spacer") {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
                 }
             }
         }
@@ -663,17 +660,25 @@ internal fun ExpandableDescription(
 }
 
 /**
- * Centered M3E [ExtendedFloatingActionButton] showing the formatted price
- * (or fallback label) with a shopping-bag icon. Tapping routes to the
- * album's Bandcamp page in the user's default browser.
+ * M3E SplitButtonLayout: leading button is the actual XL "Buy" CTA showing
+ * the formatted price + shopping-bag icon; trailing chevron opens a
+ * DropdownMenu containing "Send as a gift". Both routes go through the
+ * caller's [LocalUriHandler] to the album's Bandcamp page.
+ *
+ * The DropdownMenu lives inside the trailing-button slot so it anchors to
+ * the chevron specifically (not the wrapping centred Box), keeping it
+ * visually attached to the split section instead of pinned to the screen
+ * edge.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi::class)
 @Composable
-private fun BuyOnBandcampFab(
+private fun BuyOnBandcampSplitButton(
     price: com.dustvalve.next.android.domain.model.AlbumPrice?,
     onBuy: () -> Unit,
+    onSendAsGift: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var menuOpen by remember { mutableStateOf(false) }
     val label = price?.let { formatPrice(it) }
         ?: stringResource(R.string.detail_buy_on_bandcamp)
 
@@ -683,15 +688,60 @@ private fun BuyOnBandcampFab(
             .padding(vertical = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
-        ExtendedFloatingActionButton(
-            onClick = onBuy,
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_shopping_bag),
-                    contentDescription = null,
-                )
+        androidx.compose.material3.SplitButtonLayout(
+            leadingButton = {
+                androidx.compose.material3.SplitButtonDefaults.LeadingButton(
+                    onClick = onBuy,
+                    modifier = Modifier.heightIn(min = 80.dp),
+                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 18.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_shopping_bag),
+                        contentDescription = null,
+                        modifier = Modifier.size(28.dp),
+                    )
+                    Spacer(Modifier.size(12.dp))
+                    Text(text = label, style = MaterialTheme.typography.titleLarge)
+                }
             },
-            text = { Text(label) },
+            trailingButton = {
+                // Anchoring the DropdownMenu inside the trailing-button slot
+                // makes the popup appear under the chevron, not pinned to
+                // the screen's left edge.
+                Box {
+                    androidx.compose.material3.SplitButtonDefaults.TrailingButton(
+                        checked = menuOpen,
+                        onCheckedChange = { menuOpen = it },
+                        modifier = Modifier.heightIn(min = 80.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                    ) {
+                        val rotation by androidx.compose.animation.core.animateFloatAsState(
+                            targetValue = if (menuOpen) 180f else 0f,
+                            animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+                            label = "buy_chevron",
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.ic_expand_more),
+                            contentDescription = stringResource(R.string.detail_buy_more_options),
+                            modifier = Modifier
+                                .size(28.dp)
+                                .rotate(rotation),
+                        )
+                    }
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = { menuOpen = false },
+                    ) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(stringResource(R.string.detail_send_as_gift)) },
+                            onClick = {
+                                menuOpen = false
+                                onSendAsGift()
+                            },
+                        )
+                    }
+                }
+            },
         )
     }
 }

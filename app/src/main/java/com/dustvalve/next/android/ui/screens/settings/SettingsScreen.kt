@@ -474,6 +474,55 @@ fun SettingsScreen(
                                 }
                             }
 
+                            // Persistence sub-toggles for the Local tab's
+                            // sort + filter chip selections. Independent so
+                            // the user can keep one without the other.
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 36.dp, end = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_local_keep_sort),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_local_keep_sort_desc),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.keepLocalSort,
+                                    onCheckedChange = { viewModel.setKeepLocalSort(it) },
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 36.dp, end = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_local_keep_filters),
+                                        style = MaterialTheme.typography.bodySmall,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_local_keep_filters_desc),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.keepLocalFilters,
+                                    onCheckedChange = { viewModel.setKeepLocalFilters(it) },
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -1715,7 +1764,6 @@ fun SettingsScreen(
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(80.dp))
         }
 
     }

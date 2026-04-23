@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -64,6 +65,15 @@ class SettingsDataStore @Inject constructor(
         val SPOTIFY_CONNECTED = booleanPreferencesKey("spotify_connected")
         val KEEP_SCREEN_ON_IN_APP = booleanPreferencesKey("keep_screen_on_in_app")
         val KEEP_SCREEN_ON_WHILE_PLAYING = booleanPreferencesKey("keep_screen_on_while_playing")
+        val KEEP_LOCAL_SORT = booleanPreferencesKey("keep_local_sort")
+        val KEEP_LOCAL_FILTERS = booleanPreferencesKey("keep_local_filters")
+        val LOCAL_SORT_OPTION = stringPreferencesKey("local_sort_option")
+        val LOCAL_REVERSE_ORDER = booleanPreferencesKey("local_reverse_order")
+        val LOCAL_SELECTED_ARTISTS = stringSetPreferencesKey("local_selected_artists")
+        val LOCAL_SELECTED_ALBUMS = stringSetPreferencesKey("local_selected_albums")
+        val LOCAL_SELECTED_DURATIONS = stringSetPreferencesKey("local_selected_durations")
+        val LOCAL_FAVORITES_ONLY = booleanPreferencesKey("local_favorites_only")
+        val LOCAL_SELECTED_FOLDERS = stringSetPreferencesKey("local_selected_folders")
     }
 
     companion object {
@@ -583,6 +593,48 @@ class SettingsDataStore @Inject constructor(
             } else {
                 prefs.remove(Keys.LAST_YOUTUBE_VIDEO_ID)
             }
+        }
+    }
+
+    // Local-section persistence: independent toggles for sort + filters.
+    val keepLocalSort: Flow<Boolean> = context.dataStore.data.map { it[Keys.KEEP_LOCAL_SORT] ?: false }
+    val keepLocalFilters: Flow<Boolean> = context.dataStore.data.map { it[Keys.KEEP_LOCAL_FILTERS] ?: false }
+    suspend fun setKeepLocalSort(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.KEEP_LOCAL_SORT] = enabled }
+    }
+    suspend fun setKeepLocalFilters(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.KEEP_LOCAL_FILTERS] = enabled }
+    }
+
+    // Persisted local sort/filter state. The Local tab consults the toggles
+    // above to decide whether to read these on init and write them on change.
+    val localSortOption: Flow<String?> = context.dataStore.data.map { it[Keys.LOCAL_SORT_OPTION] }
+    val localReverseOrder: Flow<Boolean> = context.dataStore.data.map { it[Keys.LOCAL_REVERSE_ORDER] ?: false }
+    val localSelectedArtists: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_ARTISTS] ?: emptySet() }
+    val localSelectedAlbums: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_ALBUMS] ?: emptySet() }
+    val localSelectedDurations: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_DURATIONS] ?: emptySet() }
+    val localFavoritesOnly: Flow<Boolean> = context.dataStore.data.map { it[Keys.LOCAL_FAVORITES_ONLY] ?: false }
+    val localSelectedFolders: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_FOLDERS] ?: emptySet() }
+
+    suspend fun setLocalSort(sortOptionName: String, reverseOrder: Boolean) {
+        context.dataStore.edit {
+            it[Keys.LOCAL_SORT_OPTION] = sortOptionName
+            it[Keys.LOCAL_REVERSE_ORDER] = reverseOrder
+        }
+    }
+    suspend fun setLocalFilters(
+        artists: Set<String>,
+        albums: Set<String>,
+        durations: Set<String>,
+        favoritesOnly: Boolean,
+        folders: Set<String>,
+    ) {
+        context.dataStore.edit {
+            it[Keys.LOCAL_SELECTED_ARTISTS] = artists
+            it[Keys.LOCAL_SELECTED_ALBUMS] = albums
+            it[Keys.LOCAL_SELECTED_DURATIONS] = durations
+            it[Keys.LOCAL_FAVORITES_ONLY] = favoritesOnly
+            it[Keys.LOCAL_SELECTED_FOLDERS] = folders
         }
     }
 }

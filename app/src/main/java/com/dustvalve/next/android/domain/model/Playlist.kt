@@ -22,7 +22,6 @@ data class Playlist(
         RECENT("Recent"),
         COLLECTION("Bandcamp purchases"),
         FAVORITES("Favorites"),
-        LOCAL("Local"),
     }
 
     val isEditable: Boolean
@@ -43,6 +42,5 @@ data class Playlist(
         const val ID_RECENT = "system_recent"
         const val ID_COLLECTION = "system_collection"
         const val ID_FAVORITES = "system_favorites"
-        const val ID_LOCAL = "system_local"
     }
 }
