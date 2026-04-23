@@ -72,6 +72,8 @@ data class SettingsUiState(
     val youtubeDefaultSource: String = "youtube",
     val keepScreenOnInApp: Boolean = false,
     val keepScreenOnWhilePlaying: Boolean = false,
+    val keepLocalSort: Boolean = false,
+    val keepLocalFilters: Boolean = false,
     val isExporting: Boolean = false,
     val exportProgress: Float = 0f,
     val exportMessage: UiText? = null,
@@ -144,6 +146,8 @@ class SettingsViewModel @Inject constructor(
         collectAlbumCoverLongPressCarousel()
         collectKeepScreenOnInApp()
         collectKeepScreenOnWhilePlaying()
+        collectKeepLocalSort()
+        collectKeepLocalFilters()
     }
 
     fun setThemeMode(mode: String) {
@@ -1065,6 +1069,40 @@ class SettingsViewModel @Inject constructor(
                 .collect { enabled ->
                     _uiState.update { it.copy(keepScreenOnWhilePlaying = enabled) }
                 }
+        }
+    }
+
+    private fun collectKeepLocalSort() {
+        viewModelScope.launch {
+            settingsDataStore.keepLocalSort
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(keepLocalSort = enabled) }
+                }
+        }
+    }
+
+    private fun collectKeepLocalFilters() {
+        viewModelScope.launch {
+            settingsDataStore.keepLocalFilters
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(keepLocalFilters = enabled) }
+                }
+        }
+    }
+
+    fun setKeepLocalSort(enabled: Boolean) {
+        viewModelScope.launch {
+            try { settingsDataStore.setKeepLocalSort(enabled) }
+            catch (e: Exception) { if (e is CancellationException) throw e }
+        }
+    }
+
+    fun setKeepLocalFilters(enabled: Boolean) {
+        viewModelScope.launch {
+            try { settingsDataStore.setKeepLocalFilters(enabled) }
+            catch (e: Exception) { if (e is CancellationException) throw e }
         }
     }
 

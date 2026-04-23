@@ -50,7 +50,6 @@ class PlaylistTest {
             Playlist.ID_RECENT,
             Playlist.ID_COLLECTION,
             Playlist.ID_FAVORITES,
-            Playlist.ID_LOCAL,
         )
         assertThat(ids).containsNoDuplicates()
     }

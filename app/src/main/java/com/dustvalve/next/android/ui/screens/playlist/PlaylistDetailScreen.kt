@@ -268,7 +268,6 @@ private fun PlaylistContent(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 80.dp),
     ) {
         // Header with playlist icon and actions
         item(key = "header") {
@@ -561,7 +560,6 @@ private fun PlaylistHeader(
     // Favorites when the auto-download-favorites toggle is on (it'd be a no-op).
     val showDownloadButton = playlist.systemType != Playlist.SystemPlaylistType.DOWNLOADS &&
         playlist.systemType != Playlist.SystemPlaylistType.RECENT &&
-        playlist.systemType != Playlist.SystemPlaylistType.LOCAL &&
         !(playlist.systemType == Playlist.SystemPlaylistType.FAVORITES && autoDownloadFavorites)
 
     val thumbnailShape = when (playlist.systemType) {
@@ -569,7 +567,6 @@ private fun PlaylistHeader(
         Playlist.SystemPlaylistType.DOWNLOADS -> AppShapes.PlaylistDownloads
         Playlist.SystemPlaylistType.RECENT -> AppShapes.PlaylistRecent
         Playlist.SystemPlaylistType.COLLECTION -> AppShapes.PlaylistCollection
-        Playlist.SystemPlaylistType.LOCAL -> AppShapes.PlaylistLocal
         else -> resolvePlaylistShape(playlist.shapeKey)
     }
 

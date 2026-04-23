@@ -424,10 +424,6 @@ fun SpotifyAlbumDetailScreen(
                         }
                     }
 
-                    // Bottom spacer
-                    item(key = "bottom_spacer") {
-                        Spacer(modifier = Modifier.height(80.dp))
-                    }
                 }
             }
         }

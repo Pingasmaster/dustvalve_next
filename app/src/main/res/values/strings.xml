@@ -258,7 +258,13 @@
     <string name="local_filter_album_count">Album (%1$d)</string>
     <string name="local_filter_folder">Folder</string>
     <string name="local_filter_folder_count">Folder (%1$d)</string>
+    <string name="local_filter_unknown_artist">Unknown artist</string>
+    <string name="local_filter_unknown_album">Unknown album</string>
     <string name="local_add_to_playlist">Add to playlist</string>
+    <string name="settings_local_keep_sort">Keep sort order between launches</string>
+    <string name="settings_local_keep_sort_desc">Restore the Local tab\'s sort selection (and reverse) when reopening the app.</string>
+    <string name="settings_local_keep_filters">Keep filters between launches</string>
+    <string name="settings_local_keep_filters_desc">Restore the Local tab\'s artist, album, folder, duration and favorites-only chips when reopening the app.</string>
 
     <!-- Common search strings -->
     <string name="common_search_failed">Search failed</string>
@@ -356,6 +362,8 @@
     <string name="detail_show_more">Show more</string>
     <string name="detail_show_less">Show less</string>
     <string name="detail_buy_on_bandcamp">Buy on Bandcamp</string>
+    <string name="detail_buy_more_options">More buy options</string>
+    <string name="detail_send_as_gift">Send as a gift</string>
     <string name="detail_cd_open_artist">Open artist page</string>
     <string name="detail_tags">Tags</string>
     <string name="detail_top_tracks">Top Tracks</string>
