@@ -1,8 +1,12 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.remote.youtube.innertube.PlayerStreamInfo
+import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
+import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicSearchParser
+import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Shelf
@@ -27,6 +31,8 @@ class YouTubeMusicRepositoryImplTest {
     private lateinit var client: YouTubeMusicInnertubeClient
     private lateinit var parser: YouTubeMusicParser
     private lateinit var searchParser: YouTubeMusicSearchParser
+    private lateinit var ytInnertube: YouTubeInnertubeClient
+    private lateinit var ytPlayerParser: YouTubePlayerParser
     private lateinit var repo: YouTubeMusicRepositoryImpl
 
     private val emptyJson: JsonElement = buildJsonObject {}
@@ -41,7 +47,21 @@ class YouTubeMusicRepositoryImplTest {
         client = mockk()
         parser = mockk()
         searchParser = mockk()
-        repo = YouTubeMusicRepositoryImpl(client, parser, searchParser)
+        ytInnertube = mockk()
+        ytPlayerParser = mockk()
+        repo = YouTubeMusicRepositoryImpl(client, parser, searchParser, ytInnertube, ytPlayerParser)
+    }
+
+    @Test fun `resolveStreamUrl dispatches to YouTube Innertube player`() = runTest {
+        coEvery { ytInnertube.player("vidvidvid12") } returns emptyJson
+        every { ytPlayerParser.parsePlayerStreamInfo(emptyJson) } returns PlayerStreamInfo(
+            streamUrl = "https://stream/x",
+            format = AudioFormat.OPUS,
+            bitrate = 128000,
+            mimeType = "audio/webm; codecs=\"opus\"",
+        )
+        assertThat(repo.resolveStreamUrl("vidvidvid12")).isEqualTo("https://stream/x")
+        coVerify { ytInnertube.player("vidvidvid12") }
     }
 
     @Test fun `getHome calls browse with FEmusic_home and parses response`() = runTest {
