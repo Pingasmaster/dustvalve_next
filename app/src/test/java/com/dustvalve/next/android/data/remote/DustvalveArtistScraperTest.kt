@@ -193,12 +193,75 @@ class DustvalveArtistScraperTest {
 
         assertThat(artist.name).isEqualTo("Taylor Moore")
         assertThat(artist.location).isEqualTo("Brooklyn, New York")
-        assertThat(artist.imageUrl).isEqualTo("https://f4.bcbits.com/img/0044448040_21.jpg")
         assertThat(artist.bio).isNotNull()
         assertThat(artist.bio!!).isNotEmpty()
-        // No music-grid in the page — the empty-state UI is acceptable, but
-        // the band metadata must still be there.
-        assertThat(artist.albums).isEmpty()
+    }
+
+    @Test fun `band photo upgrades to high-res popupImage href instead of blurry img src`() = runTest {
+        // Bandcamp ships the band photo as <a class="popupImage"
+        // href="..._10.jpg"><img class="band-photo" src="..._21.jpg"></a>.
+        // The small img.src is ~100 px, the popupImage href is ~480 px.
+        // Prefer the latter so the artist screen doesn't show a blurry photo.
+        val classLoader = checkNotNull(this::class.java.classLoader)
+        val html = checkNotNull(
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html")
+        ).bufferedReader().use { it.readText() }
+        setup.server.enqueue(MockResponse().setBody(html))
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val artist = scraper.scrapeArtist(setup.url("/album/single-thing"))
+
+        assertThat(artist.imageUrl).isEqualTo("https://f4.bcbits.com/img/0044448040_10.jpg")
+        assertThat(artist.imageUrl).doesNotContain("_21")
+    }
+
+    @Test fun `single-album artist surfaces its only album via og meta when music-grid is empty`() = runTest {
+        // For artists with a single album/track, Bandcamp redirects /music to
+        // the album page itself (no music-grid). We fall back to the
+        // OpenGraph metadata so the artist screen still shows the one item
+        // instead of looking empty.
+        val classLoader = checkNotNull(this::class.java.classLoader)
+        val html = checkNotNull(
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html")
+        ).bufferedReader().use { it.readText() }
+        setup.server.enqueue(MockResponse().setBody(html))
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val artist = scraper.scrapeArtist(setup.url("/album/single-thing"))
+
+        assertThat(artist.albums).hasSize(1)
+        val album = artist.albums.single()
+        assertThat(album.title).isEqualTo(
+            "Worlds Beyond Number: The Wizard, the Witch, and the Wild One, Book One (Original Soundtrack)"
+        )
+        assertThat(album.url).isEqualTo(
+            "https://taylormooremusic.bandcamp.com/album/worlds-beyond-number-the-wizard-the-witch-and-the-wild-one-book-one-original-soundtrack"
+        )
+        assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a4206992803_5.jpg")
+        assertThat(album.artist).isEqualTo("Taylor Moore")
+    }
+
+    @Test fun `og fallback never fires when music-grid already populated`() = runTest {
+        // Defensive: a normal multi-album artist should NOT pick up an extra
+        // og:url-derived album entry on top of the music-grid items.
+        val html = """
+            <html><head>
+              <meta property="og:url" content="https://x.bandcamp.com/album/somewhere"/>
+              <meta property="og:title" content="Somewhere, by X"/>
+              <meta property="og:image" content="https://cdn/img/og.jpg"/>
+            </head><body>
+              <p id="band-name-location"><span class="title">X</span></p>
+              <div id="music-grid">
+                <div class="music-grid-item">
+                  <a href="/album/one"><img src="https://cdn/img/a1.jpg"/><p class="title">One</p></a>
+                </div>
+              </div>
+            </body></html>
+        """.trimIndent()
+        setup.server.enqueue(MockResponse().setBody(html))
+        val artist = scraper.scrapeArtist(setup.url(""))
+        assertThat(artist.albums).hasSize(1)
+        assertThat(artist.albums.single().title).isEqualTo("One")
     }
 
     @Test fun `stable id deterministic`() = runTest {

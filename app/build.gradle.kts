@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 182
-        versionName = "0.3.32"
+        versionCode = 183
+        versionName = "0.3.33"
     }
 
     buildTypes {
