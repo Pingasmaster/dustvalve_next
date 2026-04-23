@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 167
-        versionName = "0.3.17"
+        versionCode = 168
+        versionName = "0.3.18"
     }
 
     buildTypes {
@@ -44,14 +44,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    packaging {
-        resources {
-            // Rhino (pulled transitively by NewPipe Extractor) ships a service file
-            // referencing javax.script, which is not available on Android.
-            excludes += "META-INF/services/javax.script.ScriptEngineFactory"
-        }
     }
 
     testOptions {
@@ -142,9 +134,6 @@ dependencies {
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.18.0")
-
-    // NewPipe Extractor (YouTube scraping)
-    implementation("com.github.TeamNewPipe:NewPipeExtractor:v0.26.1")
 
     // --- Unit test dependencies ---
     testImplementation("junit:junit:4.13.2")
