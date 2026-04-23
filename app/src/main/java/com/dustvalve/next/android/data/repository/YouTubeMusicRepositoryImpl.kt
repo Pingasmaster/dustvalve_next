@@ -1,5 +1,7 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
+import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicSearchParser
@@ -14,7 +16,14 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
     private val client: YouTubeMusicInnertubeClient,
     private val parser: YouTubeMusicParser,
     private val searchParser: YouTubeMusicSearchParser,
+    private val youtubeInnertubeClient: YouTubeInnertubeClient,
+    private val youtubePlayerParser: YouTubePlayerParser,
 ) : YouTubeMusicRepository {
+
+    override suspend fun resolveStreamUrl(videoId: String): String {
+        val response = youtubeInnertubeClient.player(videoId)
+        return youtubePlayerParser.parsePlayerStreamInfo(response).streamUrl
+    }
 
     override suspend fun getHome(): YouTubeMusicHomeFeed {
         val response = client.browse(browseId = HOME_BROWSE_ID)
