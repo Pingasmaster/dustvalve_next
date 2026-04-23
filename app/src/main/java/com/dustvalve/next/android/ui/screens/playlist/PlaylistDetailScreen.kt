@@ -201,6 +201,7 @@ fun PlaylistDetailScreen(
                     isPlaying = playerState.isPlaying,
                     isDownloading = state.isDownloading,
                     downloadedTrackIds = state.downloadedTrackIds,
+                    autoDownloadFavorites = state.autoDownloadFavorites,
                     onTrackClick = { tracks, index ->
                         playerViewModel.playTrackInList(tracks, index)
                     },
@@ -236,6 +237,7 @@ private fun PlaylistContent(
     isPlaying: Boolean,
     isDownloading: Boolean,
     downloadedTrackIds: Set<String>,
+    autoDownloadFavorites: Boolean,
     onTrackClick: (List<Track>, Int) -> Unit,
     onMoveTrack: (Int, Int) -> Unit,
     onPlayAll: () -> Unit,
@@ -275,6 +277,7 @@ private fun PlaylistContent(
                 tracks = reorderableTracks,
                 isDownloading = isDownloading,
                 downloadedTrackIds = downloadedTrackIds,
+                autoDownloadFavorites = autoDownloadFavorites,
                 onPlayAll = onPlayAll,
                 onShufflePlay = onShufflePlay,
                 onDownloadAll = onDownloadAll,
@@ -545,6 +548,7 @@ private fun PlaylistHeader(
     tracks: List<Track>,
     isDownloading: Boolean,
     downloadedTrackIds: Set<String>,
+    autoDownloadFavorites: Boolean,
     onPlayAll: () -> Unit,
     onShufflePlay: () -> Unit,
     onDownloadAll: () -> Unit,
@@ -553,9 +557,12 @@ private fun PlaylistHeader(
     val allTracksLocal = tracks.isNotEmpty() && tracks.all { it.isLocal }
     val allTracksDownloaded = tracks.isNotEmpty() &&
         tracks.all { it.id in downloadedTrackIds || it.isLocal }
+    // Hide the download button on playlists where it doesn't apply, and on
+    // Favorites when the auto-download-favorites toggle is on (it'd be a no-op).
     val showDownloadButton = playlist.systemType != Playlist.SystemPlaylistType.DOWNLOADS &&
         playlist.systemType != Playlist.SystemPlaylistType.RECENT &&
-        playlist.systemType != Playlist.SystemPlaylistType.LOCAL
+        playlist.systemType != Playlist.SystemPlaylistType.LOCAL &&
+        !(playlist.systemType == Playlist.SystemPlaylistType.FAVORITES && autoDownloadFavorites)
 
     val thumbnailShape = when (playlist.systemType) {
         Playlist.SystemPlaylistType.FAVORITES -> AppShapes.PlaylistFavorites

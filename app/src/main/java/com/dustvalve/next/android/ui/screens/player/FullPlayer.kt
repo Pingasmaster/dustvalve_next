@@ -75,6 +75,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.TonalToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -140,6 +141,7 @@ fun FullPlayer(
     playerViewModel: PlayerViewModel,
     onCollapse: () -> Unit,
     onArtistClick: (Track) -> Unit = {},
+    onAlbumClick: (Track) -> Unit = {},
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
     val track = state.currentTrack
@@ -586,10 +588,13 @@ fun FullPlayer(
                                             },
                                             onLongPress = {
                                                 hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                // Settings → Debug → "Show debug info":
+                                                //   ON  → long-press shows the debug sheet
+                                                //   OFF → long-press opens the cover carousel (default)
                                                 if (state.albumCoverLongPressCarousel) {
-                                                    isCarouselMode = true
-                                                } else {
                                                     showDebugSheet = true
+                                                } else {
+                                                    isCarouselMode = true
                                                 }
                                             },
                                         )
@@ -696,46 +701,62 @@ fun FullPlayer(
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    // Connected M3E ButtonGroup: Artist · Album · Favorite ·
+                    // Download · Add-to-playlist. All icon-only (the artist
+                    // name is already in the title above), all ~40 dp tall to
+                    // match the previous TonalToggleButton sizing. Spaced 8 dp
+                    // apart for visual breathing room — wider than the 2 dp
+                    // ButtonGroupDefaults.ConnectedSpaceBetween.
+                    val isTrackDownloaded = track.id in state.downloadedTrackIds
+                    val isDownloading = state.downloadingTrackId == track.id
+                    val isLocalTrack = track.isLocal
+                    val albumNavEnabled = track.albumUrl.isNotEmpty()
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     ) {
-                        // Artist name as TextButton
-                        TextButton(
-                            onClick = { onArtistClick(track) },
+                        // Artist navigation (icon-only — name is in the title above).
+                        TonalToggleButton(
+                            checked = false,
+                            onCheckedChange = { onArtistClick(track) },
+                            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
                             enabled = track.artistUrl.isNotEmpty() || track.isLocal,
-                            modifier = Modifier.weight(1f, fill = false),
-                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.weight(1f),
                         ) {
-                            Text(
-                                text = track.artist,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                            Icon(
+                                painter = painterResource(R.drawable.ic_person),
+                                contentDescription = stringResource(R.string.player_cd_open_artist),
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        // Favorite toggle button
+                        // Album navigation (new). Disabled when the track has
+                        // no album page (streaming sources where it's not
+                        // canonical).
+                        TonalToggleButton(
+                            checked = false,
+                            onCheckedChange = { onAlbumClick(track) },
+                            shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                            enabled = albumNavEnabled,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_album),
+                                contentDescription = stringResource(R.string.player_cd_open_album),
+                            )
+                        }
+                        // Favorite toggle.
                         TonalToggleButton(
                             checked = track.isFavorite,
                             onCheckedChange = { playerViewModel.onToggleFavorite() },
-                            colors = ToggleButtonDefaults.tonalToggleButtonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                                checkedContainerColor = MaterialTheme.colorScheme.errorContainer,
-                                checkedContentColor = MaterialTheme.colorScheme.error,
-                            ),
+                            shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                            modifier = Modifier.weight(1f),
                         ) {
                             Icon(
                                 painter = painterResource(if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border),
                                 contentDescription = stringResource(if (track.isFavorite) R.string.player_cd_remove_from_favorites else R.string.player_cd_add_to_favorites),
                             )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        // Download toggle button
-                        val isTrackDownloaded = track.id in state.downloadedTrackIds
-                        val isDownloading = state.downloadingTrackId == track.id
-                        val isLocalTrack = track.isLocal
+                        // Download toggle (matches Favorite's interaction language).
                         TonalToggleButton(
                             checked = isTrackDownloaded || isLocalTrack,
                             onCheckedChange = {
@@ -747,17 +768,11 @@ fun FullPlayer(
                                 }
                             },
                             enabled = !isDownloading && !isLocalTrack,
-                            colors = ToggleButtonDefaults.tonalToggleButtonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                                checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                checkedContentColor = MaterialTheme.colorScheme.primary,
-                            ),
+                            shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                            modifier = Modifier.weight(1f),
                         ) {
                             if (isDownloading) {
-                                CircularWavyProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                )
+                                CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                             } else {
                                 Icon(
                                     painter = painterResource(if (isTrackDownloaded || isLocalTrack) R.drawable.ic_download_done
@@ -769,6 +784,18 @@ fun FullPlayer(
                                     }),
                                 )
                             }
+                        }
+                        // Add to playlist (new — opens the existing AddToPlaylistSheet).
+                        TonalToggleButton(
+                            checked = track.id in state.userPlaylistTrackIds,
+                            onCheckedChange = { showPlaylistSheet = true },
+                            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_playlist_add),
+                                contentDescription = stringResource(R.string.player_cd_add_to_playlist),
+                            )
                         }
                     }
                 }
@@ -838,41 +865,35 @@ fun FullPlayer(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
+                    val barHeight = state.progressBarSizeDp.dp
+                    val isWavy = state.progressBarStyle == "wavy"
                     if (state.isLoadingTrack) {
-                        if (state.wavyProgressBar) {
+                        if (isWavy) {
                             LinearWavyProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(24.dp),
+                                modifier = Modifier.fillMaxWidth().height(barHeight),
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                             )
                         } else {
                             LinearProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(24.dp),
+                                modifier = Modifier.fillMaxWidth().height(barHeight),
                                 color = MaterialTheme.colorScheme.primary,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                             )
                         }
-                    } else if (state.wavyProgressBar) {
+                    } else if (isWavy) {
                         LinearWavyProgressIndicator(
                             progress = { sliderPosition.coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(24.dp),
+                            modifier = Modifier.fillMaxWidth().height(barHeight),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            stroke = Stroke(width = 24.dp.value),
-                            trackStroke = Stroke(width = 24.dp.value),
+                            stroke = Stroke(width = barHeight.value),
+                            trackStroke = Stroke(width = barHeight.value),
                         )
                     } else {
                         LinearProgressIndicator(
                             progress = { sliderPosition.coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(24.dp),
+                            modifier = Modifier.fillMaxWidth().height(barHeight),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         )

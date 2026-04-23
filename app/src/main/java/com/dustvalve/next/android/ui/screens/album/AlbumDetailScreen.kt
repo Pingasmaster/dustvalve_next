@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.res.painterResource
@@ -36,6 +35,7 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
@@ -387,17 +387,14 @@ fun AlbumDetailScreen(
                         }
                     }
 
-                    // Bandcamp-only "Buy" split CTA — opens the album page in the
-                    // default browser (no in-app webview). The trailing chevron
-                    // exposes "Send as a gift" which routes to the same page
-                    // (Bandcamp's gift flow lives in the page's own buy widget).
+                    // Bandcamp-only "Buy" CTA — opens the album page in the
+                    // default browser (no in-app webview).
                     if (album.url.contains("bandcamp.com", ignoreCase = true)) {
                         item(key = "buy_on_bandcamp") {
                             val uriHandler = LocalUriHandler.current
-                            BuyOnBandcampSplitButton(
+                            BuyOnBandcampFab(
                                 price = album.price,
                                 onBuy = { uriHandler.openUri(album.url) },
-                                onSendAsGift = { uriHandler.openUri(album.url) },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -501,10 +498,8 @@ private fun AlbumActionBar(
             // visual parity with the icon-only siblings.
             Icon(
                 painter = painterResource(R.drawable.ic_play_arrow),
-                contentDescription = null,
+                contentDescription = stringResource(R.string.common_play_all),
             )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.common_play_all))
         }
 
         FilledTonalButton(
@@ -668,85 +663,36 @@ internal fun ExpandableDescription(
 }
 
 /**
- * M3E SplitButtonLayout wrapping [SplitButtonDefaults.LeadingButton] (the
- * actual "Buy" CTA showing the formatted price + add-circle icon) and
- * [SplitButtonDefaults.TrailingButton] (the chevron that opens a tiny
- * DropdownMenu with "Send as a gift").
- *
- * Both actions route through the caller's [LocalUriHandler] to the album's
- * Bandcamp page in the user's default browser; the gift flow is on the page
- * itself, so we don't try to deep-link into it.
- *
- * The whole composable centres horizontally so it doesn't span the full
- * screen width — matches the screenshot the user supplied.
+ * Centered M3E [ExtendedFloatingActionButton] showing the formatted price
+ * (or fallback label) with a shopping-bag icon. Tapping routes to the
+ * album's Bandcamp page in the user's default browser.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun BuyOnBandcampSplitButton(
+private fun BuyOnBandcampFab(
     price: com.dustvalve.next.android.domain.model.AlbumPrice?,
     onBuy: () -> Unit,
-    onSendAsGift: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val label = price?.let { formatPrice(it) }
         ?: stringResource(R.string.detail_buy_on_bandcamp)
 
-    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        androidx.compose.material3.SplitButtonLayout(
-            modifier = Modifier.padding(vertical = 16.dp),
-            leadingButton = {
-                androidx.compose.material3.SplitButtonDefaults.LeadingButton(
-                    onClick = onBuy,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add_circle),
-                        contentDescription = null,
-                        modifier = Modifier.size(androidx.compose.material3.SplitButtonDefaults.LeadingIconSize),
-                    )
-                    Spacer(Modifier.width(androidx.compose.material3.ButtonDefaults.IconSpacing))
-                    Text(text = label, style = MaterialTheme.typography.labelLarge)
-                }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 20.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        ExtendedFloatingActionButton(
+            onClick = onBuy,
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_shopping_bag),
+                    contentDescription = null,
+                )
             },
-            trailingButton = {
-                androidx.compose.material3.SplitButtonDefaults.TrailingButton(
-                    checked = menuOpen,
-                    onCheckedChange = { menuOpen = it },
-                ) {
-                    val rotation by androidx.compose.animation.core.animateFloatAsState(
-                        targetValue = if (menuOpen) 180f else 0f,
-                        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
-                        label = "buy_chevron",
-                    )
-                    Icon(
-                        painter = painterResource(R.drawable.ic_expand_more),
-                        contentDescription = stringResource(R.string.detail_buy_more_options),
-                        modifier = Modifier
-                            .size(androidx.compose.material3.SplitButtonDefaults.TrailingIconSize)
-                            .rotate(rotation),
-                    )
-                }
-            },
+            text = { Text(label) },
         )
-
-        androidx.compose.material3.DropdownMenu(
-            expanded = menuOpen,
-            onDismissRequest = { menuOpen = false },
-        ) {
-            androidx.compose.material3.DropdownMenuItem(
-                text = { Text(stringResource(R.string.detail_send_as_gift)) },
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_add_circle),
-                        contentDescription = null,
-                    )
-                },
-                onClick = {
-                    menuOpen = false
-                    onSendAsGift()
-                },
-            )
-        }
     }
 }
 

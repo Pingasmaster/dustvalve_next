@@ -21,8 +21,32 @@ import javax.inject.Singleton
 
 @Singleton
 class DustvalveArtistScraper @Inject constructor(
-    private val client: OkHttpClient
+    sharedClient: OkHttpClient,
 ) {
+
+    /**
+     * Bandcamp serves a heavily-stripped HTML when it sees a mobile User-Agent
+     * (no `band-name-location`, no `band-photo`, no `signed-out-artists-bio-text`,
+     * no `music-grid` — the artist hero is reduced to a JSON-LD `byArtist.name`
+     * with no photo, no location, no bio). The shared `OkHttpClient` ships a
+     * mobile UA via `userAgentInterceptor` (set in NetworkModule), so every
+     * scrapeArtist call would produce an "Unknown Artist" with no metadata for
+     * single-album-artists whose root URL redirects to the album page.
+     *
+     * Override the UA on a derived client that we own. The interceptor we add
+     * runs after NetworkModule's mobile-UA interceptor in the chain, so its
+     * `.header("User-Agent", DESKTOP_UA)` wins.
+     */
+    private val client: OkHttpClient = sharedClient.newBuilder()
+        .addInterceptor(::desktopUserAgentInterceptor)
+        .build()
+
+    private fun desktopUserAgentInterceptor(chain: okhttp3.Interceptor.Chain): okhttp3.Response {
+        val req = chain.request().newBuilder()
+            .header("User-Agent", DESKTOP_UA)
+            .build()
+        return chain.proceed(req)
+    }
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -176,5 +200,13 @@ class DustvalveArtistScraper @Inject constructor(
         val normalized = normalizeUrl(input)
         val bytes = MessageDigest.getInstance("SHA-256").digest(normalized.toByteArray())
         return bytes.take(16).joinToString("") { "%02x".format(it) }
+    }
+
+    companion object {
+        // A current desktop Chrome UA — Bandcamp serves the desktop layout
+        // (with band-name-location / band-photo / signed-out-artists-bio-text
+        // selectors we depend on) for any non-mobile-flagged UA.
+        internal const val DESKTOP_UA =
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 }

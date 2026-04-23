@@ -31,6 +31,8 @@ data class PlaylistDetailUiState(
     val error: String? = null,
     val snackbarMessage: UiText? = null,
     val isSnackbarError: Boolean = false,
+    /** When true AND this is the Favorites system playlist, hide the manual Download button. */
+    val autoDownloadFavorites: Boolean = false,
 )
 
 @HiltViewModel
@@ -51,6 +53,11 @@ class PlaylistDetailViewModel @Inject constructor(
 
     init {
         collectDownloadedTrackIds()
+        viewModelScope.launch {
+            settingsDataStore.autoDownloadFavorites
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(autoDownloadFavorites = v) } }
+        }
     }
 
     private fun collectDownloadedTrackIds() {

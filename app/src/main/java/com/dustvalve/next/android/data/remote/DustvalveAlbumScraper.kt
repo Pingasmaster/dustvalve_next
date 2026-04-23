@@ -108,6 +108,7 @@ class DustvalveAlbumScraper @Inject constructor(
 
         val tags = extractTags(html)
 
+        val resolvedAlbumUrl = tralbumData.url.ifEmpty { albumUrl }
         val tracks = tralbumData.trackinfo.mapIndexed { index, trackInfo ->
             Track(
                 id = "${albumId}_${trackInfo.id}",
@@ -120,6 +121,7 @@ class DustvalveAlbumScraper @Inject constructor(
                 streamUrl = trackInfo.file?.mp3128,
                 artUrl = artUrl,
                 albumTitle = tralbumData.current.title,
+                albumUrl = resolvedAlbumUrl,
             )
         }
 

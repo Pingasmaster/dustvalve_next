@@ -11,6 +11,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.data.asset.StoragePaths
+import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
@@ -24,6 +25,16 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var autoDownloadFavoritesCoordinator: AutoDownloadFavoritesCoordinator
+
+    override fun onCreate() {
+        super.onCreate()
+        // Idempotent — observes the "Auto-download favorites" toggle and
+        // enqueues downloads for any favorited tracks not already on disk.
+        autoDownloadFavoritesCoordinator.start()
+    }
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
