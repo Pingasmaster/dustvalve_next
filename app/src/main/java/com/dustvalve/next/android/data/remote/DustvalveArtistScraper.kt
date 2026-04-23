@@ -75,7 +75,18 @@ class DustvalveArtistScraper @Inject constructor(
             ?: document.selectFirst("p#band-name-location span.title")?.text()?.trim()?.takeIf { it.isNotEmpty() }
             ?: "Unknown Artist"
 
-        val bio = document.selectFirst(".signed-out-artists-bio-text")?.text()?.trim()
+        val bio = document.selectFirst(".signed-out-artists-bio-text")?.let { bioEl ->
+            // Bandcamp wraps long bios in a `bcTruncate` JS plugin: it hides the
+            // overflow inside `<span class="peekaboo-text">` and renders a
+            // `<span class="peekaboo-link"><span class="peekaboo-ellipsis">...</span>
+            // <a>more</a></span>` overlay that the user clicks to expand. We don't
+            // run the JS, so Jsoup's `.text()` would otherwise concatenate the
+            // hidden long form AND the literal "...more" link tail. Drop the link
+            // overlay (we keep `.peekaboo-text` so the FULL bio is returned).
+            val cleaned = bioEl.clone()
+            cleaned.select(".peekaboo-link, .peekaboo-ellipsis").remove()
+            cleaned.text().trim().takeIf { it.isNotEmpty() }
+        }
 
         val imageUrl = document.selectFirst(".band-photo img")?.attr("abs:src")
             ?: document.selectFirst("img.band-photo")?.attr("abs:src")
