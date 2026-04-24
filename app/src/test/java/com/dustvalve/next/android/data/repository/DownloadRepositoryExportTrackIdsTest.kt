@@ -15,7 +15,6 @@ import com.dustvalve.next.android.data.local.db.entity.AlbumEntity
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
-import com.dustvalve.next.android.domain.repository.SpotifyRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
@@ -59,7 +58,6 @@ class DownloadRepositoryExportTrackIdsTest {
     private lateinit var downloadScraper: DustvalveDownloadScraper
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var youtubeRepository: YouTubeRepository
-    private lateinit var spotifyRepository: SpotifyRepository
     private lateinit var client: OkHttpClient
     private lateinit var rootDoc: DocumentFile
     private lateinit var albumDoc: DocumentFile
@@ -82,7 +80,6 @@ class DownloadRepositoryExportTrackIdsTest {
         downloadScraper = mockk(relaxed = true)
         settingsDataStore = mockk(relaxed = true)
         youtubeRepository = mockk(relaxed = true)
-        spotifyRepository = mockk(relaxed = true)
         client = OkHttpClient()
 
         repo = DownloadRepositoryImpl(
@@ -96,7 +93,6 @@ class DownloadRepositoryExportTrackIdsTest {
             downloadScraper = downloadScraper,
             settingsDataStore = settingsDataStore,
             youtubeRepository = youtubeRepository,
-            spotifyRepository = spotifyRepository,
             context = context,
         )
 

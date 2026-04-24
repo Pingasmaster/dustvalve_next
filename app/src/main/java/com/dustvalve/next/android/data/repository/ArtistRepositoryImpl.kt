@@ -41,7 +41,14 @@ class ArtistRepositoryImpl @Inject constructor(
 ) : ArtistRepository {
 
     companion object {
-        private const val REVALIDATE_THRESHOLD_MS = 30 * 60 * 1000L // 30 minutes
+        // Artists may grow new albums over time, so unlike fully-immutable
+        // album metadata we still revalidate periodically — but the cached
+        // copy is always emitted FIRST so the UI never blocks on the network.
+        // The artist-photo URL is content-addressed by Bandcamp (the image
+        // id changes whenever the artist re-uploads), so a fresh scrape that
+        // returns a different imageUrl is functionally a hash-mismatch and
+        // the new URL silently replaces the stored one when persisted.
+        private const val REVALIDATE_THRESHOLD_MS = 24 * 60 * 60 * 1000L // 24h
     }
 
     override suspend fun getArtistDetail(url: String): Artist {

@@ -27,19 +27,15 @@ enum class RemoteItemKind { TRACK, ALBUM, PLAYLIST, ARTIST }
 
 fun SearchResultType.toRemoteKind(): RemoteItemKind? = when (this) {
     SearchResultType.TRACK,
-    SearchResultType.YOUTUBE_TRACK,
-    SearchResultType.SPOTIFY_TRACK -> RemoteItemKind.TRACK
+    SearchResultType.YOUTUBE_TRACK -> RemoteItemKind.TRACK
 
     SearchResultType.ALBUM,
-    SearchResultType.YOUTUBE_ALBUM,
-    SearchResultType.SPOTIFY_ALBUM -> RemoteItemKind.ALBUM
+    SearchResultType.YOUTUBE_ALBUM -> RemoteItemKind.ALBUM
 
-    SearchResultType.YOUTUBE_PLAYLIST,
-    SearchResultType.SPOTIFY_PLAYLIST -> RemoteItemKind.PLAYLIST
+    SearchResultType.YOUTUBE_PLAYLIST -> RemoteItemKind.PLAYLIST
 
     SearchResultType.ARTIST,
-    SearchResultType.YOUTUBE_ARTIST,
-    SearchResultType.SPOTIFY_ARTIST -> RemoteItemKind.ARTIST
+    SearchResultType.YOUTUBE_ARTIST -> RemoteItemKind.ARTIST
 
     SearchResultType.LOCAL_TRACK -> null
 }

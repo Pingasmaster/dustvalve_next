@@ -1,5 +1,9 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
+import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
+import com.dustvalve.next.android.data.local.db.entity.YouTubePlaylistCacheEntity
+import com.dustvalve.next.android.data.local.db.entity.YouTubeVideoCacheEntity
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeChannelParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeNextParser
@@ -10,7 +14,15 @@ import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,7 +40,25 @@ class YouTubeRepositoryImpl @Inject constructor(
     private val playlistParser: YouTubePlaylistParser,
     private val channelParser: YouTubeChannelParser,
     private val nextParser: YouTubeNextParser,
+    private val videoCache: YouTubeVideoCacheDao,
+    private val playlistCache: YouTubePlaylistCacheDao,
 ) : YouTubeRepository {
+
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val json = Json { ignoreUnknownKeys = true }
+    private val stringListSerializer = ListSerializer(String.serializer())
+
+    private companion object {
+        // Playlists may grow over time (uploader appends videos), so we
+        // refresh in the background after a day. Video metadata (title,
+        // duration, uploader) is immutable post-publish and cached forever.
+        const val PLAYLIST_REVALIDATE_MS = 24L * 60L * 60L * 1000L
+
+        // Opaque YouTube `params` token selecting the channel "Videos" tab.
+        // This is the same value Metrolist / NewPipe / yt-dlp use; YT has
+        // not rotated it in years.
+        const val VIDEOS_TAB_PARAMS = "EgZ2aWRlb3PyBgQKAjoA"
+    }
 
     /**
      * filter: "songs" -> videos only, "playlists" -> playlists only,
@@ -85,9 +115,44 @@ class YouTubeRepositoryImpl @Inject constructor(
     override suspend fun getTrackInfo(videoUrl: String): Track {
         val videoId = extractVideoId(videoUrl)
             ?: throw IllegalArgumentException("Cannot extract videoId from $videoUrl")
+        // Cache-first: video metadata is immutable post-publish, so a hit
+        // returns instantly with no network access.
+        videoCache.getById(videoId)?.let { cached ->
+            return cachedToTrack(cached)
+        }
         val response = client.player(videoId)
-        return playerParser.parseTrack(response, videoId)
+        val track = playerParser.parseTrack(response, videoId)
+        // Persist for future reads. Errors swallowed silently — caching is
+        // best-effort and must never break the user-facing call.
+        try {
+            videoCache.insert(track.toCacheEntity(videoId))
+        } catch (_: Throwable) {}
+        return track
     }
+
+    private fun cachedToTrack(cached: YouTubeVideoCacheEntity): Track = Track(
+        id = "yt_${cached.videoId}",
+        albumId = "",
+        title = cached.title,
+        artist = cached.artist,
+        artistUrl = cached.artistUrl,
+        trackNumber = 0,
+        duration = cached.durationSec,
+        streamUrl = null,  // Re-resolved live by the player.
+        artUrl = cached.artUrl,
+        albumTitle = "",
+        source = TrackSource.YOUTUBE,
+    )
+
+    private fun Track.toCacheEntity(videoId: String): YouTubeVideoCacheEntity =
+        YouTubeVideoCacheEntity(
+            videoId = videoId,
+            title = title,
+            artist = artist,
+            artistUrl = artistUrl,
+            durationSec = duration,
+            artUrl = artUrl,
+        )
 
     override suspend fun getRecommendations(videoUrl: String): List<SearchResult> {
         val videoId = extractVideoId(videoUrl)
@@ -99,6 +164,36 @@ class YouTubeRepositoryImpl @Inject constructor(
     override suspend fun getPlaylistTracks(playlistUrl: String): Pair<List<Track>, String> {
         val playlistId = extractPlaylistId(playlistUrl)
             ?: throw IllegalArgumentException("Cannot extract playlistId from $playlistUrl")
+
+        // Cache-first: rebuild the playlist from cached video metadata if
+        // available. Then trigger a silent background refresh (errors
+        // swallowed) to pick up any newly-added videos.
+        val cached = playlistCache.getById(playlistId)
+        if (cached != null) {
+            val ids = try {
+                json.decodeFromString(stringListSerializer, cached.videoIdsJson)
+            } catch (_: Throwable) { emptyList() }
+            if (ids.isNotEmpty()) {
+                val cachedVideos = videoCache.getByIds(ids).associateBy { it.videoId }
+                val tracks = ids.mapNotNull { id -> cachedVideos[id]?.let { cachedToTrack(it) } }
+                if (tracks.size == ids.size) {
+                    val age = System.currentTimeMillis() - cached.cachedAt
+                    if (age >= PLAYLIST_REVALIDATE_MS) {
+                        backgroundScope.launch {
+                            try { fetchAndCachePlaylist(playlistId) } catch (_: Throwable) {}
+                        }
+                    }
+                    return tracks to cached.title
+                }
+            }
+        }
+
+        // Cache miss / partial cache: fetch synchronously.
+        val (freshTracks, title) = fetchAndCachePlaylist(playlistId)
+        return freshTracks to title
+    }
+
+    private suspend fun fetchAndCachePlaylist(playlistId: String): Pair<List<Track>, String> {
         val response = client.browse("VL$playlistId")
         val first = playlistParser.parse(response, playlistId)
         val all = first.tracks.toMutableList()
@@ -114,7 +209,22 @@ class YouTubeRepositoryImpl @Inject constructor(
             cont = nextPage.continuation
             safety += 1
         }
-        return all to (first.title ?: "")
+        val title = first.title ?: ""
+
+        // Persist video + playlist snapshots. Best-effort.
+        try {
+            val ids = all.map { it.id.removePrefix("yt_") }
+            val videoEntities = all.zip(ids).map { (track, vid) -> track.toCacheEntity(vid) }
+            videoCache.insertAll(videoEntities)
+            playlistCache.insert(
+                YouTubePlaylistCacheEntity(
+                    playlistId = playlistId,
+                    title = title,
+                    videoIdsJson = json.encodeToString(stringListSerializer, ids),
+                )
+            )
+        } catch (_: Throwable) {}
+        return all to title
     }
 
     override suspend fun getChannelVideos(
@@ -177,10 +287,4 @@ class YouTubeRepositoryImpl @Inject constructor(
         return null
     }
 
-    private companion object {
-        // Opaque YouTube `params` token selecting the channel "Videos" tab.
-        // This is the same value Metrolist / NewPipe / yt-dlp use; YT has
-        // not rotated it in years.
-        const val VIDEOS_TAB_PARAMS = "EgZ2aWRlb3PyBgQKAjoA"
-    }
 }

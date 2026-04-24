@@ -56,13 +56,10 @@ class SettingsDataStore @Inject constructor(
         val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
         val SEARCH_HISTORY_BANDCAMP = booleanPreferencesKey("search_history_bandcamp")
         val SEARCH_HISTORY_YOUTUBE = booleanPreferencesKey("search_history_youtube")
-        val SEARCH_HISTORY_SPOTIFY = booleanPreferencesKey("search_history_spotify")
         val SEARCH_HISTORY_LOCAL = booleanPreferencesKey("search_history_local")
         val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
         val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
         val YOUTUBE_DEFAULT_SOURCE = stringPreferencesKey("youtube_default_source")
-        val SPOTIFY_ENABLED = booleanPreferencesKey("spotify_enabled")
-        val SPOTIFY_CONNECTED = booleanPreferencesKey("spotify_connected")
         val KEEP_SCREEN_ON_IN_APP = booleanPreferencesKey("keep_screen_on_in_app")
         val KEEP_SCREEN_ON_WHILE_PLAYING = booleanPreferencesKey("keep_screen_on_while_playing")
         val KEEP_LOCAL_SORT = booleanPreferencesKey("keep_local_sort")
@@ -415,10 +412,6 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.YOUTUBE_ENABLED] ?: false
     }
 
-    val spotifyEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.SPOTIFY_ENABLED] ?: false
-    }
-
     val showInlineVolumeSlider: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.SHOW_INLINE_VOLUME_SLIDER] ?: false
     }
@@ -481,10 +474,6 @@ class SettingsDataStore @Inject constructor(
         prefs[Keys.SEARCH_HISTORY_YOUTUBE] ?: true
     }
 
-    val searchHistorySpotify: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.SEARCH_HISTORY_SPOTIFY] ?: true
-    }
-
     val searchHistoryLocal: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.SEARCH_HISTORY_LOCAL] ?: true
     }
@@ -513,10 +502,6 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setSearchHistoryYoutube(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_YOUTUBE] = enabled }
-    }
-
-    suspend fun setSearchHistorySpotify(enabled: Boolean) {
-        context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_SPOTIFY] = enabled }
     }
 
     suspend fun setSearchHistoryLocal(enabled: Boolean) {
@@ -561,28 +546,6 @@ class SettingsDataStore @Inject constructor(
     suspend fun clearYtmAccount() {
         context.dataStore.edit { prefs ->
             prefs.remove(Keys.YTM_CONNECTED)
-        }
-    }
-
-    val spotifyConnected: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[Keys.SPOTIFY_CONNECTED] ?: false
-    }
-
-    suspend fun setSpotifyEnabled(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.SPOTIFY_ENABLED] = enabled
-        }
-    }
-
-    suspend fun setSpotifyConnected(connected: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.SPOTIFY_CONNECTED] = connected
-        }
-    }
-
-    suspend fun clearSpotifyAccount() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(Keys.SPOTIFY_CONNECTED)
         }
     }
 

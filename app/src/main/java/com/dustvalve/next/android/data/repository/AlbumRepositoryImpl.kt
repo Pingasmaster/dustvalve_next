@@ -34,7 +34,13 @@ class AlbumRepositoryImpl @Inject constructor(
 ) : AlbumRepository {
 
     companion object {
-        private const val REVALIDATE_THRESHOLD_MS = 30 * 60 * 1000L // 30 minutes
+        // Albums are immutable once released — title, artist, tracks, art and
+        // tags don't change. We deliberately treat any cached row that has at
+        // least one persisted track as the source of truth and never refetch
+        // it, in line with the unified "never re-fetch a resource we've
+        // already gotten" caching policy. Stub rows (no tracks) and bare
+        // cache misses still trigger a foreground scrape.
+        private const val REVALIDATE_THRESHOLD_MS = Long.MAX_VALUE
     }
 
     override suspend fun getAlbumDetail(url: String): Album {

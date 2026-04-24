@@ -69,9 +69,6 @@ class MainActivity : ComponentActivity() {
     lateinit var accountRepository: AccountRepository
 
     @Inject
-    lateinit var spotifyRepository: com.dustvalve.next.android.domain.repository.SpotifyRepository
-
-    @Inject
     lateinit var settingsDataStore: SettingsDataStore
 
     @Inject
@@ -124,7 +121,7 @@ class MainActivity : ComponentActivity() {
                 oledBlack = config.oledBlack,
                 albumSeedColor = config.albumSeedColor,
             ) {
-                MainContent(accountRepository = accountRepository, spotifyRepository = spotifyRepository, activity = this@MainActivity)
+                MainContent(accountRepository = accountRepository, activity = this@MainActivity)
             }
         }
     }
@@ -181,7 +178,7 @@ private data class ThemeConfig(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MainContent(accountRepository: AccountRepository, spotifyRepository: com.dustvalve.next.android.domain.repository.SpotifyRepository, activity: MainActivity) {
+private fun MainContent(accountRepository: AccountRepository, activity: MainActivity) {
     val playerViewModel: PlayerViewModel = hiltViewModel()
     val navViewModel: NavigationViewModel = hiltViewModel()
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
@@ -276,7 +273,6 @@ private fun MainContent(accountRepository: AccountRepository, spotifyRepository:
                         navViewModel = navViewModel,
                         playerViewModel = playerViewModel,
                         accountRepository = accountRepository,
-                        spotifyRepository = spotifyRepository,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
@@ -305,7 +301,6 @@ private fun MainContent(accountRepository: AccountRepository, spotifyRepository:
                     navViewModel = navViewModel,
                     playerViewModel = playerViewModel,
                     accountRepository = accountRepository,
-                    spotifyRepository = spotifyRepository,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
@@ -346,13 +341,6 @@ private fun MainContent(accountRepository: AccountRepository, spotifyRepository:
                             track.source == TrackSource.YOUTUBE -> navViewModel.navigateTo(
                                 NavDestination.YouTubeArtistDetail(
                                     url = track.artistUrl,
-                                    name = track.artist,
-                                    imageUrl = null,
-                                )
-                            )
-                            track.source == TrackSource.SPOTIFY -> navViewModel.navigateTo(
-                                NavDestination.SpotifyArtistDetail(
-                                    uri = track.artistUrl,
                                     name = track.artist,
                                     imageUrl = null,
                                 )

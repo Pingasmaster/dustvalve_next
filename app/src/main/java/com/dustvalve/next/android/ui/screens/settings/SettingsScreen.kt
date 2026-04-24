@@ -91,7 +91,6 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     onBandcampLoginClick: () -> Unit,
     onYouTubeMusicLoginClick: () -> Unit,
-    onSpotifyLoginClick: () -> Unit = {},
     onDownloadsClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -270,8 +269,6 @@ fun SettingsScreen(
                     viewModel.addLocalMusicFolder(uri.toString())
                 }
             }
-
-            var showSpotifySourceWarning by rememberSaveable { mutableStateOf(false) }
 
             val scanText = state.scanMessage?.asString()
             LaunchedEffect(scanText) {
@@ -627,71 +624,13 @@ fun SettingsScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_spotify),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = stringResource(R.string.settings_source_spotify),
-                                    style = MaterialTheme.typography.titleSmall,
-                                )
-                            }
-                            Switch(
-                                checked = state.spotifyEnabled,
-                                onCheckedChange = { enabled ->
-                                    if (enabled) {
-                                        showSpotifySourceWarning = true
-                                    } else {
-                                        viewModel.setSpotifyEnabled(false)
-                                    }
-                                },
-                            )
-                        }
                     }
                 }
-            }
-
-            if (showSpotifySourceWarning) {
-                AlertDialog(
-                    onDismissRequest = { showSpotifySourceWarning = false },
-                    title = { Text(stringResource(R.string.settings_spotify_premium_title)) },
-                    text = {
-                        Text(stringResource(R.string.settings_spotify_premium_text))
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showSpotifySourceWarning = false
-                                viewModel.setSpotifyEnabled(true)
-                            },
-                            shapes = ButtonDefaults.shapes(),
-                        ) {
-                            Text(stringResource(R.string.common_action_enable))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showSpotifySourceWarning = false }, shapes = ButtonDefaults.shapes()) {
-                            Text(stringResource(R.string.common_action_cancel))
-                        }
-                    },
-                )
             }
         }
 
         // Connections section
         item {
-            var showSpotifyWarning by rememberSaveable { mutableStateOf(false) }
-
             SettingsSection(
                 title = stringResource(R.string.settings_section_connections),
                 icon = R.drawable.ic_account_circle,
@@ -816,83 +755,8 @@ fun SettingsScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        // Spotify connection
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_spotify),
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = stringResource(R.string.settings_source_spotify),
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        if (state.spotifyConnected) {
-                            Text(
-                                text = stringResource(R.string.settings_spotify_connected),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedButton(
-                                onClick = { viewModel.disconnectSpotify() },
-                                shapes = ButtonDefaults.shapes(),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(stringResource(R.string.common_action_disconnect))
-                            }
-                        } else {
-                            Text(
-                                text = stringResource(R.string.settings_connect_spotify_desc),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Button(
-                                onClick = { showSpotifyWarning = true },
-                                shapes = ButtonDefaults.shapes(),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(stringResource(R.string.settings_connect_spotify))
-                            }
-                        }
                     }
                 }
-            }
-
-            if (showSpotifyWarning) {
-                AlertDialog(
-                    onDismissRequest = { showSpotifyWarning = false },
-                    title = { Text(stringResource(R.string.settings_spotify_warning_title)) },
-                    text = {
-                        Text(stringResource(R.string.settings_spotify_warning_text))
-                    },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                showSpotifyWarning = false
-                                onSpotifyLoginClick()
-                            },
-                            shapes = ButtonDefaults.shapes(),
-                        ) {
-                            Text(stringResource(R.string.settings_i_understand))
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showSpotifyWarning = false }, shapes = ButtonDefaults.shapes()) {
-                            Text(stringResource(R.string.common_action_cancel))
-                        }
-                    },
-                )
             }
         }
 
@@ -1617,13 +1481,6 @@ fun SettingsScreen(
                                         labelRes = R.string.settings_search_history_source_youtube,
                                         checked = state.searchHistoryYoutube,
                                         onCheckedChange = { viewModel.setSearchHistorySource("youtube", it) },
-                                    )
-                                }
-                                if (state.spotifyEnabled) {
-                                    SearchHistorySourceRow(
-                                        labelRes = R.string.settings_search_history_source_spotify,
-                                        checked = state.searchHistorySpotify,
-                                        onCheckedChange = { viewModel.setSearchHistorySource("spotify", it) },
                                     )
                                 }
                                 if (state.localMusicEnabled) {

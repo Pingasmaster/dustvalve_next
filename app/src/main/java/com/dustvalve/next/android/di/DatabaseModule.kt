@@ -11,6 +11,9 @@ import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.dao.RecentTrackDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
+import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
+import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -80,5 +83,23 @@ object DatabaseModule {
     @Singleton
     fun provideRecentSearchDao(database: DustvalveNextDatabase): RecentSearchDao {
         return database.recentSearchDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideYouTubeVideoCacheDao(database: DustvalveNextDatabase): YouTubeVideoCacheDao {
+        return database.youtubeVideoCacheDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideYouTubePlaylistCacheDao(database: DustvalveNextDatabase): YouTubePlaylistCacheDao {
+        return database.youtubePlaylistCacheDao()
+    }
+
+    @Provides
+    @Singleton
+    fun provideYouTubeMusicHomeCacheDao(database: DustvalveNextDatabase): YouTubeMusicHomeCacheDao {
+        return database.youtubeMusicHomeCacheDao()
     }
 }

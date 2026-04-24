@@ -49,7 +49,10 @@ class YouTubeMusicRepositoryImplTest {
         searchParser = mockk()
         ytInnertube = mockk()
         ytPlayerParser = mockk()
-        repo = YouTubeMusicRepositoryImpl(client, parser, searchParser, ytInnertube, ytPlayerParser)
+        repo = YouTubeMusicRepositoryImpl(
+            client, parser, searchParser, ytInnertube, ytPlayerParser,
+            homeCache = mockk(relaxed = true),
+        )
     }
 
     @Test fun `resolveStreamUrl dispatches to YouTube Innertube player`() = runTest {

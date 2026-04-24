@@ -43,8 +43,17 @@ class YouTubeRepositoryImplTest {
         playlistParser = mockk()
         channelParser = mockk()
         nextParser = mockk()
+        // Cache DAOs explicitly return null on lookup so the existing tests
+        // (which assert the network/parser path) hit the cache-miss branch.
+        val videoCacheMock = mockk<com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao>(relaxed = true)
+        val playlistCacheMock = mockk<com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao>(relaxed = true)
+        coEvery { videoCacheMock.getById(any()) } returns null
+        coEvery { videoCacheMock.getByIds(any()) } returns emptyList()
+        coEvery { playlistCacheMock.getById(any()) } returns null
         repo = YouTubeRepositoryImpl(
             client, playerParser, searchParser, playlistParser, channelParser, nextParser,
+            videoCache = videoCacheMock,
+            playlistCache = playlistCacheMock,
         )
     }
 

@@ -10,7 +10,6 @@ import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.model.ExportableTrack
-import com.dustvalve.next.android.domain.model.SpotifyAccountState
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
@@ -57,7 +56,6 @@ class SettingsViewModelExportTest {
         accountRepository = mockk(relaxed = true)
         every { accountRepository.getAccountState() } returns flowOf(AccountState())
         every { accountRepository.getYouTubeMusicAccountState() } returns flowOf(YouTubeMusicAccountState())
-        every { accountRepository.getSpotifyAccountState() } returns flowOf(SpotifyAccountState())
 
         storageTracker = mockk(relaxed = true)
         every { storageTracker.getCacheInfo() } returns flowOf(CacheInfo(0, 0, 0, 0, 0, 0f))
@@ -83,7 +81,6 @@ class SettingsViewModelExportTest {
             every { localMusicUseMediaStore } returns flowOf(true)
             every { bandcampEnabled } returns flowOf(true)
             every { youtubeEnabled } returns flowOf(true)
-            every { spotifyEnabled } returns flowOf(false)
             every { showInlineVolumeSlider } returns flowOf(false)
             every { showVolumeButton } returns flowOf(false)
             every { searchHistoryEnabled } returns flowOf(true)
