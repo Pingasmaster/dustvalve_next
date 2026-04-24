@@ -264,6 +264,48 @@ class DustvalveArtistScraperTest {
         assertThat(artist.albums.single().title).isEqualTo("One")
     }
 
+    /**
+     * Regression: a.a. williams' bandcamp landing renders a *merch* grid
+     * (class `merch-grid-item`) with no `#music-grid`. Before this fix the
+     * scraper returned zero albums for such artists because the album
+     * selectors only matched `#music-grid .music-grid-item`. The albums ARE
+     * at `/music` under the normal layout, so the fix retries there when
+     * the landing has merch items but no music grid.
+     */
+    @Test fun `falls back to -music when the landing is a merch grid with no music-grid`() = runTest {
+        val merchLanding = """
+            <html><body>
+              <p id="band-name-location"><span class="title">aa williams</span></p>
+              <div id="merch-grid">
+                <li class="merch-grid-item"><a href="/album/solstice"><p class="title">Solstice</p></a></li>
+                <li class="merch-grid-item"><a href="/album/solstice"><p class="title">Solstice</p></a></li>
+              </div>
+            </body></html>
+        """.trimIndent()
+        val musicPage = """
+            <html><body>
+              <p id="band-name-location"><span class="title">aa williams</span></p>
+              <div id="music-grid">
+                <div class="music-grid-item"><a href="/album/solstice"><p class="title">Solstice</p></a></div>
+                <div class="music-grid-item"><a href="/album/a-a-williams"><p class="title">a.a. williams</p></a></div>
+                <div class="music-grid-item"><a href="/album/as-the-moon-rests"><p class="title">As the Moon Rests</p></a></div>
+              </div>
+            </body></html>
+        """.trimIndent()
+        setup.server.enqueue(MockResponse().setBody(merchLanding))
+        setup.server.enqueue(MockResponse().setBody(musicPage))
+
+        val artist = scraper.scrapeArtist(setup.url(""))
+
+        assertThat(artist.albums).hasSize(3)
+        assertThat(artist.albums.map { it.title })
+            .containsExactly("Solstice", "a.a. williams", "As the Moon Rests").inOrder()
+        // Requests should have been: landing, then /music.
+        setup.server.takeRequest() // landing
+        val musicReq = setup.server.takeRequest()
+        assertThat(musicReq.path).endsWith("/music")
+    }
+
     @Test fun `stable id deterministic`() = runTest {
         val html = """<html><body>
             <p id="band-name-location"><span class="title">N</span></p>

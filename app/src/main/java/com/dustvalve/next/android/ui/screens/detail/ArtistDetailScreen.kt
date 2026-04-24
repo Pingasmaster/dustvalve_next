@@ -565,24 +565,31 @@ private fun BuyDiscographySplitButton(
     onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Sizing mirrors the album-page Buy split-button (min 80.dp height,
+    // 32×18 content padding, 28 dp icon, titleLarge) so the artist CTA
+    // matches in visual weight.
     var menuOpen by remember { mutableStateOf(false) }
     Box(
-        modifier = modifier.fillMaxWidth().padding(vertical = 12.dp),
+        modifier = modifier.fillMaxWidth().padding(vertical = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
         SplitButtonLayout(
             leadingButton = {
                 SplitButtonDefaults.LeadingButton(
                     onClick = { onOpen(artistUrl) },
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                    modifier = Modifier.heightIn(min = 80.dp),
+                    contentPadding = PaddingValues(horizontal = 32.dp, vertical = 18.dp),
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_shopping_bag),
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(28.dp),
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.detail_buy_full_discography))
+                    Spacer(Modifier.size(12.dp))
+                    Text(
+                        text = stringResource(R.string.detail_buy_full_discography),
+                        style = MaterialTheme.typography.titleLarge,
+                    )
                 }
             },
             trailingButton = {
@@ -590,6 +597,8 @@ private fun BuyDiscographySplitButton(
                     SplitButtonDefaults.TrailingButton(
                         checked = menuOpen,
                         onCheckedChange = { menuOpen = it },
+                        modifier = Modifier.heightIn(min = 80.dp),
+                        contentPadding = PaddingValues(horizontal = 20.dp),
                     ) {
                         val rotation by animateFloatAsState(
                             targetValue = if (menuOpen) 180f else 0f,
@@ -599,7 +608,7 @@ private fun BuyDiscographySplitButton(
                         Icon(
                             painter = painterResource(R.drawable.ic_expand_more),
                             contentDescription = stringResource(R.string.detail_buy_more_options),
-                            modifier = Modifier.size(20.dp).rotate(rotation),
+                            modifier = Modifier.size(28.dp).rotate(rotation),
                         )
                     }
                     DropdownMenu(

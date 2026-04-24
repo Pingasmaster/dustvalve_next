@@ -84,7 +84,9 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.AudioFormat
 import androidx.compose.ui.platform.LocalContext
 import com.dustvalve.next.android.ui.components.StorageIndicator
+import com.dustvalve.next.android.ui.components.update.AppUpdateDialog
 import com.dustvalve.next.android.ui.theme.AppShapes
+import com.dustvalve.next.android.update.UpdateUiState
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -1777,68 +1779,3 @@ private fun SearchHistorySourceRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun AppUpdateDialog(
-    state: UpdateUiState,
-    onConfirmDownload: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    when (state) {
-        is UpdateUiState.Available -> {
-            AlertDialog(
-                onDismissRequest = onDismiss,
-                title = { Text(stringResource(R.string.settings_update_available_title)) },
-                text = {
-                    Text(
-                        stringResource(
-                            R.string.settings_update_available_text,
-                            state.versionName,
-                        )
-                    )
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = onConfirmDownload,
-                        shapes = ButtonDefaults.shapes(),
-                    ) {
-                        Text(stringResource(R.string.settings_update_download_action))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = onDismiss, shapes = ButtonDefaults.shapes()) {
-                        Text(stringResource(R.string.common_action_cancel))
-                    }
-                },
-            )
-        }
-        is UpdateUiState.Downloading -> {
-            AlertDialog(
-                onDismissRequest = { /* not dismissable while downloading */ },
-                title = {
-                    Text(
-                        stringResource(
-                            R.string.settings_update_downloading,
-                            state.versionName,
-                        )
-                    )
-                },
-                text = {
-                    if (state.progress != null) {
-                        LinearWavyProgressIndicator(
-                            progress = { state.progress },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        // Indeterminate when the server didn't send Content-Length.
-                        LinearWavyProgressIndicator(
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                },
-                confirmButton = {},
-            )
-        }
-        else -> Unit
-    }
-}

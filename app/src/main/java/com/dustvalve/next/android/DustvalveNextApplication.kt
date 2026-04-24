@@ -13,6 +13,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
+import com.dustvalve.next.android.update.AppUpdateController
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
@@ -33,6 +34,9 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
     @Inject
     lateinit var folderMirror: FolderMirror
 
+    @Inject
+    lateinit var appUpdateController: AppUpdateController
+
     override fun onCreate() {
         super.onCreate()
         // Idempotent — observes the "Auto-download favorites" toggle and
@@ -41,6 +45,10 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
         // Observes the dedicated-folder toggle; when on, mirrors every user-
         // data table + DataStore to the folder. Cancels cleanly when off.
         folderMirror.start()
+        // Fire-and-forget pre-alpha update check. One-shot per process; the
+        // controller swallows errors + mutates shared state that
+        // MainActivity's dialog host observes. See AppUpdateController.
+        appUpdateController.checkSilently()
     }
 
     override val workManagerConfiguration: Configuration

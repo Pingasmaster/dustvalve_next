@@ -4,6 +4,7 @@ import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.util.HtmlUtils
 import com.dustvalve.next.android.util.NetworkUtils
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -79,19 +80,21 @@ class DustvalveArtistScraper @Inject constructor(
                 // Main page redirected to an album/track page — mobile layout lacks
                 // artist metadata, so re-fetch the /music page instead.
                 response.body.string() // consume body to release connection
-                val baseUrl = artistUrl.trimEnd('/')
-                val musicRequest = Request.Builder().url("$baseUrl/music").build()
-                val musicCall = client.newCall(musicRequest)
-                coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) musicCall.cancel() }
-                musicCall.execute().use { musicResponse ->
-                    if (!musicResponse.isSuccessful) throw IOException("HTTP ${musicResponse.code}")
-                    musicResponse.body.string()
-                }
+                fetchArtistMusicPage(artistUrl)
             } else {
                 response.body.string()
             }
         }
         ensureActive()
+
+        // Some artists (e.g. aawilliams.bandcamp.com) render the landing page
+        // as a *merch* grid with no `#music-grid` — our album selectors come
+        // up empty. The discography IS there at `/music` under the normal
+        // music-grid layout, so retry there once before giving up.
+        if (!html.contains("music-grid-item") && html.contains("merch-grid-item")) {
+            html = fetchArtistMusicPage(artistUrl)
+            ensureActive()
+        }
 
         val document = Jsoup.parse(html, artistUrl)
 
@@ -247,6 +250,23 @@ class DustvalveArtistScraper @Inject constructor(
         // Look at the next ~32 chars after the key to find the value token.
         val tail = html.substring(idx + needle.length, (idx + needle.length + 32).coerceAtMost(html.length))
         return Regex("""[":\s]*(?:&quot;)?(true|1)(?:&quot;)?""").find(tail) != null
+    }
+
+    /**
+     * Fetches `<artistUrl>/music` — the canonical discography layout. Split
+     * out so both the "landing redirected to album/track" and the
+     * "landing is a merch grid without #music-grid" fallbacks go through the
+     * same path.
+     */
+    private suspend fun fetchArtistMusicPage(artistUrl: String): String {
+        val baseUrl = artistUrl.trimEnd('/')
+        val musicRequest = Request.Builder().url("$baseUrl/music").build()
+        val musicCall = client.newCall(musicRequest)
+        coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) musicCall.cancel() }
+        return musicCall.execute().use { musicResponse ->
+            if (!musicResponse.isSuccessful) throw IOException("HTTP ${musicResponse.code}")
+            musicResponse.body.string()
+        }
     }
 
     private fun normalizeUrl(url: String): String {
