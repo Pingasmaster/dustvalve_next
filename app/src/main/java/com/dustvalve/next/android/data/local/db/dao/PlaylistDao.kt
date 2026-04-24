@@ -177,4 +177,16 @@ interface PlaylistDao {
 
     @Query("SELECT * FROM playlist_tracks")
     fun getAllPlaylistTrackMappings(): Flow<List<PlaylistTrackEntity>>
+
+    @Query("SELECT * FROM playlists")
+    suspend fun getAllPlaylistsSync(): List<PlaylistEntity>
+
+    @Query("SELECT * FROM playlist_tracks")
+    suspend fun getAllPlaylistTrackMappingsSync(): List<PlaylistTrackEntity>
+
+    @Query("DELETE FROM playlists")
+    suspend fun deleteAllPlaylists()
+
+    @Query("DELETE FROM playlist_tracks")
+    suspend fun deleteAllPlaylistTracks()
 }

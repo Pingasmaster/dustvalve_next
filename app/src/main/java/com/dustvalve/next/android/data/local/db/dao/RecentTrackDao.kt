@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.dustvalve.next.android.data.local.db.entity.RecentTrackEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RecentTrackDao {
@@ -23,4 +24,13 @@ interface RecentTrackDao {
         """
     )
     suspend fun deleteOld(keepCount: Int)
+
+    @Query("SELECT * FROM recent_tracks")
+    suspend fun getAllSync(): List<RecentTrackEntity>
+
+    @Query("SELECT * FROM recent_tracks")
+    fun getAllFlow(): Flow<List<RecentTrackEntity>>
+
+    @Query("DELETE FROM recent_tracks")
+    suspend fun deleteAll()
 }

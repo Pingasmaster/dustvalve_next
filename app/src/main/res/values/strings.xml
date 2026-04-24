@@ -149,9 +149,25 @@
     <string name="ytm_artist_spotlight">Artist spotlight</string>
     <string name="youtube_tab_source_yt">YouTube</string>
     <string name="youtube_tab_source_ytm">YouTube Music</string>
-    <string name="settings_manage_downloads">Manage downloads</string>
-    <string name="settings_export_downloads">Export downloads</string>
     <string name="settings_remove_all_downloads">Remove all downloads</string>
+    <string name="settings_dedicated_folder_title">Store everything in a dedicated folder</string>
+    <string name="settings_dedicated_folder_desc">Playlists, favorites, downloads, history, and settings are stored in a folder of your choice. Required on every app launch.</string>
+    <string name="settings_dedicated_folder_change">Change folder</string>
+    <string name="settings_dedicated_folder_image_cache">Also store image cache in folder</string>
+    <string name="settings_dedicated_folder_image_cache_desc">Album artwork mirrored to the folder; survives reinstalls.</string>
+    <string name="settings_dedicated_folder_metadata_cache">Also store metadata cache in folder</string>
+    <string name="settings_dedicated_folder_metadata_cache_desc">YouTube and Bandcamp lookup caches mirrored to the folder.</string>
+    <string name="settings_dedicated_folder_disable_title">Move data back to app storage?</string>
+    <string name="settings_dedicated_folder_disable_text">Everything currently in the dedicated folder will be copied back into the app. The folder contents are removed afterwards.</string>
+    <string name="settings_dedicated_folder_disable_confirm">Move back</string>
+    <string name="settings_dedicated_folder_migrating">Moving your data…</string>
+    <string name="settings_dedicated_folder_migration_success">Dedicated folder ready</string>
+    <string name="settings_dedicated_folder_migration_reverted">Data back in app storage</string>
+    <string name="settings_dedicated_folder_migration_failed">Migration failed: %1$s</string>
+    <string name="settings_dedicated_folder_unreachable_title">Dedicated folder unavailable</string>
+    <string name="settings_dedicated_folder_unreachable_text">Dustvalve can\'t reach the folder where your data lives. Locate it again, or turn the feature off to fall back to app storage.</string>
+    <string name="settings_dedicated_folder_locate">Locate folder</string>
+    <string name="settings_dedicated_folder_turn_off">Turn off and use app storage</string>
     <string name="settings_auto_download_purchases">Auto-download purchases</string>
     <string name="settings_auto_download_purchases_desc">Automatically download your Dustvalve purchases</string>
     <string name="settings_auto_download_future">Auto-download future content</string>
@@ -415,18 +431,4 @@
     <string name="snackbar_playing_next">\'%1$s\' will play next</string>
     <string name="snackbar_audio_stream_failed">Couldn\'t load audio stream</string>
     <string name="snackbar_scan_failed">Scan failed: %1$s</string>
-    <string name="snackbar_export_failed">Export failed: %1$s</string>
-
-    <!-- Export Tracks bottom sheet -->
-    <string name="export_tracks_title">Export tracks</string>
-    <string name="export_tracks_count" tools:ignore="PluralsCandidate">%1$d of %2$d selected</string>
-    <string name="export_tracks_export_selected">Export selected (%1$d)</string>
-    <string name="export_tracks_export_all">Export all</string>
-    <string name="export_tracks_select_all">Select all</string>
-    <string name="export_tracks_deselect_all">Deselect all</string>
-    <string name="export_tracks_quality_flac">FLAC</string>
-    <string name="export_tracks_quality_kbps">%1$d kbps</string>
-    <string name="export_tracks_quality_v0">V0</string>
-    <string name="export_tracks_button">Export tracks</string>
-    <string name="export_tracks_more_options">More export options</string>
 </resources>

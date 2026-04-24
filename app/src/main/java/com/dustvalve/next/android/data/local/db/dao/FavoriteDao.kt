@@ -50,6 +50,15 @@ interface FavoriteDao {
         ORDER BY f.isPinned DESC, f.addedAt DESC
     """)
     fun getFavoritedArtistsWithInfo(): Flow<List<FavoriteArtistInfo>>
+
+    @Query("SELECT * FROM favorites")
+    suspend fun getAllSync(): List<FavoriteEntity>
+
+    @Query("SELECT * FROM favorites")
+    fun getAllFlow(): Flow<List<FavoriteEntity>>
+
+    @Query("DELETE FROM favorites")
+    suspend fun deleteAll()
 }
 
 suspend fun FavoriteDao.getFavoriteIds(ids: List<String>): List<String> {

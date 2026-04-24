@@ -11,6 +11,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.data.asset.StoragePaths
+import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -29,11 +30,17 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
     @Inject
     lateinit var autoDownloadFavoritesCoordinator: AutoDownloadFavoritesCoordinator
 
+    @Inject
+    lateinit var folderMirror: FolderMirror
+
     override fun onCreate() {
         super.onCreate()
         // Idempotent — observes the "Auto-download favorites" toggle and
         // enqueues downloads for any favorited tracks not already on disk.
         autoDownloadFavoritesCoordinator.start()
+        // Observes the dedicated-folder toggle; when on, mirrors every user-
+        // data table + DataStore to the folder. Cancels cleanly when off.
+        folderMirror.start()
     }
 
     override val workManagerConfiguration: Configuration

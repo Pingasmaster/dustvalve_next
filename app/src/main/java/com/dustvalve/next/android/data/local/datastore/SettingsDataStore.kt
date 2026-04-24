@@ -71,6 +71,10 @@ class SettingsDataStore @Inject constructor(
         val LOCAL_SELECTED_DURATIONS = stringSetPreferencesKey("local_selected_durations")
         val LOCAL_FAVORITES_ONLY = booleanPreferencesKey("local_favorites_only")
         val LOCAL_SELECTED_FOLDERS = stringSetPreferencesKey("local_selected_folders")
+        val DEDICATED_FOLDER_ENABLED = booleanPreferencesKey("dedicated_folder_enabled")
+        val DEDICATED_FOLDER_TREE_URI = stringPreferencesKey("dedicated_folder_tree_uri")
+        val DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE = booleanPreferencesKey("dedicated_folder_include_image_cache")
+        val DEDICATED_FOLDER_INCLUDE_METADATA_CACHE = booleanPreferencesKey("dedicated_folder_include_metadata_cache")
     }
 
     companion object {
@@ -598,6 +602,109 @@ class SettingsDataStore @Inject constructor(
             it[Keys.LOCAL_SELECTED_DURATIONS] = durations
             it[Keys.LOCAL_FAVORITES_ONLY] = favoritesOnly
             it[Keys.LOCAL_SELECTED_FOLDERS] = folders
+        }
+    }
+
+    // Dedicated-folder toggle: when on, user data (playlists, favorites,
+    // downloads, history, settings) is mirrored to a user-picked SAF tree.
+    // The two include-cache keys are sub-toggles, ignored when the main
+    // toggle is off.
+    val dedicatedFolderEnabled: Flow<Boolean> = context.dataStore.data.map {
+        it[Keys.DEDICATED_FOLDER_ENABLED] ?: false
+    }
+    val dedicatedFolderTreeUri: Flow<String?> = context.dataStore.data.map {
+        it[Keys.DEDICATED_FOLDER_TREE_URI]
+    }
+    val dedicatedFolderIncludeImageCache: Flow<Boolean> = context.dataStore.data.map {
+        it[Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE] ?: false
+    }
+    val dedicatedFolderIncludeMetadataCache: Flow<Boolean> = context.dataStore.data.map {
+        it[Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE] ?: false
+    }
+
+    suspend fun getDedicatedFolderEnabledSync(): Boolean =
+        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_ENABLED) ?: false
+
+    suspend fun getDedicatedFolderTreeUriSync(): String? =
+        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_TREE_URI)
+
+    suspend fun getDedicatedFolderIncludeImageCacheSync(): Boolean =
+        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE) ?: false
+
+    suspend fun getDedicatedFolderIncludeMetadataCacheSync(): Boolean =
+        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE) ?: false
+
+    suspend fun setDedicatedFolder(enabled: Boolean, treeUri: String?) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.DEDICATED_FOLDER_ENABLED] = enabled
+            if (treeUri != null) {
+                prefs[Keys.DEDICATED_FOLDER_TREE_URI] = treeUri
+            } else {
+                prefs.remove(Keys.DEDICATED_FOLDER_TREE_URI)
+            }
+        }
+    }
+
+    suspend fun setDedicatedFolderIncludeImageCache(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE] = enabled }
+    }
+
+    suspend fun setDedicatedFolderIncludeMetadataCache(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE] = enabled }
+    }
+
+    /** Raw preferences Flow used by [FolderMirror] to mirror every edit. */
+    val rawPreferencesFlow: Flow<Preferences> = context.dataStore.data
+
+    /**
+     * Captures the entire current preferences map as a typed snapshot for
+     * mirroring to a settings.json file. We skip the dedicated-folder keys
+     * themselves; they are device-local and must not round-trip through the
+     * folder (that would make turning the toggle off impossible once on).
+     */
+    suspend fun captureAllPreferences(): Map<String, Any> {
+        val prefs = context.dataStore.data.firstOrNull() ?: return emptyMap()
+        val skip = setOf(
+            Keys.DEDICATED_FOLDER_ENABLED.name,
+            Keys.DEDICATED_FOLDER_TREE_URI.name,
+            Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE.name,
+            Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE.name,
+        )
+        val out = mutableMapOf<String, Any>()
+        for ((key, value) in prefs.asMap()) {
+            if (key.name in skip) continue
+            out[key.name] = value
+        }
+        return out
+    }
+
+    /**
+     * Overwrites the DataStore with [entries]. Keys present in DataStore but
+     * absent from [entries] are preserved (device-local toggles, etc.), while
+     * any dedicated-folder keys in [entries] are discarded.
+     */
+    suspend fun restorePreferences(entries: Map<String, Any>) {
+        val skip = setOf(
+            Keys.DEDICATED_FOLDER_ENABLED.name,
+            Keys.DEDICATED_FOLDER_TREE_URI.name,
+            Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE.name,
+            Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE.name,
+        )
+        context.dataStore.edit { prefs ->
+            for ((name, value) in entries) {
+                if (name in skip) continue
+                when (value) {
+                    is Boolean -> prefs[booleanPreferencesKey(name)] = value
+                    is Int -> prefs[androidx.datastore.preferences.core.intPreferencesKey(name)] = value
+                    is Long -> prefs[longPreferencesKey(name)] = value
+                    is Float -> prefs[androidx.datastore.preferences.core.floatPreferencesKey(name)] = value
+                    is String -> prefs[stringPreferencesKey(name)] = value
+                    is Set<*> -> {
+                        @Suppress("UNCHECKED_CAST")
+                        prefs[stringSetPreferencesKey(name)] = (value as Set<String>)
+                    }
+                }
+            }
         }
     }
 }

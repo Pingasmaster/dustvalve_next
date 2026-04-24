@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.dustvalve.next.android.data.local.db.entity.YouTubeVideoCacheEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface YouTubeVideoCacheDao {
@@ -19,4 +20,13 @@ interface YouTubeVideoCacheDao {
 
     @Query("SELECT * FROM youtube_videos WHERE videoId IN (:videoIds)")
     suspend fun getByIds(videoIds: List<String>): List<YouTubeVideoCacheEntity>
+
+    @Query("SELECT * FROM youtube_videos")
+    suspend fun getAllSync(): List<YouTubeVideoCacheEntity>
+
+    @Query("SELECT * FROM youtube_videos")
+    fun getAllFlow(): Flow<List<YouTubeVideoCacheEntity>>
+
+    @Query("DELETE FROM youtube_videos")
+    suspend fun deleteAll()
 }

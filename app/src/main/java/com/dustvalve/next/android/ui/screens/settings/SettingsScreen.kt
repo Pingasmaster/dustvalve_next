@@ -91,7 +91,6 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     onBandcampLoginClick: () -> Unit,
     onYouTubeMusicLoginClick: () -> Unit,
-    onDownloadsClick: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -121,13 +120,24 @@ fun SettingsScreen(
         }
     }
 
-    val exportText = state.exportMessage?.asString()
-    LaunchedEffect(exportText) {
-        exportText?.let { message ->
+    val folderMigrationText = state.folderMigrationMessage?.asString()
+    LaunchedEffect(folderMigrationText) {
+        folderMigrationText?.let { message ->
             try {
                 snackbarHostState.showSnackbar(message)
             } finally {
-                viewModel.clearExportMessage()
+                viewModel.clearFolderMigrationMessage()
+            }
+        }
+    }
+
+    val folderMigrationErrorText = state.folderMigrationError?.asString()
+    LaunchedEffect(folderMigrationErrorText) {
+        folderMigrationErrorText?.let { message ->
+            try {
+                snackbarHostState.showSnackbar(message)
+            } finally {
+                viewModel.clearFolderMigrationError()
             }
         }
     }
@@ -762,32 +772,46 @@ fun SettingsScreen(
 
         // Storage section
         item {
-            val exportContext = LocalContext.current
-            // Tracks selected via the Export Tracks sheet; null while the user is
-            // exporting the entire library (the "Export downloads" button).
-            var pendingExportIds by remember { mutableStateOf<Set<String>?>(null) }
-            var showExportSheet by remember { mutableStateOf(false) }
-            val exportableTracks by viewModel.exportableTracks.collectAsStateWithLifecycle()
-            val exportFolderPickerLauncher = rememberLauncherForActivityResult(
+            val storageContext = LocalContext.current
+            var showDisableFolderDialog by rememberSaveable { mutableStateOf(false) }
+            val folderPickerForDedicatedFolder = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.OpenDocumentTree(),
             ) { uri: Uri? ->
                 if (uri != null) {
                     val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
                             Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                     try {
-                        exportContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                        storageContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
                     } catch (_: Exception) { /* Best effort */ }
-                    val ids = pendingExportIds
-                    if (ids != null) {
-                        viewModel.exportSelectedDownloads(uri.toString(), ids)
-                        pendingExportIds = null
-                        showExportSheet = false
-                    } else {
-                        viewModel.exportDownloads(uri.toString())
-                    }
-                } else {
-                    pendingExportIds = null
+                    viewModel.enableDedicatedFolder(uri.toString())
                 }
+            }
+
+            if (showDisableFolderDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDisableFolderDialog = false },
+                    title = { Text(stringResource(R.string.settings_dedicated_folder_disable_title)) },
+                    text = { Text(stringResource(R.string.settings_dedicated_folder_disable_text)) },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showDisableFolderDialog = false
+                                viewModel.disableDedicatedFolder()
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(R.string.settings_dedicated_folder_disable_confirm))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showDisableFolderDialog = false },
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(R.string.common_action_cancel))
+                        }
+                    },
+                )
             }
 
             SettingsSection(
@@ -831,58 +855,125 @@ fun SettingsScreen(
                             steps = storageLimitSteps.size - 2,
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FilledTonalButton(
-                            onClick = onDownloadsClick,
-                            shapes = ButtonDefaults.shapes(),
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Dedicated folder: store all user data in a folder of
+                        // the user's choice instead of app-internal memory.
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_cloud_download),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
+                            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.settings_dedicated_folder_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_dedicated_folder_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.dedicatedFolderEnabled,
+                                enabled = !state.folderMigrationInProgress,
+                                onCheckedChange = { enable ->
+                                    if (enable) {
+                                        folderPickerForDedicatedFolder.launch(null)
+                                    } else {
+                                        showDisableFolderDialog = true
+                                    }
+                                },
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.settings_manage_downloads))
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FilledTonalButton(
-                            onClick = { exportFolderPickerLauncher.launch(null) },
-                            shapes = ButtonDefaults.shapes(),
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !state.isExporting,
+
+                        AnimatedVisibility(
+                            visible = state.dedicatedFolderEnabled,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically(),
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_folder_open),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.settings_export_downloads))
+                            Column(modifier = Modifier.padding(top = 8.dp, start = 16.dp)) {
+                                // Current folder path + change button
+                                val folderLabel = remember(state.dedicatedFolderTreeUri) {
+                                    val uriStr = state.dedicatedFolderTreeUri
+                                    if (uriStr.isNullOrBlank()) null else runCatching {
+                                        uriStr.toUri().lastPathSegment?.substringAfterLast(':')
+                                    }.getOrNull()
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_folder_open),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = folderLabel
+                                            ?: stringResource(R.string.common_selected_folder),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    TextButton(
+                                        onClick = { folderPickerForDedicatedFolder.launch(null) },
+                                        shapes = ButtonDefaults.shapes(),
+                                        enabled = !state.folderMigrationInProgress,
+                                    ) {
+                                        Text(stringResource(R.string.settings_dedicated_folder_change))
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                        Text(
+                                            text = stringResource(R.string.settings_dedicated_folder_image_cache),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.settings_dedicated_folder_image_cache_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Switch(
+                                        checked = state.dedicatedFolderIncludeImageCache,
+                                        enabled = !state.folderMigrationInProgress,
+                                        onCheckedChange = { viewModel.setDedicatedFolderIncludeImageCache(it) },
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                        Text(
+                                            text = stringResource(R.string.settings_dedicated_folder_metadata_cache),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.settings_dedicated_folder_metadata_cache_desc),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Switch(
+                                        checked = state.dedicatedFolderIncludeMetadataCache,
+                                        enabled = !state.folderMigrationInProgress,
+                                        onCheckedChange = { viewModel.setDedicatedFolderIncludeMetadataCache(it) },
+                                    )
+                                }
+                            }
                         }
-                        if (state.isExporting) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            LinearWavyProgressIndicator(
-                                progress = { state.exportProgress },
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FilledTonalButton(
-                            onClick = { showExportSheet = true },
-                            shapes = ButtonDefaults.shapes(),
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !state.isExporting && exportableTracks.isNotEmpty(),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_folder_open),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.export_tracks_button))
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Spacer(modifier = Modifier.height(16.dp))
                         FilledTonalButton(
                             onClick = { showRemoveDownloadsDialog = true },
                             shapes = ButtonDefaults.shapes(),
@@ -977,18 +1068,6 @@ fun SettingsScreen(
                 }
             }
 
-            if (showExportSheet) {
-                com.dustvalve.next.android.ui.components.sheet.ExportTracksSheet(
-                    tracks = exportableTracks,
-                    onDismiss = { showExportSheet = false },
-                    onExport = { ids ->
-                        if (ids.isNotEmpty()) {
-                            pendingExportIds = ids
-                            exportFolderPickerLauncher.launch(null)
-                        }
-                    },
-                )
-            }
         }
 
         // Audio Quality section
@@ -1633,6 +1712,14 @@ fun SettingsScreen(
         onConfirmDownload = { viewModel.confirmAppUpdate() },
         onDismiss = { viewModel.dismissAppUpdate() },
     )
+
+    if (state.folderMigrationInProgress) {
+        com.dustvalve.next.android.ui.components.LoadingOverlay(
+            title = stringResource(R.string.settings_dedicated_folder_migrating),
+            progress = state.folderMigrationProgress,
+            message = state.folderMigrationMessage?.asString(),
+        )
+    }
 
     } // end Scaffold
 }

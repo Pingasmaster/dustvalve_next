@@ -35,7 +35,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -186,7 +185,7 @@ class PlayerViewModel @Inject constructor(
                         )
                     }
                 }
-                return track.copy(streamUrl = android.net.Uri.fromFile(File(ytDownloadInfo.filePath)).toString())
+                return track.copy(streamUrl = ytDownloadInfo.streamUri)
             }
             // Resolve stream URL from YouTube
             return try {
@@ -223,7 +222,7 @@ class PlayerViewModel @Inject constructor(
                     )
                 }
             }
-            return track.copy(streamUrl = android.net.Uri.fromFile(File(downloadInfo.filePath)).toString())
+            return track.copy(streamUrl = downloadInfo.streamUri)
         }
 
         // No local download — use original stream URL (mp3-128)
@@ -280,7 +279,7 @@ class PlayerViewModel @Inject constructor(
                     if (currentTrack != null && currentTrack.id == track.id) {
                         val seamlessUpgrade = settingsDataStore.getSeamlessQualityUpgradeSync()
                         if (seamlessUpgrade) {
-                            playbackManager.hotSwapSource(downloadInfo.filePath, track.id)
+                            playbackManager.hotSwapSource(downloadInfo.streamUri, track.id)
                         }
                         _extraState.update {
                             it.copy(

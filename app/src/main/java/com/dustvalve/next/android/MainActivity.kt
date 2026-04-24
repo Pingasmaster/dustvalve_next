@@ -33,6 +33,9 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.storage.folder.FolderHealthChecker
+import com.dustvalve.next.android.data.storage.folder.FolderMirror
+import com.dustvalve.next.android.data.storage.folder.FolderRehydrator
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.ui.navigation.AppNavigation
@@ -77,6 +80,24 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var albumThemeManager: AlbumThemeManager
 
+    @Inject
+    lateinit var folderHealthChecker: FolderHealthChecker
+
+    @Inject
+    lateinit var folderRehydrator: FolderRehydrator
+
+    @Inject
+    lateinit var folderMirror: FolderMirror
+
+    sealed interface BootState {
+        object Loading : BootState
+        object Ready : BootState
+        object DedicatedFolderUnreachable : BootState
+    }
+
+    private val _bootState = MutableStateFlow<BootState>(BootState.Loading)
+    val bootState: StateFlow<BootState> = _bootState.asStateFlow()
+
     private val _deepLinkUrl = MutableStateFlow<String?>(null)
     val deepLinkUrl: StateFlow<String?> = _deepLinkUrl.asStateFlow()
 
@@ -94,6 +115,7 @@ class MainActivity : ComponentActivity() {
         handleIncomingIntent(intent)
         requestNotificationPermissionIfNeeded()
         triggerLocalMusicRescanIfNeeded()
+        bootstrapDedicatedFolderIfNeeded()
         setContent {
             // Combine theme flows into a single emission to avoid theme flash on cold start
             val themeConfig by remember {
@@ -121,7 +143,37 @@ class MainActivity : ComponentActivity() {
                 oledBlack = config.oledBlack,
                 albumSeedColor = config.albumSeedColor,
             ) {
-                MainContent(accountRepository = accountRepository, activity = this@MainActivity)
+                val boot by bootState.collectAsStateWithLifecycle()
+                when (boot) {
+                    BootState.Loading -> com.dustvalve.next.android.ui.components.DedicatedFolderBootLoading()
+                    BootState.DedicatedFolderUnreachable -> com.dustvalve.next.android.ui.screens.folder.DedicatedFolderErrorScreen(
+                        onLocateFolder = { uri ->
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                try {
+                                    val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                                    try { contentResolver.takePersistableUriPermission(uri, flags) } catch (_: Exception) {}
+                                    settingsDataStore.setDedicatedFolder(enabled = true, treeUri = uri.toString())
+                                    folderMirror.suspendFor(5_000L)
+                                    folderRehydrator.rehydrateAll()
+                                    clearDedicatedFolderError()
+                                } catch (_: Exception) {
+                                    // Stay on error screen if re-pick fails.
+                                }
+                            }
+                        },
+                        onTurnOff = {
+                            lifecycleScope.launch(Dispatchers.IO) {
+                                try {
+                                    settingsDataStore.setDedicatedFolder(enabled = false, treeUri = null)
+                                    settingsDataStore.setDedicatedFolderIncludeImageCache(false)
+                                    settingsDataStore.setDedicatedFolderIncludeMetadataCache(false)
+                                } catch (_: Exception) {}
+                                clearDedicatedFolderError()
+                            }
+                        },
+                    )
+                    BootState.Ready -> MainContent(accountRepository = accountRepository, activity = this@MainActivity)
+                }
             }
         }
     }
@@ -139,6 +191,33 @@ class MainActivity : ComponentActivity() {
                 // Best-effort foreground rescan
             }
         }
+    }
+
+    private fun bootstrapDedicatedFolderIfNeeded() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val enabled = settingsDataStore.getDedicatedFolderEnabledSync()
+                if (!enabled) {
+                    _bootState.value = BootState.Ready
+                    return@launch
+                }
+                if (!folderHealthChecker.check()) {
+                    _bootState.value = BootState.DedicatedFolderUnreachable
+                    return@launch
+                }
+                // Suspend the mirror while we overwrite Room + DataStore so its
+                // Flow collectors don't kick in and re-flush stale data.
+                folderMirror.suspendFor(5_000L)
+                folderRehydrator.rehydrateAll()
+                _bootState.value = BootState.Ready
+            } catch (_: Exception) {
+                _bootState.value = BootState.DedicatedFolderUnreachable
+            }
+        }
+    }
+
+    fun clearDedicatedFolderError() {
+        _bootState.value = BootState.Ready
     }
 
     override fun onNewIntent(intent: Intent) {
