@@ -64,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -213,17 +214,9 @@ fun SettingsScreen(
                             )
                         }
                     },
-                    colors = if (isSelected) {
-                        ListItemDefaults.colors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        )
-                    } else {
-                        ListItemDefaults.colors()
-                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
-                        .clip(MaterialTheme.shapes.medium)
                         .clickable {
                             formatHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             viewModel.setDownloadFormat(format.key)

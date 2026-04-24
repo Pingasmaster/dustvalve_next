@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,7 +16,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,8 +33,8 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.theme.AppShapes
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -102,9 +102,10 @@ fun AddToPlaylistSheet(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     ) {
                         userPlaylists.forEachIndexed { index, playlist ->
-                            Surface(
-                                shape = segmentedItemShape(index, userPlaylists.size),
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            SegmentedListItem(
+                                index = index,
+                                count = userPlaylists.size,
+                                contentPadding = PaddingValues(0.dp),
                             ) {
                                 PlaylistListItem(
                                     playlist = playlist,

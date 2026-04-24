@@ -23,8 +23,23 @@ import javax.inject.Singleton
  */
 @Singleton
 open class YouTubeMusicVisitorDataFetcher @Inject constructor(
-    private val okHttpClient: OkHttpClient,
+    sharedOkHttpClient: OkHttpClient,
 ) {
+
+    /**
+     * The landing fetch MUST NOT carry the shared CookieJar's cookies. A
+     * stale login cookie from a prior session (or any SID / HSID / SAPISID)
+     * rotates the landing page onto a signed-in variant whose `ytcfg.set(...)`
+     * block is served behind additional setup scripts that vary by account,
+     * and in some EU-locale combinations the block is omitted entirely —
+     * parsing then fails with "missing ytcfg.set block". Reuse the shared
+     * connection pool / dispatcher / interceptors via newBuilder() but drop
+     * the cookie jar so only the manual `SOCS=CAI` header below is sent.
+     * (Same pattern as YouTubeMusicInnertubeClient.)
+     */
+    private val okHttpClient: OkHttpClient = sharedOkHttpClient.newBuilder()
+        .cookieJar(okhttp3.CookieJar.NO_COOKIES)
+        .build()
 
     /** Overridable in tests so MockWebServer can answer the landing GET. */
     protected open val landingUrl: String = "https://music.youtube.com/"

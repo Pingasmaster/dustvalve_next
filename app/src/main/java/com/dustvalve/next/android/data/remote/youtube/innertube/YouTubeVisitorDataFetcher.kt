@@ -24,8 +24,18 @@ import javax.inject.Singleton
  */
 @Singleton
 open class YouTubeVisitorDataFetcher @Inject constructor(
-    private val okHttpClient: OkHttpClient,
+    sharedOkHttpClient: OkHttpClient,
 ) {
+
+    /**
+     * Landing fetch MUST NOT carry the shared CookieJar's cookies (stale
+     * login / consent cookies from prior sessions shift the response shape
+     * and sometimes drop the `ytcfg.set(...)` block entirely). Same
+     * rationale and pattern as YouTubeMusicVisitorDataFetcher.
+     */
+    private val okHttpClient: OkHttpClient = sharedOkHttpClient.newBuilder()
+        .cookieJar(okhttp3.CookieJar.NO_COOKIES)
+        .build()
 
     /** Overridable in tests so MockWebServer can answer the landing GET. */
     protected open val landingUrl: String = "https://www.youtube.com/"

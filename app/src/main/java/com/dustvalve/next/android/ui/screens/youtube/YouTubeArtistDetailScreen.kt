@@ -60,9 +60,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.ui.components.TrackRow
+import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -362,31 +362,22 @@ fun YouTubeArtistDetailScreen(
                             val track = state.tracks[index]
                             val isCurrentTrack = playerState.currentTrack?.id == track.id
 
-                            Surface(
-                                modifier = Modifier
-                                    .padding(
-                                        start = 16.dp,
-                                        end = 16.dp,
-                                        top = if (index == 0) 8.dp else 1.dp,
-                                        bottom = if (index == state.tracks.lastIndex && !state.hasMore) 0.dp else 1.dp,
-                                    )
-                                    .animateItem(
-                                        fadeInSpec = null,
-                                        fadeOutSpec = null,
-                                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                                    ),
-                                shape = segmentedItemShape(
-                                    index,
-                                    if (state.hasMore) state.tracks.size + 1 else state.tracks.size,
+                            SegmentedListItem(
+                                index = index,
+                                count = if (state.hasMore) state.tracks.size + 1 else state.tracks.size,
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    fadeOutSpec = null,
+                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
                                 ),
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
                             ) {
-                                TrackRow(
+                                MusicRow(
                                     track = track,
-                                    isPlaying = isCurrentTrack && playerState.isPlaying,
                                     onClick = {
                                         playerViewModel.playAlbum(state.tracks, index)
                                     },
+                                    isPlaying = isCurrentTrack && playerState.isPlaying,
+                                    isCurrentTrack = isCurrentTrack,
                                 )
                             }
                         }

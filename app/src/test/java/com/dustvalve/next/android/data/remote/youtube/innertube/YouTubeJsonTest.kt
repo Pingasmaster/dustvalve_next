@@ -81,7 +81,7 @@ class YouTubeJsonTest {
         assertThat(obj.runsText("title")).isNull()
     }
 
-    @Test fun `extractThumbnail picks largest by width and returns url verbatim`() {
+    @Test fun `extractThumbnail picks largest by width and bumps to HQ variant`() {
         val obj = json.parseToJsonElement(
             """
             {
@@ -94,7 +94,42 @@ class YouTubeJsonTest {
             }
             """.trimIndent()
         )
-        assertThat(obj.extractThumbnail()).isEqualTo("https://i.ytimg.com/vi/x/hqdefault.jpg")
+        assertThat(obj.extractThumbnail()).isEqualTo("https://i.ytimg.com/vi/x/hq720.jpg")
+    }
+
+    @Test fun `bumpYtThumbnailResolution upgrades hqdefault to hq720`() {
+        assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/hqdefault.jpg"))
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
+    }
+
+    @Test fun `bumpYtThumbnailResolution upgrades first-frame hq1-3 to hqdefault`() {
+        assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/hq2.jpg"))
+            .isEqualTo("https://i.ytimg.com/vi/abc/hqdefault.jpg")
+    }
+
+    @Test fun `bumpYtThumbnailResolution rewrites googleusercontent sN param`() {
+        assertThat(
+            bumpYtThumbnailResolution("https://yt3.googleusercontent.com/abc=s48-c-k-c0xff-no-rj"),
+        ).isEqualTo("https://yt3.googleusercontent.com/abc=s720-c-k-c0xff-no-rj")
+    }
+
+    @Test fun `bumpYtThumbnailResolution rewrites ggpht wN-hM param`() {
+        assertThat(
+            bumpYtThumbnailResolution("https://yt4.ggpht.com/abc=w100-h100-p-k"),
+        ).isEqualTo("https://yt4.ggpht.com/abc=w720-h720-p-k")
+    }
+
+    @Test fun `bumpYtThumbnailResolution leaves unknown shapes untouched`() {
+        val url = "https://cdn.example.com/some/path.jpg"
+        assertThat(bumpYtThumbnailResolution(url)).isEqualTo(url)
+    }
+
+    @Test fun `bumpYtThumbnailResolution does NOT promote to maxresdefault`() {
+        // maxresdefault 404s for older/lower-tier uploads; hq720 is always
+        // present when HD source exists. Guard against someone "improving"
+        // this to maxresdefault and regressing the broken-thumbnail count.
+        val result = bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/hqdefault.jpg")
+        assertThat(result).doesNotContain("maxresdefault")
     }
 
     @Test fun `extractThumbnail handles bare thumbnails array fallback`() {

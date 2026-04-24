@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 187
-        versionName = "0.3.37"
+        versionCode = 192
+        versionName = "0.3.42"
     }
 
     buildTypes {
@@ -128,6 +128,9 @@ dependencies {
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+
+    // Reorderable lists (drag & drop for LazyColumn / LazyRow)
+    implementation("sh.calvin.reorderable:reorderable:3.1.0")
 
     // WebKit
     implementation("androidx.webkit:webkit:1.16.0-rc01")
