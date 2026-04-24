@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -42,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -175,8 +177,26 @@ fun CollectionDetailScreen(
             }
             else -> {
                 val heroUrl = state.coverUrl ?: state.tracks.firstOrNull()?.artUrl
+                val listState = rememberLazyListState()
+
+                // Infinite scroll: when within 3 items of the bottom and the
+                // collection reports hasMore (e.g. a YouTube Mix), fetch the
+                // next page. Mirrors the pattern in ArtistDetailScreen and the
+                // queue sheet in FullPlayer.
+                LaunchedEffect(listState, state.tracks.size, state.hasMore) {
+                    snapshotFlow {
+                        val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+                        val total = listState.layoutInfo.totalItemsCount
+                        total > 0 && last >= total - 3
+                    }.collect { nearEnd ->
+                        if (nearEnd && state.hasMore && !state.isLoadingMore) {
+                            viewModel.loadMore()
+                        }
+                    }
+                }
 
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentPadding = PaddingValues(bottom = 10.dp),
                 ) {
@@ -353,6 +373,16 @@ fun CollectionDetailScreen(
                                     isPlaying = isCurrent && playerState.isPlaying,
                                     isCurrentTrack = isCurrent,
                                 )
+                            }
+                        }
+                        if (state.hasMore || state.isLoadingMore) {
+                            item(key = "loading_more") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) { ContainedLoadingIndicator() }
                             }
                         }
                     }

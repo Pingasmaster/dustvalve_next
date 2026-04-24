@@ -150,8 +150,20 @@ open class YouTubeInnertubeClient @Inject constructor(
         )
     }
 
-    /** Watch-next / related videos. Uses MWEB so we get videoWithContextRenderer. */
-    suspend fun next(videoId: String, playlistId: String? = null): JsonElement {
+    /**
+     * Watch-next / related videos. Uses MWEB so we get videoWithContextRenderer.
+     *
+     * videoId is optional: genre mixes (`RDGMEM*`) accept playlistId alone.
+     * playlistIndex + params are used when paginating through a Mix — pass
+     * the last track's playlist index and the watchEndpoint.params from the
+     * previous page's last item.
+     */
+    suspend fun next(
+        videoId: String? = null,
+        playlistId: String? = null,
+        playlistIndex: Int? = null,
+        params: String? = null,
+    ): JsonElement {
         val cfg = visitorDataFetcher.get()
         val client = YouTubeClient.MWEB_NO_AUTH
         return post(
@@ -163,8 +175,10 @@ open class YouTubeInnertubeClient @Inject constructor(
                 put("context", buildJsonObject {
                     put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
                 })
-                put("videoId", videoId)
+                if (videoId != null) put("videoId", videoId)
                 if (playlistId != null) put("playlistId", playlistId)
+                if (playlistIndex != null) put("playlistIndex", playlistIndex)
+                if (params != null) put("params", params)
             },
         )
     }
