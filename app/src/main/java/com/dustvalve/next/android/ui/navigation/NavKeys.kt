@@ -11,12 +11,28 @@ sealed interface NavDestination {
     data object Library : NavDestination
     data object Settings : NavDestination
     data class AlbumDetail(val url: String) : NavDestination
-    data class ArtistDetail(val url: String) : NavDestination
+    /**
+     * Source-agnostic artist detail. [sourceId] matches
+     * [com.dustvalve.next.android.domain.repository.MusicSource.id] — e.g.
+     * "bandcamp", "youtube". [name] and [imageUrl] are optional hints the
+     * caller already knows (YouTube channels browse doesn't return those, so
+     * plumbing them through the nav arg avoids a flash of empty header).
+     */
+    data class ArtistDetail(
+        val url: String,
+        val sourceId: String = "bandcamp",
+        val name: String? = null,
+        val imageUrl: String? = null,
+    ) : NavDestination
     data object AccountLogin : NavDestination
     data object YouTubeMusicLogin : NavDestination
     data class PlaylistDetail(val playlistId: String) : NavDestination
-    data class YouTubePlaylistDetail(val url: String, val name: String) : NavDestination
-    data class YouTubeArtistDetail(val url: String, val name: String, val imageUrl: String?) : NavDestination
+    /** Source-agnostic remote collection (YouTube playlist, etc.). */
+    data class CollectionDetail(
+        val url: String,
+        val sourceId: String = "youtube",
+        val name: String = "",
+    ) : NavDestination
 }
 
 enum class BottomNavItem(

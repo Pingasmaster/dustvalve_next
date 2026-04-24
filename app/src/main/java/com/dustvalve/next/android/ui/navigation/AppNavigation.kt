@@ -17,7 +17,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
-import com.dustvalve.next.android.ui.screens.artist.ArtistDetailScreen
+import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
 import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
 import com.dustvalve.next.android.ui.screens.library.LibraryScreen
 import com.dustvalve.next.android.ui.screens.local.LocalScreen
@@ -26,8 +26,7 @@ import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
 import com.dustvalve.next.android.ui.screens.settings.YouTubeMusicLoginScreen
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.youtube.YouTubeArtistDetailScreen
-import com.dustvalve.next.android.ui.screens.youtube.YouTubePlaylistDetailScreen
+import com.dustvalve.next.android.ui.screens.detail.CollectionDetailScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
 import kotlinx.coroutines.launch
 
@@ -77,21 +76,31 @@ fun AppNavigation(
             is NavDestination.YouTubeHome -> YouTubeScreen(
                 playerViewModel = playerViewModel,
                 onPlaylistClick = { url, name ->
-                    navViewModel.navigateTo(NavDestination.YouTubePlaylistDetail(url, name))
+                    navViewModel.navigateTo(
+                        NavDestination.CollectionDetail(url = url, sourceId = "youtube", name = name),
+                    )
                 },
                 onArtistClick = { url, name, imageUrl ->
-                    navViewModel.navigateTo(NavDestination.YouTubeArtistDetail(url, name, imageUrl))
+                    navViewModel.navigateTo(
+                        NavDestination.ArtistDetail(
+                            url = url,
+                            sourceId = "youtube",
+                            name = name,
+                            imageUrl = imageUrl,
+                        ),
+                    )
                 },
                 onExpandPlayer = { navViewModel.expandPlayer() },
             )
             is NavDestination.Library -> LibraryScreen(
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                 onArtistClick = { url ->
-                    if (url.contains("youtube.com") || url.contains("youtu.be")) {
-                        navViewModel.navigateTo(NavDestination.YouTubeArtistDetail(url, "", null))
+                    val sourceId = if (url.contains("youtube.com") || url.contains("youtu.be")) {
+                        "youtube"
                     } else {
-                        navViewModel.navigateTo(NavDestination.ArtistDetail(url))
+                        "bandcamp"
                     }
+                    navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
                 },
                 onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
                 playerViewModel = playerViewModel,
@@ -108,11 +117,14 @@ fun AppNavigation(
                 viewModel = hiltViewModel(key = destination.url),
             )
             is NavDestination.ArtistDetail -> ArtistDetailScreen(
+                sourceId = destination.sourceId,
                 artistUrl = destination.url,
+                artistNameHint = destination.name,
+                artistImageHint = destination.imageUrl,
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                 onBack = { navViewModel.navigateBack() },
                 playerViewModel = playerViewModel,
-                viewModel = hiltViewModel(key = destination.url),
+                viewModel = hiltViewModel(key = "${destination.sourceId}|${destination.url}"),
             )
             is NavDestination.PlaylistDetail -> PlaylistDetailScreen(
                 playlistId = destination.playlistId,
@@ -122,20 +134,13 @@ fun AppNavigation(
                 playerViewModel = playerViewModel,
                 viewModel = hiltViewModel(key = destination.playlistId),
             )
-            is NavDestination.YouTubePlaylistDetail -> YouTubePlaylistDetailScreen(
-                playlistUrl = destination.url,
-                playlistName = destination.name,
+            is NavDestination.CollectionDetail -> CollectionDetailScreen(
+                sourceId = destination.sourceId,
+                collectionUrl = destination.url,
+                collectionName = destination.name,
                 onBack = { navViewModel.navigateBack() },
                 playerViewModel = playerViewModel,
-                viewModel = hiltViewModel(key = destination.url),
-            )
-            is NavDestination.YouTubeArtistDetail -> YouTubeArtistDetailScreen(
-                artistUrl = destination.url,
-                artistName = destination.name,
-                artistImageUrl = destination.imageUrl,
-                onBack = { navViewModel.navigateBack() },
-                playerViewModel = playerViewModel,
-                viewModel = hiltViewModel(key = destination.url),
+                viewModel = hiltViewModel(key = "${destination.sourceId}|${destination.url}"),
             )
             is NavDestination.YouTubeMusicLogin -> YouTubeMusicLoginScreen(
                 onLoginSuccess = { cookies ->

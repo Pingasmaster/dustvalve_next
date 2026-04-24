@@ -31,8 +31,8 @@ class DeepLinkRouterTest {
     @Test fun `youtube playlist standalone`() {
         val r = DeepLinkRouter.route("https://www.youtube.com/playlist?list=PL12345")
         assertThat(r).isInstanceOf(DeepLinkAction.Navigate::class.java)
-        val nav = (r as DeepLinkAction.Navigate).destination
-        assertThat(nav).isInstanceOf(NavDestination.YouTubePlaylistDetail::class.java)
+        val nav = (r as DeepLinkAction.Navigate).destination as NavDestination.CollectionDetail
+        assertThat(nav.sourceId).isEqualTo("youtube")
     }
 
     @Test fun `youtube music domain`() {
@@ -43,15 +43,15 @@ class DeepLinkRouterTest {
     @Test fun `youtube channel`() {
         val r = DeepLinkRouter.route("https://www.youtube.com/channel/UCabc123")
         assertThat(r).isInstanceOf(DeepLinkAction.Navigate::class.java)
-        assertThat((r as DeepLinkAction.Navigate).destination)
-            .isInstanceOf(NavDestination.YouTubeArtistDetail::class.java)
+        val nav = (r as DeepLinkAction.Navigate).destination as NavDestination.ArtistDetail
+        assertThat(nav.sourceId).isEqualTo("youtube")
     }
 
     @Test fun `youtube at username`() {
         val r = DeepLinkRouter.route("https://www.youtube.com/@someuser")
         assertThat(r).isInstanceOf(DeepLinkAction.Navigate::class.java)
-        assertThat((r as DeepLinkAction.Navigate).destination)
-            .isInstanceOf(NavDestination.YouTubeArtistDetail::class.java)
+        val nav = (r as DeepLinkAction.Navigate).destination as NavDestination.ArtistDetail
+        assertThat(nav.sourceId).isEqualTo("youtube")
     }
 
     @Test fun `youtube non 11 char id rejected`() {
