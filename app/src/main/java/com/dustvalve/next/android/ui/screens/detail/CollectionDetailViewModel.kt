@@ -1,18 +1,20 @@
-package com.dustvalve.next.android.ui.screens.youtube
+package com.dustvalve.next.android.ui.screens.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
+import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.domain.repository.YouTubeRepository
+import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,75 +26,101 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-data class YouTubePlaylistDetailUiState(
-    val playlistName: String = "",
-    val playlistUrl: String = "",
+data class CollectionDetailUiState(
+    val sourceId: String = "youtube",
+    val collectionUrl: String = "",
+    val name: String = "",
+    val coverUrl: String? = null,
     val tracks: List<Track> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
+    val isFavorite: Boolean = false,
     val isImported: Boolean = false,
     val isImporting: Boolean = false,
     val importedPlaylistId: String? = null,
-    val isFavorite: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
 )
 
+/**
+ * Source-agnostic "playlist / collection" detail VM. Loads tracks via
+ * [com.dustvalve.next.android.domain.repository.MusicSource.getCollection].
+ * Favorite / import-to-library / download flows mirror the prior
+ * YouTube-playlist VM.
+ *
+ * Replaces `YouTubePlaylistDetailViewModel`.
+ */
 @HiltViewModel
-class YouTubePlaylistDetailViewModel @Inject constructor(
-    private val youtubeRepository: YouTubeRepository,
+class CollectionDetailViewModel @Inject constructor(
+    private val sources: MusicSourceRegistry,
     private val playlistRepository: PlaylistRepository,
     private val trackDao: TrackDao,
-    private val database: DustvalveNextDatabase,
-    private val favoriteDao: FavoriteDao,
     private val playlistDao: PlaylistDao,
+    private val favoriteDao: FavoriteDao,
+    private val database: DustvalveNextDatabase,
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(YouTubePlaylistDetailUiState())
-    val uiState: StateFlow<YouTubePlaylistDetailUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(CollectionDetailUiState())
+    val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
 
-    private var loadedUrl: String? = null
+    private var loadedKey: String? = null
 
     init {
-        collectDownloadedTrackIds()
-    }
-
-    private fun collectDownloadedTrackIds() {
         viewModelScope.launch {
             downloadRepository.getDownloadedTrackIds()
-                .catch { /* ignore */ }
+                .catch { }
                 .collect { ids ->
                     _uiState.update { it.copy(downloadedTrackIds = ids.toSet()) }
                 }
         }
     }
 
-    fun loadPlaylist(url: String, name: String) {
-        if (loadedUrl == url && _uiState.value.tracks.isNotEmpty()) return
-        loadedUrl = url
-        _uiState.update { it.copy(playlistUrl = url, playlistName = name, isLoading = true, error = null) }
+    fun load(sourceId: String, url: String, nameHint: String) {
+        val key = "$sourceId|$url"
+        if (loadedKey == key && _uiState.value.tracks.isNotEmpty()) return
+        loadedKey = key
+        _uiState.update {
+            it.copy(
+                sourceId = sourceId,
+                collectionUrl = url,
+                name = nameHint,
+                isLoading = true,
+                error = null,
+            )
+        }
+
         viewModelScope.launch {
+            val source = sources[sourceId]
+            if (source == null) {
+                _uiState.update { it.copy(isLoading = false, error = "Unknown source: $sourceId") }
+                return@launch
+            }
+            if (SourceConcept.COLLECTION !in source.capabilities) {
+                _uiState.update { it.copy(isLoading = false, error = "Source '$sourceId' does not expose collections") }
+                return@launch
+            }
             try {
-                val (tracks, fetchedName) = youtubeRepository.getPlaylistTracks(url)
+                val collection: MusicCollection = source.getCollection(url)
                 val isFav = favoriteDao.isFavorite(url)
-                val displayName = if (_uiState.value.playlistName.isBlank()) fetchedName else _uiState.value.playlistName
-                val existingPlaylist = playlistDao.getPlaylistByName(displayName)
+                val displayName = collection.name.ifBlank { nameHint }
+                val existing = playlistDao.getPlaylistByName(displayName)
                 _uiState.update {
                     it.copy(
-                        tracks = tracks,
-                        playlistName = displayName,
+                        name = displayName,
+                        coverUrl = collection.coverUrl,
+                        tracks = collection.tracks,
                         isLoading = false,
                         isFavorite = isFav,
-                        isImported = existingPlaylist != null,
-                        importedPlaylistId = existingPlaylist?.id,
+                        isImported = existing != null,
+                        importedPlaylistId = existing?.id,
                     )
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load playlist")
+                    it.copy(isLoading = false, error = e.message ?: "Failed to load collection")
                 }
             }
         }
@@ -107,11 +135,13 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
                 var playlistId: String? = null
                 database.withTransaction {
                     trackDao.insertAll(state.tracks.map { it.toEntity() })
-                    val playlist = playlistRepository.createPlaylist(state.playlistName)
-                    playlistId = playlist.id
-                    playlistRepository.addTracksToPlaylist(playlist.id, state.tracks.map { it.id })
+                    val pl = playlistRepository.createPlaylist(state.name)
+                    playlistId = pl.id
+                    playlistRepository.addTracksToPlaylist(pl.id, state.tracks.map { it.id })
                 }
-                _uiState.update { it.copy(isImported = true, isImporting = false, importedPlaylistId = playlistId) }
+                _uiState.update {
+                    it.copy(isImported = true, isImporting = false, importedPlaylistId = playlistId)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update { it.copy(isImporting = false, error = "Failed to import: ${e.message}") }
@@ -120,23 +150,26 @@ class YouTubePlaylistDetailViewModel @Inject constructor(
     }
 
     fun toggleFavorite() {
-        val url = _uiState.value.playlistUrl
-        if (url.isBlank()) return
-        val prev = _uiState.value.isFavorite
+        val state = _uiState.value
+        val url = state.collectionUrl.ifBlank { return }
+        val prev = state.isFavorite
         _uiState.update { it.copy(isFavorite = !prev) }
         viewModelScope.launch {
             try {
                 if (prev) {
                     favoriteDao.delete(url)
-                    // Remove the imported playlist from library
-                    val playlistId = _uiState.value.importedPlaylistId
-                        ?: playlistDao.getPlaylistByName(_uiState.value.playlistName)?.id
+                    val playlistId = state.importedPlaylistId
+                        ?: playlistDao.getPlaylistByName(state.name)?.id
                     if (playlistId != null) {
                         playlistRepository.deletePlaylist(playlistId)
                         _uiState.update { it.copy(isImported = false, importedPlaylistId = null) }
                     }
                 } else {
-                    favoriteDao.insert(FavoriteEntity(id = url, type = "youtube_playlist"))
+                    val favType = when (state.sourceId) {
+                        "youtube" -> "youtube_playlist"
+                        else -> "collection"
+                    }
+                    favoriteDao.insert(FavoriteEntity(id = url, type = favType))
                     importToLibrary()
                 }
             } catch (e: Exception) {

@@ -1,9 +1,10 @@
-package com.dustvalve.next.android.ui.screens.youtube
+package com.dustvalve.next.android.ui.screens.detail
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,10 +29,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonColors
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -61,21 +61,50 @@ import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 
+/**
+ * Source-agnostic playlist / collection detail screen. Loads via
+ * [com.dustvalve.next.android.domain.repository.MusicSource.getCollection].
+ *
+ * Replaces `YouTubePlaylistDetailScreen`.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun YouTubePlaylistDetailScreen(
-    playlistUrl: String,
-    playlistName: String,
+fun CollectionDetailScreen(
+    sourceId: String,
+    collectionUrl: String,
+    collectionName: String,
     onBack: () -> Unit,
     playerViewModel: PlayerViewModel,
-    viewModel: YouTubePlaylistDetailViewModel = hiltViewModel(),
+    viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    LaunchedEffect(playlistUrl, playlistName) {
-        viewModel.loadPlaylist(playlistUrl, playlistName)
+    LaunchedEffect(sourceId, collectionUrl, collectionName) {
+        viewModel.load(sourceId, collectionUrl, collectionName)
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
+            text = { Text(stringResource(R.string.detail_delete_playlist_downloads_text, state.name)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAllDownloads()
+                        showDeleteDialog = false
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) { Text(stringResource(R.string.common_action_delete)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.common_action_cancel))
+                }
+            },
+        )
     }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -85,7 +114,7 @@ fun YouTubePlaylistDetailScreen(
             LargeFlexibleTopAppBar(
                 title = {
                     Text(
-                        text = state.playlistName,
+                        text = state.name,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -121,19 +150,13 @@ fun YouTubePlaylistDetailScreen(
         when {
             state.isLoading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,
-                ) {
-                    ContainedLoadingIndicator()
-                }
+                ) { ContainedLoadingIndicator() }
             }
             state.error != null && state.tracks.isEmpty() -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -144,35 +167,27 @@ fun YouTubePlaylistDetailScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = { viewModel.loadPlaylist(playlistUrl, playlistName) },
+                            onClick = { viewModel.load(sourceId, collectionUrl, collectionName) },
                             shapes = ButtonDefaults.shapes(),
-                        ) {
-                            Text(stringResource(R.string.common_action_retry))
-                        }
+                        ) { Text(stringResource(R.string.common_action_retry)) }
                     }
                 }
             }
             else -> {
-                val heroArtUrl = state.tracks.firstOrNull()?.artUrl
+                val heroUrl = state.coverUrl ?: state.tracks.firstOrNull()?.artUrl
 
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
+                    modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentPadding = PaddingValues(bottom = 10.dp),
                 ) {
-                    // Hero art
                     item(key = "hero") {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .animateItem(),
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                         ) {
-                            if (!heroArtUrl.isNullOrBlank()) {
+                            if (!heroUrl.isNullOrBlank()) {
                                 AsyncImage(
-                                    model = heroArtUrl,
-                                    contentDescription = state.playlistName,
+                                    model = heroUrl,
+                                    contentDescription = state.name,
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Crop,
                                 )
@@ -183,22 +198,6 @@ fun YouTubePlaylistDetailScreen(
                                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 )
                             }
-                            // Top scrim
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(80.dp)
-                                    .align(Alignment.TopCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.scrim.copy(alpha = 0.35f),
-                                                Color.Transparent,
-                                            ),
-                                        ),
-                                    ),
-                            )
-                            // Bottom gradient
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -220,7 +219,7 @@ fun YouTubePlaylistDetailScreen(
                                     .padding(horizontal = 20.dp, vertical = 16.dp),
                             ) {
                                 Text(
-                                    text = state.playlistName,
+                                    text = state.name,
                                     style = MaterialTheme.typography.headlineLargeEmphasized,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 2,
@@ -230,25 +229,11 @@ fun YouTubePlaylistDetailScreen(
                         }
                     }
 
-                    // Track count
-                    item(key = "meta") {
-                        Text(
-                            text = pluralStringResource(R.plurals.track_count, state.tracks.size, state.tracks.size),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier
-                                .padding(horizontal = 20.dp, vertical = 4.dp)
-                                .animateItem(),
-                        )
-                    }
-
-                    // Action bar
                     item(key = "actions") {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                                .animateItem(),
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
                             shape = MaterialTheme.shapes.large,
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
@@ -319,19 +304,14 @@ fun YouTubePlaylistDetailScreen(
                                     state.tracks.all { it.id in state.downloadedTrackIds }
                                 FilledTonalIconButton(
                                     onClick = {
-                                        if (allDownloaded) {
-                                            showDeleteDialog = true
-                                        } else {
-                                            viewModel.downloadAll()
-                                        }
+                                        if (allDownloaded) showDeleteDialog = true
+                                        else viewModel.downloadAll()
                                     },
                                     enabled = !state.isDownloading,
                                     shapes = IconButtonDefaults.shapes(),
                                 ) {
                                     if (state.isDownloading) {
-                                        CircularWavyProgressIndicator(
-                                            modifier = Modifier.size(20.dp),
-                                        )
+                                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
                                     } else {
                                         Icon(
                                             painter = painterResource(
@@ -347,7 +327,6 @@ fun YouTubePlaylistDetailScreen(
                         }
                     }
 
-                    // Track list
                     if (state.tracks.isNotEmpty()) {
                         item(key = "tracks_header") {
                             Text(
@@ -356,69 +335,29 @@ fun YouTubePlaylistDetailScreen(
                                     totalDurationSec = state.tracks.sumOf { it.duration.toDouble() }.toLong(),
                                 ),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
-                                modifier = Modifier
-                                    .padding(
-                                        start = 20.dp, end = 20.dp,
-                                        top = 16.dp, bottom = 4.dp,
-                                    )
-                                    .animateItem(),
+                                modifier = Modifier.padding(
+                                    start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp,
+                                ),
                             )
                         }
-
                         items(
                             count = state.tracks.size,
                             key = { state.tracks[it].id },
                         ) { index ->
                             val track = state.tracks[index]
-                            val isCurrentTrack = playerState.currentTrack?.id == track.id
-
-                            SegmentedListItem(
-                                index = index,
-                                count = state.tracks.size,
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                                ),
-                            ) {
+                            val isCurrent = playerState.currentTrack?.id == track.id
+                            SegmentedListItem(index = index, count = state.tracks.size) {
                                 MusicRow(
                                     track = track,
-                                    onClick = {
-                                        playerViewModel.playAlbum(state.tracks, index)
-                                    },
-                                    isPlaying = isCurrentTrack && playerState.isPlaying,
-                                    isCurrentTrack = isCurrentTrack,
+                                    onClick = { playerViewModel.playAlbum(state.tracks, index) },
+                                    isPlaying = isCurrent && playerState.isPlaying,
+                                    isCurrentTrack = isCurrent,
                                 )
                             }
                         }
                     }
-
                 }
             }
         }
-    }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
-            text = { Text(stringResource(R.string.detail_delete_playlist_downloads_text)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteAllDownloads()
-                        showDeleteDialog = false
-                    },
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(stringResource(R.string.common_action_delete), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }, shapes = ButtonDefaults.shapes()) {
-                    Text(stringResource(R.string.common_action_cancel))
-                }
-            },
-        )
     }
 }

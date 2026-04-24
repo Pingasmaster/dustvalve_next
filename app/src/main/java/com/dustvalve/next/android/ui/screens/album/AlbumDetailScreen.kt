@@ -3,7 +3,6 @@ package com.dustvalve.next.android.ui.screens.album
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,20 +62,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.semantics.collapse
-import androidx.compose.ui.semantics.expand
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import androidx.compose.ui.draw.rotate
+import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -458,7 +455,7 @@ fun AlbumDetailScreen(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ExpandableAbout(about: String) {
-    ExpandableDescription(text = about, collapsedMaxLines = 4)
+    ExpandableText(text = about, collapsedMaxLines = 4)
 }
 
 /**
@@ -591,79 +588,6 @@ private fun AlbumActionBar(
  */
 private val ActionBarSpacing = 8.dp
 
-/**
- * M3E-idiomatic "expand to show more text" pattern (no first-party component
- * exists). Multi-line `Text` with overflow detection driving a chevron+label
- * row; rotation animates with `MotionScheme.fastEffectsSpec`, height reflow
- * animates with `MotionScheme.defaultSpatialSpec`. Trigger is hidden when
- * the text fits without ellipsis.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-internal fun ExpandableDescription(
-    text: String,
-    collapsedMaxLines: Int,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by rememberSaveable(text) { mutableStateOf(false) }
-    var hasOverflow by remember(text) { mutableStateOf(false) }
-    val rotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
-        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
-        label = "show_more_chevron",
-    )
-
-    Column(
-        modifier = modifier
-            .padding(horizontal = 20.dp, vertical = 8.dp)
-            .animateContentSize(
-                animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-            ),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = if (expanded) Int.MAX_VALUE else collapsedMaxLines,
-            overflow = TextOverflow.Ellipsis,
-            onTextLayout = { result ->
-                if (!expanded) hasOverflow = result.hasVisualOverflow
-            },
-        )
-        if (hasOverflow || expanded) {
-            val expandLabel = stringResource(R.string.detail_show_more)
-            val collapseLabel = stringResource(R.string.detail_show_less)
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier
-                    .padding(top = 4.dp)
-                    .clickable(
-                        onClickLabel = if (expanded) collapseLabel else expandLabel,
-                    ) { expanded = !expanded }
-                    .semantics(mergeDescendants = true) {
-                        if (expanded) collapse { expanded = false; true }
-                        else expand { expanded = true; true }
-                    }
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = if (expanded) collapseLabel else expandLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Icon(
-                    painter = painterResource(R.drawable.ic_expand_more),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .rotate(rotation),
-                )
-            }
-        }
-    }
-}
 
 /**
  * M3E SplitButtonLayout for Bandcamp's "Buy" CTA.

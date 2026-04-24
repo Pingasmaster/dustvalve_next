@@ -418,8 +418,9 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                         when {
                             track.isLocal -> navViewModel.requestLocalArtistFilter(track.artist)
                             track.source == TrackSource.YOUTUBE -> navViewModel.navigateTo(
-                                NavDestination.YouTubeArtistDetail(
+                                NavDestination.ArtistDetail(
                                     url = track.artistUrl,
+                                    sourceId = "youtube",
                                     name = track.artist,
                                     imageUrl = null,
                                 )

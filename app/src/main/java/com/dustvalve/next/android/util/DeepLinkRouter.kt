@@ -68,8 +68,9 @@ object DeepLinkRouter {
             val query = uri.rawQuery ?: ""
             PLAYLIST_ID_REGEX.find(query)?.groupValues?.getOrNull(1)?.let { listId ->
                 return DeepLinkAction.Navigate(
-                    NavDestination.YouTubePlaylistDetail(
+                    NavDestination.CollectionDetail(
                         url = "https://www.youtube.com/playlist?list=$listId",
+                        sourceId = "youtube",
                         name = "",
                     ),
                 )
@@ -79,7 +80,12 @@ object DeepLinkRouter {
         // /channel/CHANNEL_ID or /@username
         if (path.startsWith("/channel/") || path.startsWith("/@")) {
             return DeepLinkAction.Navigate(
-                NavDestination.YouTubeArtistDetail(url = url, name = "", imageUrl = null),
+                NavDestination.ArtistDetail(
+                    url = url,
+                    sourceId = "youtube",
+                    name = null,
+                    imageUrl = null,
+                ),
             )
         }
 
