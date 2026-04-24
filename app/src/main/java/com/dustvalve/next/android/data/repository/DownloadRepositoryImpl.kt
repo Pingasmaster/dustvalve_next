@@ -11,9 +11,9 @@ import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
+import com.dustvalve.next.android.data.storage.folder.DedicatedFolderPaths
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
-import com.dustvalve.next.android.domain.model.ExportableTrack
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
@@ -36,9 +36,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import android.net.Uri
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
@@ -133,48 +131,29 @@ class DownloadRepositoryImpl @Inject constructor(
             val existingFormat = AudioFormat.fromKey(existingDownload.format)
             if (existingFormat != null &&
                 existingFormat.qualityRank >= format.qualityRank &&
-                File(existingDownload.filePath).exists()
+                downloadPathExists(existingDownload.filePath)
             ) {
                 return@withContext
             }
             // Delete old lower-quality file before upgrading
-            try { File(existingDownload.filePath).delete() } catch (_: Exception) {}
+            try { deleteByPath(existingDownload.filePath) } catch (_: Exception) {}
         }
 
         val safeAlbumId = NetworkUtils.sanitizeFileName(track.albumId)
         val safeTrackId = NetworkUtils.sanitizeFileName(track.id)
-
-        val downloadDir = File(context.filesDir, "downloads/$safeAlbumId")
-        if (!downloadDir.mkdirs() && !downloadDir.exists()) {
-            throw IOException("Failed to create download directory: ${downloadDir.absolutePath}")
-        }
-
-        val targetFile = File(downloadDir, "$safeTrackId.${format.extension}")
-        val tempFile = File(downloadDir, "$safeTrackId.${format.extension}.tmp")
+        val fileName = "$safeTrackId.${format.extension}"
 
         if (!downloadUrl.startsWith("https://")) {
             throw IOException("Download URL must use HTTPS: ${downloadUrl.take(50)}")
         }
-        downloadFile(downloadUrl, tempFile, track.id)
 
-        // Atomic rename on success — fall back to copy+delete if rename fails
-        if (!tempFile.renameTo(targetFile)) {
-            try {
-                tempFile.copyTo(targetFile, overwrite = true)
-                tempFile.delete()
-            } catch (e: Exception) {
-                // Clean up partial target file on copy failure
-                targetFile.delete()
-                tempFile.delete()
-                throw IOException("Failed to copy download to target: ${e.message}")
-            }
+        // Branch: SAF folder mode vs. app-internal mode. Both write via a
+        // temp sibling then replace on success.
+        val (finalPath, fileSize) = if (settingsDataStore.getDedicatedFolderEnabledSync()) {
+            writeDownloadToFolder(safeAlbumId, fileName, format, downloadUrl, track.id)
+        } else {
+            writeDownloadToInternal(safeAlbumId, fileName, format, downloadUrl, track.id)
         }
-
-        if (!targetFile.exists() || targetFile.length() == 0L) {
-            throw IOException("Failed to write download file: ${targetFile.absolutePath}")
-        }
-
-        val fileSize = targetFile.length()
 
         // Atomically insert the track row + the unified-pool download record.
         database.withTransaction {
@@ -186,7 +165,7 @@ class DownloadRepositoryImpl @Inject constructor(
                 DownloadEntity(
                     trackId = track.id,
                     albumId = track.albumId,
-                    filePath = targetFile.absolutePath,
+                    filePath = finalPath,
                     sizeBytes = fileSize,
                     format = format.key,
                     pinned = true,
@@ -195,6 +174,129 @@ class DownloadRepositoryImpl @Inject constructor(
         }
 
         storageTracker.notifyChanged()
+    }
+
+    private suspend fun writeDownloadToInternal(
+        safeAlbumId: String,
+        fileName: String,
+        format: AudioFormat,
+        downloadUrl: String,
+        trackId: String,
+    ): Pair<String, Long> {
+        val downloadDir = File(context.filesDir, "downloads/$safeAlbumId")
+        if (!downloadDir.mkdirs() && !downloadDir.exists()) {
+            throw IOException("Failed to create download directory: ${downloadDir.absolutePath}")
+        }
+        val targetFile = File(downloadDir, fileName)
+        val tempFile = File(downloadDir, "$fileName.tmp")
+
+        downloadFile(downloadUrl, tempFile, trackId)
+
+        if (!tempFile.renameTo(targetFile)) {
+            try {
+                tempFile.copyTo(targetFile, overwrite = true)
+                tempFile.delete()
+            } catch (e: Exception) {
+                targetFile.delete()
+                tempFile.delete()
+                throw IOException("Failed to copy download to target: ${e.message}")
+            }
+        }
+        if (!targetFile.exists() || targetFile.length() == 0L) {
+            throw IOException("Failed to write download file: ${targetFile.absolutePath}")
+        }
+        return targetFile.absolutePath to targetFile.length()
+    }
+
+    private suspend fun writeDownloadToFolder(
+        safeAlbumId: String,
+        fileName: String,
+        format: AudioFormat,
+        downloadUrl: String,
+        trackId: String,
+    ): Pair<String, Long> {
+        val treeUriStr = settingsDataStore.getDedicatedFolderTreeUriSync()
+            ?: throw IOException("Dedicated folder URI missing")
+        val treeUri = treeUriStr.toUri()
+        val downloadsRoot = DedicatedFolderPaths.downloadsDir(context, treeUri)
+            ?: throw IOException("Dedicated folder not accessible")
+        val albumDir = downloadsRoot.findFile(safeAlbumId)
+            ?: downloadsRoot.createDirectory(safeAlbumId)
+            ?: throw IOException("Failed to create album dir in folder: $safeAlbumId")
+
+        albumDir.findFile(fileName)?.delete()
+        val mime = when (format.extension) {
+            "flac" -> "audio/flac"
+            "mp3" -> "audio/mpeg"
+            "m4a" -> "audio/mp4"
+            "ogg" -> "audio/ogg"
+            "opus" -> "audio/opus"
+            "webm" -> "audio/webm"
+            "wav" -> "audio/wav"
+            else -> "application/octet-stream"
+        }
+        val newFile = albumDir.createFile(mime, fileName)
+            ?: throw IOException("Failed to create audio file in folder: $fileName")
+
+        val request = Request.Builder().url(downloadUrl).build()
+        val call = client.newCall(request)
+        var size = 0L
+        try {
+            coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
+                if (cause != null) call.cancel()
+            }
+            call.execute().use { response ->
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                val body = response.body
+                val expectedLength = response.header("Content-Length")?.toLongOrNull()
+                context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
+                    body.byteStream().use { input ->
+                        val buffer = ByteArray(8192)
+                        var read: Int
+                        while (input.read(buffer).also { read = it } != -1) {
+                            coroutineContext.ensureActive()
+                            out.write(buffer, 0, read)
+                            size += read
+                        }
+                    }
+                } ?: throw IOException("Failed to open output stream for $fileName")
+                if (size == 0L) throw IOException("Downloaded file is empty for track: $trackId")
+                if (expectedLength != null && expectedLength > 0 && size != expectedLength) {
+                    throw IOException("Size mismatch: expected $expectedLength bytes but wrote $size for track: $trackId")
+                }
+            }
+        } catch (e: Exception) {
+            try { newFile.delete() } catch (_: Exception) {}
+            throw e
+        }
+        return newFile.uri.toString() to size
+    }
+
+    /** Path-existence check that handles both local file paths and content:// URIs. */
+    private fun downloadPathExists(path: String): Boolean {
+        if (path.isBlank()) return false
+        return if (path.startsWith("content://")) {
+            try {
+                val uri = path.toUri()
+                val doc = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)
+                doc?.exists() == true
+            } catch (_: Exception) { false }
+        } else {
+            File(path).exists()
+        }
+    }
+
+    /** Delete helper that handles both local file paths and content:// URIs. */
+    private fun deleteByPath(path: String) {
+        if (path.isBlank()) return
+        if (path.startsWith("content://")) {
+            try {
+                val uri = path.toUri()
+                androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)?.delete()
+            } catch (_: Exception) {}
+        } else {
+            try { File(path).delete() } catch (_: Exception) {}
+        }
     }
 
     private suspend fun resolvePurchaseInfo(track: Track): PurchaseInfo? {
@@ -293,10 +395,10 @@ class DownloadRepositoryImpl @Inject constructor(
             grouped.mapNotNull { (albumId, albumDownloads) ->
                     val tracks = albumDownloads.mapNotNull { download ->
                         // Skip downloads whose files no longer exist on disk
-                        if (!File(download.filePath).exists()) return@mapNotNull null
+                        if (!downloadPathExists(download.filePath)) return@mapNotNull null
                         val entity = trackEntitiesById[download.trackId] ?: return@mapNotNull null
                         entity.toDomain(isFavorite = download.trackId in favoriteIds).copy(
-                            streamUrl = android.net.Uri.fromFile(File(download.filePath)).toString()
+                            streamUrl = playableStreamUrl(download.filePath)
                         )
                     }
                     if (tracks.isEmpty()) return@mapNotNull null
@@ -332,37 +434,18 @@ class DownloadRepositoryImpl @Inject constructor(
 
             downloads.mapNotNull { download ->
                 // Skip downloads whose files no longer exist on disk
-                if (!File(download.filePath).exists()) return@mapNotNull null
+                if (!downloadPathExists(download.filePath)) return@mapNotNull null
                 trackEntitiesById[download.trackId]?.toDomain(
                     isFavorite = download.trackId in favoriteIds
-                )?.copy(streamUrl = android.net.Uri.fromFile(File(download.filePath)).toString())
+                )?.copy(streamUrl = playableStreamUrl(download.filePath))
             }
         }.flowOn(Dispatchers.IO)
     }
 
-    override fun getExportableTracks(): Flow<List<ExportableTrack>> {
-        return downloadDao.getAll().map { downloads ->
-            if (downloads.isEmpty()) return@map emptyList()
-
-            val allTrackIds = downloads.map { it.trackId }
-            val favoriteIds = favoriteDao.getFavoriteIds(allTrackIds).toSet()
-            val trackEntitiesById = trackDao.getByIds(allTrackIds).associateBy { it.id }
-
-            downloads.mapNotNull { download ->
-                if (!File(download.filePath).exists()) return@mapNotNull null
-                val entity = trackEntitiesById[download.trackId] ?: return@mapNotNull null
-                val track = entity.toDomain(isFavorite = download.trackId in favoriteIds)
-                    .copy(streamUrl = android.net.Uri.fromFile(File(download.filePath)).toString())
-                val format = AudioFormat.fromKey(download.format) ?: AudioFormat.MP3_128
-                ExportableTrack(
-                    track = track,
-                    format = format,
-                    sizeBytes = download.sizeBytes,
-                    qualityLabel = qualityLabelFor(format),
-                )
-            }
-        }.flowOn(Dispatchers.IO)
-    }
+    /** Produces a streamable URI for ExoPlayer from either a local path or a tree URI. */
+    private fun playableStreamUrl(filePath: String): String =
+        if (filePath.startsWith("content://")) filePath
+        else android.net.Uri.fromFile(File(filePath)).toString()
 
     override suspend fun isTrackDownloaded(trackId: String): Boolean {
         return downloadDao.getByTrackId(trackId) != null
@@ -370,7 +453,7 @@ class DownloadRepositoryImpl @Inject constructor(
 
     override suspend fun getDownloadInfo(trackId: String): DownloadInfo? {
         val download = downloadDao.getByTrackId(trackId) ?: return null
-        if (!File(download.filePath).exists()) return null
+        if (!downloadPathExists(download.filePath)) return null
         val format = AudioFormat.fromKey(download.format) ?: AudioFormat.MP3_128
         return DownloadInfo(filePath = download.filePath, format = format)
     }
@@ -390,91 +473,11 @@ class DownloadRepositoryImpl @Inject constructor(
         return downloadDao.getDownloadedAlbumIds()
     }
 
-    override suspend fun exportDownloads(
-        destinationUri: String,
-        trackIds: Set<String>?,
-        onProgress: (exported: Int, total: Int) -> Unit,
-    ): Int = withContext(Dispatchers.IO) {
-        val allDownloads = downloadDao.getAllSync()
-        val downloads = if (trackIds == null) allDownloads
-            else allDownloads.filter { it.trackId in trackIds }
-        if (downloads.isEmpty()) return@withContext 0
-
-        val trackIds = downloads.map { it.trackId }
-        val albumIds = downloads.map { it.albumId }.distinct()
-        val trackEntitiesById = trackDao.getByIds(trackIds).associateBy { it.id }
-        val albumEntitiesById = albumDao.getByIds(albumIds).associateBy { it.id }
-
-        val treeUri = destinationUri.toUri()
-        val rootDoc = DocumentFile.fromTreeUri(context, treeUri)
-            ?: throw IOException("Cannot access selected folder")
-
-        val dirCache = mutableMapOf<String, DocumentFile>()
-        var processed = 0
-        var actuallyExported = 0
-        val total = downloads.size
-
-        for (download in downloads) {
-            coroutineContext.ensureActive()
-
-            val sourceFile = File(download.filePath)
-            if (!sourceFile.exists()) {
-                onProgress(++processed, total)
-                continue
-            }
-
-            val trackEntity = trackEntitiesById[download.trackId]
-            val albumEntity = albumEntitiesById[download.albumId]
-            val artist = trackEntity?.artist ?: "Unknown Artist"
-            val albumTitle = albumEntity?.title ?: trackEntity?.albumTitle ?: "Unknown Album"
-            val trackTitle = trackEntity?.title ?: download.trackId
-            val trackNumber = (trackEntity?.trackNumber ?: 0).toString().padStart(2, '0')
-            val format = AudioFormat.fromKey(download.format) ?: AudioFormat.MP3_128
-
-            val folderName = NetworkUtils.sanitizeFileName("$artist - $albumTitle")
-            val albumDir = dirCache.getOrPut(folderName) {
-                rootDoc.findFile(folderName) ?: rootDoc.createDirectory(folderName)
-                ?: throw IOException("Failed to create folder: $folderName")
-            }
-
-            val fileName = NetworkUtils.sanitizeFileName("$trackNumber - $trackTitle") + ".${format.extension}"
-            val mimeType = when (format.extension) {
-                "flac" -> "audio/flac"
-                "mp3" -> "audio/mpeg"
-                "m4a" -> "audio/mp4"
-                "ogg" -> "audio/ogg"
-                "webm" -> "audio/webm"
-                else -> "application/octet-stream"
-            }
-
-            // Remove existing file with same name (re-export)
-            albumDir.findFile(fileName)?.delete()
-
-            val newFile = albumDir.createFile(mimeType, fileName)
-                ?: throw IOException("Failed to create file: $fileName")
-
-            context.contentResolver.openOutputStream(newFile.uri)?.use { output ->
-                sourceFile.inputStream().use { input ->
-                    input.copyTo(output, 8192)
-                }
-            } ?: throw IOException("Failed to open output stream for: $fileName")
-
-            actuallyExported++
-            onProgress(++processed, total)
-        }
-
-        actuallyExported
-    }
-
     override suspend fun deleteDownload(trackId: String) {
         val download = downloadDao.getByTrackId(trackId) ?: return
 
-        // Delete the file
-        try {
-            File(download.filePath).delete()
-        } catch (_: Exception) {
-            // Best-effort file deletion
-        }
+        // Delete the file, handling both local paths and SAF content URIs.
+        deleteByPath(download.filePath)
 
         downloadDao.delete(trackId)
         storageTracker.notifyChanged()
@@ -488,26 +491,11 @@ class DownloadRepositoryImpl @Inject constructor(
         // delete it while the cache is open.
         val all = downloadDao.getAllSync()
         for (row in all) {
-            try { File(row.filePath).delete() } catch (_: Exception) {}
+            deleteByPath(row.filePath)
             try { downloadDao.delete(row.trackId) } catch (_: Exception) {}
         }
         try { com.dustvalve.next.android.data.asset.StoragePaths.imagesDir(context).deleteRecursively() } catch (_: Exception) {}
         try { com.dustvalve.next.android.data.asset.StoragePaths.mediaCacheDir(context).deleteRecursively() } catch (_: Exception) {}
         storageTracker.notifyChanged()
-    }
-
-    /**
-     * Maps an [AudioFormat] to a short, localizable quality label used by the
-     * Export Tracks UI (e.g. "FLAC", "320 kbps", "V0").
-     */
-    private fun qualityLabelFor(format: AudioFormat): String = when (format) {
-        AudioFormat.FLAC -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_flac)
-        AudioFormat.OGG_VORBIS_320 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 320)
-        AudioFormat.MP3_320 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 320)
-        AudioFormat.MP3_V0 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_v0)
-        AudioFormat.AAC -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 256)
-        AudioFormat.OPUS -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 256)
-        AudioFormat.OGG_VORBIS -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 192)
-        AudioFormat.MP3_128 -> context.getString(com.dustvalve.next.android.R.string.export_tracks_quality_kbps, 128)
     }
 }

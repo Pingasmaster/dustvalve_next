@@ -86,6 +86,15 @@ interface TrackDao {
         """
     )
     suspend fun searchLocalTracks(query: String): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks")
+    suspend fun getAllSync(): List<TrackEntity>
+
+    @Query("SELECT * FROM tracks")
+    fun getAllFlow(): Flow<List<TrackEntity>>
+
+    @Query("DELETE FROM tracks")
+    suspend fun deleteAll()
 }
 
 suspend fun TrackDao.deleteByIds(ids: Collection<String>) {

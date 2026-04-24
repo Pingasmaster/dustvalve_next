@@ -4,9 +4,10 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.storage.folder.FolderMirror
+import com.dustvalve.next.android.data.storage.folder.StorageMigrator
 import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
-import com.dustvalve.next.android.domain.model.ExportableTrack
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
@@ -19,12 +20,9 @@ import com.dustvalve.next.android.util.UiText
 import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -71,9 +69,14 @@ data class SettingsUiState(
     val keepScreenOnWhilePlaying: Boolean = false,
     val keepLocalSort: Boolean = false,
     val keepLocalFilters: Boolean = false,
-    val isExporting: Boolean = false,
-    val exportProgress: Float = 0f,
-    val exportMessage: UiText? = null,
+    val dedicatedFolderEnabled: Boolean = false,
+    val dedicatedFolderTreeUri: String? = null,
+    val dedicatedFolderIncludeImageCache: Boolean = false,
+    val dedicatedFolderIncludeMetadataCache: Boolean = false,
+    val folderMigrationInProgress: Boolean = false,
+    val folderMigrationProgress: Float = 0f,
+    val folderMigrationMessage: UiText? = null,
+    val folderMigrationError: UiText? = null,
     val updateState: UpdateUiState = UpdateUiState.Idle,
     val updateMessage: UiText? = null,
 )
@@ -97,19 +100,12 @@ class SettingsViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val recentSearchDao: RecentSearchDao,
     private val appUpdateService: AppUpdateService,
+    private val storageMigrator: StorageMigrator,
+    private val folderMirror: FolderMirror,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-
-    /**
-     * All currently downloaded tracks, surfaced to the Export Tracks bottom sheet
-     * with their format / quality metadata.
-     */
-    val exportableTracks: StateFlow<List<ExportableTrack>> = downloadRepository
-        .getExportableTracks()
-        .catch { /* ignore collection errors */ }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000L), emptyList())
 
     private var scanJob: Job? = null
 
@@ -143,6 +139,158 @@ class SettingsViewModel @Inject constructor(
         collectKeepScreenOnWhilePlaying()
         collectKeepLocalSort()
         collectKeepLocalFilters()
+        collectDedicatedFolder()
+    }
+
+    private fun collectDedicatedFolder() {
+        viewModelScope.launch {
+            settingsDataStore.dedicatedFolderEnabled
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(dedicatedFolderEnabled = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.dedicatedFolderTreeUri
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(dedicatedFolderTreeUri = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.dedicatedFolderIncludeImageCache
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(dedicatedFolderIncludeImageCache = v) } }
+        }
+        viewModelScope.launch {
+            settingsDataStore.dedicatedFolderIncludeMetadataCache
+                .catch { /* ignore */ }
+                .collect { v -> _uiState.update { it.copy(dedicatedFolderIncludeMetadataCache = v) } }
+        }
+    }
+
+    fun enableDedicatedFolder(treeUri: String) {
+        viewModelScope.launch {
+            try {
+                _uiState.update {
+                    it.copy(
+                        folderMigrationInProgress = true,
+                        folderMigrationProgress = 0f,
+                        folderMigrationMessage = null,
+                        folderMigrationError = null,
+                    )
+                }
+                folderMirror.suspendFor(60_000L)
+                val includeImages = _uiState.value.dedicatedFolderIncludeImageCache
+                val includeMetadata = _uiState.value.dedicatedFolderIncludeMetadataCache
+                storageMigrator.migrateToFolder(
+                    treeUriStr = treeUri,
+                    includeImages = includeImages,
+                    includeMetadata = includeMetadata,
+                ) { p ->
+                    _uiState.update {
+                        it.copy(
+                            folderMigrationProgress = p.fraction,
+                            folderMigrationMessage = UiText.DynamicString(p.label),
+                        )
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        folderMigrationInProgress = false,
+                        folderMigrationProgress = 1f,
+                        folderMigrationMessage = UiText.StringResource(
+                            R.string.settings_dedicated_folder_migration_success,
+                        ),
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        folderMigrationInProgress = false,
+                        folderMigrationError = UiText.StringResource(
+                            R.string.settings_dedicated_folder_migration_failed,
+                            listOf(e.message ?: "Unknown error"),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun disableDedicatedFolder() {
+        viewModelScope.launch {
+            try {
+                _uiState.update {
+                    it.copy(
+                        folderMigrationInProgress = true,
+                        folderMigrationProgress = 0f,
+                        folderMigrationMessage = null,
+                        folderMigrationError = null,
+                    )
+                }
+                folderMirror.suspendFor(60_000L)
+                storageMigrator.migrateFromFolder { p ->
+                    _uiState.update {
+                        it.copy(
+                            folderMigrationProgress = p.fraction,
+                            folderMigrationMessage = UiText.DynamicString(p.label),
+                        )
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        folderMigrationInProgress = false,
+                        folderMigrationProgress = 1f,
+                        folderMigrationMessage = UiText.StringResource(
+                            R.string.settings_dedicated_folder_migration_reverted,
+                        ),
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update {
+                    it.copy(
+                        folderMigrationInProgress = false,
+                        folderMigrationError = UiText.StringResource(
+                            R.string.settings_dedicated_folder_migration_failed,
+                            listOf(e.message ?: "Unknown error"),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    fun setDedicatedFolderIncludeImageCache(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(folderMigrationInProgress = true, folderMigrationProgress = 0.1f) }
+                storageMigrator.setIncludeImageCache(enabled)
+                _uiState.update { it.copy(folderMigrationInProgress = false, folderMigrationProgress = 1f) }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(folderMigrationInProgress = false) }
+            }
+        }
+    }
+
+    fun setDedicatedFolderIncludeMetadataCache(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(folderMigrationInProgress = true, folderMigrationProgress = 0.1f) }
+                storageMigrator.setIncludeMetadataCache(enabled)
+                _uiState.update { it.copy(folderMigrationInProgress = false, folderMigrationProgress = 1f) }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(folderMigrationInProgress = false) }
+            }
+        }
+    }
+
+    fun clearFolderMigrationMessage() {
+        _uiState.update { it.copy(folderMigrationMessage = null) }
+    }
+
+    fun clearFolderMigrationError() {
+        _uiState.update { it.copy(folderMigrationError = null) }
     }
 
     fun setThemeMode(mode: String) {
@@ -844,68 +992,6 @@ class SettingsViewModel @Inject constructor(
                 if (e is CancellationException) throw e
             }
         }
-    }
-
-    private var exportJob: Job? = null
-
-    fun exportDownloads(destinationUri: String) {
-        exportJob?.cancel()
-        exportJob = viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, exportProgress = 0f) }
-            try {
-                val count = downloadRepository.exportDownloads(destinationUri) { exported, total ->
-                    _uiState.update { it.copy(exportProgress = exported.toFloat() / total.toFloat()) }
-                }
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        exportMessage = UiText.PluralsResource(R.plurals.export_complete, count),
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        exportMessage = e.message?.let { UiText.StringResource(R.string.snackbar_export_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_export_failed, listOf("Unknown error")),
-                    )
-                }
-            }
-        }
-    }
-
-    fun exportSelectedDownloads(destinationUri: String, trackIds: Set<String>) {
-        if (trackIds.isEmpty()) return
-        exportJob?.cancel()
-        exportJob = viewModelScope.launch {
-            _uiState.update { it.copy(isExporting = true, exportProgress = 0f) }
-            try {
-                val count = downloadRepository.exportDownloads(destinationUri, trackIds) { exported, total ->
-                    _uiState.update {
-                        it.copy(exportProgress = if (total == 0) 0f else exported.toFloat() / total.toFloat())
-                    }
-                }
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        exportMessage = UiText.PluralsResource(R.plurals.export_complete, count),
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        exportMessage = e.message?.let { UiText.StringResource(R.string.snackbar_export_failed, listOf(it)) }
-                            ?: UiText.StringResource(R.string.snackbar_export_failed, listOf("Unknown error")),
-                    )
-                }
-            }
-        }
-    }
-
-    fun clearExportMessage() {
-        _uiState.update { it.copy(exportMessage = null) }
     }
 
     fun removeAllDownloads() {

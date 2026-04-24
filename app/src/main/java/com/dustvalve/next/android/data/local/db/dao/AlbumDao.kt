@@ -54,6 +54,12 @@ interface AlbumDao {
 
     @Query("UPDATE albums SET cachedAt = :cachedAt WHERE id = :albumId")
     suspend fun updateCachedAt(albumId: String, cachedAt: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM albums")
+    fun getAllFlow(): Flow<List<AlbumEntity>>
+
+    @Query("DELETE FROM albums")
+    suspend fun deleteAll()
 }
 
 suspend fun AlbumDao.getByIds(ids: List<String>): List<AlbumEntity> {

@@ -30,4 +30,13 @@ interface RecentSearchDao {
         """
     )
     suspend fun deleteOld(source: String, keepCount: Int = 20)
+
+    @Query("SELECT * FROM recent_searches")
+    suspend fun getAllSync(): List<RecentSearchEntity>
+
+    @Query("SELECT * FROM recent_searches")
+    fun getAllFlow(): Flow<List<RecentSearchEntity>>
+
+    @Query("DELETE FROM recent_searches")
+    suspend fun deleteAll()
 }

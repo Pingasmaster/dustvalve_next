@@ -99,11 +99,6 @@ fun AppNavigation(
             is NavDestination.Settings -> SettingsScreen(
                 onBandcampLoginClick = { navViewModel.navigateTo(NavDestination.AccountLogin) },
                 onYouTubeMusicLoginClick = { navViewModel.navigateTo(NavDestination.YouTubeMusicLogin) },
-                onDownloadsClick = {
-                    navViewModel.navigateTo(
-                        NavDestination.PlaylistDetail(com.dustvalve.next.android.domain.model.Playlist.ID_DOWNLOADS)
-                    )
-                },
             )
             is NavDestination.AlbumDetail -> AlbumDetailScreen(
                 albumUrl = destination.url,

@@ -32,4 +32,13 @@ interface ArtistDao {
 
     @Query("UPDATE artists SET cachedAt = :cachedAt WHERE id = :artistId")
     suspend fun updateCachedAt(artistId: String, cachedAt: Long = System.currentTimeMillis())
+
+    @Query("SELECT * FROM artists")
+    suspend fun getAllSync(): List<ArtistEntity>
+
+    @Query("SELECT * FROM artists")
+    fun getAllFlow(): Flow<List<ArtistEntity>>
+
+    @Query("DELETE FROM artists")
+    suspend fun deleteAll()
 }
