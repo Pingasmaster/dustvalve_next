@@ -45,9 +45,9 @@ class ExportTracksSheetTest {
             qualityLabel = "128 kbps",
         ),
         exportable(
-            id = "spotify_track",
-            title = "Spot OGG 320",
-            source = TrackSource.SPOTIFY,
+            id = "local_track",
+            title = "Local OGG 320",
+            source = TrackSource.LOCAL,
             format = AudioFormat.OGG_VORBIS_320,
             qualityLabel = "320 kbps",
         ),
@@ -65,7 +65,7 @@ class ExportTracksSheetTest {
         val harness = setStatefulContent(onExport = { lastExport = it })
 
         composeTestRule.onNodeWithText("YT MP3 128").assertExists()
-        composeTestRule.onNodeWithText("Spot OGG 320").assertExists()
+        composeTestRule.onNodeWithText("Local OGG 320").assertExists()
         composeTestRule.onNodeWithText("BC FLAC").assertExists()
 
         // Format chips (one per row).
@@ -80,7 +80,7 @@ class ExportTracksSheetTest {
 
         // Platform chips.
         composeTestRule.onNodeWithText("Youtube").assertExists()
-        composeTestRule.onNodeWithText("Spotify").assertExists()
+        composeTestRule.onNodeWithText("Local").assertExists()
         composeTestRule.onNodeWithText("Bandcamp").assertExists()
 
         assertThat(harness.dismissed).isFalse()
@@ -127,7 +127,7 @@ class ExportTracksSheetTest {
         harness.invokeExportAll()
         composeTestRule.waitForIdle()
 
-        assertThat(lastExport).containsExactly("yt_track", "spotify_track", "bandcamp_track")
+        assertThat(lastExport).containsExactly("yt_track", "local_track", "bandcamp_track")
     }
 
     @Test fun `tapping FAB after selecting two passes those two ids`() {

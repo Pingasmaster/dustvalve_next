@@ -19,7 +19,6 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
-import com.dustvalve.next.android.domain.repository.SpotifyRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -45,7 +44,6 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val SPOTIFY_NATIVE_DOWNLOAD = "__spotify_native__"
 
 @Singleton
 class DownloadRepositoryImpl @Inject constructor(
@@ -59,7 +57,6 @@ class DownloadRepositoryImpl @Inject constructor(
     private val downloadScraper: DustvalveDownloadScraper,
     private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
-    private val spotifyRepository: SpotifyRepository,
     @param:ApplicationContext private val context: Context,
 ) : DownloadRepository {
 
@@ -122,9 +119,6 @@ class DownloadRepositoryImpl @Inject constructor(
                 "https://www.youtube.com/watch?v=$videoId"
             }
             youtubeRepository.getDownloadableStream(videoUrl)
-        } else if (track.source == TrackSource.SPOTIFY) {
-            // Spotify: native bridge handles download directly — use placeholder URL
-            SPOTIFY_NATIVE_DOWNLOAD to AudioFormat.OGG_VORBIS_320
         } else {
             (track.streamUrl to AudioFormat.MP3_128)
         }
@@ -158,20 +152,10 @@ class DownloadRepositoryImpl @Inject constructor(
         val targetFile = File(downloadDir, "$safeTrackId.${format.extension}")
         val tempFile = File(downloadDir, "$safeTrackId.${format.extension}.tmp")
 
-        if (downloadUrl == SPOTIFY_NATIVE_DOWNLOAD) {
-            // Spotify: native librespot bridge downloads directly to file
-            val uri = track.streamUrl
-                ?: throw IOException("Track '${track.title}' has no Spotify URI")
-            spotifyRepository.downloadTrack(uri, tempFile.absolutePath)
-            if (!tempFile.exists() || tempFile.length() == 0L) {
-                throw IOException("Spotify download produced empty file for: ${track.title}")
-            }
-        } else {
-            if (!downloadUrl.startsWith("https://")) {
-                throw IOException("Download URL must use HTTPS: ${downloadUrl.take(50)}")
-            }
-            downloadFile(downloadUrl, tempFile, track.id)
+        if (!downloadUrl.startsWith("https://")) {
+            throw IOException("Download URL must use HTTPS: ${downloadUrl.take(50)}")
         }
+        downloadFile(downloadUrl, tempFile, track.id)
 
         // Atomic rename on success — fall back to copy+delete if rename fails
         if (!tempFile.renameTo(targetFile)) {

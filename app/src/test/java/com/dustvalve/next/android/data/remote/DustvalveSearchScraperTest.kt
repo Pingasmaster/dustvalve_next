@@ -22,13 +22,11 @@ class DustvalveSearchScraperTest {
         setup.server.shutdown()
     }
 
-    @Test fun `youtube and spotify types return empty immediately`() = runTest {
+    @Test fun `non-bandcamp types return empty immediately`() = runTest {
         for (t in listOf(
             SearchResultType.LOCAL_TRACK,
             SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
             SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
-            SearchResultType.SPOTIFY_TRACK, SearchResultType.SPOTIFY_ALBUM,
-            SearchResultType.SPOTIFY_ARTIST, SearchResultType.SPOTIFY_PLAYLIST,
         )) {
             assertThat(scraper.search("q", 1, t)).isEmpty()
         }

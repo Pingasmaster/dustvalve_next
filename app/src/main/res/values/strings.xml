@@ -10,7 +10,6 @@
     <string name="common_action_save">Save</string>
     <string name="common_action_create">Create</string>
     <string name="common_action_remove">Remove</string>
-    <string name="common_action_enable">Enable</string>
     <string name="common_action_disconnect">Disconnect</string>
     <string name="common_play_all">Play All</string>
     <string name="common_play_mix">Play Mix</string>
@@ -48,7 +47,6 @@
     <string name="nav_label_local">Local</string>
     <string name="nav_label_bandcamp">Bandcamp</string>
     <string name="nav_label_youtube">YouTube</string>
-    <string name="nav_label_spotify">Spotify</string>
     <string name="nav_label_library">Library</string>
     <string name="nav_label_settings">Settings</string>
 
@@ -127,7 +125,6 @@
     <string name="settings_source_local">Local</string>
     <string name="settings_source_bandcamp">Bandcamp</string>
     <string name="settings_source_youtube">YouTube</string>
-    <string name="settings_source_spotify">Spotify</string>
     <string name="settings_use_individual_folders">Use individual folders</string>
     <string name="settings_use_individual_folders_desc">Pick specific folders instead of scanning all audio</string>
     <string name="settings_remove_downloads_title">Remove all downloads</string>
@@ -144,8 +141,6 @@
     <string name="settings_connect_bandcamp_desc">Connect to access your Bandcamp purchases.</string>
     <string name="settings_connect_youtube">Connect YouTube Music</string>
     <string name="settings_connect_youtube_desc">Connect to access your YouTube Music library.</string>
-    <string name="settings_connect_spotify">Connect Spotify</string>
-    <string name="settings_connect_spotify_desc">Connect to search and stream from Spotify. Requires Premium.</string>
     <string name="settings_youtube_music">YouTube Music</string>
     <string name="settings_youtube_default_source_title">Default view</string>
     <string name="settings_youtube_default_source_desc">Which view opens when you tap the YouTube tab</string>
@@ -154,12 +149,6 @@
     <string name="ytm_artist_spotlight">Artist spotlight</string>
     <string name="youtube_tab_source_yt">YouTube</string>
     <string name="youtube_tab_source_ytm">YouTube Music</string>
-    <string name="settings_spotify_connected">Spotify connected</string>
-    <string name="settings_spotify_premium_title">Spotify Premium Required</string>
-    <string name="settings_spotify_premium_text">Spotify streaming requires a paid Spotify Premium account. Free accounts are not supported.</string>
-    <string name="settings_spotify_warning_title">Spotify Integration Warning</string>
-    <string name="settings_spotify_warning_text">This feature requires a paid Spotify Premium account.\n\nUsing unofficial Spotify clients violates Spotify\'s Terms of Service. Your account may be suspended or banned. Use at your own risk.\n\nDustvalve is not affiliated with Spotify.</string>
-    <string name="settings_i_understand">I understand, continue</string>
     <string name="settings_manage_downloads">Manage downloads</string>
     <string name="settings_export_downloads">Export downloads</string>
     <string name="settings_remove_all_downloads">Remove all downloads</string>
@@ -208,7 +197,6 @@
     <string name="settings_search_history_cleared">Cleared all search histories</string>
     <string name="settings_search_history_source_bandcamp">Bandcamp</string>
     <string name="settings_search_history_source_youtube">YouTube</string>
-    <string name="settings_search_history_source_spotify">Spotify</string>
     <string name="settings_search_history_source_local">Local</string>
     <string name="settings_version">Version</string>
     <string name="settings_license">Licensed under GPLv3</string>
@@ -227,8 +215,6 @@
     <string name="settings_storage_limit_gb">Storage limit: %1$d GB</string>
     <string name="settings_sign_in_bandcamp">Sign in to Bandcamp</string>
     <string name="settings_sign_in_youtube">Sign in to YouTube Music</string>
-    <string name="settings_sign_in_spotify">Sign in to Spotify</string>
-    <string name="settings_spotify_native_unavailable">Spotify native library not available. Please rebuild with Rust support.</string>
 
     <!-- Local screen -->
     <string name="local_search_placeholder">Search local music…</string>
@@ -291,14 +277,6 @@
     <string name="youtube_tab_playlists">Playlists</string>
     <string name="youtube_tab_tracks">Tracks</string>
 
-    <!-- Spotify screen -->
-    <string name="spotify_search_placeholder">Search Spotify…</string>
-    <string name="spotify_tab_all">All</string>
-    <string name="spotify_tab_tracks">Tracks</string>
-    <string name="spotify_tab_albums">Albums</string>
-    <string name="spotify_tab_artists">Artists</string>
-    <string name="spotify_tab_playlists">Playlists</string>
-    <string name="spotify_empty_state">Search for tracks, albums, artists, or playlists on Spotify</string>
 
     <!-- Library screen -->
     <string name="library_title">Library</string>
@@ -337,7 +315,6 @@
     <string name="playlist_empty_system_subtitle">Tracks will appear here automatically</string>
     <string name="playlist_empty_custom_subtitle">Add songs to get started</string>
 
-    <!-- Detail screens (album, artist, Spotify, YouTube) -->
     <string name="detail_tracks_label">Tracks</string>
     <string name="detail_duration_minutes">%1$d min</string>
     <string name="detail_duration_hours_only">%1$d hr</string>
@@ -355,7 +332,6 @@
     <string name="detail_delete_track_download_text">Remove downloaded file for \'%1$s\'?</string>
     <string name="detail_delete_artist_downloads_text">Remove all downloaded tracks by %1$s?</string>
     <string name="detail_delete_playlist_downloads_text">Delete all downloaded tracks from this playlist?</string>
-    <string name="detail_delete_album_source_downloads_text">Delete all downloaded tracks from this album?</string>
     <string name="detail_delete_artist_source_downloads_text">Delete all downloaded tracks from this artist?</string>
     <string name="detail_cd_remove_favorites">Remove from favorites</string>
     <string name="detail_cd_add_favorites">Add to favorites</string>
@@ -364,8 +340,6 @@
     <string name="detail_cd_delete_all_downloads">Delete all downloads</string>
     <string name="detail_cd_download_all">Download all</string>
     <string name="detail_cd_delete_downloads">Delete downloads</string>
-    <string name="detail_cd_already_imported">Already imported</string>
-    <string name="detail_cd_import_to_library">Import to library</string>
     <string name="detail_show_more">Show more</string>
     <string name="detail_show_less">Show less</string>
     <string name="detail_buy_on_bandcamp">Buy on Bandcamp</string>
@@ -373,8 +347,6 @@
     <string name="detail_send_as_gift">Send as a gift</string>
     <string name="detail_cd_open_artist">Open artist page</string>
     <string name="detail_tags">Tags</string>
-    <string name="detail_top_tracks">Top Tracks</string>
-    <string name="detail_albums">Albums</string>
     <string name="detail_videos">Videos</string>
     <string name="detail_discography">Discography</string>
     <string name="detail_no_releases">No releases yet</string>
@@ -441,7 +413,6 @@
     <string name="snackbar_add_to_playlist_failed">Failed to add to playlist</string>
     <string name="snackbar_create_playlist_failed">Failed to create playlist</string>
     <string name="snackbar_playing_next">\'%1$s\' will play next</string>
-    <string name="snackbar_spotify_audio_failed">Couldn\'t load Spotify audio</string>
     <string name="snackbar_audio_stream_failed">Couldn\'t load audio stream</string>
     <string name="snackbar_scan_failed">Scan failed: %1$s</string>
     <string name="snackbar_export_failed">Export failed: %1$s</string>

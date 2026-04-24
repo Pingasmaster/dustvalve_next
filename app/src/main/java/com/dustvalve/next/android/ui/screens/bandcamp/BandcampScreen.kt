@@ -574,9 +574,7 @@ fun BandcampScreen(
                                                             onExpandPlayer()
                                                         }
                                                         SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                                                        SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
-                                                        SearchResultType.SPOTIFY_TRACK, SearchResultType.SPOTIFY_ALBUM,
-                                                        SearchResultType.SPOTIFY_ARTIST, SearchResultType.SPOTIFY_PLAYLIST -> { /* not applicable */ }
+                                                        SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> { /* not applicable */ }
                                                     }
                                                 },
                                                 onLongClick = {
@@ -728,9 +726,6 @@ private fun SearchResultItem(
         SearchResultType.YOUTUBE_TRACK -> AppShapes.SearchResultTrack
         SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> AppShapes.SearchResultAlbum
         SearchResultType.YOUTUBE_ARTIST -> AppShapes.SearchResultArtist
-        SearchResultType.SPOTIFY_TRACK -> AppShapes.SearchResultTrack
-        SearchResultType.SPOTIFY_ALBUM, SearchResultType.SPOTIFY_PLAYLIST -> AppShapes.SearchResultAlbum
-        SearchResultType.SPOTIFY_ARTIST -> AppShapes.SearchResultArtist
     }
 
     val artistLabel = stringResource(R.string.bandcamp_type_artist)
@@ -770,9 +765,7 @@ private fun SearchResultItem(
                         }
                     }
                     SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                    SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
-                    SearchResultType.SPOTIFY_TRACK, SearchResultType.SPOTIFY_ALBUM,
-                    SearchResultType.SPOTIFY_ARTIST, SearchResultType.SPOTIFY_PLAYLIST -> {
+                    SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> {
                         result.artist?.let { append(it) }
                     }
                 }
@@ -798,9 +791,6 @@ private fun SearchResultItem(
                 SearchResultType.YOUTUBE_TRACK -> R.drawable.ic_music_note
                 SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_album
                 SearchResultType.YOUTUBE_ARTIST -> R.drawable.ic_person
-                SearchResultType.SPOTIFY_TRACK -> R.drawable.ic_music_note
-                SearchResultType.SPOTIFY_ALBUM, SearchResultType.SPOTIFY_PLAYLIST -> R.drawable.ic_album
-                SearchResultType.SPOTIFY_ARTIST -> R.drawable.ic_person
             }
             if (result.imageUrl != null) {
                 AsyncImage(

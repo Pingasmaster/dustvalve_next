@@ -3,8 +3,7 @@ package com.dustvalve.next.android.domain.model
 enum class TrackSource(val key: String) {
     LOCAL("local"),
     BANDCAMP("bandcamp"),
-    YOUTUBE("youtube"),
-    SPOTIFY("spotify");
+    YOUTUBE("youtube");
 
     companion object {
         fun fromKey(key: String): TrackSource =

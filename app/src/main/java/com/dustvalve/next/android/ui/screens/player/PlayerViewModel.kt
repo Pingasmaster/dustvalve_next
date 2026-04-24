@@ -80,7 +80,6 @@ class PlayerViewModel @Inject constructor(
     private val favoriteDao: com.dustvalve.next.android.data.local.db.dao.FavoriteDao,
     private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
-    private val spotifyRepository: com.dustvalve.next.android.domain.repository.SpotifyRepository,
     @param:ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -173,45 +172,6 @@ class PlayerViewModel @Inject constructor(
                 }
             }
             return track
-        }
-
-        // Spotify tracks: check download first, then download-to-temp for playback
-        if (track.source == TrackSource.SPOTIFY) {
-            val spDownloadInfo = downloadRepository.getDownloadInfo(track.id)
-            if (spDownloadInfo != null) {
-                if (updateState) {
-                    _extraState.update {
-                        it.copy(
-                            currentPlaybackFormat = spDownloadInfo.format,
-                            currentSourcePath = spDownloadInfo.filePath,
-                        )
-                    }
-                }
-                return track.copy(streamUrl = android.net.Uri.fromFile(File(spDownloadInfo.filePath)).toString())
-            }
-            // Download to temp file for playback
-            return try {
-                val uri = track.streamUrl ?: return track
-                val tempDir = File(appContext.cacheDir, "spotify_stream")
-                tempDir.mkdirs()
-                val tempFile = File(tempDir, "sp_${track.id.hashCode()}.ogg")
-                spotifyRepository.downloadTrack(uri, tempFile.absolutePath)
-                if (updateState) {
-                    _extraState.update {
-                        it.copy(currentPlaybackFormat = AudioFormat.OGG_VORBIS_320, currentSourcePath = tempFile.absolutePath)
-                    }
-                }
-                track.copy(streamUrl = android.net.Uri.fromFile(tempFile).toString())
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _extraState.update {
-                    it.copy(
-                        snackbarMessage = UiText.StringResource(R.string.snackbar_spotify_audio_failed),
-                        isSnackbarError = true,
-                    )
-                }
-                track.copy(streamUrl = null)
-            }
         }
 
         // YouTube tracks: check download first, then resolve stream URL live

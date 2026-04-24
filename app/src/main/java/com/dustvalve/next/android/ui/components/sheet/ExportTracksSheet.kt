@@ -381,15 +381,9 @@ private fun platformLabel(source: TrackSource): String = when (source) {
     TrackSource.LOCAL -> "Local"
     TrackSource.BANDCAMP -> "Bandcamp"
     TrackSource.YOUTUBE -> "Youtube"
-    TrackSource.SPOTIFY -> "Spotify"
 }
 
-private fun platformIcon(source: TrackSource): Int = when (source) {
-    TrackSource.SPOTIFY -> R.drawable.ic_spotify
-    // Bandcamp / YouTube / Local fall back to a generic music note icon
-    // until dedicated brand drawables ship.
-    else -> R.drawable.ic_music_note
-}
+private fun platformIcon(source: TrackSource): Int = R.drawable.ic_music_note
 
 /**
  * Production renderer for the overflow menu — a real [DropdownMenu]. Tests

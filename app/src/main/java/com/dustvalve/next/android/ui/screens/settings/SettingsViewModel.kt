@@ -42,7 +42,6 @@ data class SettingsUiState(
     val bandcampSignOutSuccess: Boolean = false,
     val ytmAccountState: YouTubeMusicAccountState = YouTubeMusicAccountState(),
     val ytmSignOutSuccess: Boolean = false,
-    val spotifyConnected: Boolean = false,
     val downloadFormat: String = "flac",
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
@@ -59,13 +58,11 @@ data class SettingsUiState(
     val scanMessage: UiText? = null,
     val bandcampEnabled: Boolean = false,
     val youtubeEnabled: Boolean = false,
-    val spotifyEnabled: Boolean = false,
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
     val searchHistoryBandcamp: Boolean = true,
     val searchHistoryYoutube: Boolean = true,
-    val searchHistorySpotify: Boolean = true,
     val searchHistoryLocal: Boolean = true,
     val searchHistoryClearedMessage: UiText? = null,
     val albumCoverLongPressCarousel: Boolean = true,
@@ -119,7 +116,6 @@ class SettingsViewModel @Inject constructor(
     init {
         collectAccountState()
         collectYtmAccountState()
-        collectSpotifyState()
         collectCacheInfo()
         collectThemeMode()
         collectDynamicColor()
@@ -138,7 +134,6 @@ class SettingsViewModel @Inject constructor(
         collectLocalMusicUseMediaStore()
         collectBandcampEnabled()
         collectYoutubeEnabled()
-        collectSpotifyEnabled()
         collectShowInlineVolumeSlider()
         collectShowVolumeButton()
         collectSearchHistoryEnabled()
@@ -325,14 +320,6 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(bandcampSignOutSuccess = false) }
     }
 
-    fun disconnectSpotify() {
-        viewModelScope.launch {
-            try {
-                accountRepository.clearSpotifyAccount()
-            } catch (_: Exception) {}
-        }
-    }
-
     fun signOutYouTubeMusic() {
         viewModelScope.launch {
             try {
@@ -370,16 +357,6 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore collection errors */ }
                 .collect { state ->
                     _uiState.update { it.copy(accountState = state) }
-                }
-        }
-    }
-
-    private fun collectSpotifyState() {
-        viewModelScope.launch {
-            accountRepository.getSpotifyAccountState()
-                .catch { /* ignore */ }
-                .collect { state ->
-                    _uiState.update { it.copy(spotifyConnected = state.isConnected) }
                 }
         }
     }
@@ -685,16 +662,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setSpotifyEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            try {
-                settingsDataStore.setSpotifyEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
     fun setShowInlineVolumeSlider(enabled: Boolean) {
         viewModelScope.launch {
             try {
@@ -731,7 +698,6 @@ class SettingsViewModel @Inject constructor(
                 when (source) {
                     "bandcamp" -> settingsDataStore.setSearchHistoryBandcamp(enabled)
                     "youtube" -> settingsDataStore.setSearchHistoryYoutube(enabled)
-                    "spotify" -> settingsDataStore.setSearchHistorySpotify(enabled)
                     "local" -> settingsDataStore.setSearchHistoryLocal(enabled)
                 }
             } catch (e: Exception) {
@@ -743,7 +709,7 @@ class SettingsViewModel @Inject constructor(
     fun clearAllSearchHistory() {
         viewModelScope.launch {
             try {
-                for (source in listOf("bandcamp", "youtube", "spotify", "local")) {
+                for (source in listOf("bandcamp", "youtube", "local")) {
                     recentSearchDao.clearAll(source)
                 }
                 _uiState.update {
@@ -972,16 +938,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun collectSpotifyEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.spotifyEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(spotifyEnabled = enabled) }
-                }
-        }
-    }
-
     private fun collectShowInlineVolumeSlider() {
         viewModelScope.launch {
             settingsDataStore.showInlineVolumeSlider
@@ -1019,11 +975,6 @@ class SettingsViewModel @Inject constructor(
             settingsDataStore.searchHistoryYoutube
                 .catch { /* ignore */ }
                 .collect { v -> _uiState.update { it.copy(searchHistoryYoutube = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.searchHistorySpotify
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(searchHistorySpotify = v) } }
         }
         viewModelScope.launch {
             settingsDataStore.searchHistoryLocal
