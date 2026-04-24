@@ -68,12 +68,16 @@ class YouTubePlayerParser @Inject constructor() {
         val duration = (details.str("lengthSeconds")?.toFloatOrNull()) ?: 0f
         val thumbs = details.path("thumbnail")?.path("thumbnails")?.arr() ?: emptyList<JsonElement>()
         val art = thumbs.maxByOrNull { it.int("width") ?: 0 }?.str("url") ?: ""
+        val channelId = details.str("channelId")
+        val artistUrl = if (!channelId.isNullOrBlank()) {
+            "https://www.youtube.com/channel/$channelId"
+        } else ""
         return Track(
             id = "yt_$videoId",
             albumId = "yt_album_$videoId",
             title = title,
             artist = artist,
-            artistUrl = "",
+            artistUrl = artistUrl,
             trackNumber = 0,
             duration = duration,
             streamUrl = "https://www.youtube.com/watch?v=$videoId",

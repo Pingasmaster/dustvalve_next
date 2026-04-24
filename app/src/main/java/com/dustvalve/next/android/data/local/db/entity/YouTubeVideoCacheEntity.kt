@@ -19,5 +19,15 @@ data class YouTubeVideoCacheEntity(
     val artistUrl: String,
     val durationSec: Float,
     val artUrl: String,
+    /**
+     * Resolved YTM album playlist URL (`youtube.com/playlist?list=OLAK5uy_…`),
+     * or empty when the video has no YTM album.
+     */
+    val albumUrl: String = "",
+    /**
+     * True once the YTM album lookup has been attempted for this video;
+     * prevents re-lookup on subsequent plays regardless of hit or miss.
+     */
+    val albumLookupDone: Boolean = false,
     val cachedAt: Long = System.currentTimeMillis(),
 )

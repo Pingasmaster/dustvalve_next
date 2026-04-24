@@ -81,6 +81,23 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
         )
     }
 
+    /**
+     * YTM /next for a given videoId. The response's tabbed watch-next shelves
+     * carry the album link (`MUSIC_PAGE_TYPE_ALBUM` browseId) for music-tagged
+     * videos; plain YouTube uploads come back without it.
+     */
+    suspend fun next(videoId: String): JsonElement {
+        val cfg = visitorDataFetcher.get()
+        return post(
+            endpoint = "next?prettyPrint=false",
+            visitor = cfg,
+            body = buildJsonObject {
+                put("context", clientContext(cfg))
+                put("videoId", videoId)
+            },
+        )
+    }
+
     private suspend fun post(
         endpoint: String,
         visitor: YouTubeMusicVisitorDataFetcher.VisitorConfig,

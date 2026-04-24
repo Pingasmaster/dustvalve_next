@@ -42,6 +42,7 @@ class YouTubeRepositoryImpl @Inject constructor(
     private val nextParser: YouTubeNextParser,
     private val videoCache: YouTubeVideoCacheDao,
     private val playlistCache: YouTubePlaylistCacheDao,
+    private val youTubeMusicRepository: com.dustvalve.next.android.domain.repository.YouTubeMusicRepository,
 ) : YouTubeRepository {
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -116,18 +117,37 @@ class YouTubeRepositoryImpl @Inject constructor(
         val videoId = extractVideoId(videoUrl)
             ?: throw IllegalArgumentException("Cannot extract videoId from $videoUrl")
         // Cache-first: video metadata is immutable post-publish, so a hit
-        // returns instantly with no network access.
+        // returns instantly with no network access. If the row pre-dates the
+        // albumUrl lookup (playlist-seeded entries have albumLookupDone=false),
+        // fire the lookup once and upgrade the row in place before returning.
         videoCache.getById(videoId)?.let { cached ->
-            return cachedToTrack(cached)
+            if (cached.albumLookupDone) return cachedToTrack(cached)
+            val resolvedAlbumUrl = resolveAlbumOnce(videoId)
+            val upgraded = cached.copy(albumUrl = resolvedAlbumUrl, albumLookupDone = true)
+            try { videoCache.insert(upgraded) } catch (_: Throwable) {}
+            return cachedToTrack(upgraded)
         }
         val response = client.player(videoId)
-        val track = playerParser.parseTrack(response, videoId)
+        val parsed = playerParser.parseTrack(response, videoId)
+        val albumUrl = resolveAlbumOnce(videoId)
+        val track = parsed.copy(albumUrl = albumUrl)
         // Persist for future reads. Errors swallowed silently — caching is
         // best-effort and must never break the user-facing call.
         try {
-            videoCache.insert(track.toCacheEntity(videoId))
+            videoCache.insert(track.toCacheEntity(videoId, albumLookupDone = true))
         } catch (_: Throwable) {}
         return track
+    }
+
+    /**
+     * YTM album lookup with hard failure suppression. Returns `""` when the
+     * video has no album or when any step of the lookup blows up, matching
+     * the entity's empty-string "no album known" convention.
+     */
+    private suspend fun resolveAlbumOnce(videoId: String): String = try {
+        youTubeMusicRepository.lookupAlbumPlaylistForVideo(videoId) ?: ""
+    } catch (_: Throwable) {
+        ""
     }
 
     private fun cachedToTrack(cached: YouTubeVideoCacheEntity): Track = Track(
@@ -141,10 +161,11 @@ class YouTubeRepositoryImpl @Inject constructor(
         streamUrl = null,  // Re-resolved live by the player.
         artUrl = cached.artUrl,
         albumTitle = "",
+        albumUrl = cached.albumUrl,
         source = TrackSource.YOUTUBE,
     )
 
-    private fun Track.toCacheEntity(videoId: String): YouTubeVideoCacheEntity =
+    private fun Track.toCacheEntity(videoId: String, albumLookupDone: Boolean = false): YouTubeVideoCacheEntity =
         YouTubeVideoCacheEntity(
             videoId = videoId,
             title = title,
@@ -152,6 +173,8 @@ class YouTubeRepositoryImpl @Inject constructor(
             artistUrl = artistUrl,
             durationSec = duration,
             artUrl = artUrl,
+            albumUrl = albumUrl,
+            albumLookupDone = albumLookupDone,
         )
 
     override suspend fun getRecommendations(videoUrl: String): List<SearchResult> {

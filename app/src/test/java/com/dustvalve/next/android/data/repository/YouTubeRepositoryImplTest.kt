@@ -50,10 +50,13 @@ class YouTubeRepositoryImplTest {
         coEvery { videoCacheMock.getById(any()) } returns null
         coEvery { videoCacheMock.getByIds(any()) } returns emptyList()
         coEvery { playlistCacheMock.getById(any()) } returns null
+        val ytmRepoMock = mockk<com.dustvalve.next.android.domain.repository.YouTubeMusicRepository>(relaxed = true)
+        coEvery { ytmRepoMock.lookupAlbumPlaylistForVideo(any()) } returns null
         repo = YouTubeRepositoryImpl(
             client, playerParser, searchParser, playlistParser, channelParser, nextParser,
             videoCache = videoCacheMock,
             playlistCache = playlistCacheMock,
+            youTubeMusicRepository = ytmRepoMock,
         )
     }
 
@@ -110,7 +113,15 @@ class YouTubeRepositoryImplTest {
         every { playerParser.parseTrack(empty, "vidVidVid12") } returns track
 
         val out = repo.getTrackInfo("https://www.youtube.com/watch?v=vidVidVid12")
-        assertThat(out).isSameInstanceAs(track)
+        // getTrackInfo now returns parsed.copy(albumUrl = resolved) — a new
+        // instance rather than the parser's exact object — so compare fields
+        // instead of identity.
+        assertThat(out.id).isEqualTo(track.id)
+        assertThat(out.title).isEqualTo(track.title)
+        assertThat(out.artist).isEqualTo(track.artist)
+        assertThat(out.source).isEqualTo(track.source)
+        // YTM album lookup is stubbed to null → empty albumUrl.
+        assertThat(out.albumUrl).isEmpty()
     }
 
     @Test fun `getRecommendations calls next and parses`() = runTest {

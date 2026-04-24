@@ -13,4 +13,13 @@ interface YouTubeMusicRepository {
      * shared first-party Innertube /player layer (no NewPipe dependency).
      */
     suspend fun resolveStreamUrl(videoId: String): String
+
+    /**
+     * Looks up the YT Music album associated with [videoId] and returns a
+     * standard `youtube.com/playlist?list=OLAK5uy_…` URL that can be opened
+     * via the shared `YouTubeSource.getCollection` path. Returns `null` when
+     * the video has no YTM album (plain YouTube upload, personal video, etc.)
+     * or when any step of the lookup fails.
+     */
+    suspend fun lookupAlbumPlaylistForVideo(videoId: String): String?
 }
