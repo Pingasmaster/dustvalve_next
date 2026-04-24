@@ -20,4 +20,12 @@ data class AlbumEntity(
     val saleItemId: Long? = null,
     val saleItemType: String? = null,
     val source: String = "bandcamp",
+    // Bandcamp "buy full discography" bundle offer cached on the album row so
+    // the album viewer can show the option without re-scraping.
+    val discogPriceAmount: Double? = null,
+    val discogPriceCurrency: String? = null,
+    val discogUrl: String? = null,
+    val discogName: String? = null,
+    val singleTrackPriceAmount: Double? = null,
+    val singleTrackPriceCurrency: String? = null,
 )

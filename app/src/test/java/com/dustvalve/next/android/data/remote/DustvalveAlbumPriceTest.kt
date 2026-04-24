@@ -189,4 +189,30 @@ class DustvalveAlbumPriceTest {
         assertThat(scraper.extractAlbumPrice(html))
             .isEqualTo(AlbumPrice(amount = 3.33, currency = "JPY"))
     }
+
+    // ── /track/ pages (single-track release: no separate /album/ page) ────
+
+    @Test fun `moeshop - HARDCODED single-track page returns 1_50 USD`() {
+        // Real /track/ page where the outer JSON-LD is MusicRecording (not
+        // MusicAlbum) and the album block lives in inAlbum.albumRelease[].
+        // Also exercises skipping the discography bundle (item_type == "b")
+        // before returning the track offer.
+        val price = scraper.extractAlbumPrice(load("track_moeshop_hardcoded.html"))
+        assertThat(price).isEqualTo(AlbumPrice(amount = 1.5, currency = "USD"))
+    }
+
+    @Test fun `MusicRecording inAlbum bundle is skipped and album offer wins`() {
+        val html = """
+            <script type="application/ld+json">
+            {"@type":"MusicRecording","inAlbum":{"@type":"MusicAlbum","albumRelease":[
+              {"additionalProperty":[{"name":"item_type","value":"b"}],
+               "offers":{"price":99.0,"priceCurrency":"USD"}},
+              {"additionalProperty":[{"name":"item_type","value":"t"}],
+               "offers":{"price":2.5,"priceCurrency":"EUR"}}
+            ]}}
+            </script>
+        """.trimIndent()
+        assertThat(scraper.extractAlbumPrice(html))
+            .isEqualTo(AlbumPrice(amount = 2.5, currency = "EUR"))
+    }
 }

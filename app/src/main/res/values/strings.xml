@@ -339,6 +339,13 @@
 
     <!-- Detail screens (album, artist, Spotify, YouTube) -->
     <string name="detail_tracks_label">Tracks</string>
+    <string name="detail_duration_minutes">%1$d min</string>
+    <string name="detail_duration_hours_only">%1$d hr</string>
+    <string name="detail_duration_hours_minutes">%1$d hr %2$d min</string>
+    <string name="detail_buy_full_discography">Buy full discography</string>
+    <string name="detail_buy_full_discography_priced">Buy full discography (%1$s)</string>
+    <string name="detail_buy_this_album">Buy this album</string>
+    <string name="detail_buy_single_track">Buy a single track</string>
     <string name="detail_delete_downloads_title">Delete downloads</string>
     <string name="detail_delete_download_title">Delete download</string>
     <string name="detail_error_load_album">Failed to load album</string>

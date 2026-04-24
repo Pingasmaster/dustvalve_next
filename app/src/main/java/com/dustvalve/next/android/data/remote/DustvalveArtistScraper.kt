@@ -222,7 +222,31 @@ class DustvalveArtistScraper @Inject constructor(
             bio = bio,
             location = location,
             albums = albums,
+            hasDiscographyOffer = extractMeetsBuyFullDiscography(html),
         )
+    }
+
+    /**
+     * Bandcamp embeds a `data-band="..."` JSON blob on every artist page
+     * containing the band's settings. The flag we care about is
+     * `meets_buy_full_discography_criteria`: when true, bandcamp itself
+     * surfaces a "buy full discography" banner on the artist page. We cache
+     * just the boolean on the artist row; the actual price + buy URL come
+     * from the album/track JSON-LD (cached on AlbumEntity), which avoids a
+     * second network round-trip from the artist scraper.
+     */
+    internal fun extractMeetsBuyFullDiscography(html: String): Boolean {
+        // The data-band attribute is HTML-entity-encoded; we don't need to
+        // fully decode for a boolean flag — a substring check is sufficient
+        // and dodges the cost of full JSON parsing.
+        // True can appear as `true`, `1`, or `&quot;true&quot;` depending on
+        // bandcamp's serializer; in practice it's always boolean true / int 1.
+        val needle = "meets_buy_full_discography_criteria"
+        val idx = html.indexOf(needle)
+        if (idx < 0) return false
+        // Look at the next ~32 chars after the key to find the value token.
+        val tail = html.substring(idx + needle.length, (idx + needle.length + 32).coerceAtMost(html.length))
+        return Regex("""[":\s]*(?:&quot;)?(true|1)(?:&quot;)?""").find(tail) != null
     }
 
     private fun normalizeUrl(url: String): String {

@@ -329,7 +329,10 @@ fun AlbumDetailScreen(
                     if (album.tracks.isNotEmpty()) {
                         item(key = "tracks_header") {
                             Text(
-                                text = stringResource(R.string.detail_tracks_label),
+                                text = com.dustvalve.next.android.ui.util.tracksHeaderLabel(
+                                    trackCount = album.tracks.size,
+                                    totalDurationSec = album.tracks.sumOf { it.duration.toDouble() }.toLong(),
+                                ),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
                                 modifier = Modifier
                                     .padding(
@@ -382,6 +385,7 @@ fun AlbumDetailScreen(
                                     },
                                     isDownloading = track.id in state.downloadingTrackIds,
                                     isDownloaded = isTrackDownloaded,
+                                    priceSuffix = album.singleTrackPrice?.let { formatPrice(it) },
                                 )
                             }
                         }
@@ -389,14 +393,19 @@ fun AlbumDetailScreen(
 
                     // Bandcamp-only "Buy" split CTA — opens the album page in
                     // the default browser. Trailing chevron exposes "Send as
-                    // a gift" which routes to the same page.
+                    // a gift" and, when the artist offers a buy-full-
+                    // discography bundle, an "Buy full discography (price)"
+                    // option that switches the leading button to the bundle
+                    // price + URL.
                     if (album.url.contains("bandcamp.com", ignoreCase = true)) {
                         item(key = "buy_on_bandcamp") {
                             val uriHandler = LocalUriHandler.current
                             BuyOnBandcampSplitButton(
-                                price = album.price,
-                                onBuy = { uriHandler.openUri(album.url) },
-                                onSendAsGift = { uriHandler.openUri(album.url) },
+                                albumPrice = album.price,
+                                singleTrackPrice = album.singleTrackPrice,
+                                albumUrl = album.url,
+                                discographyOffer = album.discographyOffer,
+                                onOpen = { uriHandler.openUri(it) },
                                 modifier = Modifier.animateItem(),
                             )
                         }
@@ -661,26 +670,49 @@ internal fun ExpandableDescription(
 }
 
 /**
- * M3E SplitButtonLayout: leading button is the actual XL "Buy" CTA showing
- * the formatted price + shopping-bag icon; trailing chevron opens a
- * DropdownMenu containing "Send as a gift". Both routes go through the
- * caller's [LocalUriHandler] to the album's Bandcamp page.
+ * M3E SplitButtonLayout for Bandcamp's "Buy" CTA.
  *
- * The DropdownMenu lives inside the trailing-button slot so it anchors to
- * the chevron specifically (not the wrapping centred Box), keeping it
- * visually attached to the split section instead of pinned to the screen
- * edge.
+ * Leading button shows the active offer's formatted price + shopping-bag
+ * icon; tapping opens that offer's URL in the user's browser. Trailing
+ * chevron opens a DropdownMenu with:
+ *   - "Send as a gift" — opens the same URL (Bandcamp's gift flow lives
+ *     inside the page itself).
+ *   - "Buy full discography (price)" — present only when the album's
+ *     [discographyOffer] is non-null. Selecting it switches the leading
+ *     button's price + URL to the bundle.
+ *   - "Buy this album (price)" — only visible when discography is
+ *     currently selected, lets the user revert to the per-album offer.
+ *
+ * The DropdownMenu lives inside the trailing-button slot so the popup
+ * anchors to the chevron, not the wrapping centred Box.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi::class)
 @Composable
 private fun BuyOnBandcampSplitButton(
-    price: com.dustvalve.next.android.domain.model.AlbumPrice?,
-    onBuy: () -> Unit,
-    onSendAsGift: () -> Unit,
+    albumPrice: com.dustvalve.next.android.domain.model.AlbumPrice?,
+    singleTrackPrice: com.dustvalve.next.android.domain.model.AlbumPrice?,
+    albumUrl: String,
+    discographyOffer: com.dustvalve.next.android.domain.model.DiscographyOffer?,
+    onOpen: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    val label = price?.let { formatPrice(it) }
+
+    /** Which offer the leading button currently shows. */
+    var activeMode by rememberSaveable(albumUrl) { mutableStateOf("album") }
+    if (activeMode == "discography" && discographyOffer == null) activeMode = "album"
+    if (activeMode == "track" && singleTrackPrice == null) activeMode = "album"
+
+    val activePrice = when (activeMode) {
+        "discography" -> discographyOffer?.price
+        "track" -> singleTrackPrice
+        else -> albumPrice
+    }
+    val activeUrl = when (activeMode) {
+        "discography" -> discographyOffer?.url ?: albumUrl
+        else -> albumUrl  // "track" stays on the album page; bandcamp's UI lets the user pick a single track there.
+    }
+    val activeLabel = activePrice?.let { formatPrice(it) }
         ?: stringResource(R.string.detail_buy_on_bandcamp)
 
     Box(
@@ -692,7 +724,7 @@ private fun BuyOnBandcampSplitButton(
         androidx.compose.material3.SplitButtonLayout(
             leadingButton = {
                 androidx.compose.material3.SplitButtonDefaults.LeadingButton(
-                    onClick = onBuy,
+                    onClick = { onOpen(activeUrl) },
                     modifier = Modifier.heightIn(min = 80.dp),
                     contentPadding = PaddingValues(horizontal = 32.dp, vertical = 18.dp),
                 ) {
@@ -702,13 +734,10 @@ private fun BuyOnBandcampSplitButton(
                         modifier = Modifier.size(28.dp),
                     )
                     Spacer(Modifier.size(12.dp))
-                    Text(text = label, style = MaterialTheme.typography.titleLarge)
+                    Text(text = activeLabel, style = MaterialTheme.typography.titleLarge)
                 }
             },
             trailingButton = {
-                // Anchoring the DropdownMenu inside the trailing-button slot
-                // makes the popup appear under the chevron, not pinned to
-                // the screen's left edge.
                 Box {
                     androidx.compose.material3.SplitButtonDefaults.TrailingButton(
                         checked = menuOpen,
@@ -737,9 +766,40 @@ private fun BuyOnBandcampSplitButton(
                             text = { Text(stringResource(R.string.detail_send_as_gift)) },
                             onClick = {
                                 menuOpen = false
-                                onSendAsGift()
+                                onOpen(activeUrl)
                             },
                         )
+                        // Switch-to options — only show the modes we're not
+                        // already on and that are actually available.
+                        if (activeMode != "album" && albumPrice != null) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Text("${stringResource(R.string.detail_buy_this_album)} (${formatPrice(albumPrice)})")
+                                },
+                                onClick = { menuOpen = false; activeMode = "album" },
+                            )
+                        }
+                        if (activeMode != "track" && singleTrackPrice != null) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Text("${stringResource(R.string.detail_buy_single_track)} (${formatPrice(singleTrackPrice)})")
+                                },
+                                onClick = { menuOpen = false; activeMode = "track" },
+                            )
+                        }
+                        if (activeMode != "discography" && discographyOffer != null) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(
+                                            R.string.detail_buy_full_discography_priced,
+                                            formatPrice(discographyOffer.price),
+                                        )
+                                    )
+                                },
+                                onClick = { menuOpen = false; activeMode = "discography" },
+                            )
+                        }
                     }
                 }
             },

@@ -4,7 +4,9 @@ import com.dustvalve.next.android.data.local.db.entity.AlbumEntity
 import com.dustvalve.next.android.data.local.db.entity.ArtistEntity
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
 import com.dustvalve.next.android.domain.model.Album
+import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.Artist
+import com.dustvalve.next.android.domain.model.DiscographyOffer
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
@@ -38,6 +40,18 @@ fun AlbumEntity.toDomain(tracks: List<Track>, isFavorite: Boolean): Album = Albu
     purchaseInfo = if (saleItemId != null && saleItemType != null) {
         PurchaseInfo(saleItemId, saleItemType)
     } else null,
+    discographyOffer = if (
+        discogPriceAmount != null && !discogPriceCurrency.isNullOrBlank() && !discogUrl.isNullOrBlank()
+    ) {
+        DiscographyOffer(
+            price = AlbumPrice(amount = discogPriceAmount, currency = discogPriceCurrency),
+            url = discogUrl,
+            name = discogName ?: "",
+        )
+    } else null,
+    singleTrackPrice = if (singleTrackPriceAmount != null && !singleTrackPriceCurrency.isNullOrBlank()) {
+        AlbumPrice(amount = singleTrackPriceAmount, currency = singleTrackPriceCurrency)
+    } else null,
 )
 
 fun Album.toEntity(): AlbumEntity = AlbumEntity(
@@ -53,6 +67,12 @@ fun Album.toEntity(): AlbumEntity = AlbumEntity(
     autoDownload = autoDownload,
     saleItemId = purchaseInfo?.saleItemId,
     saleItemType = purchaseInfo?.saleItemType,
+    discogPriceAmount = discographyOffer?.price?.amount,
+    discogPriceCurrency = discographyOffer?.price?.currency,
+    discogUrl = discographyOffer?.url,
+    discogName = discographyOffer?.name,
+    singleTrackPriceAmount = singleTrackPrice?.amount,
+    singleTrackPriceCurrency = singleTrackPrice?.currency,
 )
 
 fun TrackEntity.toDomain(isFavorite: Boolean): Track = Track(
@@ -102,6 +122,7 @@ fun ArtistEntity.toDomain(albums: List<Album>, isFavorite: Boolean = false): Art
     albums = albums,
     isFavorite = isFavorite,
     autoDownload = autoDownload,
+    hasDiscographyOffer = hasDiscographyOffer,
 )
 
 fun Artist.toEntity(): ArtistEntity = ArtistEntity(
@@ -113,4 +134,5 @@ fun Artist.toEntity(): ArtistEntity = ArtistEntity(
     location = location,
     autoDownload = autoDownload,
     albumIdOrder = tagJson.encodeToString(albums.map { it.id }),
+    hasDiscographyOffer = hasDiscographyOffer,
 )

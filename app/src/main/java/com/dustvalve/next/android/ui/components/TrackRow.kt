@@ -49,6 +49,8 @@ fun TrackRow(
     onDownloadClick: (() -> Unit)? = null,
     isDownloading: Boolean = false,
     isDownloaded: Boolean = false,
+    /** Optional per-track price suffix (Bandcamp only); appended after duration with a centred dot. */
+    priceSuffix: String? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -132,8 +134,10 @@ fun TrackRow(
             )
         },
         supportingContent = {
+            val durationStr = TimeUtils.formatDuration(track.duration)
+            val text = if (!priceSuffix.isNullOrBlank()) "$durationStr  ·  $priceSuffix" else durationStr
             Text(
-                text = TimeUtils.formatDuration(track.duration),
+                text = text,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
