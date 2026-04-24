@@ -196,6 +196,7 @@
     <string name="settings_auto_download_favorites_desc">Also download every favorited track in the background</string>
     <string name="player_cd_open_artist">Open artist page</string>
     <string name="player_cd_open_album">Open album page</string>
+    <string name="snackbar_no_album_for_track">No album for this track</string>
     <string name="settings_volume_slider">Volume slider</string>
     <string name="settings_volume_slider_desc">Show a volume slider next to album art in the music player</string>
     <string name="settings_volume_button">Volume button</string>

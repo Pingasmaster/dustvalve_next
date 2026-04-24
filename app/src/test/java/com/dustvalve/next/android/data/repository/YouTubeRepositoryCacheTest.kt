@@ -47,6 +47,7 @@ class YouTubeRepositoryCacheTest {
     private lateinit var nextParser: YouTubeNextParser
     private lateinit var videoCache: YouTubeVideoCacheDao
     private lateinit var playlistCache: YouTubePlaylistCacheDao
+    private lateinit var ytmRepo: com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
     private lateinit var repo: YouTubeRepositoryImpl
 
     @Before fun setUp() {
@@ -58,9 +59,11 @@ class YouTubeRepositoryCacheTest {
         nextParser = mockk(relaxed = true)
         videoCache = mockk(relaxed = true)
         playlistCache = mockk(relaxed = true)
+        ytmRepo = mockk(relaxed = true)
+        coEvery { ytmRepo.lookupAlbumPlaylistForVideo(any()) } returns null
         repo = YouTubeRepositoryImpl(
             client, playerParser, searchParser, playlistParser, channelParser, nextParser,
-            videoCache, playlistCache,
+            videoCache, playlistCache, ytmRepo,
         )
     }
 
@@ -72,6 +75,7 @@ class YouTubeRepositoryCacheTest {
             artistUrl = "https://www.youtube.com/channel/UCx",
             durationSec = 233f,
             artUrl = "https://i.ytimg.com/vi/abc12345678/hqdefault.jpg",
+            albumLookupDone = true,  // Already-resolved row — fully complete cache hit.
         )
 
         val track = repo.getTrackInfo("https://www.youtube.com/watch?v=abc12345678")

@@ -252,6 +252,8 @@ data class YtVideoSnapshot(
     val artistUrl: String,
     val durationSec: Float,
     val artUrl: String,
+    val albumUrl: String = "",
+    val albumLookupDone: Boolean = false,
     val cachedAt: Long = 0L,
 )
 
@@ -278,10 +280,26 @@ data class MetadataCacheFile(
 )
 
 fun YouTubeVideoCacheEntity.toSnapshot() = YtVideoSnapshot(
-    videoId, title, artist, artistUrl, durationSec, artUrl, cachedAt,
+    videoId = videoId,
+    title = title,
+    artist = artist,
+    artistUrl = artistUrl,
+    durationSec = durationSec,
+    artUrl = artUrl,
+    albumUrl = albumUrl,
+    albumLookupDone = albumLookupDone,
+    cachedAt = cachedAt,
 )
 fun YtVideoSnapshot.toEntity() = YouTubeVideoCacheEntity(
-    videoId, title, artist, artistUrl, durationSec, artUrl, cachedAt,
+    videoId = videoId,
+    title = title,
+    artist = artist,
+    artistUrl = artistUrl,
+    durationSec = durationSec,
+    artUrl = artUrl,
+    albumUrl = albumUrl,
+    albumLookupDone = albumLookupDone,
+    cachedAt = cachedAt,
 )
 fun YouTubePlaylistCacheEntity.toSnapshot() = YtPlaylistSnapshot(
     playlistId, title, videoIdsJson, cachedAt,

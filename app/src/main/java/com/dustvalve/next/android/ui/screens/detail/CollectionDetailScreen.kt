@@ -12,30 +12,32 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilledTonalIconToggleButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButtonColors
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -46,8 +48,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -67,7 +67,12 @@ import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
  * Source-agnostic playlist / collection detail screen. Loads via
  * [com.dustvalve.next.android.domain.repository.MusicSource.getCollection].
  *
- * Replaces `YouTubePlaylistDetailScreen`.
+ * Visually mirrors [com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen]:
+ * name lives in the top-bar (no hero overlay), actions are a connected M3E
+ * ButtonGroup offset -28dp to sit on the cover's bottom edge. Differences
+ * versus album detail are scope-appropriate: no Buy CTA, no tags, no bio, no
+ * Artist-nav button (a playlist has no single artist), plus a mix-style
+ * infinite-scroll footer that album detail doesn't need.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -200,9 +205,14 @@ fun CollectionDetailScreen(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentPadding = PaddingValues(bottom = 10.dp),
                 ) {
+                    // Hero cover. Name + track count live in the top-bar, so
+                    // the hero is the bare artwork — matches AlbumDetailScreen.
                     item(key = "hero") {
                         Box(
-                            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .animateItem(),
                         ) {
                             if (!heroUrl.isNullOrBlank()) {
                                 AsyncImage(
@@ -218,133 +228,38 @@ fun CollectionDetailScreen(
                                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 )
                             }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(180.dp)
-                                    .align(Alignment.BottomCenter)
-                                    .background(
-                                        Brush.verticalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                                                MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
-                                                MaterialTheme.colorScheme.surface,
-                                            ),
-                                        ),
-                                    ),
-                            )
-                            Column(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                            ) {
-                                Text(
-                                    text = state.name,
-                                    style = MaterialTheme.typography.headlineLargeEmphasized,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
                         }
                     }
 
                     item(key = "actions") {
-                        Surface(
+                        val allDownloaded = state.tracks.isNotEmpty() &&
+                            state.tracks.all { it.id in state.downloadedTrackIds }
+                        CollectionActionBar(
+                            isFavorite = state.isFavorite,
+                            isDownloading = state.isDownloading,
+                            allTracksDownloaded = allDownloaded,
+                            hasTracks = state.tracks.isNotEmpty(),
+                            onPlayAll = {
+                                if (state.tracks.isNotEmpty()) {
+                                    playerViewModel.playAlbum(state.tracks, 0)
+                                }
+                            },
+                            onShuffle = {
+                                if (state.tracks.isNotEmpty()) {
+                                    playerViewModel.playAlbum(state.tracks.shuffled(), 0)
+                                }
+                            },
+                            onToggleFavorite = { viewModel.toggleFavorite() },
+                            onDownload = {
+                                if (allDownloaded) showDeleteDialog = true
+                                else viewModel.downloadAll()
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            shape = MaterialTheme.shapes.large,
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Button(
-                                    onClick = {
-                                        if (state.tracks.isNotEmpty()) {
-                                            playerViewModel.playAlbum(state.tracks, 0)
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    enabled = state.tracks.isNotEmpty(),
-                                    shapes = ButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_play_arrow),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(ButtonDefaults.IconSize),
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(stringResource(R.string.common_play_all))
-                                }
-
-                                FilledTonalIconButton(
-                                    onClick = {
-                                        if (state.tracks.isNotEmpty()) {
-                                            playerViewModel.playAlbum(state.tracks.shuffled(), 0)
-                                        }
-                                    },
-                                    enabled = state.tracks.isNotEmpty(),
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_shuffle),
-                                        contentDescription = stringResource(R.string.common_cd_shuffle_play),
-                                    )
-                                }
-
-                                FilledTonalIconToggleButton(
-                                    checked = state.isFavorite,
-                                    onCheckedChange = { viewModel.toggleFavorite() },
-                                    colors = IconToggleButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                        disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        checkedContentColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (state.isFavorite) R.drawable.ic_favorite
-                                            else R.drawable.ic_favorite_border,
-                                        ),
-                                        contentDescription = if (state.isFavorite) stringResource(R.string.detail_cd_remove_favorites)
-                                            else stringResource(R.string.detail_cd_add_favorites),
-                                    )
-                                }
-
-                                val allDownloaded = state.tracks.isNotEmpty() &&
-                                    state.tracks.all { it.id in state.downloadedTrackIds }
-                                FilledTonalIconButton(
-                                    onClick = {
-                                        if (allDownloaded) showDeleteDialog = true
-                                        else viewModel.downloadAll()
-                                    },
-                                    enabled = !state.isDownloading,
-                                    shapes = IconButtonDefaults.shapes(),
-                                ) {
-                                    if (state.isDownloading) {
-                                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
-                                    } else {
-                                        Icon(
-                                            painter = painterResource(
-                                                if (allDownloaded) R.drawable.ic_download_done
-                                                else R.drawable.ic_download,
-                                            ),
-                                            contentDescription = if (allDownloaded) stringResource(R.string.detail_cd_delete_downloads)
-                                                else stringResource(R.string.detail_cd_download_all),
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                                .padding(horizontal = 16.dp)
+                                .offset(y = (-28).dp)
+                                .animateItem(),
+                        )
                     }
 
                     if (state.tracks.isNotEmpty()) {
@@ -355,9 +270,12 @@ fun CollectionDetailScreen(
                                     totalDurationSec = state.tracks.sumOf { it.duration.toDouble() }.toLong(),
                                 ),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
-                                modifier = Modifier.padding(
-                                    start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp,
-                                ),
+                                modifier = Modifier
+                                    .padding(
+                                        start = 20.dp, end = 20.dp,
+                                        top = 16.dp, bottom = 4.dp,
+                                    )
+                                    .animateItem(),
                             )
                         }
                         items(
@@ -366,7 +284,15 @@ fun CollectionDetailScreen(
                         ) { index ->
                             val track = state.tracks[index]
                             val isCurrent = playerState.currentTrack?.id == track.id
-                            SegmentedListItem(index = index, count = state.tracks.size) {
+                            SegmentedListItem(
+                                index = index,
+                                count = state.tracks.size,
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    fadeOutSpec = null,
+                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                ),
+                            ) {
                                 MusicRow(
                                     track = track,
                                     onClick = { playerViewModel.playAlbum(state.tracks, index) },
@@ -391,3 +317,107 @@ fun CollectionDetailScreen(
         }
     }
 }
+
+/**
+ * Connected M3E button-group action bar for collection detail. Layout:
+ * [Play all (weighted, primary filled)] · [Shuffle] · [Favorite (toggle)]
+ *  · [Download (toggle)].
+ *
+ * Mirrors `AlbumActionBar` minus the Artist-nav button — a playlist doesn't
+ * have a single artist. Spacing + shape morphing + heights match album
+ * detail so the two screens read as one design system.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun CollectionActionBar(
+    isFavorite: Boolean,
+    isDownloading: Boolean,
+    allTracksDownloaded: Boolean,
+    hasTracks: Boolean,
+    onPlayAll: () -> Unit,
+    onShuffle: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onDownload: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.heightIn(min = 56.dp),
+        horizontalArrangement = Arrangement.spacedBy(ActionBarSpacing),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Button(
+            onClick = onPlayAll,
+            enabled = hasTracks,
+            shape = ButtonGroupDefaults.connectedLeadingButtonShapes().shape,
+            modifier = Modifier
+                .weight(1f)
+                .heightIn(min = 56.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_play_arrow),
+                contentDescription = stringResource(R.string.common_play_all),
+            )
+        }
+
+        FilledTonalButton(
+            onClick = onShuffle,
+            enabled = hasTracks,
+            shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.heightIn(min = 56.dp),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_shuffle),
+                contentDescription = stringResource(R.string.common_cd_shuffle_play),
+            )
+        }
+
+        ToggleButton(
+            checked = isFavorite,
+            onCheckedChange = { onToggleFavorite() },
+            shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.heightIn(min = 56.dp),
+        ) {
+            Icon(
+                painter = painterResource(
+                    if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border
+                ),
+                contentDescription = if (isFavorite) {
+                    stringResource(R.string.detail_cd_remove_favorites)
+                } else {
+                    stringResource(R.string.detail_cd_add_favorites)
+                },
+            )
+        }
+
+        ToggleButton(
+            checked = allTracksDownloaded,
+            onCheckedChange = { onDownload() },
+            enabled = !isDownloading && hasTracks,
+            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier.heightIn(min = 56.dp),
+        ) {
+            if (isDownloading) {
+                CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
+            } else {
+                Icon(
+                    painter = painterResource(
+                        if (allTracksDownloaded) R.drawable.ic_download_done
+                        else R.drawable.ic_download
+                    ),
+                    contentDescription = if (allTracksDownloaded) {
+                        stringResource(R.string.detail_cd_delete_downloads)
+                    } else {
+                        stringResource(R.string.detail_cd_download_all)
+                    },
+                )
+            }
+        }
+    }
+}
+
+private val ActionBarSpacing = 8.dp

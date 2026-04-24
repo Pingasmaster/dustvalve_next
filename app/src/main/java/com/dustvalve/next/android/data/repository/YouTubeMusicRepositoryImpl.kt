@@ -7,6 +7,10 @@ import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerPar
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicSearchParser
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
@@ -110,5 +114,69 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
         "playlists" -> PLAYLISTS_PARAMS
         "artists" -> ARTISTS_PARAMS
         else -> SONGS_PARAMS
+    }
+
+    /**
+     * Two-step YTM album lookup for a track's [videoId]:
+     *   1. POST /next → find the first `browseEndpoint` whose
+     *      `browseEndpointContextMusicConfig.pageType == MUSIC_PAGE_TYPE_ALBUM`;
+     *      short-circuit to null if the video has no YTM album context.
+     *   2. POST /browse with that `MPREb_…` id → pluck the `audioPlaylistId`
+     *      (the `OLAK5uy_…` playlist the YTM UI uses for the album).
+     * Returns a canonical youtube.com/playlist URL so callers can route
+     * straight through the shared [com.dustvalve.next.android.data.repository.YouTubeSource]
+     * path. Any network or parse failure yields null — the caller treats that
+     * as "no album" and stores it idempotently.
+     */
+    override suspend fun lookupAlbumPlaylistForVideo(videoId: String): String? {
+        val nextJson = try {
+            client.next(videoId)
+        } catch (_: Throwable) {
+            return null
+        }
+        val albumBrowseId = findAlbumBrowseId(nextJson) ?: return null
+        val browseJson = try {
+            client.browse(albumBrowseId)
+        } catch (_: Throwable) {
+            return null
+        }
+        val audioPlaylistId = findAudioPlaylistId(browseJson) ?: return null
+        return "https://www.youtube.com/playlist?list=$audioPlaylistId"
+    }
+
+    private fun findAlbumBrowseId(root: JsonElement): String? {
+        when (root) {
+            is JsonObject -> {
+                val browseEndpoint = root["browseEndpoint"] as? JsonObject
+                if (browseEndpoint != null) {
+                    val pageType = ((browseEndpoint["browseEndpointContextSupportedConfigs"]
+                        as? JsonObject)
+                        ?.get("browseEndpointContextMusicConfig") as? JsonObject)
+                        ?.get("pageType")
+                        ?.let { (it as? JsonPrimitive)?.content }
+                    if (pageType == "MUSIC_PAGE_TYPE_ALBUM") {
+                        val id = (browseEndpoint["browseId"] as? JsonPrimitive)?.content
+                        if (!id.isNullOrBlank()) return id
+                    }
+                }
+                for (v in root.values) findAlbumBrowseId(v)?.let { return it }
+            }
+            is JsonArray -> for (v in root) findAlbumBrowseId(v)?.let { return it }
+            else -> Unit
+        }
+        return null
+    }
+
+    private fun findAudioPlaylistId(root: JsonElement): String? {
+        when (root) {
+            is JsonObject -> {
+                (root["audioPlaylistId"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
+                    ?.let { return it }
+                for (v in root.values) findAudioPlaylistId(v)?.let { return it }
+            }
+            is JsonArray -> for (v in root) findAudioPlaylistId(v)?.let { return it }
+            else -> Unit
+        }
+        return null
     }
 }

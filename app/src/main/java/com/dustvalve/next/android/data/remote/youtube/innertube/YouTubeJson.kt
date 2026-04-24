@@ -31,6 +31,19 @@ internal fun JsonElement.runsText(key: String): String? {
 }
 
 /**
+ * First `browseEndpoint.browseId` found inside the `runs` array at [key]. YT
+ * bylines (shortBylineText, longBylineText) carry the channel's UC… id here.
+ */
+internal fun JsonElement.runsBrowseId(key: String): String? {
+    val runs = path(key)?.path("runs")?.arr() ?: return null
+    for (run in runs) {
+        val id = run.path("navigationEndpoint")?.path("browseEndpoint")?.str("browseId")
+        if (id != null) return id
+    }
+    return null
+}
+
+/**
  * YouTube (non-Music) thumbnail extraction. Picks the largest by width and
  * then rewrites the URL to request a higher-resolution variant when the URL
  * shape supports it — see [bumpYtThumbnailResolution].

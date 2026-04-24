@@ -848,4 +848,14 @@ class PlayerViewModel @Inject constructor(
     fun clearSnackbar() {
         _extraState.update { it.copy(snackbarMessage = null) }
     }
+
+    /** Feedback for the full-player Album button when the video has no YTM album. */
+    fun showNoAlbumSnackbar() {
+        _extraState.update {
+            it.copy(
+                snackbarMessage = UiText.StringResource(R.string.snackbar_no_album_for_track),
+                isSnackbarError = false,
+            )
+        }
+    }
 }

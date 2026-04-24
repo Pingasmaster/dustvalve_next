@@ -447,9 +447,27 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                         }
                     },
                     onAlbumClick = { track ->
-                        if (track.albumUrl.isNotBlank()) {
-                            navViewModel.collapsePlayer()
-                            navViewModel.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
+                        when {
+                            track.source == TrackSource.YOUTUBE -> {
+                                if (track.albumUrl.isNotBlank()) {
+                                    navViewModel.collapsePlayer()
+                                    navViewModel.navigateTo(
+                                        NavDestination.CollectionDetail(
+                                            url = track.albumUrl,
+                                            sourceId = "youtube",
+                                            name = track.albumTitle,
+                                        ),
+                                    )
+                                } else {
+                                    // Pre-fetch already ran (albumLookupDone=true);
+                                    // empty means the video has no YTM album.
+                                    playerViewModel.showNoAlbumSnackbar()
+                                }
+                            }
+                            track.albumUrl.isNotBlank() -> {
+                                navViewModel.collapsePlayer()
+                                navViewModel.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
+                            }
                         }
                     },
                 )

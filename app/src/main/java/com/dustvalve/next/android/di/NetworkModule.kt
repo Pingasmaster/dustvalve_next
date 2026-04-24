@@ -18,6 +18,16 @@ object NetworkModule {
 
     private const val USER_AGENT =
         "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+
+    /**
+     * Matches [com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent].
+     * Kept as a duplicate constant (rather than a cross-module import) so this
+     * low-level network module has no dependency on the YouTube innertube
+     * layer — it only needs the UA string for host-based routing.
+     */
+    private const val ANDROID_VR_USER_AGENT =
+        "com.google.android.apps.youtube.vr.oculus/1.61.48 " +
+            "(Linux; U; Android 12L; eureka-user Build/SQ3A.220605.009.A1) gzip"
     private const val RATE_LIMIT_INTERVAL_MS = 500L
     private const val MAX_RETRIES = 3
     private const val INITIAL_BACKOFF_MS = 1000L
@@ -38,11 +48,27 @@ object NetworkModule {
             .build()
     }
 
+    /**
+     * Sets the User-Agent only when the caller hasn't supplied one
+     * (Innertube POSTs set their own per-client UA and must pass through
+     * untouched) and picks the UA by host for everything else. `googlevideo`
+     * + youtube-family hosts get the ANDROID_VR UA so streaming requests
+     * align with the `/player` client that issued the URL — avoiding the
+     * client/URL-identity mismatch that triggers googlevideo's soft throttle
+     * (the "1-2 s play, 1 s stall" pattern).
+     */
     private fun userAgentInterceptor(): Interceptor = Interceptor { chain ->
-        val request = chain.request().newBuilder()
-            .header("User-Agent", USER_AGENT)
-            .build()
-        chain.proceed(request)
+        val request = chain.request()
+        if (request.header("User-Agent") != null) {
+            return@Interceptor chain.proceed(request)
+        }
+        val host = request.url.host
+        val ua = when {
+            host == "googlevideo.com" || host.endsWith(".googlevideo.com") -> ANDROID_VR_USER_AGENT
+            host == "youtube.com" || host.endsWith(".youtube.com") || host == "youtu.be" -> ANDROID_VR_USER_AGENT
+            else -> USER_AGENT
+        }
+        chain.proceed(request.newBuilder().header("User-Agent", ua).build())
     }
 
     private fun rateLimitInterceptor(): Interceptor = Interceptor { chain ->

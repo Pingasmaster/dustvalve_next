@@ -116,6 +116,10 @@ class YouTubePlaylistParser @Inject constructor() {
         val videoId = pvr.str("videoId") ?: return null
         val title = pvr.runsText("title") ?: return null
         val artist = pvr.runsText("shortBylineText") ?: ""
+        val channelId = pvr.runsBrowseId("shortBylineText")
+        val artistUrl = if (!channelId.isNullOrBlank()) {
+            "https://www.youtube.com/channel/$channelId"
+        } else ""
         val durationSec = pvr.str("lengthSeconds")?.toFloatOrNull() ?: 0f
         val art = pvr.path("thumbnail")?.extractThumbnail() ?: ""
         return Track(
@@ -123,7 +127,7 @@ class YouTubePlaylistParser @Inject constructor() {
             albumId = "yt_playlist_$playlistId",
             title = title,
             artist = artist,
-            artistUrl = "",
+            artistUrl = artistUrl,
             trackNumber = trackNumber,
             duration = durationSec,
             streamUrl = "https://www.youtube.com/watch?v=$videoId",
@@ -212,6 +216,11 @@ class YouTubePlaylistParser @Inject constructor() {
         val artist = pvr.runsText("longBylineText")
             ?: pvr.runsText("shortBylineText")
             ?: ""
+        val channelId = pvr.runsBrowseId("longBylineText")
+            ?: pvr.runsBrowseId("shortBylineText")
+        val artistUrl = if (!channelId.isNullOrBlank()) {
+            "https://www.youtube.com/channel/$channelId"
+        } else ""
         // playlistPanelVideoRenderer carries lengthText (e.g. "3:45"), not lengthSeconds.
         val durationSec = pvr.str("lengthSeconds")?.toFloatOrNull()
             ?: pvr.runsText("lengthText")?.let { parseLengthText(it) }
@@ -222,7 +231,7 @@ class YouTubePlaylistParser @Inject constructor() {
             albumId = "yt_playlist_$playlistId",
             title = title,
             artist = artist,
-            artistUrl = "",
+            artistUrl = artistUrl,
             trackNumber = trackNumber,
             duration = durationSec,
             streamUrl = "https://www.youtube.com/watch?v=$videoId",
