@@ -268,6 +268,7 @@ private fun PlaylistContent(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         // Header with playlist icon and actions
         item(key = "header") {

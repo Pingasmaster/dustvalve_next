@@ -203,6 +203,7 @@ private fun YouTubeMusicContent(
     LazyColumn(
         state = lazyState,
         modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         if (heroShelf != null && heroShelf.items.isNotEmpty()) {
             item(key = "ytm_hero") {

@@ -330,7 +330,7 @@ fun BandcampScreen(
                 // Discover category rows
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp),
                 ) {
                     item(key = "discover_header") {
                         StaggeredAnimatedItem(index = 0) {
@@ -523,6 +523,7 @@ fun BandcampScreen(
                             LazyColumn(
                                 state = searchListState,
                                 modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 10.dp),
                             ) {
                                 itemsIndexed(
                                     items = searchState.results,
@@ -834,6 +835,7 @@ private fun CategorySheetContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         // Top 10 carousel
         if (carouselAlbums.isNotEmpty()) {

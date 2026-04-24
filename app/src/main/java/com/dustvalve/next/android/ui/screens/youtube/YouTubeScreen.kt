@@ -413,6 +413,7 @@ fun YouTubeScreen(
                             LazyColumn(
                                 state = searchListState,
                                 modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 10.dp),
                             ) {
                                 itemsIndexed(
                                     items = state.results,
@@ -692,6 +693,7 @@ private fun YouTubeSourceContent(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 10.dp),
         ) {
             if (state.selectedMood != null) {
                 item(key = "mood_section") {

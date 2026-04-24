@@ -211,6 +211,7 @@ fun ArtistDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
+                    contentPadding = PaddingValues(bottom = 10.dp),
                 ) {
                     // Hero image — name + location are already in the LargeFlexibleTopAppBar
                     // so we drop the legacy bottom-overlay text and the bottom-fade gradient.

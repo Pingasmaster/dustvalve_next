@@ -241,6 +241,7 @@ fun AlbumDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
+                    contentPadding = PaddingValues(bottom = 10.dp),
                 ) {
                     // Hero album art with gradient overlay
                     item(key = "album_art") {
