@@ -13,4 +13,10 @@ data class Artist(
     val albums: List<Album>,
     val isFavorite: Boolean = false,
     val autoDownload: Boolean = false,
+    /**
+     * True for Bandcamp artists whose data-band JSON has
+     * `meets_buy_full_discography_criteria: true`. Cached on the entity so
+     * subsequent loads don't refetch the artist page just to check.
+     */
+    val hasDiscographyOffer: Boolean = false,
 )

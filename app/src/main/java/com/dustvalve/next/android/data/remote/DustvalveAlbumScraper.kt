@@ -39,6 +39,8 @@ class DustvalveAlbumScraper @Inject constructor(
         @SerialName("art_id") val artId: Long = 0,
         @SerialName("item_type") val itemType: String = "",
         @SerialName("album_url") val albumUrl: String? = null,
+        /** Bandcamp's per-item suggested price for the artist (null on free/no-pricing items). */
+        @SerialName("defaultPrice") val defaultPrice: Double? = null,
     )
 
     @Serializable
@@ -55,7 +57,10 @@ class DustvalveAlbumScraper @Inject constructor(
     data class TrackInfo(
         val id: Long = 0,
         val title: String = "",
-        @SerialName("track_num") val trackNum: Int = 0,
+        // Single-track releases (e.g. moeshop's HARDCODED) ship `track_num: null`,
+        // so this has to be nullable; downstream code coerces null to the
+        // 1-based positional index.
+        @SerialName("track_num") val trackNum: Int? = null,
         val duration: Float = 0f,
         val file: TrackFile? = null,
     )
@@ -116,7 +121,7 @@ class DustvalveAlbumScraper @Inject constructor(
                 title = trackInfo.title,
                 artist = artistName,
                 artistUrl = artistUrl,
-                trackNumber = if (trackInfo.trackNum > 0) trackInfo.trackNum else index + 1,
+                trackNumber = trackInfo.trackNum?.takeIf { it > 0 } ?: (index + 1),
                 duration = trackInfo.duration,
                 streamUrl = trackInfo.file?.mp3128,
                 artUrl = artUrl,
@@ -137,6 +142,17 @@ class DustvalveAlbumScraper @Inject constructor(
             tracks = tracks,
             tags = tags,
             price = extractAlbumPrice(html),
+            discographyOffer = extractDiscographyOffer(html),
+            singleTrackPrice = run {
+                val albumPrice = extractAlbumPrice(html)
+                val def = tralbumData.defaultPrice
+                // Only surface a per-track price when bandcamp gives us one
+                // AND it differs from the album price; otherwise the "Buy a
+                // single track" option would be redundant noise.
+                if (def != null && def > 0.0 && albumPrice != null && def != albumPrice.amount) {
+                    AlbumPrice(amount = def, currency = albumPrice.currency)
+                } else null
+            },
         )
     }
 
@@ -158,37 +174,98 @@ class DustvalveAlbumScraper @Inject constructor(
      * up a MockWebServer.
      */
     fun extractAlbumPrice(html: String): AlbumPrice? {
+        for (releases in iterAlbumReleases(html)) {
+            for (release in releases) {
+                val obj = release as? kotlinx.serialization.json.JsonObject ?: continue
+                // Skip the discography bundle (item_type == "b"); we want the
+                // album/track itself (item_type == "a" or "t"), which on
+                // bandcamp is always the first non-bundle entry.
+                val itemType = additionalProperty(obj, "item_type")
+                if (itemType == "b") continue
+                val offer = obj["offers"] as? kotlinx.serialization.json.JsonObject ?: continue
+                val price = parseOffer(offer) ?: continue
+                return price
+            }
+            return null  // Found a release block but no usable non-bundle offer.
+        }
+        return null
+    }
+
+    /**
+     * Extracts the artist's "buy full discography" bundle offer that bandcamp
+     * embeds in every tralbum page's JSON-LD as the entry whose
+     * `additionalProperty[item_type] == "b"`. Caching this on the album row
+     * means the album viewer can show a "Buy full discography (N)" menu
+     * option without re-scraping.
+     */
+    fun extractDiscographyOffer(html: String): com.dustvalve.next.android.domain.model.DiscographyOffer? {
+        for (releases in iterAlbumReleases(html)) {
+            for (release in releases) {
+                val obj = release as? kotlinx.serialization.json.JsonObject ?: continue
+                val itemType = additionalProperty(obj, "item_type")
+                if (itemType != "b") continue
+                val offer = obj["offers"] as? kotlinx.serialization.json.JsonObject ?: continue
+                val price = parseOffer(offer) ?: continue
+                val url = offer["url"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+                    ?.contentOrNull
+                    ?: (obj["@id"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                    ?: continue
+                val name = (obj["name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull.orEmpty()
+                return com.dustvalve.next.android.domain.model.DiscographyOffer(
+                    price = price,
+                    url = url,
+                    name = name,
+                )
+            }
+        }
+        return null
+    }
+
+    /**
+     * Yields the `albumRelease` arrays from each JSON-LD block on the page.
+     * Bandcamp ships either a top-level `MusicAlbum` (regular album page) or
+     * a `MusicRecording` whose `inAlbum.albumRelease[]` carries the same
+     * shape (track-only releases like moe shop's HARDCODED). We unify both
+     * here so price + discography extraction works in either case.
+     */
+    private fun iterAlbumReleases(html: String): Sequence<kotlinx.serialization.json.JsonArray> = sequence {
         val scriptRegex = Regex(
             """<script type="application/ld\+json"[^>]*>(.+?)</script>""",
             RegexOption.DOT_MATCHES_ALL,
         )
         for (m in scriptRegex.findAll(html)) {
             val body = m.groupValues[1].trim()
-            val root = try {
-                json.parseToJsonElement(body)
-            } catch (_: Throwable) {
-                continue
-            }
+            val root = try { json.parseToJsonElement(body) } catch (_: Throwable) { continue }
             val obj = root as? kotlinx.serialization.json.JsonObject ?: continue
-            // Only the MusicAlbum block carries albumRelease[].offers; bandcamp also
-            // emits a sibling MusicRecording block per track which we want to skip.
             val type = obj["@type"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }?.contentOrNull
-            if (type != "MusicAlbum") continue
-
-            val releases = obj["albumRelease"] as? kotlinx.serialization.json.JsonArray ?: continue
-            for (release in releases) {
-                val offer = (release as? kotlinx.serialization.json.JsonObject)
-                    ?.get("offers") as? kotlinx.serialization.json.JsonObject
-                    ?: continue
-                val priceNum = offer["price"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
-                    ?.contentOrNull?.toDoubleOrNull()
-                val currency = offer["priceCurrency"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
-                    ?.contentOrNull
-                if (priceNum != null && priceNum > 0.0 && !currency.isNullOrBlank()) {
-                    return AlbumPrice(amount = priceNum, currency = currency)
-                }
+            val releases: kotlinx.serialization.json.JsonArray? = when (type) {
+                "MusicAlbum" -> obj["albumRelease"] as? kotlinx.serialization.json.JsonArray
+                "MusicRecording" -> ((obj["inAlbum"] as? kotlinx.serialization.json.JsonObject)
+                    ?.get("albumRelease") as? kotlinx.serialization.json.JsonArray)
+                else -> null
             }
-            return null  // Found MusicAlbum but no usable offer — don't keep scanning.
+            if (releases != null) yield(releases)
+        }
+    }
+
+    private fun parseOffer(offer: kotlinx.serialization.json.JsonObject): AlbumPrice? {
+        val priceNum = offer["price"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+            ?.contentOrNull?.toDoubleOrNull()
+        val currency = offer["priceCurrency"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+            ?.contentOrNull
+        return if (priceNum != null && priceNum > 0.0 && !currency.isNullOrBlank()) {
+            AlbumPrice(amount = priceNum, currency = currency)
+        } else null
+    }
+
+    private fun additionalProperty(obj: kotlinx.serialization.json.JsonObject, name: String): String? {
+        val arr = obj["additionalProperty"] as? kotlinx.serialization.json.JsonArray ?: return null
+        for (e in arr) {
+            val o = e as? kotlinx.serialization.json.JsonObject ?: continue
+            val n = (o["name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+            if (n == name) {
+                return (o["value"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+            }
         }
         return null
     }

@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.ui.screens.artist
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
@@ -282,6 +285,23 @@ fun ArtistDetailScreen(
                         }
                     }
 
+                    // Bandcamp "buy full discography" button — visible only
+                    // when the artist's data-band JSON had
+                    // `meets_buy_full_discography_criteria: true`. The button
+                    // opens the artist URL in the browser, where bandcamp
+                    // surfaces the bundle buy modal. The flag is cached on
+                    // ArtistEntity so we don't refetch to decide visibility.
+                    if (artist.hasDiscographyOffer) {
+                        item(key = "buy_discography", span = { GridItemSpan(2) }) {
+                            val uriHandler = LocalUriHandler.current
+                            BuyDiscographySplitButton(
+                                artistUrl = artist.url,
+                                onOpen = { uriHandler.openUri(it) },
+                                modifier = Modifier.animateItem(),
+                            )
+                        }
+                    }
+
                     if (artist.albums.isNotEmpty()) {
                         // Discography header
                         item(key = "discography_header", span = { GridItemSpan(2) }) {
@@ -464,5 +484,77 @@ private fun ArtistActionBar(
                 )
             }
         }
+    }
+}
+
+/**
+ * Same SplitButton shape as the album viewer's "Buy" CTA, but for the
+ * artist's "buy full discography" offer. The leading button is the discog
+ * CTA; the trailing chevron exposes only "Send as a gift" (no album / track
+ * switch options — those live on the album viewer where prices are known).
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi::class)
+@Composable
+private fun BuyDiscographySplitButton(
+    artistUrl: String,
+    onOpen: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.SplitButtonLayout(
+            leadingButton = {
+                androidx.compose.material3.SplitButtonDefaults.LeadingButton(
+                    onClick = { onOpen(artistUrl) },
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_shopping_bag),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.detail_buy_full_discography))
+                }
+            },
+            trailingButton = {
+                Box {
+                    androidx.compose.material3.SplitButtonDefaults.TrailingButton(
+                        checked = menuOpen,
+                        onCheckedChange = { menuOpen = it },
+                    ) {
+                        val rotation by animateFloatAsState(
+                            targetValue = if (menuOpen) 180f else 0f,
+                            animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+                            label = "buy_discog_chevron",
+                        )
+                        Icon(
+                            painter = painterResource(R.drawable.ic_expand_more),
+                            contentDescription = stringResource(R.string.detail_buy_more_options),
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(rotation),
+                        )
+                    }
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = { menuOpen = false },
+                    ) {
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(stringResource(R.string.detail_send_as_gift)) },
+                            onClick = {
+                                menuOpen = false
+                                onOpen(artistUrl)
+                            },
+                        )
+                    }
+                }
+            },
+        )
     }
 }

@@ -351,7 +351,10 @@ fun YouTubePlaylistDetailScreen(
                     if (state.tracks.isNotEmpty()) {
                         item(key = "tracks_header") {
                             Text(
-                                text = stringResource(R.string.detail_tracks_label),
+                                text = com.dustvalve.next.android.ui.util.tracksHeaderLabel(
+                                    trackCount = state.tracks.size,
+                                    totalDurationSec = state.tracks.sumOf { it.duration.toDouble() }.toLong(),
+                                ),
                                 style = MaterialTheme.typography.titleMediumEmphasized,
                                 modifier = Modifier
                                     .padding(
