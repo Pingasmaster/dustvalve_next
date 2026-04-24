@@ -33,5 +33,8 @@ internal fun JsonElement.extractMusicThumbnail(): String? {
 
     return thumbnails.maxByOrNull { it.path("width")?.jsonPrimitive?.content?.toIntOrNull() ?: 0 }
         ?.str("url")
-        ?.replace(Regex("=w\\d+-h\\d+.*$"), "=w544-h544-l90-rj")
+        // Bump size. 720×720 is the sweet spot: big enough for full-screen
+        // players without being wastefully large. Preserves query params
+        // (`-l90-rj`, crop flags) that YT Music sets after the size token.
+        ?.replace(Regex("=w\\d+-h\\d+"), "=w720-h720")
 }

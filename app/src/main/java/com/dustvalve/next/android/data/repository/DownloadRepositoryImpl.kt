@@ -11,6 +11,7 @@ import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
+import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.data.storage.folder.DedicatedFolderPaths
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
@@ -29,16 +30,20 @@ import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import androidx.core.net.toUri
 import java.io.File
 import java.io.IOException
+import java.io.OutputStream
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -190,7 +195,18 @@ class DownloadRepositoryImpl @Inject constructor(
         val targetFile = File(downloadDir, fileName)
         val tempFile = File(downloadDir, "$fileName.tmp")
 
-        downloadFile(downloadUrl, tempFile, trackId)
+        try {
+            tempFile.outputStream().use { out ->
+                streamWithResume(
+                    url = downloadUrl,
+                    trackId = trackId,
+                    sink = out,
+                )
+            }
+        } catch (e: Exception) {
+            tempFile.delete()
+            throw e
+        }
 
         if (!tempFile.renameTo(targetFile)) {
             try {
@@ -238,33 +254,15 @@ class DownloadRepositoryImpl @Inject constructor(
         val newFile = albumDir.createFile(mime, fileName)
             ?: throw IOException("Failed to create audio file in folder: $fileName")
 
-        val request = Request.Builder().url(downloadUrl).build()
-        val call = client.newCall(request)
-        var size = 0L
+        val size: Long
         try {
-            coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
-                if (cause != null) call.cancel()
-            }
-            call.execute().use { response ->
-                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                val body = response.body
-                val expectedLength = response.header("Content-Length")?.toLongOrNull()
-                context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
-                    body.byteStream().use { input ->
-                        val buffer = ByteArray(8192)
-                        var read: Int
-                        while (input.read(buffer).also { read = it } != -1) {
-                            coroutineContext.ensureActive()
-                            out.write(buffer, 0, read)
-                            size += read
-                        }
-                    }
-                } ?: throw IOException("Failed to open output stream for $fileName")
-                if (size == 0L) throw IOException("Downloaded file is empty for track: $trackId")
-                if (expectedLength != null && expectedLength > 0 && size != expectedLength) {
-                    throw IOException("Size mismatch: expected $expectedLength bytes but wrote $size for track: $trackId")
-                }
-            }
+            size = context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
+                streamWithResume(
+                    url = downloadUrl,
+                    trackId = trackId,
+                    sink = out,
+                )
+            } ?: throw IOException("Failed to open output stream for $fileName")
         } catch (e: Exception) {
             try { newFile.delete() } catch (_: Exception) {}
             throw e
@@ -332,48 +330,39 @@ class DownloadRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun downloadFile(url: String, tempFile: File, trackId: String) {
-        val request = Request.Builder()
-            .url(url)
+    /**
+     * OkHttp client scoped to download transfers. Differences vs. the shared
+     * [client]:
+     *
+     * - 90-second read timeout (shared is 30s). A slow-network song download
+     *   can legitimately stall 30s+ between chunks on an LTE/3G connection;
+     *   with 30s we'd fail downloads that would have succeeded in 35s.
+     * - HTTP/1.1 only. `googlevideo.com` CDN nodes sporadically reset HTTP/2
+     *   streams mid-body when the request isn't a browser/Media3 shape; HTTP/1.1
+     *   is stable on the same endpoints (observed across yt-dlp, NewPipe,
+     *   Metrolist issues).
+     * - No cookie jar. A stale login / consent cookie can 403 the CDN.
+     */
+    private val downloadClient: OkHttpClient by lazy {
+        client.newBuilder()
+            .readTimeout(90, TimeUnit.SECONDS)
+            .callTimeout(0, TimeUnit.SECONDS)
+            .protocols(listOf(Protocol.HTTP_1_1))
+            .cookieJar(okhttp3.CookieJar.NO_COOKIES)
             .build()
-
-        val call = client.newCall(request)
-        try {
-            coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
-                if (cause != null) call.cancel()
-            }
-            call.execute().use { response ->
-                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-                val body = response.body
-                val expectedLength = response.header("Content-Length")?.toLongOrNull()
-
-                tempFile.outputStream().use { output ->
-                    body.byteStream().use { input ->
-                        val buffer = ByteArray(8192)
-                        var bytesRead: Int
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            coroutineContext.ensureActive()
-                            output.write(buffer, 0, bytesRead)
-                        }
-                    }
-                }
-
-                val writtenBytes = tempFile.length()
-                if (writtenBytes == 0L) {
-                    throw IOException("Downloaded file is empty for track: $trackId")
-                }
-                if (expectedLength != null && expectedLength > 0 && writtenBytes != expectedLength) {
-                    throw IOException("Size mismatch: expected $expectedLength bytes but wrote $writtenBytes for track: $trackId")
-                }
-                if (expectedLength == null && writtenBytes < 1024) {
-                    throw IOException("Download suspiciously small ($writtenBytes bytes) without Content-Length header for track: $trackId")
-                }
-            }
-        } catch (e: Exception) {
-            tempFile.delete()
-            throw e
-        }
     }
+
+    /** Thin wrapper preserving the existing call-site shape. */
+    private suspend fun streamWithResume(
+        url: String,
+        trackId: String,
+        sink: OutputStream,
+    ): Long = RangeResumeDownloader.stream(
+        client = downloadClient,
+        url = url,
+        sink = sink,
+        trackId = trackId,
+    )
 
     override fun getDownloadedAlbums(): Flow<List<Album>> {
         return downloadDao.getAll().map { downloads ->

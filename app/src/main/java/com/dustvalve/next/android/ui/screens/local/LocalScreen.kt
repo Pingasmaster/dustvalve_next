@@ -60,7 +60,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSearchBarState
@@ -89,12 +88,12 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.PlaylistListItem
-import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.components.RecentSearchesList
+import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -450,20 +449,23 @@ fun LocalScreen(
                                 items = filteredTracks,
                                 key = { _, track -> track.id },
                             ) { index, track ->
-                                LocalTrackItem(
-                                    track = track,
+                                SegmentedListItem(
                                     index = index,
-                                    total = filteredTracks.size,
-                                    onClick = {
-                                        playerViewModel.playTrackInList(filteredTracks, index)
-                                    },
-                                    onLongClick = { contextMenuTrack = track },
+                                    count = filteredTracks.size,
                                     modifier = Modifier.animateItem(
                                         fadeInSpec = null,
                                         fadeOutSpec = null,
                                         placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
                                     ),
-                                )
+                                ) {
+                                    MusicRow(
+                                        track = track,
+                                        onClick = {
+                                            playerViewModel.playTrackInList(filteredTracks, index)
+                                        },
+                                        onLongClick = { contextMenuTrack = track },
+                                    )
+                                }
                             }
                         }
                         if (filteredTracks.size > 15) {
@@ -565,21 +567,24 @@ fun LocalScreen(
                                     items = state.searchResults,
                                     key = { _, track -> "search_${track.id}" },
                                 ) { index, track ->
-                                    LocalTrackItem(
-                                        track = track,
+                                    SegmentedListItem(
                                         index = index,
-                                        total = state.searchResults.size,
-                                        onClick = {
-                                            playerViewModel.playTrackInList(state.searchResults, index)
-                                            onExpandPlayer()
-                                        },
-                                        onLongClick = { contextMenuTrack = track },
+                                        count = state.searchResults.size,
                                         modifier = Modifier.animateItem(
                                             fadeInSpec = null,
                                             fadeOutSpec = null,
                                             placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
                                         ),
-                                    )
+                                    ) {
+                                        MusicRow(
+                                            track = track,
+                                            onClick = {
+                                                playerViewModel.playTrackInList(state.searchResults, index)
+                                                onExpandPlayer()
+                                            },
+                                            onLongClick = { contextMenuTrack = track },
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -749,9 +754,11 @@ fun LocalScreen(
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "sortItemColor",
                     )
-                    Surface(
-                        shape = segmentedItemShape(index, LocalSortOption.entries.size),
-                        color = sortItemColor,
+                    SegmentedListItem(
+                        index = index,
+                        count = LocalSortOption.entries.size,
+                        containerColor = sortItemColor,
+                        contentPadding = PaddingValues(0.dp),
                         modifier = Modifier.selectable(
                             selected = isSelected,
                             onClick = {
@@ -812,9 +819,11 @@ fun LocalScreen(
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "artistItemColor",
                     )
-                    Surface(
-                        shape = segmentedItemShape(index, availableArtists.size),
-                        color = artistItemColor,
+                    SegmentedListItem(
+                        index = index,
+                        count = availableArtists.size,
+                        containerColor = artistItemColor,
+                        contentPadding = PaddingValues(0.dp),
                         modifier = Modifier.animateItem(),
                     ) {
                         val artistLabel = if (artist.isBlank())
@@ -855,9 +864,11 @@ fun LocalScreen(
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "albumItemColor",
                     )
-                    Surface(
-                        shape = segmentedItemShape(index, availableAlbums.size),
-                        color = albumItemColor,
+                    SegmentedListItem(
+                        index = index,
+                        count = availableAlbums.size,
+                        containerColor = albumItemColor,
+                        contentPadding = PaddingValues(0.dp),
                         modifier = Modifier.animateItem(),
                     ) {
                         val albumLabel = if (album.isBlank())
@@ -903,9 +914,11 @@ fun LocalScreen(
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "folderItemColor",
                     )
-                    Surface(
-                        shape = segmentedItemShape(index, availableFolders.size),
-                        color = folderItemColor,
+                    SegmentedListItem(
+                        index = index,
+                        count = availableFolders.size,
+                        containerColor = folderItemColor,
+                        contentPadding = PaddingValues(0.dp),
                         modifier = Modifier.animateItem(),
                     ) {
                         ListItem(
@@ -919,94 +932,5 @@ fun LocalScreen(
             }
             Spacer(modifier = Modifier.height(28.dp))
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
-@Composable
-private fun LocalTrackItem(
-    track: Track,
-    index: Int,
-    total: Int,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-        label = "pressScale",
-    )
-    val hapticFeedback = LocalHapticFeedback.current
-
-    Surface(
-        shape = segmentedItemShape(index, total),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = modifier
-            .padding(
-                start = 16.dp,
-                end = 16.dp,
-                top = if (index == 0) 8.dp else 1.dp,
-                bottom = if (index == total - 1) 0.dp else 1.dp,
-            )
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-            .combinedClickable(
-                interactionSource = interactionSource,
-                indication = LocalIndication.current,
-                onClick = onClick,
-                onLongClick = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onLongClick()
-                },
-            ),
-    ) {
-        ListItem(
-            headlineContent = {
-                Text(
-                    text = track.title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            },
-            supportingContent = {
-                val supporting = buildString {
-                    append(track.artist)
-                    if (track.albumTitle.isNotBlank()) {
-                        append(" \u00B7 ")
-                        append(track.albumTitle)
-                    }
-                }
-                if (supporting.isNotEmpty()) {
-                    Text(
-                        text = supporting,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            },
-            leadingContent = {
-                if (track.artUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = track.artUrl,
-                        contentDescription = track.title,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(AppShapes.SearchResultTrack),
-                    )
-                } else {
-                    TrackArtPlaceholder(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(AppShapes.SearchResultTrack),
-                    )
-                }
-            },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        )
     }
 }

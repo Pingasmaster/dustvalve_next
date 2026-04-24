@@ -22,9 +22,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.ShapePickerSheet
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,7 +41,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -274,16 +273,15 @@ private fun LibraryList(
             key = { items[it].id },
         ) { index ->
             val item = items[index]
-            Surface(
-                shape = segmentedItemShape(index, items.size),
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier
-                    .padding(bottom = 2.dp)
-                    .animateItem(
-                        fadeInSpec = null,
-                        fadeOutSpec = null,
-                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    ),
+            SegmentedListItem(
+                index = index,
+                count = items.size,
+                contentPadding = PaddingValues(bottom = 2.dp),
+                modifier = Modifier.animateItem(
+                    fadeInSpec = null,
+                    fadeOutSpec = null,
+                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                ),
             ) {
                 when (item) {
                     is LibraryItem.PlaylistItem -> {

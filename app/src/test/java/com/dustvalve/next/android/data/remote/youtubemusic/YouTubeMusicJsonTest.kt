@@ -72,7 +72,7 @@ class YouTubeMusicJsonTest {
                   "thumbnail": {
                     "thumbnails": [
                       {"url":"https://yt3.example/img=w226-h226-l90-rj","width":226,"height":226},
-                      {"url":"https://yt3.example/img=w544-h544-l90-rj","width":544,"height":544}
+                      {"url":"https://yt3.example/img=w720-h720-l90-rj","width":544,"height":544}
                     ]
                   }
                 }
@@ -81,7 +81,7 @@ class YouTubeMusicJsonTest {
             """.trimIndent()
         )
         // Largest = 544, but extractMusicThumbnail also normalizes to w544-h544 anyway
-        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=w544-h544-l90-rj")
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=w720-h720-l90-rj")
     }
 
     @Test fun `extractMusicThumbnail uses thumbnailRenderer fallback`() {
@@ -100,7 +100,7 @@ class YouTubeMusicJsonTest {
             }
             """.trimIndent()
         )
-        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img=w544-h544-l90-rj")
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img=w720-h720")
     }
 
     @Test fun `extractMusicThumbnail uses bare thumbnail thumbnails fallback`() {

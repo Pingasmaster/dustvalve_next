@@ -27,7 +27,6 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -128,6 +127,9 @@ import com.dustvalve.next.android.domain.model.RepeatMode
 import androidx.compose.foundation.background
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
+import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -1334,22 +1336,6 @@ fun FullPlayer(
         val hasMore = displayCount < allUpNextTracks.size
         val queueListState = rememberLazyListState()
 
-        // Drag-and-drop state
-        var queueDraggedIndex by remember { mutableIntStateOf(-1) }
-        var queueDragStartIndex by remember { mutableIntStateOf(-1) }
-        var queueDragOffset by remember { mutableFloatStateOf(0f) }
-        val queueItemHeights = remember { mutableMapOf<Int, Float>() }
-        var queueDroppingItemKey by remember { mutableStateOf<String?>(null) }
-        val queueDropAnimOffset = remember { Animatable(0f) }
-        val queueDropSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-        val queueReorderableTracks = remember { displayedTracks.toMutableStateList() }
-        LaunchedEffect(displayedTracks) {
-            if (queueDraggedIndex == -1) {
-                queueReorderableTracks.clear()
-                queueReorderableTracks.addAll(displayedTracks)
-            }
-        }
-
         // Pagination: load more when near bottom
         val currentHasMore by rememberUpdatedState(hasMore)
         val currentDisplayedCount by rememberUpdatedState(displayedTracks.size)
@@ -1377,46 +1363,40 @@ fun FullPlayer(
             )
 
             Box(modifier = Modifier.fillMaxWidth()) {
-            LazyColumn(
-                state = queueListState,
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            ) {
-                items(
-                    count = queueReorderableTracks.size,
-                    key = { queueReorderableTracks[it].id },
-                ) { upNextIndex ->
-                    val queueTrack = queueReorderableTracks[upNextIndex]
+                ReorderableMusicList(
+                    items = displayedTracks,
+                    keyFn = { it.id },
+                    onMove = { from, to ->
+                        playerViewModel.moveQueueItem(
+                            currentIndex + 1 + from,
+                            currentIndex + 1 + to,
+                        )
+                    },
+                    lazyListState = queueListState,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    footer = {
+                        if (hasMore) {
+                            item(key = "queue_loading_more") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                        .animateItem(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    ContainedLoadingIndicator()
+                                }
+                            }
+                        }
+                        item(key = "queue_bottom_spacer") {
+                            Spacer(modifier = Modifier.height(28.dp))
+                        }
+                    },
+                ) { upNextIndex, queueTrack, isDragging, dragHandleModifier ->
                     val queueIndex = currentIndex + 1 + upNextIndex
                     val isDownloaded = queueTrack.id in state.downloadedTrackIds || queueTrack.isLocal
-                    val isDragging = queueDraggedIndex == upNextIndex
-
-                    val interactionSource = remember { MutableInteractionSource() }
-                    val isPressed by interactionSource.collectIsPressedAsState()
-                    val pressScale by animateFloatAsState(
-                        targetValue = if (isPressed) 0.97f else 1f,
-                        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-                        label = "queuePressScale",
-                    )
-                    val elevation by animateDpAsState(
-                        targetValue = if (isDragging) 2.dp else 0.dp,
-                        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                        label = "queueDragElevation",
-                    )
-                    val containerColor by animateColorAsState(
-                        targetValue = if (isDragging) {
-                            MaterialTheme.colorScheme.surfaceContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerLow
-                        },
-                        animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                        label = "queueDragColor",
-                    )
-                    val itemShape = if (isDragging) {
-                        MaterialTheme.shapes.large
-                    } else {
-                        segmentedItemShape(upNextIndex, queueReorderableTracks.size)
-                    }
+                    val isCurrentTrack = state.currentTrack?.id == queueTrack.id
 
                     val dismissState = rememberSwipeToDismissBoxState()
                     LaunchedEffect(dismissState.currentValue) {
@@ -1425,28 +1405,21 @@ fun FullPlayer(
                             playerViewModel.removeFromQueue(queueIndex)
                         }
                     }
+
                     SwipeToDismissBox(
                         state = dismissState,
                         enableDismissFromStartToEnd = false,
-                        gesturesEnabled = queueDraggedIndex == -1,
-                        modifier = Modifier
-                            .padding(
-                                top = if (upNextIndex == 0) 0.dp else 1.dp,
-                                bottom = if (upNextIndex == queueReorderableTracks.lastIndex) 0.dp else 1.dp,
-                            )
-                            .animateItem(
-                                fadeInSpec = null,
-                                fadeOutSpec = null,
-                                placementSpec = if (isDragging || queueTrack.id == queueDroppingItemKey) null
-                                    else MaterialTheme.motionScheme.defaultSpatialSpec(),
-                            )
-                            .zIndex(if (isDragging || queueTrack.id == queueDroppingItemKey) 1f else 0f),
+                        gesturesEnabled = !isDragging,
                         backgroundContent = {
                             if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .clip(itemShape)
+                                        .padding(
+                                            top = if (upNextIndex == 0) 0.dp else 1.dp,
+                                            bottom = if (upNextIndex == displayedTracks.lastIndex) 0.dp else 1.dp,
+                                        )
+                                        .clip(segmentedItemShape(upNextIndex, displayedTracks.size))
                                         .background(MaterialTheme.colorScheme.errorContainer)
                                         .padding(horizontal = 20.dp),
                                     contentAlignment = Alignment.CenterEnd,
@@ -1460,65 +1433,22 @@ fun FullPlayer(
                             }
                         },
                     ) {
-                        Surface(
-                            shape = itemShape,
-                            color = containerColor,
-                            modifier = Modifier
-                                .graphicsLayer {
-                                    scaleX = pressScale
-                                    scaleY = pressScale
-                                    if (isDragging) {
-                                        translationY = queueDragOffset
-                                        shadowElevation = elevation.toPx()
-                                    } else if (queueTrack.id == queueDroppingItemKey) {
-                                        translationY = queueDropAnimOffset.value
-                                    }
-                                }
-                                .onGloballyPositioned { coords ->
-                                    queueItemHeights[upNextIndex] = coords.size.height.toFloat()
-                                }
-                                .clickable(
-                                    interactionSource = interactionSource,
-                                    indication = LocalIndication.current,
-                                ) {
-                                    playerViewModel.skipToQueueIndex(queueIndex)
-                                },
-                            shadowElevation = if (!isDragging) elevation else 0.dp,
+                        SegmentedListItem(
+                            index = upNextIndex,
+                            count = displayedTracks.size,
+                            isDragging = isDragging,
+                            contentPadding = PaddingValues(
+                                top = if (upNextIndex == 0) 0.dp else 1.dp,
+                                bottom = if (upNextIndex == displayedTracks.lastIndex) 0.dp else 1.dp,
+                            ),
                         ) {
-                            ListItem(
-                                headlineContent = {
-                                    Text(
-                                        text = queueTrack.title,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                },
-                                supportingContent = {
-                                    Text(
-                                        text = queueTrack.artist,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                },
-                                leadingContent = {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .clip(AppShapes.SearchResultTrack),
-                                    ) {
-                                        if (queueTrack.artUrl.isNotBlank()) {
-                                            AsyncImage(
-                                                model = queueTrack.artUrl,
-                                                contentDescription = queueTrack.albumTitle,
-                                                modifier = Modifier.fillMaxSize(),
-                                                contentScale = ContentScale.Crop,
-                                            )
-                                        } else {
-                                            TrackArtPlaceholder(modifier = Modifier.fillMaxSize())
-                                        }
-                                    }
-                                },
-                                trailingContent = {
+                            MusicRow(
+                                track = queueTrack,
+                                onClick = { playerViewModel.skipToQueueIndex(queueIndex) },
+                                isCurrentTrack = isCurrentTrack,
+                                showDownload = false,
+                                isDownloaded = isDownloaded,
+                                dragHandle = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         if (isDownloaded) {
                                             Icon(
@@ -1531,67 +1461,7 @@ fun FullPlayer(
                                         Box(
                                             modifier = Modifier
                                                 .size(48.dp)
-                                                .pointerInput(Unit) {
-                                                    detectDragGesturesAfterLongPress(
-                                                        onDragStart = {
-                                                            queueDroppingItemKey = null
-                                                            scope.launch { queueDropAnimOffset.snapTo(0f) }
-                                                            queueDraggedIndex = upNextIndex
-                                                            queueDragStartIndex = upNextIndex
-                                                            queueDragOffset = 0f
-                                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        },
-                                                        onDrag = { change, dragAmount ->
-                                                            change.consume()
-                                                            queueDragOffset += dragAmount.y
-                                                            val ci = queueDraggedIndex
-                                                            if (ci < 0) return@detectDragGesturesAfterLongPress
-                                                            val h = queueItemHeights[ci] ?: return@detectDragGesturesAfterLongPress
-                                                            if (queueDragOffset > h * 0.6f && ci < queueReorderableTracks.lastIndex) {
-                                                                val item = queueReorderableTracks.removeAt(ci)
-                                                                queueReorderableTracks.add(ci + 1, item)
-                                                                queueDraggedIndex = ci + 1
-                                                                queueDragOffset -= h
-                                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            } else if (queueDragOffset < -h * 0.6f && ci > 0) {
-                                                                val item = queueReorderableTracks.removeAt(ci)
-                                                                queueReorderableTracks.add(ci - 1, item)
-                                                                queueDraggedIndex = ci - 1
-                                                                queueDragOffset += h
-                                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                            }
-                                                        },
-                                                        onDragEnd = {
-                                                            val from = currentIndex + 1 + queueDragStartIndex
-                                                            val to = currentIndex + 1 + queueDraggedIndex
-                                                            val finalOffset = queueDragOffset
-                                                            val droppedKey = if (queueDraggedIndex in queueReorderableTracks.indices)
-                                                                queueReorderableTracks[queueDraggedIndex].id else null
-
-                                                            queueDraggedIndex = -1
-                                                            queueDragStartIndex = -1
-                                                            queueDragOffset = 0f
-
-                                                            if (from != to) {
-                                                                playerViewModel.moveQueueItem(from, to)
-                                                            }
-
-                                                            if (droppedKey != null && kotlin.math.abs(finalOffset) > 1f) {
-                                                                queueDroppingItemKey = droppedKey
-                                                                scope.launch {
-                                                                    queueDropAnimOffset.snapTo(finalOffset)
-                                                                    queueDropAnimOffset.animateTo(0f, queueDropSpec)
-                                                                    queueDroppingItemKey = null
-                                                                }
-                                                            }
-                                                        },
-                                                        onDragCancel = {
-                                                            queueDraggedIndex = -1
-                                                            queueDragStartIndex = -1
-                                                            queueDragOffset = 0f
-                                                        },
-                                                    )
-                                                },
+                                                .then(dragHandleModifier),
                                             contentAlignment = Alignment.Center,
                                         ) {
                                             Icon(
@@ -1603,39 +1473,17 @@ fun FullPlayer(
                                         }
                                     }
                                 },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
                         }
                     }
                 }
-
-                // Loading indicator at bottom for pagination
-                if (hasMore) {
-                    item(key = "queue_loading_more") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp)
-                                .animateItem(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            ContainedLoadingIndicator()
-                        }
-                    }
-                }
-
-                // Bottom spacer
-                item(key = "queue_bottom_spacer") {
-                    Spacer(modifier = Modifier.height(28.dp))
+                if (displayedTracks.size > 15) {
+                    FastScrollbar(
+                        listState = queueListState,
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                    )
                 }
             }
-            if (queueReorderableTracks.size > 15) {
-                FastScrollbar(
-                    listState = queueListState,
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
-            }
-            } // end Box wrapping LazyColumn + scrollbar
         }
     }
 }

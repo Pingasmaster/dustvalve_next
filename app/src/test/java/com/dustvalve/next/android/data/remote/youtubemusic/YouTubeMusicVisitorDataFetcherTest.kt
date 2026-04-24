@@ -2,6 +2,9 @@ package com.dustvalve.next.android.data.remote.youtubemusic
 
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
+import okhttp3.Cookie
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -105,6 +108,37 @@ class YouTubeMusicVisitorDataFetcherTest {
         val ex = runCatching { fetcher.get() }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
         assertThat(ex!!.message).contains("HTTP 503")
+    }
+
+    @Test fun `landing fetch does NOT send jar cookies (regression for stale-cookie ytcfg failure)`() = runTest {
+        // A prior session left a SID cookie (or similar) in the shared jar.
+        // Without the cookie-strip fix, OkHttp's BridgeInterceptor rewrites
+        // the request's Cookie header to the jar's content, wiping the
+        // manual SOCS=CAI value and causing YT Music to serve a signed-in /
+        // consent variant whose response omits the ytcfg.set block.
+        val jar = object : CookieJar {
+            override fun loadForRequest(url: HttpUrl): List<Cookie> = listOf(
+                Cookie.Builder()
+                    .name("SID").value("stale_session_value").domain(url.host).path("/")
+                    .build(),
+            )
+            override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {}
+        }
+        val clientWithJar = OkHttpClient.Builder().cookieJar(jar).build()
+        val fetcher = TestableFetcher(clientWithJar, server.url("/").toString())
+
+        server.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"post_fix","INNERTUBE_CLIENT_VERSION":"9.9.9"});</script>""",
+            ),
+        )
+
+        val cfg = fetcher.get()
+        assertThat(cfg.visitorData).isEqualTo("post_fix")
+
+        val request = server.takeRequest()
+        assertThat(request.headers["Cookie"]).isEqualTo("SOCS=CAI")
+        assertThat(request.headers["Cookie"]).doesNotContain("SID=")
     }
 
     @Test fun `ytcfg pattern keeps closing brace escaped (Android ICU)`() {

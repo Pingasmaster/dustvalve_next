@@ -77,10 +77,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.dustvalve.next.android.ui.components.TrackRow
+import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -351,31 +351,27 @@ fun AlbumDetailScreen(
                             val isCurrentTrack = playerState.currentTrack?.id == track.id
                             val isTrackDownloaded = track.id in state.downloadedTrackIds
 
-                            Surface(
-                                modifier = Modifier
-                                    .padding(
-                                        start = 16.dp,
-                                        end = 16.dp,
-                                        top = if (index == 0) 8.dp else 1.dp,
-                                        bottom = if (index == album.tracks.lastIndex) 0.dp else 1.dp,
-                                    )
-                                    .animateItem(
-                                        fadeInSpec = null,
-                                        fadeOutSpec = null,
-                                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                                    ),
-                                shape = segmentedItemShape(index, album.tracks.size),
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            SegmentedListItem(
+                                index = index,
+                                count = album.tracks.size,
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = null,
+                                    fadeOutSpec = null,
+                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                ),
                             ) {
-                                TrackRow(
+                                MusicRow(
                                     track = track,
-                                    isPlaying = isCurrentTrack && playerState.isPlaying,
                                     onClick = {
                                         playerViewModel.playAlbum(album.tracks, index)
                                     },
+                                    isPlaying = isCurrentTrack && playerState.isPlaying,
+                                    isCurrentTrack = isCurrentTrack,
+                                    showFavorite = true,
                                     onFavoriteClick = {
                                         viewModel.toggleTrackFavorite(track.id)
                                     },
+                                    showDownload = true,
                                     onDownloadClick = {
                                         if (isTrackDownloaded) {
                                             trackToDelete = track

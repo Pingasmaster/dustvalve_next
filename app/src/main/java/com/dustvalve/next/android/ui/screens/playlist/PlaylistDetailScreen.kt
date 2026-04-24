@@ -1,13 +1,6 @@
 package com.dustvalve.next.android.ui.screens.playlist
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,8 +17,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import com.dustvalve.next.android.ui.components.getPlaylistIconRes
+import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.SwipeToDismissBox
@@ -38,37 +33,22 @@ import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,20 +56,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import com.dustvalve.next.android.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import kotlinx.coroutines.launch
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
-import com.dustvalve.next.android.util.TimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -228,7 +207,7 @@ fun PlaylistDetailScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun PlaylistContent(
     playlist: Playlist,
@@ -248,295 +227,116 @@ private fun PlaylistContent(
     modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
-    var draggedIndex by remember { mutableIntStateOf(-1) }
-    var dragStartIndex by remember { mutableIntStateOf(-1) }
-    var dragOffset by remember { mutableFloatStateOf(0f) }
-    val itemHeights = remember { mutableMapOf<Int, Float>() }
-    var droppingItemKey by remember { mutableStateOf<String?>(null) }
-    val dropAnimOffset = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val dropSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-    // Only update from Flow when not actively dragging to prevent state corruption
-    val reorderableTracks = remember { tracks.toMutableStateList() }
-    LaunchedEffect(tracks) {
-        if (draggedIndex == -1) {
-            reorderableTracks.clear()
-            reorderableTracks.addAll(tracks)
-        }
+    val trackCount = tracks.size
+
+    val headerBlock: @Composable () -> Unit = {
+        PlaylistHeader(
+            playlist = playlist,
+            tracks = tracks,
+            isDownloading = isDownloading,
+            downloadedTrackIds = downloadedTrackIds,
+            autoDownloadFavorites = autoDownloadFavorites,
+            onPlayAll = onPlayAll,
+            onShufflePlay = onShufflePlay,
+            onDownloadAll = onDownloadAll,
+        )
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 10.dp),
-    ) {
-        // Header with playlist icon and actions
-        item(key = "header") {
-            PlaylistHeader(
-                playlist = playlist,
-                tracks = reorderableTracks,
-                isDownloading = isDownloading,
-                downloadedTrackIds = downloadedTrackIds,
-                autoDownloadFavorites = autoDownloadFavorites,
-                onPlayAll = onPlayAll,
-                onShufflePlay = onShufflePlay,
-                onDownloadAll = onDownloadAll,
-            )
-        }
-
-        // Tracks
-        if (reorderableTracks.isEmpty()) {
+    if (tracks.isEmpty()) {
+        LazyColumn(
+            state = listState,
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 10.dp),
+        ) {
+            item(key = "header") { headerBlock() }
             item(key = "empty") {
                 EmptyPlaylistState(
                     isSystem = playlist.isSystem,
                     modifier = Modifier.fillParentMaxSize(),
                 )
             }
-        } else {
-            items(
-                count = reorderableTracks.size,
-                key = { reorderableTracks[it].id },
-            ) { index ->
-                val track = reorderableTracks[index]
-                val isCurrentTrack = currentTrackId == track.id
-                val isTrackPlaying = isCurrentTrack && isPlaying
-                val isDragging = draggedIndex == index
+        }
+        return
+    }
 
-                val interactionSource = remember { MutableInteractionSource() }
-                val isPressed by interactionSource.collectIsPressedAsState()
-                val pressScale by animateFloatAsState(
-                    targetValue = if (isPressed) 0.97f else 1f,
-                    animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-                    label = "pressScale",
-                )
+    ReorderableMusicList(
+        items = tracks,
+        keyFn = { it.id },
+        onMove = onMoveTrack,
+        lazyListState = listState,
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 10.dp),
+        header = { item(key = "header") { headerBlock() } },
+    ) { index, track, isDragging, dragHandleModifier ->
+        val isCurrentTrack = currentTrackId == track.id
+        val isTrackPlaying = isCurrentTrack && isPlaying
+        val canSwipeToDelete = !playlist.isSystem
 
-                val elevation by animateDpAsState(
-                    targetValue = if (isDragging) 2.dp else 0.dp,
-                    animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    label = "dragElevation",
-                )
-                val containerColor by animateColorAsState(
-                    targetValue = if (isDragging) {
-                        MaterialTheme.colorScheme.surfaceContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerLow
-                    },
-                    animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
-                    label = "dragColor",
-                )
-                val itemShape = if (isDragging) {
-                    MaterialTheme.shapes.large
-                } else {
-                    segmentedItemShape(index, reorderableTracks.size)
-                }
-
-                val itemModifier = Modifier
-                    .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = if (index == 0) 8.dp else 1.dp,
-                        bottom = if (index == reorderableTracks.lastIndex) 0.dp else 1.dp,
-                    )
-                    .animateItem(
-                        fadeInSpec = null,
-                        fadeOutSpec = null,
-                        placementSpec = if (isDragging || track.id == droppingItemKey) null
-                            else MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    )
-                    .zIndex(if (isDragging || track.id == droppingItemKey) 1f else 0f)
-
-                val canSwipeToDelete = !playlist.isSystem
-
-                if (canSwipeToDelete) {
-                    val dismissState = rememberSwipeToDismissBoxState()
-                    LaunchedEffect(dismissState.currentValue) {
-                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
-                            onRemoveTrack(track.id)
+        val body: @Composable () -> Unit = {
+            SegmentedListItem(
+                index = index,
+                count = trackCount,
+                isDragging = isDragging,
+            ) {
+                MusicRow(
+                    track = track,
+                    onClick = { onTrackClick(tracks, index) },
+                    isPlaying = isTrackPlaying,
+                    isCurrentTrack = isCurrentTrack,
+                    dragHandle = {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .then(dragHandleModifier),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_drag_handle),
+                                contentDescription = stringResource(R.string.common_cd_reorder),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp),
+                            )
                         }
-                    }
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        modifier = itemModifier,
-                        backgroundContent = {
-                            if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clip(itemShape)
-                                        .background(MaterialTheme.colorScheme.errorContainer)
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_delete),
-                                        contentDescription = stringResource(R.string.common_cd_delete),
-                                        tint = MaterialTheme.colorScheme.onErrorContainer,
-                                    )
-                                }
-                            }
-                        },
-                        enableDismissFromStartToEnd = false,
-                    ) {
-                    Surface(
-                        onClick = { onTrackClick(reorderableTracks.toList(), index) },
-                        interactionSource = interactionSource,
-                        modifier = Modifier
-                            .graphicsLayer {
-                                scaleX = pressScale
-                                scaleY = pressScale
-                                if (isDragging) {
-                                    translationY = dragOffset
-                                    shadowElevation = elevation.toPx()
-                                } else if (track.id == droppingItemKey) {
-                                    translationY = dropAnimOffset.value
-                                }
-                            }
-                            .onGloballyPositioned { coords ->
-                                itemHeights[index] = coords.size.height.toFloat()
-                            },
-                        shadowElevation = if (!isDragging) elevation else 0.dp,
-                        shape = itemShape,
-                        color = containerColor,
-                    ) {
-                        TrackListItem(
-                            track = track,
-                            isPlaying = isTrackPlaying,
-                            isCurrentTrack = isCurrentTrack,
-                            onDragStart = {
-                                droppingItemKey = null
-                                scope.launch { dropAnimOffset.snapTo(0f) }
-                                draggedIndex = index
-                                dragStartIndex = index
-                                dragOffset = 0f
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            },
-                            onDrag = { delta ->
-                                dragOffset += delta
-                                val ci = draggedIndex
-                                if (ci < 0) return@TrackListItem
-                                val h = itemHeights[ci] ?: return@TrackListItem
-                                if (dragOffset > h * 0.6f && ci < reorderableTracks.lastIndex) {
-                                    val item = reorderableTracks.removeAt(ci)
-                                    reorderableTracks.add(ci + 1, item)
-                                    draggedIndex = ci + 1
-                                    dragOffset -= h
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                } else if (dragOffset < -h * 0.6f && ci > 0) {
-                                    val item = reorderableTracks.removeAt(ci)
-                                    reorderableTracks.add(ci - 1, item)
-                                    draggedIndex = ci - 1
-                                    dragOffset += h
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
-                            },
-                            onDragEnd = {
-                                val from = dragStartIndex
-                                val to = draggedIndex
-                                val finalOffset = dragOffset
-                                val droppedKey = if (to in reorderableTracks.indices) reorderableTracks[to].id else null
+                    },
+                )
+            }
+        }
 
-                                draggedIndex = -1
-                                dragStartIndex = -1
-                                dragOffset = 0f
-
-                                if (from >= 0 && to >= 0 && from != to) {
-                                    onMoveTrack(from, to)
-                                }
-
-                                if (droppedKey != null && kotlin.math.abs(finalOffset) > 1f) {
-                                    droppingItemKey = droppedKey
-                                    scope.launch {
-                                        dropAnimOffset.snapTo(finalOffset)
-                                        dropAnimOffset.animateTo(0f, dropSpec)
-                                        droppingItemKey = null
-                                    }
-                                }
-                            },
-                        )
-                    }
-                    }
-                } else {
-                    // System playlist — no swipe to delete
-                    Surface(
-                        onClick = { onTrackClick(reorderableTracks.toList(), index) },
-                        interactionSource = interactionSource,
-                        modifier = itemModifier
-                            .graphicsLayer {
-                                scaleX = pressScale
-                                scaleY = pressScale
-                                if (isDragging) {
-                                    translationY = dragOffset
-                                    shadowElevation = elevation.toPx()
-                                } else if (track.id == droppingItemKey) {
-                                    translationY = dropAnimOffset.value
-                                }
-                            }
-                            .onGloballyPositioned { coords ->
-                                itemHeights[index] = coords.size.height.toFloat()
-                            },
-                        shadowElevation = if (!isDragging) elevation else 0.dp,
-                        shape = itemShape,
-                        color = containerColor,
-                    ) {
-                        TrackListItem(
-                            track = track,
-                            isPlaying = isTrackPlaying,
-                            isCurrentTrack = isCurrentTrack,
-                            onDragStart = {
-                                droppingItemKey = null
-                                scope.launch { dropAnimOffset.snapTo(0f) }
-                                draggedIndex = index
-                                dragStartIndex = index
-                                dragOffset = 0f
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                            },
-                            onDrag = { delta ->
-                                dragOffset += delta
-                                val ci = draggedIndex
-                                if (ci < 0) return@TrackListItem
-                                val h = itemHeights[ci] ?: return@TrackListItem
-                                if (dragOffset > h * 0.6f && ci < reorderableTracks.lastIndex) {
-                                    val item = reorderableTracks.removeAt(ci)
-                                    reorderableTracks.add(ci + 1, item)
-                                    draggedIndex = ci + 1
-                                    dragOffset -= h
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                } else if (dragOffset < -h * 0.6f && ci > 0) {
-                                    val item = reorderableTracks.removeAt(ci)
-                                    reorderableTracks.add(ci - 1, item)
-                                    draggedIndex = ci - 1
-                                    dragOffset += h
-                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
-                            },
-                            onDragEnd = {
-                                val from = dragStartIndex
-                                val to = draggedIndex
-                                val finalOffset = dragOffset
-                                val droppedKey = if (to in reorderableTracks.indices) reorderableTracks[to].id else null
-
-                                draggedIndex = -1
-                                dragStartIndex = -1
-                                dragOffset = 0f
-
-                                if (from >= 0 && to >= 0 && from != to) {
-                                    onMoveTrack(from, to)
-                                }
-
-                                if (droppedKey != null && kotlin.math.abs(finalOffset) > 1f) {
-                                    droppingItemKey = droppedKey
-                                    scope.launch {
-                                        dropAnimOffset.snapTo(finalOffset)
-                                        dropAnimOffset.animateTo(0f, dropSpec)
-                                        droppingItemKey = null
-                                    }
-                                }
-                            },
-                        )
-                    }
+        if (canSwipeToDelete) {
+            val dismissState = rememberSwipeToDismissBoxState()
+            LaunchedEffect(dismissState.currentValue) {
+                if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                    onRemoveTrack(track.id)
                 }
             }
+            SwipeToDismissBox(
+                state = dismissState,
+                backgroundContent = {
+                    if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp, vertical = 1.dp)
+                                .clip(segmentedItemShape(index, trackCount))
+                                .background(MaterialTheme.colorScheme.errorContainer)
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.CenterEnd,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_delete),
+                                contentDescription = stringResource(R.string.common_cd_delete),
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                },
+                enableDismissFromStartToEnd = false,
+            ) {
+                body()
+            }
+        } else {
+            body()
         }
     }
 }
@@ -688,114 +488,6 @@ private fun PlaylistHeader(
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun TrackListItem(
-    track: Track,
-    isPlaying: Boolean,
-    isCurrentTrack: Boolean,
-    onDragStart: () -> Unit,
-    onDrag: (Float) -> Unit,
-    onDragEnd: () -> Unit,
-) {
-    val currentOnDragStart by rememberUpdatedState(onDragStart)
-    val currentOnDrag by rememberUpdatedState(onDrag)
-    val currentOnDragEnd by rememberUpdatedState(onDragEnd)
-
-    ListItem(
-        modifier = Modifier
-            .fillMaxWidth(),
-        colors = ListItemDefaults.colors(
-            containerColor = Color.Transparent,
-        ),
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(MaterialTheme.shapes.small),
-            ) {
-                if (track.artUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = track.artUrl,
-                        contentDescription = track.albumTitle,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    TrackArtPlaceholder(modifier = Modifier.fillMaxSize())
-                }
-                if (isPlaying) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_graphic_eq),
-                            contentDescription = stringResource(R.string.common_cd_now_playing),
-                            modifier = Modifier.size(22.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                }
-            }
-        },
-        headlineContent = {
-            Text(
-                text = track.title,
-                style = if (isCurrentTrack) {
-                    MaterialTheme.typography.titleMediumEmphasized
-                } else {
-                    MaterialTheme.typography.titleMedium
-                },
-                color = if (isCurrentTrack) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        supportingContent = {
-            Text(
-                text = stringResource(R.string.playlist_artist_separator, track.artist, track.albumTitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
-        trailingContent = {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .pointerInput(Unit) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = { currentOnDragStart() },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                currentOnDrag(dragAmount.y)
-                            },
-                            onDragEnd = { currentOnDragEnd() },
-                            onDragCancel = { currentOnDragEnd() },
-                        )
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_drag_handle),
-                    contentDescription = stringResource(R.string.common_cd_reorder),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-        },
-    )
-}
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun EmptyPlaylistState(

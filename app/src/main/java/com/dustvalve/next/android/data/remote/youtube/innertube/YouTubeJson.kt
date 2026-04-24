@@ -32,14 +32,52 @@ internal fun JsonElement.runsText(key: String): String? {
 
 /**
  * YouTube (non-Music) thumbnail extraction. Picks the largest by width and
- * returns the URL as-is (no =wH-hH rewrite, since YT video thumbs already
- * encode size in the path like hqdefault.jpg / hq720.jpg).
+ * then rewrites the URL to request a higher-resolution variant when the URL
+ * shape supports it — see [bumpYtThumbnailResolution].
  */
 internal fun JsonElement.extractThumbnail(): String? {
     val thumbnails = path("thumbnail")?.path("thumbnails")?.arr()
         ?: path("thumbnails")?.arr()
         ?: return null
-    return thumbnails.maxByOrNull {
+    val raw = thumbnails.maxByOrNull {
         (it.path("width")?.jsonPrimitive?.content?.toIntOrNull() ?: 0)
-    }?.str("url")
+    }?.str("url") ?: return null
+    return bumpYtThumbnailResolution(raw)
+}
+
+/**
+ * Request a higher-resolution thumbnail from YouTube / Google CDNs when the
+ * URL shape advertises a size. Safe to call on any YouTube thumbnail string:
+ * unrecognised shapes are returned unchanged.
+ *
+ * - `i.ytimg.com/vi/<id>/hqdefault.jpg` (480×360) → `hq720.jpg` (1280×720)
+ * - `i.ytimg.com/vi/<id>/hq1.jpg .. hq3.jpg` (first-frame thumbs, 120×90) →
+ *   `hqdefault.jpg` (480×360)
+ * - Google avatar CDNs (`yt3.googleusercontent.com`, `lh3.googleusercontent.com`,
+ *   `yt4.ggpht.com`, etc.) using `=sN-...` or `=wN-hM-...` params →
+ *   bump to 720. Other segments (crop, rounding, no-rj) are preserved.
+ *
+ * We deliberately do NOT promote `hqdefault.jpg` → `maxresdefault.jpg` because
+ * `maxresdefault` 404s for older / lower-tier uploads (`hq720` is always
+ * present when the source is HD).
+ */
+internal fun bumpYtThumbnailResolution(url: String): String {
+    // i.ytimg.com paths
+    if (url.contains("/hq1.jpg") || url.contains("/hq2.jpg") || url.contains("/hq3.jpg")) {
+        return url
+            .replace("/hq1.jpg", "/hqdefault.jpg")
+            .replace("/hq2.jpg", "/hqdefault.jpg")
+            .replace("/hq3.jpg", "/hqdefault.jpg")
+    }
+    if (url.endsWith("/hqdefault.jpg") || url.contains("/hqdefault.jpg?")) {
+        return url.replace("/hqdefault.jpg", "/hq720.jpg")
+    }
+    // googleusercontent / ggpht avatar + album-art CDNs
+    if (url.contains("googleusercontent.com") || url.contains("ggpht.com")) {
+        val sRewritten = url.replace(Regex("=s\\d+(-[^=&]*)?"), "=s720$1")
+        if (sRewritten != url) return sRewritten
+        val whRewritten = url.replace(Regex("=w\\d+-h\\d+(-[^=&]*)?"), "=w720-h720$1")
+        if (whRewritten != url) return whRewritten
+    }
+    return url
 }
