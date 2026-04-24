@@ -157,4 +157,45 @@ class DustvalveAlbumScraperTest {
         assertThat(a.id).isEqualTo(b.id)
         assertThat(a.id).hasLength(32) // 16 hex bytes = 32 chars
     }
+
+    /**
+     * Regression: a.a. williams' `solstice` ships several tracks with
+     * `"id": null` in the tralbumData JSON. Before this fix every such track
+     * deserialized to `id = 0L`, producing duplicate Track.id values
+     * (`<albumId>_0`) which crashed the track LazyColumn on-device with
+     * `IllegalArgumentException: Key "..._0" was already used`.
+     */
+    @Test fun `scrapeAlbum gives unique Track ids even when Bandcamp ships null track ids`() = runTest {
+        val albumUrl = setup.url("/album/solstice")
+        val html = """
+            <html>
+              <script>var TralbumData = {
+                "url":"$albumUrl",
+                "current":{"title":"Solstice","artist":"a.a. williams","band_id":1},
+                "trackinfo":[
+                  {"id":999820091,"title":"Poison","track_num":1,"duration":0.0},
+                  {"id":58739464, "title":"Wolves","track_num":2,"duration":0.0},
+                  {"id":null,     "title":"Little By Little","track_num":3,"duration":0.0},
+                  {"id":null,     "title":"Outlines","track_num":5,"duration":0.0},
+                  {"id":null,     "title":"I've Seen Enough","track_num":6,"duration":0.0},
+                  {"id":null,     "title":"The Veil","track_num":7,"duration":0.0}
+                ],
+                "art_id":42,"item_type":"album"
+              };</script>
+            </html>
+        """.trimIndent()
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val album = scraper.scrapeAlbum(albumUrl)
+
+        assertThat(album.tracks).hasSize(6)
+        val ids = album.tracks.map { it.id }
+        assertThat(ids.toSet()).hasSize(6)
+        // The null-id tracks must fall back to a positional key (not "_0" / "_null").
+        val nullIdTrackKeys = album.tracks.drop(2).map { it.id }
+        for (key in nullIdTrackKeys) {
+            assertThat(key).doesNotContain("_0")
+            assertThat(key).doesNotContain("_null")
+        }
+    }
 }

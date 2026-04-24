@@ -55,7 +55,11 @@ class DustvalveAlbumScraper @Inject constructor(
 
     @Serializable
     data class TrackInfo(
-        val id: Long = 0,
+        // Nullable: Bandcamp ships `"id": null` for tracks on some albums
+        // (compilations, pay-what-you-want singles, a.a.williams' `solstice`).
+        // Using a default of 0 would collapse every such track onto the same
+        // Track.id and crash LazyColumn with "Key ... was already used".
+        val id: Long? = null,
         val title: String = "",
         // Single-track releases (e.g. moeshop's HARDCODED) ship `track_num: null`,
         // so this has to be nullable; downstream code coerces null to the
@@ -115,8 +119,12 @@ class DustvalveAlbumScraper @Inject constructor(
 
         val resolvedAlbumUrl = tralbumData.url.ifEmpty { albumUrl }
         val tracks = tralbumData.trackinfo.mapIndexed { index, trackInfo ->
+            // Prefer Bandcamp's stable track id when present, else fall back
+            // to the 1-based positional index so sibling tracks with a null
+            // track id on the same album don't collide on the key.
+            val trackKey = trackInfo.id?.toString() ?: "idx${index + 1}"
             Track(
-                id = "${albumId}_${trackInfo.id}",
+                id = "${albumId}_$trackKey",
                 albumId = albumId,
                 title = trackInfo.title,
                 artist = artistName,

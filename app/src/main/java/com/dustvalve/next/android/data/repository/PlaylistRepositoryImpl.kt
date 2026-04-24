@@ -153,20 +153,31 @@ class PlaylistRepositoryImpl @Inject constructor(
     }
 
     override fun getTracksInPlaylist(playlistId: String): Flow<List<Track>> {
-        // For system playlists, read live from source tables so changes
-        // (new favorite, new download, new play) appear instantly.
+        // System playlists (Favorites / Downloads) read live from source
+        // tables so new items appear instantly — BUT when the user has
+        // manually reordered the list, playlist_tracks rows carry a custom
+        // position override. We merge: apply the playlist_tracks ordering
+        // to tracks that have a row, then append any new source-only
+        // tracks at the end. Tracks that disappear from the source
+        // (unfavorited / deleted download) drop out naturally.
+        //
+        // Recents stays source-ordered always (chronological by design;
+        // the UI disables reorder for it).
         return when (playlistId) {
-            Playlist.ID_FAVORITES -> trackDao.getFavorites().map { tracks ->
-                tracks.map { it.toDomain(isFavorite = true) }
+            Playlist.ID_FAVORITES -> combine(
+                trackDao.getFavorites(),
+                playlistDao.getTracksInPlaylist(playlistId),
+            ) { source, ordered ->
+                mergeSystemPlaylist(source, ordered).map { it.toDomain(isFavorite = true) }
             }
-            Playlist.ID_DOWNLOADS -> trackDao.getDownloaded().map { tracks ->
-                val trackIds = tracks.map { it.id }
-                val favoriteIds = if (trackIds.isNotEmpty()) {
-                    favoriteDao.getFavoriteIds(trackIds).toSet()
-                } else {
-                    emptySet()
-                }
-                tracks.map { it.toDomain(it.id in favoriteIds) }
+            Playlist.ID_DOWNLOADS -> combine(
+                trackDao.getDownloaded(),
+                playlistDao.getTracksInPlaylist(playlistId),
+            ) { source, ordered ->
+                val merged = mergeSystemPlaylist(source, ordered)
+                val trackIds = merged.map { it.id }
+                val favoriteIds = if (trackIds.isNotEmpty()) favoriteDao.getFavoriteIds(trackIds).toSet() else emptySet()
+                merged.map { it.toDomain(it.id in favoriteIds) }
             }
             Playlist.ID_RECENT -> trackDao.getRecent().map { tracks ->
                 val trackIds = tracks.map { it.id }
@@ -187,6 +198,28 @@ class PlaylistRepositoryImpl @Inject constructor(
                 trackEntities.map { it.toDomain(it.id in favoriteIds) }
             }
         }.flowOn(Dispatchers.IO)
+    }
+
+    /**
+     * Merges a source-table list (favorites / downloaded) with an optional
+     * manual-order override from `playlist_tracks`:
+     *
+     *  - Tracks present in both source AND override: take the override order.
+     *  - Tracks in source but not in override: append in their source order
+     *    (so newly-favorited tracks land at the end of the custom list).
+     *  - Tracks in override but not in source: drop (unfavorited / undownloaded).
+     *  - Override empty → return source verbatim.
+     */
+    private fun mergeSystemPlaylist(
+        source: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>,
+        ordered: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>,
+    ): List<com.dustvalve.next.android.data.local.db.entity.TrackEntity> {
+        if (ordered.isEmpty()) return source
+        val sourceById = source.associateBy { it.id }
+        val byOrder = ordered.mapNotNull { sourceById[it.id] }
+        val orderedIds = byOrder.mapTo(HashSet()) { it.id }
+        val tail = source.filter { it.id !in orderedIds }
+        return byOrder + tail
     }
 
     override suspend fun getTracksInPlaylistSync(playlistId: String): List<Track> {
@@ -253,12 +286,41 @@ class PlaylistRepositoryImpl @Inject constructor(
     }
 
     override suspend fun moveTrackInPlaylist(playlistId: String, fromPosition: Int, toPosition: Int) {
+        // System playlists (Favorites / Downloads) don't normally carry
+        // playlist_track rows — tracks are derived from source tables. The
+        // first time the user reorders, seed playlist_tracks with the
+        // current source ordering so the override exists + getTracksInPlaylist's
+        // merge path takes over. (Recents is intentionally non-reorderable
+        // in the UI so this branch never fires for it.)
+        if (playlistDao.getPlaylistTrackCount(playlistId) == 0 && isSystemPlaylistId(playlistId)) {
+            seedSystemPlaylistOrdering(playlistId)
+        }
+
         val tracks = playlistDao.getTracksInPlaylistSync(playlistId)
         if (fromPosition < 0 || fromPosition >= tracks.size) return
         if (toPosition < 0 || toPosition >= tracks.size) return
 
         val trackId = tracks[fromPosition].id
         playlistDao.reorderTrack(playlistId, trackId, fromPosition, toPosition)
+    }
+
+    private fun isSystemPlaylistId(playlistId: String): Boolean = when (playlistId) {
+        Playlist.ID_FAVORITES, Playlist.ID_DOWNLOADS, Playlist.ID_RECENT -> true
+        else -> false
+    }
+
+    private suspend fun seedSystemPlaylistOrdering(playlistId: String) {
+        val source: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity> = when (playlistId) {
+            Playlist.ID_FAVORITES -> trackDao.getFavorites().first()
+            Playlist.ID_DOWNLOADS -> trackDao.getDownloaded().first()
+            Playlist.ID_RECENT -> trackDao.getRecent().first()
+            else -> return
+        }
+        if (source.isEmpty()) return
+        val rows = source.mapIndexed { index, t ->
+            PlaylistTrackEntity(playlistId = playlistId, trackId = t.id, position = index)
+        }
+        playlistDao.insertPlaylistTracks(rows)
     }
 
     override suspend fun isTrackInPlaylist(playlistId: String, trackId: String): Boolean {

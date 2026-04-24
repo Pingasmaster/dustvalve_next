@@ -89,6 +89,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var folderMirror: FolderMirror
 
+    @Inject
+    lateinit var appUpdateController: com.dustvalve.next.android.update.AppUpdateController
+
     sealed interface BootState {
         object Loading : BootState
         object Ready : BootState
@@ -137,6 +140,11 @@ class MainActivity : ComponentActivity() {
                 "light" -> false
                 else -> isSystemInDarkTheme()
             }
+            // Host the self-update dialog at the theme scope so it surfaces
+            // from any screen when the cold-start silent check (or an in-flight
+            // download kicked off elsewhere) transitions state to Available /
+            // Downloading. Idle / Checking render nothing.
+            val updateState by appUpdateController.state.collectAsStateWithLifecycle()
             DustvalveNextTheme(
                 darkTheme = darkTheme,
                 dynamicColor = config.dynamicColor,
@@ -174,6 +182,16 @@ class MainActivity : ComponentActivity() {
                     )
                     BootState.Ready -> MainContent(accountRepository = accountRepository, activity = this@MainActivity)
                 }
+
+                // Pre-alpha nag: the cold-start silent check (fired from
+                // Application.onCreate) may have populated this while the
+                // user is on any screen. The dialog is a no-op on Idle /
+                // Checking so it's safe to host unconditionally.
+                com.dustvalve.next.android.ui.components.update.AppUpdateDialog(
+                    state = updateState,
+                    onConfirmDownload = { appUpdateController.confirmDownload() },
+                    onDismiss = { appUpdateController.dismiss() },
+                )
             }
         }
     }

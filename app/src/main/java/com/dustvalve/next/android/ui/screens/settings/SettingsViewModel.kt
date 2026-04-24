@@ -12,7 +12,8 @@ import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.update.AppUpdateService
+import com.dustvalve.next.android.update.AppUpdateController
+import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
@@ -81,15 +82,6 @@ data class SettingsUiState(
     val updateMessage: UiText? = null,
 )
 
-sealed interface UpdateUiState {
-    object Idle : UpdateUiState
-    object Checking : UpdateUiState
-    /** API said an update is available; awaiting user confirmation. */
-    data class Available(val versionName: String, val apkUrl: String) : UpdateUiState
-    /** Downloading the APK. [progress] is 0f..1f or `null` when the server didn't send Content-Length. */
-    data class Downloading(val versionName: String, val progress: Float?) : UpdateUiState
-}
-
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
@@ -99,7 +91,7 @@ class SettingsViewModel @Inject constructor(
     private val localMusicRepository: LocalMusicRepository,
     private val downloadRepository: DownloadRepository,
     private val recentSearchDao: RecentSearchDao,
-    private val appUpdateService: AppUpdateService,
+    private val appUpdateController: AppUpdateController,
     private val storageMigrator: StorageMigrator,
     private val folderMirror: FolderMirror,
 ) : ViewModel() {
@@ -113,6 +105,19 @@ class SettingsViewModel @Inject constructor(
         collectAccountState()
         collectYtmAccountState()
         collectCacheInfo()
+        // Mirror the process-wide update flow into our SettingsUiState so the
+        // "Search for updates" row reflects whatever the cold-start silent
+        // check (or an in-flight download) found.
+        viewModelScope.launch {
+            appUpdateController.state.collect { s ->
+                _uiState.update { it.copy(updateState = s) }
+            }
+        }
+        viewModelScope.launch {
+            appUpdateController.messages.collect { m ->
+                _uiState.update { it.copy(updateMessage = m) }
+            }
+        }
         collectThemeMode()
         collectDynamicColor()
         collectStorageLimit()
@@ -874,81 +879,14 @@ class SettingsViewModel @Inject constructor(
     }
 
     // ─── App update ────────────────────────────────────────────────────────
+    //
+    // Thin delegates over [AppUpdateController] so the cold-start dialog and
+    // the Settings row share one source of truth for state + an in-flight
+    // download. See AppUpdateController's kdoc for the design.
 
-    fun checkForAppUpdate() {
-        if (_uiState.value.updateState is UpdateUiState.Downloading) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(updateState = UpdateUiState.Checking) }
-            try {
-                val available = appUpdateService.checkForUpdate()
-                if (available == null) {
-                    _uiState.update {
-                        it.copy(
-                            updateState = UpdateUiState.Idle,
-                            updateMessage = UiText.StringResource(R.string.settings_update_no_update),
-                        )
-                    }
-                } else {
-                    _uiState.update {
-                        it.copy(
-                            updateState = UpdateUiState.Available(
-                                versionName = available.versionName,
-                                apkUrl = available.apkDownloadUrl,
-                            ),
-                        )
-                    }
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        updateState = UpdateUiState.Idle,
-                        updateMessage = UiText.StringResource(R.string.settings_update_check_failed),
-                    )
-                }
-            }
-        }
-    }
-
-    fun confirmAppUpdate() {
-        val current = _uiState.value.updateState
-        if (current !is UpdateUiState.Available) return
-        viewModelScope.launch {
-            _uiState.update {
-                it.copy(updateState = UpdateUiState.Downloading(current.versionName, 0f))
-            }
-            try {
-                appUpdateService.downloadApk(current.apkUrl).collect { p ->
-                    val frac = if (p.totalBytes > 0L) p.fraction else null
-                    _uiState.update {
-                        it.copy(updateState = UpdateUiState.Downloading(current.versionName, frac))
-                    }
-                }
-                // Download finished — hand off to the system installer.
-                try {
-                    appUpdateService.launchInstaller()
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    _uiState.update {
-                        it.copy(updateMessage = UiText.StringResource(R.string.settings_update_install_failed))
-                    }
-                }
-                _uiState.update { it.copy(updateState = UpdateUiState.Idle) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        updateState = UpdateUiState.Idle,
-                        updateMessage = UiText.StringResource(R.string.settings_update_download_failed),
-                    )
-                }
-            }
-        }
-    }
-
-    fun dismissAppUpdate() {
-        _uiState.update { it.copy(updateState = UpdateUiState.Idle) }
-    }
+    fun checkForAppUpdate() = appUpdateController.checkManually()
+    fun confirmAppUpdate() = appUpdateController.confirmDownload()
+    fun dismissAppUpdate() = appUpdateController.dismiss()
 
     fun clearUpdateMessage() {
         _uiState.update { it.copy(updateMessage = null) }

@@ -259,6 +259,36 @@ private fun PlaylistContent(
         return
     }
 
+    // Recents is ordered chronologically (newest-first) by the recent_plays
+    // table — manual reorder would be fighting the feed. Render as a plain
+    // LazyColumn with no drag handle and no swipe-to-remove.
+    if (playlist.systemType == Playlist.SystemPlaylistType.RECENT) {
+        LazyColumn(
+            state = listState,
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 10.dp),
+        ) {
+            item(key = "header") { headerBlock() }
+            items(
+                count = tracks.size,
+                key = { tracks[it].id },
+            ) { index ->
+                val track = tracks[index]
+                val isCurrentTrack = currentTrackId == track.id
+                val isTrackPlaying = isCurrentTrack && isPlaying
+                SegmentedListItem(index = index, count = trackCount) {
+                    MusicRow(
+                        track = track,
+                        onClick = { onTrackClick(tracks, index) },
+                        isPlaying = isTrackPlaying,
+                        isCurrentTrack = isCurrentTrack,
+                    )
+                }
+            }
+        }
+        return
+    }
+
     ReorderableMusicList(
         items = tracks,
         keyFn = { it.id },
