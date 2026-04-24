@@ -4,9 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import javax.inject.Inject
@@ -14,25 +11,22 @@ import javax.inject.Singleton
 
 /**
  * Fetches and caches YouTube's `VISITOR_DATA` token plus the live
- * `INNERTUBE_CLIENT_VERSION` by GET-ing https://www.youtube.com/ and
- * scraping its `ytcfg.set({...})` block. Anonymous /search and /browse
- * calls degrade (returning placeholder shelves or 400s) without a real
- * visitor cookie, so we always inject one. Cached in-memory only; rotating
- * across app launches is fine.
+ * `INNERTUBE_CLIENT_VERSION` by scraping the landing page's `ytcfg.set({...})`
+ * block. Anonymous /search and /browse calls degrade (returning placeholder
+ * shelves or 400s) without a real visitor cookie, so we always inject one.
+ * Cached in-memory only; rotating across app launches is fine.
  *
- * This is the YT-flavoured twin of YouTubeMusicVisitorDataFetcher.
+ * Twin of [com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicVisitorDataFetcher]
+ * — same hardening (navigation headers, dual consent cookies, fallback URL,
+ * shared brace-balanced ytcfg extractor). The fallback URL is the same as
+ * the primary because plain youtube.com is the most reliable source already;
+ * having the second attempt covers transient failures.
  */
 @Singleton
 open class YouTubeVisitorDataFetcher @Inject constructor(
     sharedOkHttpClient: OkHttpClient,
 ) {
 
-    /**
-     * Landing fetch MUST NOT carry the shared CookieJar's cookies (stale
-     * login / consent cookies from prior sessions shift the response shape
-     * and sometimes drop the `ytcfg.set(...)` block entirely). Same
-     * rationale and pattern as YouTubeMusicVisitorDataFetcher.
-     */
     private val okHttpClient: OkHttpClient = sharedOkHttpClient.newBuilder()
         .cookieJar(okhttp3.CookieJar.NO_COOKIES)
         .build()
@@ -40,14 +34,12 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
     /** Overridable in tests so MockWebServer can answer the landing GET. */
     protected open val landingUrl: String = "https://www.youtube.com/"
 
+    /** Overridable in tests. Hit this if the primary returns no ytcfg. */
+    protected open val fallbackLandingUrl: String = "https://www.youtube.com/"
+
     @Volatile
     private var cached: VisitorConfig? = null
     private val mutex = Mutex()
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
 
     open suspend fun get(): VisitorConfig {
         cached?.let { return it }
@@ -63,38 +55,62 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
     fun invalidate() { cached = null }
 
     private suspend fun fetch(): VisitorConfig = withContext(Dispatchers.IO) {
-        val request = Request.Builder()
-            .url(landingUrl)
-            .header("Accept-Language", "en-US,en;q=0.9")
-            // SOCS=CAI dismisses the EU consent banner so the landing page
-            // returns the real ytcfg.set block instead of redirecting to
-            // consent.youtube.com.
-            .header("Cookie", "SOCS=CAI")
-            .build()
-
-        val html = okHttpClient.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                throw IllegalStateException("YouTube landing fetch failed: HTTP ${response.code}")
-            }
-            response.body.string()
+        val primary = fetchLanding(landingUrl)
+        primary.extract()?.let {
+            return@withContext VisitorConfig(
+                visitorData = it.visitorData,
+                clientVersion = it.clientVersion ?: DEFAULT_CLIENT_VERSION,
+            )
         }
 
-        val configMatch = YTCFG_REGEX.find(html)
-            ?: throw IllegalStateException("YouTube landing missing ytcfg.set block")
-        val config = json.parseToJsonElement(configMatch.groupValues[1]).jsonObject
+        val fallback = if (fallbackLandingUrl != landingUrl) {
+            fetchLanding(fallbackLandingUrl).also { fb ->
+                fb.extract()?.let {
+                    return@withContext VisitorConfig(
+                        visitorData = it.visitorData,
+                        clientVersion = it.clientVersion ?: DEFAULT_CLIENT_VERSION,
+                    )
+                }
+            }
+        } else null
 
-        val visitorData = (config["INNERTUBE_CONTEXT"]?.jsonObject
-            ?.get("client")?.jsonObject
-            ?.get("visitorData")
-            ?: config["VISITOR_DATA"])
-            ?.jsonPrimitive?.content
-            ?: throw IllegalStateException("ytcfg missing VISITOR_DATA")
+        throw IllegalStateException(
+            "YouTube landing missing ytcfg.set block " +
+                "(primary=HTTP ${primary.status}, ${primary.body.length} B; " +
+                (if (fallback != null)
+                    "fallback=HTTP ${fallback.status}, ${fallback.body.length} B; "
+                else "") +
+                "head='${primary.body.take(120).replace('\n', ' ')}')",
+        )
+    }
 
-        val clientVersion = config["INNERTUBE_CLIENT_VERSION"]?.jsonPrimitive?.content
-            ?: config["INNERTUBE_CONTEXT_CLIENT_VERSION"]?.jsonPrimitive?.content
-            ?: DEFAULT_CLIENT_VERSION
+    private data class LandingResponse(val status: Int, val body: String) {
+        fun extract(): YouTubeYtcfgExtractor.YtcfgData? =
+            if (status in 200..299) YouTubeYtcfgExtractor.extract(body) else null
+    }
 
-        VisitorConfig(visitorData = visitorData, clientVersion = clientVersion)
+    private fun fetchLanding(url: String): LandingResponse {
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", DESKTOP_CHROME_UA)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "en-US,en;q=0.9")
+            .header("Upgrade-Insecure-Requests", "1")
+            .header("Sec-Fetch-Mode", "navigate")
+            .header("Sec-Fetch-Site", "none")
+            .header("Sec-Fetch-Dest", "document")
+            .header("Sec-Fetch-User", "?1")
+            .header("Cookie", "SOCS=CAI; CONSENT=YES+1")
+            .build()
+
+        return okHttpClient.newCall(request).execute().use { response ->
+            val body = try {
+                response.body.string()
+            } catch (_: Throwable) {
+                ""
+            }
+            LandingResponse(status = response.code, body = body)
+        }
     }
 
     data class VisitorConfig(val visitorData: String, val clientVersion: String)
@@ -102,16 +118,8 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
     companion object {
         const val DEFAULT_CLIENT_VERSION = "2.20260421.00.00"
 
-        // Matches `ytcfg.set({...});` and captures the JSON object body.
-        // Both braces are escaped: Android's ICU-backed regex engine rejects
-        // a literal `}` outside `{n,m}` — the JVM-tolerated unescaped form
-        // crashes with PatternSyntaxException at class init on-device.
-        // (Visible to tests.)
-        internal const val YTCFG_PATTERN = """ytcfg\.set\s*\(\s*(\{.+?\})\s*\)\s*;"""
-
-        private val YTCFG_REGEX = Regex(
-            YTCFG_PATTERN,
-            RegexOption.DOT_MATCHES_ALL,
-        )
+        private const val DESKTOP_CHROME_UA =
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 }

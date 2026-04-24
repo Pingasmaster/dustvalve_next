@@ -88,6 +88,29 @@ class YouTubeSource @Inject constructor(
         url: String,
         continuation: Any?,
     ): MusicCollection {
+        // Mixes (auto-generated radio playlists, IDs starting with `RD`) are
+        // effectively infinite and don't live under the static /browse
+        // endpoint — they paginate via /next, one page at a time. Regular
+        // playlists keep the synchronous "load to end" behaviour because they
+        // are bounded.
+        val playlistId = extractPlaylistId(url)
+        if (playlistId != null && playlistId.startsWith("RD")) {
+            val (tracks, title, nextCursor) = youtubeRepository.getMixPage(
+                mixUrl = url,
+                cursor = continuation,
+                seenVideoIds = emptySet(),
+            )
+            return MusicCollection(
+                id = url,
+                url = url,
+                name = title,
+                owner = "",
+                coverUrl = null,
+                tracks = tracks,
+                continuation = nextCursor,
+                hasMore = nextCursor != null && tracks.isNotEmpty(),
+            )
+        }
         // YouTubeRepository.getPlaylistTracks internally paginates to the end,
         // so we ignore the [continuation] arg — the returned collection is
         // always complete.
@@ -103,4 +126,8 @@ class YouTubeSource @Inject constructor(
             hasMore = false,
         )
     }
+
+    private fun extractPlaylistId(url: String): String? =
+        Regex("[?&]list=([A-Za-z0-9_-]+)").find(url)?.groupValues?.getOrNull(1)
+            ?: url.takeIf { it.matches(Regex("[A-Za-z0-9_-]+")) && it.length in 8..64 }
 }

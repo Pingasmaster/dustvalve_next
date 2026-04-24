@@ -33,6 +33,8 @@ data class CollectionDetailUiState(
     val coverUrl: String? = null,
     val tracks: List<Track> = emptyList(),
     val isLoading: Boolean = true,
+    val isLoadingMore: Boolean = false,
+    val hasMore: Boolean = false,
     val error: String? = null,
     val isFavorite: Boolean = false,
     val isImported: Boolean = false,
@@ -66,6 +68,8 @@ class CollectionDetailViewModel @Inject constructor(
     val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
 
     private var loadedKey: String? = null
+    private var paginationCursor: Any? = null
+    private var loadMoreJob: kotlinx.coroutines.Job? = null
 
     init {
         viewModelScope.launch {
@@ -103,6 +107,7 @@ class CollectionDetailViewModel @Inject constructor(
             }
             try {
                 val collection: MusicCollection = source.getCollection(url)
+                paginationCursor = collection.continuation
                 val isFav = favoriteDao.isFavorite(url)
                 val displayName = collection.name.ifBlank { nameHint }
                 val existing = playlistDao.getPlaylistByName(displayName)
@@ -112,6 +117,7 @@ class CollectionDetailViewModel @Inject constructor(
                         coverUrl = collection.coverUrl,
                         tracks = collection.tracks,
                         isLoading = false,
+                        hasMore = collection.hasMore,
                         isFavorite = isFav,
                         isImported = existing != null,
                         importedPlaylistId = existing?.id,
@@ -122,6 +128,39 @@ class CollectionDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(isLoading = false, error = e.message ?: "Failed to load collection")
                 }
+            }
+        }
+    }
+
+    /**
+     * Loads the next page of an infinite-scroll collection (e.g. a YouTube
+     * Mix). No-op for sources/collections that returned `hasMore = false`.
+     */
+    fun loadMore() {
+        val state = _uiState.value
+        if (!state.hasMore || state.isLoadingMore || state.isLoading) return
+        val cursor = paginationCursor ?: return
+        val source = sources[state.sourceId] ?: return
+        loadMoreJob?.cancel()
+        _uiState.update { it.copy(isLoadingMore = true) }
+        loadMoreJob = viewModelScope.launch {
+            try {
+                val page = source.getCollection(state.collectionUrl, cursor)
+                val existingIds = state.tracks.mapTo(HashSet()) { it.id }
+                val deduped = page.tracks.filter { it.id !in existingIds }
+                paginationCursor = page.continuation
+                _uiState.update {
+                    it.copy(
+                        tracks = it.tracks + deduped,
+                        isLoadingMore = false,
+                        hasMore = page.hasMore && deduped.isNotEmpty(),
+                    )
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // Surface failure as "no more" to stop further scroll-triggered
+                // loads, but don't blow the screen away.
+                _uiState.update { it.copy(isLoadingMore = false, hasMore = false) }
             }
         }
     }

@@ -227,6 +227,42 @@ class YouTubeRepositoryImpl @Inject constructor(
         return all to title
     }
 
+    override suspend fun getMixPage(
+        mixUrl: String,
+        cursor: Any?,
+        seenVideoIds: Set<String>,
+    ): Triple<List<Track>, String, Any?> {
+        val mixId = extractPlaylistId(mixUrl)
+            ?: throw IllegalArgumentException("Cannot extract mix playlistId from $mixUrl")
+        val typed = cursor as? YouTubePlaylistParser.MixContinuation
+        val response = if (typed == null) {
+            val seed = playlistParser.extractMixSeedVideoId(mixId)
+            client.next(videoId = seed, playlistId = mixId)
+        } else {
+            client.next(
+                videoId = typed.lastVideoId,
+                playlistId = mixId,
+                playlistIndex = typed.playlistIndex,
+                params = typed.params,
+            )
+        }
+        val startIndex = (typed?.playlistIndex ?: 0) + 1
+        val page = playlistParser.parseMix(
+            root = response,
+            playlistId = mixId,
+            startIndex = startIndex,
+            seenVideoIds = seenVideoIds,
+        )
+        // If pagination yields zero new tracks, treat the mix as exhausted.
+        val nextCursor = if (page.tracks.isEmpty()) null else page.continuation
+        // Best-effort cache write so freshly seen videos benefit getTrackInfo etc.
+        try {
+            val entities = page.tracks.map { it.toCacheEntity(it.id.removePrefix("yt_")) }
+            videoCache.insertAll(entities)
+        } catch (_: Throwable) {}
+        return Triple(page.tracks, page.title.orEmpty(), nextCursor)
+    }
+
     override suspend fun getChannelVideos(
         channelUrl: String,
         page: Any?,
