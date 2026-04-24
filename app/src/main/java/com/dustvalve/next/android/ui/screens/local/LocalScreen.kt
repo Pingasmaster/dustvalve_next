@@ -444,6 +444,7 @@ fun LocalScreen(
                         LazyColumn(
                             state = localListState,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 10.dp),
                         ) {
                             itemsIndexed(
                                 items = filteredTracks,
@@ -558,6 +559,7 @@ fun LocalScreen(
                         else -> {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 10.dp),
                             ) {
                                 itemsIndexed(
                                     items = state.searchResults,

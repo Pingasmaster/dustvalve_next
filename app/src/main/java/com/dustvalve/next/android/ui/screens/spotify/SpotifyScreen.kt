@@ -312,6 +312,7 @@ fun SpotifyScreen(
                             LazyColumn(
                                 state = searchListState,
                                 modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 10.dp),
                             ) {
                                 itemsIndexed(
                                     items = state.results,

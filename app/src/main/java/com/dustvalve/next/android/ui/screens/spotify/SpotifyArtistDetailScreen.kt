@@ -169,6 +169,7 @@ fun SpotifyArtistDetailScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
+                    contentPadding = PaddingValues(bottom = 10.dp),
                 ) {
                     // Hero image with gradient and artist name overlay
                     item(key = "hero") {
