@@ -31,10 +31,24 @@ import kotlin.coroutines.coroutineContext
  * startup. The user opts in from Settings → About → "Search for updates".
  */
 @Singleton
-class AppUpdateService @Inject constructor(
+open class AppUpdateService @Inject constructor(
     private val client: OkHttpClient,
     @param:ApplicationContext private val context: Context,
 ) {
+
+    /**
+     * Overridable in tests so MockWebServer can answer the releases GET.
+     * Production is the GitHub Releases listing — returned in reverse
+     * chronological order (newest first) by the API.
+     */
+    protected open val releasesUrl: String =
+        "https://api.github.com/repos/Pingasmaster/dustvalve_next/releases"
+
+    /**
+     * Overridable in tests so we can pretend the installed build is an
+     * arbitrary version. Production reads `BuildConfig.VERSION_NAME`.
+     */
+    protected open val installedVersion: String = BuildConfig.VERSION_NAME
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -70,9 +84,9 @@ class AppUpdateService @Inject constructor(
      *         GitHub is the same or older than the installed build.
      * @throws IOException on network or parse failure.
      */
-    suspend fun checkForUpdate(): AvailableUpdate? = withContext(Dispatchers.IO) {
+    open suspend fun checkForUpdate(): AvailableUpdate? = withContext(Dispatchers.IO) {
         val request = Request.Builder()
-            .url(RELEASES_URL)
+            .url(releasesUrl)
             .header("Accept", "application/vnd.github.v3+json")
             .build()
 
@@ -83,13 +97,16 @@ class AppUpdateService @Inject constructor(
         val body = response.body.string()
         val releases = json.decodeFromString<List<GitHubRelease>>(body)
 
+        // Pre-alpha: every CI build ships as a GitHub prerelease, so we
+        // MUST include them here. Drafts (unpublished) are still skipped.
+        // Releases with no .apk asset (doc-only / assets-not-yet-uploaded)
+        // are skipped — we have nothing to install from them.
         val latest = releases.firstOrNull { release ->
-            !release.draft && !release.prerelease &&
-                release.assets.any { it.name.endsWith(".apk") }
+            !release.draft && release.assets.any { it.name.endsWith(".apk") }
         } ?: return@withContext null
 
         val latestVersion = latest.tagName.removePrefix("v")
-        if (!isNewer(latestVersion, BuildConfig.VERSION_NAME)) return@withContext null
+        if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
         val apkAsset = latest.assets.first { it.name.endsWith(".apk") }
         AvailableUpdate(versionName = latestVersion, apkDownloadUrl = apkAsset.browserDownloadUrl)
@@ -157,8 +174,6 @@ class AppUpdateService @Inject constructor(
 
     companion object {
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
-        private const val RELEASES_URL =
-            "https://api.github.com/repos/Pingasmaster/dustvalve_next/releases"
 
         /** True when [remote] is a strictly higher dotted-int version than [local]. */
         fun isNewer(remote: String, local: String): Boolean {
