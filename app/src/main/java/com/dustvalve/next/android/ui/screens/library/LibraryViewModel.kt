@@ -274,8 +274,6 @@ class LibraryViewModel @Inject constructor(
     private fun syncSystemPlaylists() {
         viewModelScope.launch {
             try {
-                playlistRepository.syncFavoritesPlaylist()
-                playlistRepository.syncDownloadsPlaylist()
                 playlistRepository.syncRecentPlaylist()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

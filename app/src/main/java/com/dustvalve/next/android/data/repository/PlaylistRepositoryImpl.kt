@@ -332,26 +332,6 @@ class PlaylistRepositoryImpl @Inject constructor(
             .flowOn(Dispatchers.IO)
     }
 
-    override suspend fun syncDownloadsPlaylist() {
-        val playlist = getSystemPlaylistSync(Playlist.SystemPlaylistType.DOWNLOADS) ?: return
-        val downloadedTracks = trackDao.getDownloaded().first()
-
-        database.withTransaction {
-            playlistDao.clearPlaylistTracks(playlist.id)
-            val playlistTracks = downloadedTracks.mapIndexed { index, trackEntity ->
-                PlaylistTrackEntity(
-                    playlistId = playlist.id,
-                    trackId = trackEntity.id,
-                    position = index,
-                )
-            }
-            if (playlistTracks.isNotEmpty()) {
-                playlistDao.insertPlaylistTracks(playlistTracks)
-            }
-            playlistDao.updateTrackCount(playlist.id, downloadedTracks.size)
-        }
-    }
-
     override suspend fun syncRecentPlaylist() {
         val playlist = getSystemPlaylistSync(Playlist.SystemPlaylistType.RECENT) ?: return
         val recentTracks = trackDao.getRecent().first()
@@ -392,23 +372,4 @@ class PlaylistRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncFavoritesPlaylist() {
-        val playlist = getSystemPlaylistSync(Playlist.SystemPlaylistType.FAVORITES) ?: return
-        val favoriteTracks = trackDao.getFavorites().first()
-
-        database.withTransaction {
-            playlistDao.clearPlaylistTracks(playlist.id)
-            val playlistTracks = favoriteTracks.mapIndexed { index, trackEntity ->
-                PlaylistTrackEntity(
-                    playlistId = playlist.id,
-                    trackId = trackEntity.id,
-                    position = index,
-                )
-            }
-            if (playlistTracks.isNotEmpty()) {
-                playlistDao.insertPlaylistTracks(playlistTracks)
-            }
-            playlistDao.updateTrackCount(playlist.id, favoriteTracks.size)
-        }
-    }
 }
