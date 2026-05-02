@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.screens.album
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.domain.model.Album
+import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
@@ -21,6 +22,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,6 +39,13 @@ data class AlbumDetailUiState(
     val downloadedTrackIds: Set<String> = emptySet(),
     val snackbarMessage: UiText? = null,
     val isSnackbarError: Boolean = false,
+    /**
+     * Per-track Bandcamp price keyed by `Track.id`. Populated lazily after
+     * the album loads by fetching each track's own page (Bandcamp doesn't
+     * ship per-track prices on the album page). Missing keys mean either
+     * the price hasn't loaded yet or the track isn't sold individually.
+     */
+    val trackPrices: Map<String, AlbumPrice> = emptyMap(),
 )
 
 @HiltViewModel
@@ -53,6 +64,7 @@ class AlbumDetailViewModel @Inject constructor(
 
     private var favoriteJob: Job? = null
     private var loadJob: Job? = null
+    private var trackPricesJob: Job? = null
     private var loadedUrl: String? = null
     var retryAction: (() -> Unit)? = null
         private set
@@ -100,9 +112,17 @@ class AlbumDetailViewModel @Inject constructor(
     fun loadAlbum(url: String) {
         if (loadedUrl == url && _uiState.value.album != null) return
         loadJob?.cancel()
+        trackPricesJob?.cancel()
         loadJob = viewModelScope.launch {
             val isNewUrl = loadedUrl != null && loadedUrl != url
-            _uiState.update { it.copy(isLoading = true, error = null, album = if (isNewUrl) null else it.album) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    album = if (isNewUrl) null else it.album,
+                    trackPrices = if (isNewUrl) emptyMap() else it.trackPrices,
+                )
+            }
             try {
                 albumRepository.getAlbumDetailFlow(url)
                     .collect { album ->
@@ -114,6 +134,7 @@ class AlbumDetailViewModel @Inject constructor(
                                 error = null,
                             )
                         }
+                        maybeLoadTrackPrices(album)
                     }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -123,6 +144,56 @@ class AlbumDetailViewModel @Inject constructor(
                         error = e.message ?: "Failed to load album",
                     )
                 }
+            }
+        }
+    }
+
+    /**
+     * Bandcamp doesn't ship per-track prices on the album page, so for
+     * Bandcamp albums we fan out one HTTP request per track to read each
+     * track's own `defaultPrice`. Results stream into [AlbumDetailUiState.trackPrices]
+     * as they arrive so rows fill in progressively. Cancelled and re-triggered
+     * when the album URL changes; tracked via [trackPricesJob] so navigation
+     * away cleanly aborts in-flight fetches.
+     */
+    private fun maybeLoadTrackPrices(album: Album) {
+        if (!album.url.contains("bandcamp.com", ignoreCase = true)) return
+        val targets = album.tracks.mapNotNull { t ->
+            t.bandcampTrackUrl?.takeIf { it.isNotBlank() }?.let { t.id to it }
+        }
+        if (targets.isEmpty()) return
+        // Skip if every priceable track already has a cached price.
+        if (targets.all { (id, _) -> _uiState.value.trackPrices.containsKey(id) }) return
+
+        val currency = album.price?.currency
+            ?: album.singleTrackPrice?.currency
+            ?: album.discographyOffer?.price?.currency
+            ?: "USD"
+
+        trackPricesJob?.cancel()
+        trackPricesJob = viewModelScope.launch {
+            try {
+                coroutineScope {
+                    targets.map { (trackId, trackUrl) ->
+                        async {
+                            val price = try {
+                                albumRepository.fetchBandcampTrackPrice(trackUrl, currency)
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                null
+                            }
+                            if (price != null) {
+                                _uiState.update {
+                                    it.copy(trackPrices = it.trackPrices + (trackId to price))
+                                }
+                            }
+                        }
+                    }.awaitAll()
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Per-track price loading is best-effort; never surface an error.
             }
         }
     }

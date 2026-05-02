@@ -12,6 +12,7 @@ import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.remote.DustvalveAlbumScraper
 import com.dustvalve.next.android.domain.model.Album
+import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
@@ -227,6 +228,11 @@ class AlbumRepositoryImpl @Inject constructor(
     override suspend fun updatePurchaseInfo(albumId: String, purchaseInfo: PurchaseInfo) {
         albumDao.updatePurchaseInfo(albumId, purchaseInfo.saleItemId, purchaseInfo.saleItemType)
     }
+
+    override suspend fun fetchBandcampTrackPrice(
+        trackUrl: String,
+        fallbackCurrency: String,
+    ): AlbumPrice? = albumScraper.fetchTrackPrice(trackUrl, fallbackCurrency)
 
     override suspend fun toggleFavorite(albumId: String) {
         database.withTransaction {

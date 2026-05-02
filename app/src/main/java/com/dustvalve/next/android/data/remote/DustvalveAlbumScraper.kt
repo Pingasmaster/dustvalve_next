@@ -67,6 +67,9 @@ class DustvalveAlbumScraper @Inject constructor(
         @SerialName("track_num") val trackNum: Int? = null,
         val duration: Float = 0f,
         val file: TrackFile? = null,
+        // Path to the track's own page (e.g. `/track/cerise`); null when the
+        // track isn't sold separately on Bandcamp.
+        @SerialName("title_link") val titleLink: String? = null,
     )
 
     @Serializable
@@ -123,6 +126,10 @@ class DustvalveAlbumScraper @Inject constructor(
             // to the 1-based positional index so sibling tracks with a null
             // track id on the same album don't collide on the key.
             val trackKey = trackInfo.id?.toString() ?: "idx${index + 1}"
+            val trackPageUrl = trackInfo.titleLink
+                ?.takeIf { it.isNotBlank() }
+                ?.let { runCatching { URL(parsedUrl, it).toString() }.getOrNull() }
+                ?.takeIf { NetworkUtils.isValidHttpsUrl(it) }
             Track(
                 id = "${albumId}_$trackKey",
                 albumId = albumId,
@@ -135,6 +142,7 @@ class DustvalveAlbumScraper @Inject constructor(
                 artUrl = artUrl,
                 albumTitle = tralbumData.current.title,
                 albumUrl = resolvedAlbumUrl,
+                bandcampTrackUrl = trackPageUrl,
             )
         }
 
@@ -163,6 +171,45 @@ class DustvalveAlbumScraper @Inject constructor(
             },
         )
     }
+
+    /**
+     * Fetches a single Bandcamp track page and returns the per-track
+     * `defaultPrice` parsed from its `data-tralbum` JSON. Used by the album
+     * detail viewmodel to fill the row subtitle with each track's individual
+     * sale price (Bandcamp doesn't ship per-track prices on the album page).
+     *
+     * Currency isn't reliably present on the track page's TralbumData, so the
+     * caller passes the album-level currency (Bandcamp uses one currency per
+     * artist). Returns null on any failure (404, parse error, no defaultPrice,
+     * non-positive price) so a single bad track never crashes the album view.
+     */
+    suspend fun fetchTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? =
+        withContext(Dispatchers.IO) {
+            if (!NetworkUtils.isValidHttpsUrl(trackUrl)) return@withContext null
+            val request = Request.Builder().url(trackUrl).build()
+            val call = client.newCall(request)
+            coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+            val html = try {
+                call.execute().use { response ->
+                    if (!response.isSuccessful) return@withContext null
+                    response.body.string()
+                }
+            } catch (e: IOException) {
+                return@withContext null
+            }
+            ensureActive()
+            val tralbumJson = HtmlUtils.extractJsonFromScript(html, "TralbumData")
+                ?: HtmlUtils.extractDataAttribute(html, "data-tralbum")
+                ?: return@withContext null
+            val tralbumData = try {
+                json.decodeFromString<TralbumData>(tralbumJson)
+            } catch (_: Throwable) {
+                return@withContext null
+            }
+            val price = tralbumData.defaultPrice ?: return@withContext null
+            if (price <= 0.0) return@withContext null
+            AlbumPrice(amount = price, currency = fallbackCurrency)
+        }
 
     /**
      * Extracts the album's headline buy price from the page's

@@ -378,7 +378,7 @@ fun AlbumDetailScreen(
                                     },
                                     isDownloading = track.id in state.downloadingTrackIds,
                                     isDownloaded = isTrackDownloaded,
-                                    priceSuffix = album.singleTrackPrice?.let { formatPrice(it) },
+                                    priceSuffix = state.trackPrices[track.id]?.let { formatPrice(it) },
                                 )
                             }
                         }
