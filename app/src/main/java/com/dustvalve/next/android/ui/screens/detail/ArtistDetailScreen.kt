@@ -400,7 +400,15 @@ private fun FlatTracksLayout(
                 key = { i -> state.tracks[i].id },
             ) { index ->
                 val track = state.tracks[index]
-                SegmentedListItem(index = index, count = count) {
+                SegmentedListItem(
+                    index = index,
+                    count = count,
+                    modifier = Modifier.animateItem(
+                        fadeInSpec = null,
+                        fadeOutSpec = null,
+                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                    ),
+                ) {
                     MusicRow(
                         track = track,
                         onClick = { onTrackClick(index) },

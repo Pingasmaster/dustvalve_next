@@ -1,6 +1,5 @@
 package com.dustvalve.next.android.ui.screens.album
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
