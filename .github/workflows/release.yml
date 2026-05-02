@@ -8,7 +8,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-modern:
     runs-on: ubuntu-latest
 
     steps:
@@ -33,3 +33,35 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: app/build/outputs/apk/release/app-release.apk
+
+  build-legacy:
+    # Builds the manually-maintained Android 8-12L backport from the
+    # legacy-android8 branch and attaches dustvalve-old.apk to the same release.
+    # Failure here does NOT block the modern release above.
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout legacy-android8 branch
+        uses: actions/checkout@v6
+        with:
+          ref: legacy-android8
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build legacy release APK
+        run: ./gradlew assembleRelease
+
+      - name: Rename APK to dustvalve-old.apk
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve-old.apk
+
+      - name: Upload legacy APK to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: app/build/outputs/apk/release/dustvalve-old.apk

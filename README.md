@@ -32,6 +32,10 @@
   <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><img src="./download.svg" alt="Download APK (legacy)" width="220"/></a>
 </p>
 
+<p align="center">
+  <sub>On <b>Android 8.0 – 12L</b>? The main build needs Android 13+ (API 33). Grab the unsupported legacy backport from the same release: <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><code>dustvalve-old.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch, updated manually, may lag behind).</sub>
+</p>
+
 ---
 
 <details>
