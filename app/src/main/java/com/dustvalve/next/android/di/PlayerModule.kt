@@ -171,17 +171,9 @@ object PlayerModule {
                     scope.launch {
                         val trackId = queueManager.currentTrack.value?.id ?: return@launch
                         val newIsFavorite = libraryRepository.toggleTrackFavorite(trackId)
-                        // Update queue in-memory
-                        val currentQueue = queueManager.queue.value
-                        val currentIndex = queueManager.currentIndex.value
-                        val updatedQueue = currentQueue.toMutableList()
-                        for (i in updatedQueue.indices) {
-                            if (updatedQueue[i].id == trackId) {
-                                updatedQueue[i] = updatedQueue[i].copy(isFavorite = newIsFavorite)
-                            }
-                        }
-                        queueManager.setQueue(updatedQueue, currentIndex)
-                        // Update notification custom layout
+                        // Queue state is patched via PlayerViewModel.collectFavoriteTrackIds
+                        // → applyFavoriteIds, which preserves the unshuffle snapshot.
+                        // setQueue here would null it.
                         updateFavoriteLayout(session, newIsFavorite)
                     }
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))

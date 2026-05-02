@@ -12,14 +12,14 @@ internal object Fixtures {
 
     fun load(name: String): JsonElement {
         val stream = Fixtures::class.java.classLoader
-            .getResourceAsStream("fixtures/youtube/$name")
+            ?.getResourceAsStream("fixtures/youtube/$name")
             ?: error("Missing test fixture: fixtures/youtube/$name")
         return stream.use { json.parseToJsonElement(it.bufferedReader().readText()) }
     }
 
     fun loadString(name: String): String {
         val stream = Fixtures::class.java.classLoader
-            .getResourceAsStream("fixtures/youtube/$name")
+            ?.getResourceAsStream("fixtures/youtube/$name")
             ?: error("Missing test fixture: fixtures/youtube/$name")
         return stream.use { it.bufferedReader().readText() }
     }

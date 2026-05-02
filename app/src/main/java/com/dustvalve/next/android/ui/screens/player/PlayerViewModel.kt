@@ -619,21 +619,11 @@ class PlayerViewModel @Inject constructor(
         val track = uiState.value.currentTrack ?: return
         favoriteJob = viewModelScope.launch {
             try {
-                val newIsFavorite = libraryRepository.toggleTrackFavorite(track.id)
-                // Update the track's isFavorite in the queue using the actual DB state
-                val currentQueue = queueManager.queue.value
-                val currentIndex = queueManager.currentIndex.value
-                if (currentIndex !in currentQueue.indices) return@launch
-                val updatedQueue = currentQueue.toMutableList()
-                for (i in updatedQueue.indices) {
-                    if (updatedQueue[i].id == track.id) {
-                        updatedQueue[i] = updatedQueue[i].copy(isFavorite = newIsFavorite)
-                    }
-                }
-                queueManager.setQueue(updatedQueue, currentIndex)
+                libraryRepository.toggleTrackFavorite(track.id)
+                // Queue state is patched via collectFavoriteTrackIds → applyFavoriteIds,
+                // which preserves the unshuffle snapshot. setQueue here would null it.
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                // DB call failed — don't update queue, UI stays in sync with DB
             }
         }
     }
@@ -750,18 +740,9 @@ class PlayerViewModel @Inject constructor(
     fun toggleFavoriteById(trackId: String) {
         viewModelScope.launch {
             try {
-                val newIsFavorite = libraryRepository.toggleTrackFavorite(trackId)
-                val currentQueue = queueManager.queue.value
-                val currentIndex = queueManager.currentIndex.value
-                val updatedQueue = currentQueue.toMutableList()
-                for (i in updatedQueue.indices) {
-                    if (updatedQueue[i].id == trackId) {
-                        updatedQueue[i] = updatedQueue[i].copy(isFavorite = newIsFavorite)
-                    }
-                }
-                if (currentIndex in updatedQueue.indices) {
-                    queueManager.setQueue(updatedQueue, currentIndex)
-                }
+                libraryRepository.toggleTrackFavorite(trackId)
+                // Same as onToggleFavorite: applyFavoriteIds runs via the DB observer
+                // and preserves the unshuffle snapshot.
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
