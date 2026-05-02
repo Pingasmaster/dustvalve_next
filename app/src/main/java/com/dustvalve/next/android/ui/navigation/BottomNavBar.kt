@@ -3,16 +3,18 @@ package com.dustvalve.next.android.ui.navigation
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.annotation.DrawableRes
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BottomNavBar(
     currentTab: BottomNavItem,
@@ -20,10 +22,10 @@ fun BottomNavBar(
     onItemSelected: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    NavigationBar(modifier = modifier) {
+    ShortNavigationBar(modifier = modifier) {
         visibleTabs.forEach { item ->
             val selected = item == currentTab
-            NavigationBarItem(
+            ShortNavigationBarItem(
                 selected = selected,
                 onClick = { onItemSelected(item.destination) },
                 icon = {

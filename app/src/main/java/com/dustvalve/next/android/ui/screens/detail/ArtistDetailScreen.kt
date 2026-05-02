@@ -395,7 +395,11 @@ private fun FlatTracksLayout(
             item(key = "empty") { EmptyState(message = stringResource(R.string.detail_no_releases)) }
         } else {
             val count = state.tracks.size + if (state.hasMore) 1 else 0
-            itemsIndexed(state.tracks, count) { index, track ->
+            items(
+                count = state.tracks.size,
+                key = { i -> state.tracks[i].id },
+            ) { index ->
+                val track = state.tracks[index]
                 SegmentedListItem(index = index, count = count) {
                     MusicRow(
                         track = track,
@@ -412,16 +416,6 @@ private fun FlatTracksLayout(
                 }
             }
         }
-    }
-}
-
-private fun <T> androidx.compose.foundation.lazy.LazyListScope.itemsIndexed(
-    items: List<T>,
-    @Suppress("UNUSED_PARAMETER") count: Int,
-    block: @Composable (index: Int, item: T) -> Unit,
-) {
-    items(items.size, key = { i -> "track_${items[i].hashCode()}" }) { i ->
-        block(i, items[i])
     }
 }
 

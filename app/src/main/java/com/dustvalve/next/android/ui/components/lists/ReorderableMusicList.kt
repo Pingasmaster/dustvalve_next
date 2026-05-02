@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
@@ -82,18 +82,17 @@ fun <T : Any> ReorderableMusicList(
     ) {
         header?.invoke(this)
 
-        items(
+        itemsIndexed(
             items = displayList,
-            key = keyFn,
-        ) { item ->
-            val index = displayList.indexOf(item)
+            key = { _, item -> keyFn(item) },
+        ) { index, item ->
             ReorderableItem(
                 state = reorderableState,
                 key = keyFn(item),
             ) { isDragging ->
                 val handleModifier = Modifier.longPressDraggableHandle(
                     onDragStarted = {
-                        dragStartIndex = displayList.indexOfFirst { keyFn(it) == keyFn(item) }
+                        dragStartIndex = index
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
                     onDragStopped = {
