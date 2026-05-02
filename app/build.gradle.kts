@@ -12,10 +12,11 @@ android {
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
-        minSdk = 33
+        minSdk = 26
         targetSdk = 37
         versionCode = 213
         versionName = "0.4.6"
+        versionNameSuffix = "-legacy"
     }
 
     buildTypes {
@@ -33,6 +34,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlin {
@@ -53,6 +55,9 @@ android {
 }
 
 dependencies {
+    // Core library desugaring (required on legacy branch: minSdk=26 + JVM 21 bytecode)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+
     // Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)

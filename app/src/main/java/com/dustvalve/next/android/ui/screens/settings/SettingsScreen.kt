@@ -87,6 +87,7 @@ import com.dustvalve.next.android.ui.components.StorageIndicator
 import com.dustvalve.next.android.ui.components.update.AppUpdateDialog
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.update.UpdateUiState
+import com.dustvalve.next.android.util.legacyAudioPermission
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -320,7 +321,7 @@ fun SettingsScreen(
                                 onCheckedChange = { enabled ->
                                     viewModel.setLocalMusicEnabled(enabled)
                                     if (enabled && state.localMusicUseMediaStore) {
-                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                                        audioPermissionLauncher.launch(legacyAudioPermission())
                                     } else if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
                                         folderPickerLauncher.launch(null)
                                     }
@@ -354,7 +355,7 @@ fun SettingsScreen(
                                         if (useIndividualFolders) {
                                             viewModel.setLocalMusicUseMediaStore(false)
                                         } else {
-                                            audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                                            audioPermissionLauncher.launch(legacyAudioPermission())
                                         }
                                     },
                                 )

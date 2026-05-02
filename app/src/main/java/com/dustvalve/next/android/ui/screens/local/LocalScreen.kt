@@ -86,6 +86,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.util.legacyAudioPermission
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.components.RecentSearchesList
@@ -253,7 +254,7 @@ fun LocalScreen(
                                 Button(
                                     onClick = {
                                         viewModel.enableLocalMusic()
-                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                                        audioPermissionLauncher.launch(legacyAudioPermission())
                                     },
                                     shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier

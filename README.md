@@ -10,15 +10,26 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 33"/>
+  <img src="https://img.shields.io/badge/Android-8.0%E2%80%9312L-FFA726?logo=android&logoColor=white" alt="Min SDK 26 (legacy backport)"/>
+  <img src="https://img.shields.io/badge/branch-legacy--android8-orange" alt="Legacy branch"/>
   <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin"/>
-  <img src="https://img.shields.io/badge/Jetpack_Compose-1.11-4285F4?logo=jetpackcompose&logoColor=white" alt="Compose"/>
   <img src="https://img.shields.io/badge/Material_3-Expressive-E8DEF8" alt="M3 Expressive"/>
   <img src="https://img.shields.io/badge/License-GPLv3-blue" alt="GPLv3"/>
 </p>
 
+> ## Legacy backport branch
+>
+> This is the **`legacy-android8`** branch: an unsupported backport that runs on **Android 8.0 (API 26) through Android 12L (API 32)**. It is updated manually by cherry-picking from `master` and may lag behind. The official build APK is named **`dustvalve-old.apk`** and is published on the same GitHub Release as the modern `app-release.apk`.
+>
+> **On Android 13 or newer?** Use the [`master` branch](https://github.com/Pingasmaster/dustvalve_next/tree/master) and grab `app-release.apk` from the [latest release](https://github.com/Pingasmaster/dustvalve_next/releases/latest).
+>
+> Known degradations vs. master:
+> - No predictive-back gesture animation (API 33+ only).
+> - Status/nav bars may not be fully edge-to-edge on Android 8-9.
+> - Notification posting works without a runtime prompt on API < 33 (no degradation, just behavior).
+
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/download/v0.4.6/app-release.apk"><img src="./download.svg" alt="Download APK v0.4.6" width="220"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><img src="./download.svg" alt="Download APK (legacy)" width="220"/></a>
 </p>
 
 ---
