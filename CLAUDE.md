@@ -25,6 +25,24 @@ Do NOT commit or push unless the user explicitly asks you to. Never commit/push 
 
 Skip this step ONLY if the user explicitly says not to bump the badge.
 
+## Legacy Android 8-12L branch (`legacy-android8`)
+
+A long-lived, **unsupported** backport branch named `legacy-android8` exists for users on Android 8.0 (API 26) through Android 12L (API 32). Master targets Android 13+ (`minSdk=33`) and uses bleeding-edge alpha deps; the legacy branch carries a minimal patch set on top of whatever master HEAD it was last cherry-picked from:
+
+- `minSdk=26`, `versionNameSuffix="-legacy"`, `coreLibraryDesugaring` enabled.
+- Manifest gates: `FOREGROUND_SERVICE_MEDIA_PLAYBACK` (`minSdkVersion="34"`), `READ_MEDIA_AUDIO` (`minSdkVersion="33"`), `READ_EXTERNAL_STORAGE` (`maxSdkVersion="32"`); no `enableOnBackInvokedCallback`.
+- Runtime guards: `Build.VERSION.SDK_INT` checks for POST_NOTIFICATIONS prompt and the audio permission picker (`util/LegacyPermissions.kt::legacyAudioPermission()`).
+
+### Goals
+- Give Android 8-12L users a working APK on every release without compromising master's modern stack.
+- Ship as `dustvalve-old.apk` on the **same** GitHub Release as the modern `app-release.apk` (release workflow has a `build-legacy` job that checks out `legacy-android8` and uploads it).
+- Zero dependency forks: legacy stays on the same dep versions as master so cherry-picks are mostly clean.
+
+### Maintenance rules — important
+- **Only update this branch when the user explicitly asks.** Do not proactively cherry-pick from master, do not propose syncing, do not surface the branch's drift unless asked.
+- **Do not build the legacy branch to verify changes before pushing.** It is unsupported; if its CI release job fails, that is the signal to fix it — locally rebuilding `legacy-android8` is not part of the normal flow.
+- When the user does ask to update legacy: enter the `legacy-android8` worktree (or check it out), cherry-pick the relevant master commits, resolve conflicts with the patch policy above (keep minSdk=26, the manifest gates, the desugaring, the `legacyAudioPermission()` indirection), commit, and push. No local build verification required.
+
 ## Pre-alpha update policy
 
 This project is **pre-alpha**. Until beta:
