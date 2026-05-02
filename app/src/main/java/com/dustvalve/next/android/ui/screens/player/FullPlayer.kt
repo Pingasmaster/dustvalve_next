@@ -33,6 +33,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -55,6 +56,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.SwipeToDismissBox
@@ -719,12 +721,14 @@ fun FullPlayer(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     ) {
                         // Artist navigation (icon-only — name is in the title above).
-                        TonalToggleButton(
-                            checked = false,
-                            onCheckedChange = { onArtistClick(track) },
-                            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                        // Stateless action: FilledTonalButton, not TonalToggleButton,
+                        // so TalkBack announces "button" rather than "not selected".
+                        FilledTonalButton(
+                            onClick = { onArtistClick(track) },
+                            shape = ButtonGroupDefaults.connectedLeadingButtonShape,
                             enabled = track.artistUrl.isNotEmpty() || track.isLocal,
                             modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(0.dp),
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_person),
@@ -733,13 +737,13 @@ fun FullPlayer(
                         }
                         // Album navigation (new). Disabled when the track has
                         // no album page (streaming sources where it's not
-                        // canonical).
-                        TonalToggleButton(
-                            checked = false,
-                            onCheckedChange = { onAlbumClick(track) },
-                            shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                        // canonical). Also stateless — same FilledTonalButton.
+                        FilledTonalButton(
+                            onClick = { onAlbumClick(track) },
+                            shape = RoundedCornerShape(4.dp),
                             enabled = albumNavEnabled,
                             modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(0.dp),
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_album),

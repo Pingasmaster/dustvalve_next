@@ -35,7 +35,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -609,7 +608,10 @@ private fun QuickPicksGrid(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = chunked) { pair ->
+        items(
+            items = chunked,
+            key = { pair -> pair.first().videoId },
+        ) { pair ->
             Column(
                 modifier = Modifier.width(320.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -648,13 +650,13 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
                     contentDescription = null,
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                        .clip(MaterialTheme.shapes.small),
                 )
             } else {
                 Box(
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(MaterialTheme.shapes.small)
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                 )
             }
@@ -722,7 +724,7 @@ private fun MixedForYouHeroCarousel(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(24.dp)),
+                        .clip(MaterialTheme.shapes.large),
                 )
             }
             Spacer(Modifier.height(8.dp))
@@ -778,14 +780,14 @@ private fun StaggeredTile(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(20.dp)),
+                    .clip(MaterialTheme.shapes.large),
             )
         } else {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(20.dp))
+                    .clip(MaterialTheme.shapes.large)
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             )
         }
@@ -821,7 +823,7 @@ private fun TilesCarousel(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = items) { tile ->
+        items(items = items, key = { it.id }) { tile ->
             Column(modifier = Modifier.width(140.dp).clickable { onOpen(tile) }) {
                 if (tile.thumbnailUrl != null) {
                     AsyncImage(
@@ -830,7 +832,7 @@ private fun TilesCarousel(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f)
-                            .clip(RoundedCornerShape(16.dp)),
+                            .clip(MaterialTheme.shapes.large),
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -856,7 +858,10 @@ private fun TilesFromHeroesCarousel(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = items) { hero ->
+        items(
+            items = items,
+            key = { hero -> hero.videoId ?: hero.playlistId ?: hero.title },
+        ) { hero ->
             Column(modifier = Modifier.width(160.dp).clickable { onOpen(hero) }) {
                 if (hero.thumbnailUrl != null) {
                     AsyncImage(
@@ -865,7 +870,7 @@ private fun TilesFromHeroesCarousel(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(1f)
-                            .clip(RoundedCornerShape(18.dp)),
+                            .clip(MaterialTheme.shapes.large),
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -912,7 +917,7 @@ private fun ArtistSpotlightCard(
     Surface(
         onClick = { onOpen(artist) },
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        shape = RoundedCornerShape(28.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -991,7 +996,7 @@ private fun ArtistRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = artists) { artist ->
+        items(items = artists, key = { it.browseId }) { artist ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(84.dp).clickable { onOpen(artist) },
