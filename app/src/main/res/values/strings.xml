@@ -322,7 +322,6 @@
     <string name="playlist_auto">Auto playlist</string>
     <string name="playlist_cd_pinned">Pinned</string>
     <string name="playlist_cd_all_downloaded">All tracks downloaded</string>
-    <string name="playlist_artist_separator">%1$s \u00B7 %2$s</string>
     <string name="playlist_cd_play_all">Play all</string>
     <string name="playlist_cd_download_all">Download all</string>
     <string name="playlist_default_title">Playlist</string>
@@ -349,7 +348,6 @@
     <string name="detail_delete_track_download_text">Remove downloaded file for \'%1$s\'?</string>
     <string name="detail_delete_artist_downloads_text">Remove all downloaded tracks by %1$s?</string>
     <string name="detail_delete_playlist_downloads_text">Delete all downloaded tracks from this playlist?</string>
-    <string name="detail_delete_artist_source_downloads_text">Delete all downloaded tracks from this artist?</string>
     <string name="detail_cd_remove_favorites">Remove from favorites</string>
     <string name="detail_cd_add_favorites">Add to favorites</string>
     <string name="detail_cd_delete_album_downloads">Delete album downloads</string>
@@ -364,7 +362,6 @@
     <string name="detail_send_as_gift">Send as a gift</string>
     <string name="detail_cd_open_artist">Open artist page</string>
     <string name="detail_tags">Tags</string>
-    <string name="detail_videos">Videos</string>
     <string name="detail_discography">Discography</string>
     <string name="detail_no_releases">No releases yet</string>
 

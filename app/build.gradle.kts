@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 208
-        versionName = "0.4.1"
+        versionCode = 210
+        versionName = "0.4.3"
     }
 
     buildTypes {
@@ -57,22 +57,22 @@ dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
     implementation(composeBom)
 
-    // Material 3 Expressive + compatible compose libs (all pinned to 1.11.0)
-    implementation("androidx.compose.runtime:runtime:1.11.0")
-    implementation("androidx.compose.ui:ui:1.11.0")
-    implementation("androidx.compose.ui:ui-graphics:1.11.0")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.11.0")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.11.0")
+    // Material 3 Expressive + compatible compose libs (all pinned to 1.12.0-alpha01)
+    implementation("androidx.compose.runtime:runtime:1.12.0-alpha01")
+    implementation("androidx.compose.ui:ui:1.12.0-alpha01")
+    implementation("androidx.compose.ui:ui-graphics:1.12.0-alpha01")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.12.0-alpha01")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.12.0-alpha01")
     implementation("androidx.compose.material3:material3:1.5.0-alpha18")
-    implementation("androidx.compose.foundation:foundation:1.11.0")
-    implementation("androidx.compose.animation:animation:1.11.0")
+    implementation("androidx.compose.foundation:foundation:1.12.0-alpha01")
+    implementation("androidx.compose.animation:animation:1.12.0-alpha01")
 
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Navigation 3
-    implementation("androidx.navigation3:navigation3-runtime:1.1.1")
-    implementation("androidx.navigation3:navigation3-ui:1.1.1")
+    implementation("androidx.navigation3:navigation3-runtime:1.2.0-alpha02")
+    implementation("androidx.navigation3:navigation3-ui:1.2.0-alpha02")
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-beta01")
@@ -84,12 +84,12 @@ dependencies {
     // Hilt
     implementation("com.google.dagger:hilt-android:2.59.2")
     ksp("com.google.dagger:hilt-android-compiler:2.59.2")
-    implementation("androidx.hilt:hilt-lifecycle-viewmodel-compose:1.3.0")
+    implementation("androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0-beta01")
 
     // WorkManager + Hilt Work
     implementation("androidx.work:work-runtime-ktx:2.11.2")
-    implementation("androidx.hilt:hilt-work:1.3.0")
-    ksp("androidx.hilt:hilt-compiler:1.3.0")
+    implementation("androidx.hilt:hilt-work:1.4.0-beta01")
+    ksp("androidx.hilt:hilt-compiler:1.4.0-beta01")
 
     // Room
     implementation("androidx.room:room-runtime:2.8.4")
@@ -116,7 +116,7 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
 
     // MaterialKolor (generate M3 ColorScheme from seed color)
-    implementation("com.materialkolor:material-kolor:4.1.1")
+    implementation("com.materialkolor:material-kolor:5.0.0-alpha07")
 
     // Media3
     implementation("androidx.media3:media3-exoplayer:1.10.0")
@@ -127,7 +127,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0-rc02")
 
     // Reorderable lists (drag & drop for LazyColumn / LazyRow)
     implementation("sh.calvin.reorderable:reorderable:3.1.0")
@@ -136,11 +136,11 @@ dependencies {
     implementation("androidx.webkit:webkit:1.16.0-rc01")
 
     // Core KTX
-    implementation("androidx.core:core-ktx:1.18.0")
+    implementation("androidx.core:core-ktx:1.19.0-alpha01")
 
     // --- Unit test dependencies ---
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0-rc02")
     testImplementation("com.google.truth:truth:1.4.5")
     testImplementation("io.mockk:mockk:1.14.9")
     testImplementation("org.robolectric:robolectric:4.16.1")
@@ -150,6 +150,6 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("com.squareup.okhttp3:okhttp-tls:5.3.2")
     testImplementation("app.cash.turbine:turbine:1.2.1")
-    testImplementation("androidx.compose.ui:ui-test-junit4:1.11.0")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.11.0")
+    testImplementation("androidx.compose.ui:ui-test-junit4:1.12.0-alpha01")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.12.0-alpha01")
 }
