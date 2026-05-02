@@ -92,6 +92,7 @@ fun TrackEntity.toDomain(isFavorite: Boolean): Track = Track(
     dateAdded = dateAdded,
     year = year,
     albumUrl = albumUrl,
+    bandcampTrackUrl = bandcampTrackUrl,
 )
 
 fun Track.toEntity(): TrackEntity = TrackEntity(
@@ -110,6 +111,7 @@ fun Track.toEntity(): TrackEntity = TrackEntity(
     dateAdded = dateAdded,
     year = year,
     albumUrl = albumUrl,
+    bandcampTrackUrl = bandcampTrackUrl,
 )
 
 fun ArtistEntity.toDomain(albums: List<Album>, isFavorite: Boolean = false): Artist = Artist(
