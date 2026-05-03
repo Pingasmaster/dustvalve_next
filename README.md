@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/download/v0.4.7/app-release.apk"><img src="./download.svg" alt="Download APK v0.4.7" width="220"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/app-release.apk"><img src="./download.svg" alt="Download latest APK" width="220"/></a>
 </p>
 
 <p align="center">

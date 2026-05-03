@@ -16,14 +16,7 @@ Always use `run_in_background: true` when launching builds so you can continue w
 
 Do NOT commit or push unless the user explicitly asks you to. Never commit/push proactively after completing changes.
 
-**When the user says "commit and push", always update the README download badge first.** Before staging:
-
-1. Read the current `versionName` from `app/build.gradle.kts` (e.g. `0.3.20`).
-2. Edit `README.md`: replace the `releases/download/v<old>/app-release.apk` URL fragment AND the `alt="Download APK v<old>"` text with `v<new>`.
-3. Edit `download.svg`: replace BOTH `aria-label="Download APK v<old>"` and the `Download APK v<old>` text node body with `v<new>`.
-4. Stage README.md + download.svg in the same commit.
-
-Skip this step ONLY if the user explicitly says not to bump the badge.
+The README download badge uses `releases/latest/download/app-release.apk` which always resolves to the latest GitHub release automatically. No manual badge update is needed on commit and push.
 
 ## Legacy Android 8-12L branch (`legacy-android8`)
 
