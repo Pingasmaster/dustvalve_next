@@ -44,6 +44,7 @@ A long-lived, **unsupported** backport branch named `legacy-android8` exists for
 - **Only update this branch when the user explicitly asks.** Do not proactively cherry-pick from master, do not propose syncing, do not surface the branch's drift unless asked.
 - **Do not build the legacy branch to verify changes before pushing.** It is unsupported; if its CI release job fails, that is the signal to fix it — locally rebuilding `legacy-android8` is not part of the normal flow.
 - When the user does ask to update legacy: enter the `legacy-android8` worktree (or check it out), cherry-pick the relevant master commits, resolve conflicts with the patch policy above (keep minSdk=26, the manifest gates, the desugaring, the `legacyAudioPermission()` indirection), commit, and push. No local build verification required.
+- **Always keep `versionCode` and `versionName` on `legacy-android8` identical to the latest master.** The `versionNameSuffix = "-legacy"` is what differentiates the two builds at install time; the underlying numbers must match so each GitHub Release ships an `app-release.apk` and a `dustvalve-old.apk` from the same version line. When resolving cherry-pick conflicts on `app/build.gradle.kts`, take master's version values verbatim.
 
 ## Pre-alpha update policy
 
