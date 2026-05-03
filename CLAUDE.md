@@ -12,6 +12,15 @@ This script builds debug + release, copies the release APK to the project root, 
 
 Always use `run_in_background: true` when launching builds so you can continue working while they compile. Once the build finishes and you've completed your task, stop and wait — you will be notified via a hook when the build completes.
 
+## Gradle perf flags to AVOID
+
+Do NOT enable these in `gradle.properties`; they cause problems on this stack:
+
+- `org.gradle.configuration-cache=true`
+- `org.gradle.caching=true`
+
+Even though Gradle's build log keeps suggesting configuration cache, leave it off. The combination of AGP alpha + KSP + Hilt at the bleeding-edge versions this project tracks is not reliably configuration-cache-safe.
+
 ## Git Policy
 
 Do NOT commit or push unless the user explicitly asks you to. Never commit/push proactively after completing changes.

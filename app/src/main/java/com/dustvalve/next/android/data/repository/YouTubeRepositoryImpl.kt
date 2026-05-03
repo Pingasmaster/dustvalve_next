@@ -94,7 +94,6 @@ class YouTubeRepositoryImpl @Inject constructor(
         // Surface no continuation: callers will treat this as a single-page
         // response, matching the legacy behaviour for filtered searches.
         // page param accepted for ABI parity but unused.
-        @Suppress("UNUSED_VARIABLE") val unused = page
         return filtered to null
     }
 
