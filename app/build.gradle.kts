@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 215
-        versionName = "0.4.8"
+        versionCode = 216
+        versionName = "0.4.9"
         versionNameSuffix = "-legacy"
     }
 
@@ -88,10 +88,6 @@ dependencies {
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
 
-    // Navigation 3
-    implementation("androidx.navigation3:navigation3-runtime:1.2.0-alpha02")
-    implementation("androidx.navigation3:navigation3-ui:1.2.0-alpha02")
-
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-beta01")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-beta01")
@@ -149,9 +145,6 @@ dependencies {
 
     // Reorderable lists (drag & drop for LazyColumn / LazyRow)
     implementation("sh.calvin.reorderable:reorderable:3.1.0")
-
-    // WebKit
-    implementation("androidx.webkit:webkit:1.16.0-rc01")
 
     // Core KTX
     implementation("androidx.core:core-ktx:1.19.0-alpha01")
