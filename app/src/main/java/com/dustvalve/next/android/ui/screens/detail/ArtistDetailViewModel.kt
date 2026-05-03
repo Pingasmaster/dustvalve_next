@@ -24,7 +24,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.security.MessageDigest
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -322,11 +321,5 @@ class ArtistDetailViewModel @Inject constructor(
                 ),
             )
         } catch (_: Throwable) { /* best-effort */ }
-    }
-
-    @Suppress("unused")
-    private fun md5Hash(input: String): String {
-        val digest = MessageDigest.getInstance("MD5")
-        return digest.digest(input.toByteArray()).joinToString("") { "%02x".format(it) }
     }
 }

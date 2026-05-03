@@ -1,29 +1,7 @@
-# Jsoup
--keeppackagenames org.jsoup.nodes
+# kotlinx-serialization, Jsoup, and Room ship their own consumer ProGuard rules
+# in their AAR/JAR (META-INF/proguard/*.pro and META-INF/com.android.tools/r8/*.pro)
+# which AGP applies automatically. Keep this file minimal; only add app-specific
+# rules R8 can't infer.
 
-# Kotlinx Serialization
--keepattributes *Annotation*, InnerClasses
--dontnote kotlinx.serialization.AnnotationsKt
--keepclassmembers class kotlinx.serialization.json.** {
-    *** Companion;
-}
--keepclasseswithmembers class kotlinx.serialization.json.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
--keep,includedescriptorclasses class com.dustvalve.next.android.**$$serializer { *; }
--keepclassmembers class com.dustvalve.next.android.** {
-    *** Companion;
-}
--keepclasseswithmembers class com.dustvalve.next.android.** {
-    kotlinx.serialization.KSerializer serializer(...);
-}
-
-# Room
--keep class * extends androidx.room.RoomDatabase
--keep @androidx.room.Entity class *
--dontwarn androidx.room.paging.**
-
-# OkHttp
+# OkHttp 5.x has no consumer rules; suppress its optional-platform reflection notes.
 -dontwarn okhttp3.internal.platform.**
-
-
