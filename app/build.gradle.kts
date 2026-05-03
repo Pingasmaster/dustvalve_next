@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 216
-        versionName = "0.4.9"
+        versionCode = 217
+        versionName = "0.4.10"
         versionNameSuffix = "-legacy"
     }
 
@@ -64,6 +64,18 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
+    }
+
+    // AGP can't run NDK strip on these AAR-supplied .so files (no NDK installed
+    // in this build env). Opt them out explicitly so AGP doesn't print a noisy
+    // "Unable to strip" notice on every build.
+    packaging {
+        jniLibs {
+            keepDebugSymbols += setOf(
+                "**/libandroidx.graphics.path.so",
+                "**/libdatastore_shared_counter.so",
+            )
+        }
     }
 }
 
