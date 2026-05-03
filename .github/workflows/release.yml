@@ -24,8 +24,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      # Release APK is signed with the Android debug keystore (auto-generated
-      # by the Android Gradle plugin on first build). No release keystore setup.
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
+
+      - name: Write signing password
+        run: echo "${{ secrets.KEYSTORE_PASSWORD }}" > .password-signing-keys
+
       - name: Build release APK
         run: ./gradlew assembleRelease
 
@@ -35,9 +39,6 @@ jobs:
           files: app/build/outputs/apk/release/app-release.apk
 
   build-legacy:
-    # Builds the manually-maintained Android 8-12L backport from the
-    # legacy-android8 branch and attaches dustvalve-old.apk to the same release.
-    # Failure here does NOT block the modern release above.
     runs-on: ubuntu-latest
 
     steps:
@@ -54,6 +55,12 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
+
+      - name: Write signing password
+        run: echo "${{ secrets.KEYSTORE_PASSWORD }}" > .password-signing-keys
 
       - name: Build legacy release APK
         run: ./gradlew assembleRelease

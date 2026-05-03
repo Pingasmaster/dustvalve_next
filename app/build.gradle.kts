@@ -14,8 +14,21 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 214
-        versionName = "0.4.7"
+        versionCode = 215
+        versionName = "0.4.8"
+    }
+
+    signingConfigs {
+        create("release") {
+            val passwordFile = rootProject.file(".password-signing-keys")
+            val signingPassword = if (passwordFile.exists()) {
+                passwordFile.readText().trim()
+            } else ""
+            storeFile = file("../release-keystore.jks")
+            storePassword = signingPassword
+            keyAlias = "dustvalve"
+            keyPassword = signingPassword
+        }
     }
 
     buildTypes {
@@ -26,7 +39,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
