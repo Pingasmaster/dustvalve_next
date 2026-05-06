@@ -675,7 +675,7 @@ fun YouTubeScreen(
 
 // ── Reusable composables ────────────────────────────────────────────────
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun YouTubeSourceContent(
     state: YouTubeUiState,

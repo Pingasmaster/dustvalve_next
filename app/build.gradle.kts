@@ -79,18 +79,18 @@ android {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2026.04.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.05.00")
     implementation(composeBom)
 
-    // Material 3 Expressive + compatible compose libs (all pinned to 1.12.0-alpha01)
-    implementation("androidx.compose.runtime:runtime:1.12.0-alpha01")
-    implementation("androidx.compose.ui:ui:1.12.0-alpha01")
-    implementation("androidx.compose.ui:ui-graphics:1.12.0-alpha01")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.12.0-alpha01")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.12.0-alpha01")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha18")
-    implementation("androidx.compose.foundation:foundation:1.12.0-alpha01")
-    implementation("androidx.compose.animation:animation:1.12.0-alpha01")
+    // Material 3 Expressive + compatible compose libs (all pinned to 1.12.0-alpha02)
+    implementation("androidx.compose.runtime:runtime:1.12.0-alpha02")
+    implementation("androidx.compose.ui:ui:1.12.0-alpha02")
+    implementation("androidx.compose.ui:ui-graphics:1.12.0-alpha02")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.12.0-alpha02")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.12.0-alpha02")
+    implementation("androidx.compose.material3:material3:1.5.0-alpha19")
+    implementation("androidx.compose.foundation:foundation:1.12.0-alpha02")
+    implementation("androidx.compose.animation:animation:1.12.0-alpha02")
 
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
@@ -118,7 +118,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.3.0-alpha08")
+    implementation("androidx.datastore:datastore-preferences:1.3.0-alpha09")
 
     // DocumentFile (SAF directory/file creation for export)
     implementation("androidx.documentfile:documentfile:1.1.0")
@@ -130,8 +130,8 @@ dependencies {
     implementation("org.jsoup:jsoup:1.22.2")
 
     // Coil 3
-    implementation("io.coil-kt.coil3:coil-compose:3.4.0")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.4.0")
+    implementation("io.coil-kt.coil3:coil-compose:3.5.0-beta01")
+    implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0-beta01")
 
     // Palette (for extracting dominant colors from album art)
     implementation("androidx.palette:palette-ktx:1.0.0")
@@ -154,7 +154,7 @@ dependencies {
     implementation("sh.calvin.reorderable:reorderable:3.1.0")
 
     // Core KTX
-    implementation("androidx.core:core-ktx:1.19.0-alpha01")
+    implementation("androidx.core:core-ktx:1.19.0-alpha02")
 
     // --- Unit test dependencies ---
     testImplementation("junit:junit:4.13.2")
@@ -168,6 +168,6 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("com.squareup.okhttp3:okhttp-tls:5.3.2")
     testImplementation("app.cash.turbine:turbine:1.2.1")
-    testImplementation("androidx.compose.ui:ui-test-junit4:1.12.0-alpha01")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.12.0-alpha01")
+    testImplementation("androidx.compose.ui:ui-test-junit4:1.12.0-alpha02")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.12.0-alpha02")
 }
