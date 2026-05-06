@@ -15,7 +15,7 @@ android {
         minSdk = 26
         targetSdk = 37
         versionCode = 218
-        versionName = "0.4.11"
+        versionName = "0.4.12"
         versionNameSuffix = "-legacy"
     }
 
