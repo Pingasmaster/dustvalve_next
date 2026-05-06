@@ -75,6 +75,7 @@ class SettingsDataStore @Inject constructor(
         val DEDICATED_FOLDER_TREE_URI = stringPreferencesKey("dedicated_folder_tree_uri")
         val DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE = booleanPreferencesKey("dedicated_folder_include_image_cache")
         val DEDICATED_FOLDER_INCLUDE_METADATA_CACHE = booleanPreferencesKey("dedicated_folder_include_metadata_cache")
+        val BANDCAMP_CUSTOM_GENRES = stringPreferencesKey("bandcamp_custom_genres")
     }
 
     companion object {
@@ -651,6 +652,22 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setDedicatedFolderIncludeMetadataCache(enabled: Boolean) {
         context.dataStore.edit { it[Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE] = enabled }
+    }
+
+    /** Custom Bandcamp genres added by the user, stored as JSON. */
+    val bandcampCustomGenres: Flow<List<String>> = context.dataStore.data.map { prefs ->
+        val json = prefs[Keys.BANDCAMP_CUSTOM_GENRES]
+        if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
+    }
+
+    suspend fun setBandcampCustomGenres(genres: List<String>) {
+        context.dataStore.edit { prefs ->
+            if (genres.isNotEmpty()) {
+                prefs[Keys.BANDCAMP_CUSTOM_GENRES] = Json.encodeToString(genres)
+            } else {
+                prefs.remove(Keys.BANDCAMP_CUSTOM_GENRES)
+            }
+        }
     }
 
     /** Raw preferences Flow used by [FolderMirror] to mirror every edit. */
