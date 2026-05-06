@@ -23,7 +23,7 @@ Even though Gradle's build log keeps suggesting configuration cache, leave it of
 
 ## Git Policy
 
-Do NOT commit or push unless the user explicitly asks you to. Never commit/push proactively after completing changes.
+Auto-commit and push is acceptable when the user has explicitly requested automated workflows (e.g., cron jobs). Otherwise, follow the user's explicit instructions.
 
 The README download badge uses `releases/latest/download/app-release.apk` which always resolves to the latest GitHub release automatically. No manual badge update is needed on commit and push.
 
