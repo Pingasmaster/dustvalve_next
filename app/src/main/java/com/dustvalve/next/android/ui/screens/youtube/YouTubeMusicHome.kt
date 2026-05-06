@@ -129,6 +129,7 @@ fun YouTubeMusicHome(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun YouTubeMusicLoadingState(modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -426,6 +427,7 @@ private fun ChipCloudRow(
 }
 
 // Wrapper that reads the Animatable each render so shape tracks animation.
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private class PillCookieMorphShape(
     private val progress: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
 ) : Shape {
@@ -585,6 +587,7 @@ private fun BentoTile(
 private class TileMorphShape(
     private val progress: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
 ) : Shape {
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     private val morph: Morph = Morph(MaterialShapes.Cookie12Sided, MaterialShapes.Pill)
 
     override fun createOutline(
@@ -887,6 +890,7 @@ private fun TilesFromHeroesCarousel(
 
 // ── Artist spotlight + row ─────────────────────────────────────────────
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ArtistSpotlightCard(
     artist: ArtistItem,
@@ -975,6 +979,7 @@ private fun ArtistSpotlightCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private class AnimatedMorphShape(private val progress: Float) : Shape {
     private val morph: Morph = Morph(MaterialShapes.Clover8Leaf, MaterialShapes.Cookie12Sided)
 
