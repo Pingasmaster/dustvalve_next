@@ -13,16 +13,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.1.0
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.0
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.1.0
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
@@ -34,7 +34,7 @@ jobs:
         run: ./gradlew assembleRelease
 
       - name: Upload APK to GitHub Release
-        uses: softprops/action-gh-release@v3.0.0
+        uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/app-release.apk
 
@@ -43,18 +43,18 @@ jobs:
 
     steps:
       - name: Checkout legacy-android8 branch
-        uses: actions/checkout@v6.1.0
+        uses: actions/checkout@v4
         with:
           ref: legacy-android8
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.0
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6.1.0
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
@@ -69,6 +69,6 @@ jobs:
         run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve-old.apk
 
       - name: Upload legacy APK to GitHub Release
-        uses: softprops/action-gh-release@v3.0.0
+        uses: softprops/action-gh-release@v2
         with:
           files: app/build/outputs/apk/release/dustvalve-old.apk
