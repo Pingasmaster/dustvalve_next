@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
@@ -553,6 +555,79 @@ fun SettingsScreen(
                                 checked = state.bandcampEnabled,
                                 onCheckedChange = { viewModel.setBandcampEnabled(it) },
                             )
+                        }
+
+                        // Custom Bandcamp genres list
+                        if (state.bandcampEnabled) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Column(modifier = Modifier.padding(start = 36.dp)) {
+                                Text(
+                                    text = "Custom genres",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                if (state.bandcampCustomGenres.isNotEmpty()) {
+                                    state.bandcampCustomGenres.forEach { genre ->
+                                        ListItem(
+                                            headlineContent = {
+                                                Text(
+                                                    text = genre,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                )
+                                            },
+                                            trailingContent = {
+                                                IconButton(
+                                                    onClick = { viewModel.removeCustomGenre(genre) },
+                                                    shapes = IconButtonDefaults.shapes(),
+                                                ) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.ic_close),
+                                                        contentDescription = "Remove $genre",
+                                                        modifier = Modifier.size(18.dp),
+                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                }
+                                            },
+                                            modifier = Modifier.padding(horizontal = 8.dp),
+                                            colors = ListItemDefaults.colors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            ),
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                }
+
+                                // "Add custom genre" button — open dialog
+                                Surface(
+                                    onClick = { viewModel.setShowAddGenreDialog(true) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(40.dp),
+                                    color = Color.Black,
+                                    contentColor = Color.White,
+                                    shape = MaterialTheme.shapes.small,
+                                ) {
+                                    Box(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.CenterStart,
+                                    ) {
+                                        Text(
+                                            text = "Add custom genre",
+                                            style = MaterialTheme.typography.titleSmallEmphasized,
+                                            modifier = Modifier.padding(horizontal = 12.dp),
+                                        )
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_chevron_right),
+                                            contentDescription = null,
+                                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -1713,6 +1788,66 @@ fun SettingsScreen(
             title = stringResource(R.string.settings_dedicated_folder_migrating),
             progress = state.folderMigrationProgress,
             message = state.folderMigrationMessage?.asString(),
+        )
+    }
+
+    if (state.showAddGenreDialog) {
+        val genreState = rememberTextFieldState(state.newGenreText)
+        LaunchedEffect(state.showAddGenreDialog) {
+            if (state.showAddGenreDialog) {
+                genreState.setTextAndPlaceCursorAtEnd(state.newGenreText)
+            }
+        }
+        AlertDialog(
+            onDismissRequest = {
+                viewModel.setShowAddGenreDialog(false)
+                viewModel.setNewGenreText("")
+            },
+            title = { Text("Add custom genre") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = genreState.text.toString(),
+                        onValueChange = { viewModel.setNewGenreText(it) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Enter genre name") },
+                        singleLine = true,
+                    )
+                    if (state.bandcampCustomGenres.contains(state.newGenreText.trim()) && state.newGenreText.trim().isNotBlank()) {
+                        Text(
+                            text = "Genre already exists",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.addCustomGenre()
+                        viewModel.setShowAddGenreDialog(false)
+                        viewModel.setNewGenreText("")
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                    enabled = state.newGenreText.trim().isNotBlank() &&
+                        !state.bandcampCustomGenres.contains(state.newGenreText.trim()),
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.setShowAddGenreDialog(false)
+                        viewModel.setNewGenreText("")
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text("Cancel")
+                }
+            },
         )
     }
 
