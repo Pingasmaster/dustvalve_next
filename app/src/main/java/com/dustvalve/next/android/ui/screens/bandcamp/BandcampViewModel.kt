@@ -157,6 +157,9 @@ class BandcampViewModel @Inject constructor(
         val GENRE_TAGS = listOf(
             "", "rock", "hip-hop-rap", "alternative", "electronic", "metal",
             "experimental", "pop", "jazz", "blues", "punk", "r-b-soul",
+            "folk", "funk", "acoustic", "ambient", "soundtrack", "country",
+            "classical", "reggae", "devotional", "comedy", "latin",
+            "audiobooks", "world", "spoken-word", "podcasts",
         )
     }
 }
