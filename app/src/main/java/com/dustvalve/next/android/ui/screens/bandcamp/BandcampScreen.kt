@@ -108,18 +108,33 @@ private data class GenreCategory(
 )
 
 private val discoverCategories = listOf(
-    GenreCategory("best selling", "", Color(0xFFF7A664)),
-    GenreCategory("rock", "rock", Color(0xFFF67356)),
-    GenreCategory("hip-hop/rap", "hip-hop-rap", Color(0xFFDF2535)),
-    GenreCategory("alternative", "alternative", Color(0xFFD4356D)),
-    GenreCategory("electronic", "electronic", Color(0xFFC13EA2)),
-    GenreCategory("metal", "metal", Color(0xFF985BBE)),
-    GenreCategory("experimental", "experimental", Color(0xFF8171B1)),
-    GenreCategory("pop", "pop", Color(0xFF8690CB)),
-    GenreCategory("jazz", "jazz", Color(0xFF87A8C4)),
-    GenreCategory("blues", "blues", Color(0xFF88BFBC)),
-    GenreCategory("punk", "punk", Color(0xFF83D048)),
-    GenreCategory("r&b/soul", "r-b-soul", Color(0xFFB0C846)),
+    GenreCategory("acoustic", "acoustic", Color(0xFFB85E00)),
+    GenreCategory("alternative", "alternative", Color(0xFF58CDB9)),
+    GenreCategory("ambient", "ambient", Color(0xFF1E787A)),
+    GenreCategory("audiobooks", "audiobooks", Color(0xFF886744)),
+    GenreCategory("blues", "blues", Color(0xFF027BA1)),
+    GenreCategory("classical", "classical", Color(0xFF027F65)),
+    GenreCategory("comedy", "comedy", Color(0xFF2859F4)),
+    GenreCategory("country", "country", Color(0xFF247945)),
+    GenreCategory("devotional", "devotional", Color(0xFF197581)),
+    GenreCategory("electronic", "electronic", Color(0xFF534AC9)),
+    GenreCategory("experimental", "experimental", Color(0xFF5B1A75)),
+    GenreCategory("folk", "folk", Color(0xFF486C85)),
+    GenreCategory("funk", "funk", Color(0xFFBF4C75)),
+    GenreCategory("hip-hop/rap", "hip-hop-rap", Color(0xFFF4B004)),
+    GenreCategory("jazz", "jazz", Color(0xFF297A62)),
+    GenreCategory("kids", "kids", Color(0xFFFFA600)),
+    GenreCategory("latin", "latin", Color(0xFFC25200)),
+    GenreCategory("metal", "metal", Color(0xFF800102)),
+    GenreCategory("podcasts", "podcasts", Color(0xFFBA4D75)),
+    GenreCategory("pop", "pop", Color(0xFFBF41B0)),
+    GenreCategory("punk", "punk", Color(0xFFF86D0A)),
+    GenreCategory("r&b/soul", "r-b-soul", Color(0xFF8724A1)),
+    GenreCategory("reggae", "reggae", Color(0xFF604BE3)),
+    GenreCategory("rock", "rock", Color(0xFFCA2F40)),
+    GenreCategory("soundtrack", "soundtrack", Color(0xFF0777A4)),
+    GenreCategory("spoken word", "spoken-word", Color(0xFFD89103)),
+    GenreCategory("world", "world", Color(0xFFCD1D5F)),
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -330,7 +345,7 @@ fun BandcampScreen(
                 // Discover category rows
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp),
+                    contentPadding = PaddingValues(top = 8.dp),
                 ) {
                     item(key = "discover_header") {
                         StaggeredAnimatedItem(index = 0) {
@@ -392,37 +407,6 @@ fun BandcampScreen(
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
-                    }
-
-                    // "view more" row
-                    item(key = "view_more") {
-                        StaggeredAnimatedItem(index = discoverCategories.size + 1) {
-                            Surface(
-                                onClick = { /* TODO */ },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp),
-                                color = Color(0xFF818285),
-                                contentColor = Color.White,
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    Text(
-                                        text = stringResource(R.string.bandcamp_view_more),
-                                        style = MaterialTheme.typography.titleMediumEmphasized,
-                                        modifier = Modifier
-                                            .align(Alignment.CenterStart)
-                                            .padding(horizontal = 20.dp),
-                                    )
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_chevron_right),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .align(Alignment.CenterEnd)
-                                            .padding(end = 16.dp),
-                                    )
                                 }
                             }
                         }
