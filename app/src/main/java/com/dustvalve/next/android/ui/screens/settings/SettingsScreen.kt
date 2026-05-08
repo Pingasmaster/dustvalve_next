@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.text.input.rememberTextFieldState
-import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
@@ -47,9 +45,11 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -622,9 +622,10 @@ fun SettingsScreen(
                                         Icon(
                                             painter = painterResource(R.drawable.ic_chevron_right),
                                             contentDescription = null,
-                                            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp),
+                                            modifier = Modifier
+                                                .align(Alignment.CenterEnd)
+                                                .padding(end = 12.dp)
+                                                .size(16.dp),
                                         )
                                     }
                                 }
@@ -1793,12 +1794,6 @@ fun SettingsScreen(
     }
 
     if (state.showAddGenreDialog) {
-        val genreState = rememberTextFieldState(state.newGenreText)
-        LaunchedEffect(state.showAddGenreDialog) {
-            if (state.showAddGenreDialog) {
-                genreState.setTextAndPlaceCursorAtEnd(state.newGenreText)
-            }
-        }
         AlertDialog(
             onDismissRequest = {
                 viewModel.setShowAddGenreDialog(false)
@@ -1808,7 +1803,7 @@ fun SettingsScreen(
             text = {
                 Column {
                     OutlinedTextField(
-                        value = genreState.text.toString(),
+                        value = state.newGenreText,
                         onValueChange = { viewModel.setNewGenreText(it) },
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = { Text("Enter genre name") },
