@@ -43,3 +43,4 @@ todo.txt
 log*.txt
 log*.md
 ideas
+.worktrees/
