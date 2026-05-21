@@ -121,22 +121,22 @@ private val discoverCategories = listOf(
     GenreCategory("blues", "blues", Color(0xFF88BFBC)),
     GenreCategory("punk", "punk", Color(0xFF83D048)),
     GenreCategory("r&b/soul", "r-b-soul", Color(0xFFB0C846)),
-    // New genres - ALL GREY for now (TODO: user will provide specific colors later)
-    GenreCategory("folk", "folk", Color(0xFF808080)),
-    GenreCategory("funk", "funk", Color(0xFF808080)),
-    GenreCategory("acoustic", "acoustic", Color(0xFF808080)),
-    GenreCategory("ambient", "ambient", Color(0xFF808080)),
-    GenreCategory("soundtrack", "soundtrack", Color(0xFF808080)),
-    GenreCategory("country", "country", Color(0xFF808080)),
-    GenreCategory("classical", "classical", Color(0xFF808080)),
-    GenreCategory("reggae", "reggae", Color(0xFF808080)),
-    GenreCategory("devotional", "devotional", Color(0xFF808080)),
-    GenreCategory("comedy", "comedy", Color(0xFF808080)),
-    GenreCategory("latin", "latin", Color(0xFF808080)),
-    GenreCategory("audiobooks", "audiobooks", Color(0xFF808080)),
-    GenreCategory("world", "world", Color(0xFF808080)),
-    GenreCategory("spoken word", "spoken-word", Color(0xFF808080)),
-    GenreCategory("podcasts", "podcasts", Color(0xFF808080)),
+    // New genres
+    GenreCategory("folk", "folk", Color(0xFFD7BE48)),
+    GenreCategory("funk", "funk", Color(0xFFF7A664)),
+    GenreCategory("acoustic", "acoustic", Color(0xFFF67356)),
+    GenreCategory("ambient", "ambient", Color(0xFFD92433)),
+    GenreCategory("soundtrack", "soundtrack", Color(0xFFD4356D)),
+    GenreCategory("country", "country", Color(0xFFC13EA2)),
+    GenreCategory("classical", "classical", Color(0xFF985BBE)),
+    GenreCategory("reggae", "reggae", Color(0xFF8474B2)),
+    GenreCategory("devotional", "devotional", Color(0xFF8690CB)),
+    GenreCategory("comedy", "comedy", Color(0xFF88BFBC)),
+    GenreCategory("latin", "latin", Color(0xFF88A9C4)),
+    GenreCategory("audiobooks", "audiobooks", Color(0xFFB0C846)),
+    GenreCategory("world", "world", Color(0xFF83D048)),
+    GenreCategory("spoken word", "spoken-word", Color(0xFFF7A664)),
+    GenreCategory("podcasts", "podcasts", Color(0xFFD6BE48)),
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -347,7 +347,7 @@ fun BandcampScreen(
                 // Discover category rows
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp),
+                    contentPadding = PaddingValues(top = 8.dp),
                 ) {
                     item(key = "discover_header") {
                         StaggeredAnimatedItem(index = 0) {
