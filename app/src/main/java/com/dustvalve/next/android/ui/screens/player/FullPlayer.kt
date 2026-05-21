@@ -204,7 +204,13 @@ fun FullPlayer(
 
         ModalBottomSheet(
             onDismissRequest = { showVolumeSheet = false },
-            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetState = androidx.compose.material3.rememberBottomSheetState(
+                initialValue = androidx.compose.material3.SheetValue.Hidden,
+                enabledValues = setOf(
+                    androidx.compose.material3.SheetValue.Hidden,
+                    androidx.compose.material3.SheetValue.Expanded,
+                ),
+            ),
         ) {
             Column(
                 modifier = Modifier
@@ -1357,7 +1363,13 @@ fun FullPlayer(
 
         ModalBottomSheet(
             onDismissRequest = { showQueueSheet = false },
-            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetState = androidx.compose.material3.rememberBottomSheetState(
+                initialValue = androidx.compose.material3.SheetValue.Hidden,
+                enabledValues = setOf(
+                    androidx.compose.material3.SheetValue.Hidden,
+                    androidx.compose.material3.SheetValue.Expanded,
+                ),
+            ),
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
