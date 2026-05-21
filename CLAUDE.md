@@ -59,6 +59,16 @@ This project is **pre-alpha**. Until beta:
 
 - **Bug #1 (Missing `org.jetbrains.kotlin.android` plugin)**: This is NOT a real bug. The `org.jetbrains.kotlin.plugin.compose` plugin already applies the Kotlin Android plugin internally. Adding `id("org.jetbrains.kotlin.android")` to `app/build.gradle.kts` causes a build failure: "Cannot add extension with name 'kotlin', as there is an extension already registered with that name." Do NOT add this plugin.
 
+- **Bug #2 (WorkManagerInitializer manifest-merge warning)**: This is NOT a real bug and will **NEVER be fixed** — always ignore it. Every build prints, in the unit-test variant manifest merge (`mergeDebugUnitTestManifest`) only:
+
+  ```
+  AndroidManifest.xml:28 Warning: meta-data#androidx.work.WorkManagerInitializer was tagged at AndroidManifest.xml:28 to remove other declarations but no other declaration present
+  ```
+
+  The `<provider tools:node="merge">` block in `app/src/main/AndroidManifest.xml` with `tools:node="remove"` on the `androidx.work.WorkManagerInitializer` meta-data is the **canonical, required** Hilt + WorkManager pattern (lets Hilt provide `HiltWorkerFactory`). The warning fires only in the unit-test variant because AGP deliberately does not merge dependency/AAR manifests into the test sourceset (Google Issue Tracker 127986458), so the `remove` directive finds nothing to act on. In the real debug/release APK merge the library contributes the node, the removal works, and there is NO warning.
+
+  There is no safe targeted suppression: `tools:ignore` only affects **lint** issue IDs (this is a manifest-*merger* warning, not lint), and `tools:node="removeAll"` would also strip the `ProfileInstallerInitializer` from the same provider and break baseline-profile installation. Do NOT touch the manifest block, do NOT add a suppression, do NOT "fix" this warning. It has zero runtime impact. Android Lint itself reports "No issues found"; this is purely a cosmetic build-log line.
+
 ## Pre-Alpha Status
 
 This project is in **pre-alpha**. Do NOT worry about database migrations or retrocompatibility. Always use `fallbackToDestructiveMigration()` and keep DB version at 1. Schema changes are free — just modify entities directly.
