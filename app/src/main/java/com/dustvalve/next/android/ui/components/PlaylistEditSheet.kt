@@ -34,7 +34,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,7 +68,10 @@ fun PlaylistEditSheet(
     tracks: List<Track> = emptyList(),
     isCreate: Boolean = true,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val sheetState = rememberBottomSheetState(
+        initialValue = SheetValue.Hidden,
+        enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+    )
     var name by rememberSaveable { mutableStateOf(initialName) }
     var selectedShapeKey by rememberSaveable { mutableStateOf(initialShapeKey ?: "clover4leaf") }
     var selectedIconUrl by rememberSaveable { mutableStateOf(initialIconUrl) }
