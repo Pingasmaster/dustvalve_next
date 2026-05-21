@@ -40,7 +40,7 @@ class AppUpdateServiceTest {
         val update = svc.checkForUpdate()
         assertThat(update).isNotNull()
         assertThat(update!!.versionName).isEqualTo("0.3.50")
-        assertThat(update.apkDownloadUrl).endsWith("app-release.apk")
+        assertThat(update.apkDownloadUrl).endsWith("dustvalve-old.apk")
     }
 
     @Test fun `detects a newer stable release too`() = runTest {
@@ -102,7 +102,7 @@ class AppUpdateServiceTest {
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v0.3.60", prerelease = true, assetName = "source.zip"),
-                    release(tag = "v0.3.55", prerelease = true, assetName = "app-release.apk"),
+                    release(tag = "v0.3.55", prerelease = true, assetName = "dustvalve-old.apk"),
                 ),
             ),
         )
@@ -186,8 +186,8 @@ class AppUpdateServiceTest {
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v9.9.9", prerelease = false, assetName = null),
-                    release(tag = "v9.9.8", prerelease = true, assetName = "app-release.apk"),
-                    release(tag = "v9.9.7", prerelease = true, assetName = "app-release.apk"),
+                    release(tag = "v9.9.8", prerelease = true, assetName = "dustvalve-old.apk"),
+                    release(tag = "v9.9.7", prerelease = true, assetName = "dustvalve-old.apk"),
                 ),
             ),
         )
@@ -208,7 +208,7 @@ class AppUpdateServiceTest {
         tag: String,
         prerelease: Boolean = false,
         draft: Boolean = false,
-        assetName: String? = "app-release.apk",
+        assetName: String? = "dustvalve-old.apk",
     ): String {
         val assetsJson = if (assetName == null) {
             "[]"

@@ -99,16 +99,18 @@ open class AppUpdateService @Inject constructor(
 
         // Pre-alpha: every CI build ships as a GitHub prerelease, so we
         // MUST include them here. Drafts (unpublished) are still skipped.
-        // Releases with no .apk asset (doc-only / assets-not-yet-uploaded)
-        // are skipped — we have nothing to install from them.
+        // LEGACY BRANCH PATCH: each release ships both app-release.apk (modern,
+        // minSdk=33) and dustvalve-old.apk (this legacy build). Match ONLY the
+        // legacy asset so Android 8-12L installs never download the modern APK.
+        // Releases without dustvalve-old.apk are skipped: nothing to install.
         val latest = releases.firstOrNull { release ->
-            !release.draft && release.assets.any { it.name.endsWith(".apk") }
+            !release.draft && release.assets.any { it.name == LEGACY_APK_ASSET }
         } ?: return@withContext null
 
         val latestVersion = latest.tagName.removePrefix("v")
         if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
-        val apkAsset = latest.assets.first { it.name.endsWith(".apk") }
+        val apkAsset = latest.assets.first { it.name == LEGACY_APK_ASSET }
         AvailableUpdate(versionName = latestVersion, apkDownloadUrl = apkAsset.browserDownloadUrl)
     }
 
@@ -174,6 +176,9 @@ open class AppUpdateService @Inject constructor(
 
     companion object {
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
+
+        /** LEGACY BRANCH PATCH: the only release asset this build will install. */
+        const val LEGACY_APK_ASSET = "dustvalve-old.apk"
 
         /** True when [remote] is a strictly higher dotted-int version than [local]. */
         fun isNewer(remote: String, local: String): Boolean {
