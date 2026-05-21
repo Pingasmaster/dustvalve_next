@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 219
-        versionName = "0.4.13"
+        versionCode = 220
+        versionName = "0.4.14"
     }
 
     signingConfigs {
@@ -79,25 +79,25 @@ android {
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2026.05.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
     implementation(composeBom)
 
-    // Material 3 Expressive + compatible compose libs (all pinned to 1.12.0-alpha02)
-    implementation("androidx.compose.runtime:runtime:1.12.0-alpha02")
-    implementation("androidx.compose.ui:ui:1.12.0-alpha02")
-    implementation("androidx.compose.ui:ui-graphics:1.12.0-alpha02")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.12.0-alpha02")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.12.0-alpha02")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha19")
-    implementation("androidx.compose.foundation:foundation:1.12.0-alpha02")
-    implementation("androidx.compose.animation:animation:1.12.0-alpha02")
+    // Material 3 Expressive + compatible compose libs (all pinned to 1.12.0-alpha03)
+    implementation("androidx.compose.runtime:runtime:1.12.0-alpha03")
+    implementation("androidx.compose.ui:ui:1.12.0-alpha03")
+    implementation("androidx.compose.ui:ui-graphics:1.12.0-alpha03")
+    implementation("androidx.compose.ui:ui-tooling-preview:1.12.0-alpha03")
+    debugImplementation("androidx.compose.ui:ui-tooling:1.12.0-alpha03")
+    implementation("androidx.compose.material3:material3:1.5.0-alpha20")
+    implementation("androidx.compose.foundation:foundation:1.12.0-alpha03")
+    implementation("androidx.compose.animation:animation:1.12.0-alpha03")
 
     // Graphics Shapes (for MaterialShapes)
     implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Lifecycle
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-beta01")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-beta01")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-beta02")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-beta02")
 
     // Activity
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -140,25 +140,25 @@ dependencies {
     implementation("com.materialkolor:material-kolor:5.0.0-alpha07")
 
     // Media3
-    implementation("androidx.media3:media3-exoplayer:1.10.0")
-    implementation("androidx.media3:media3-session:1.10.0")
-    implementation("androidx.media3:media3-datasource-okhttp:1.10.0")
+    implementation("androidx.media3:media3-exoplayer:1.10.1")
+    implementation("androidx.media3:media3-session:1.10.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.10.1")
 
     // Kotlinx Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0-rc02")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // Reorderable lists (drag & drop for LazyColumn / LazyRow)
     implementation("sh.calvin.reorderable:reorderable:3.1.0")
 
     // Core KTX
-    implementation("androidx.core:core-ktx:1.19.0-alpha02")
+    implementation("androidx.core:core-ktx:1.19.0-rc01")
 
     // --- Unit test dependencies ---
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0-rc02")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("com.google.truth:truth:1.4.5")
     testImplementation("io.mockk:mockk:1.14.9")
     testImplementation("org.robolectric:robolectric:4.16.1")
@@ -168,6 +168,6 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("com.squareup.okhttp3:okhttp-tls:5.3.2")
     testImplementation("app.cash.turbine:turbine:1.2.1")
-    testImplementation("androidx.compose.ui:ui-test-junit4:1.12.0-alpha02")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.12.0-alpha02")
+    testImplementation("androidx.compose.ui:ui-test-junit4:1.12.0-alpha03")
+    debugImplementation("androidx.compose.ui:ui-test-manifest:1.12.0-alpha03")
 }
