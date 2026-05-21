@@ -103,6 +103,8 @@ IMPORTANT: Before any design actions, make sure to fully understand material you
 
 - **YT player JS / nsig support (deferred)**: We deliberately ship without a JS engine. The `ANDROID_VR_NO_AUTH` + `IOS` cascade in `data/remote/youtube/innertube` returns playback URLs that need no sig/nsig deciphering, but loses Premium 256 kbps Opus and age-gated playback. Adding `com.github.gedoor:rhino-android` (~1 MB) for nsig only (sig can be hand-translated) would unlock both. Not urgent today: track the yt-dlp `web_music` config and the yt-dlp PoToken Guide; revisit when ANDROID_VR / IOS clients start failing or when Premium quality becomes a goal.
 
+- **Spotify via librespot (scaffold only, currently dead code)**: The `rust/` directory (`librespot-ffi`, `buildLibrespot.sh`, `prepare.sh`) is a JNI-bridge scaffold added in commit `d17c361` for a future Spotify provider. It is **not wired into the build**: nothing in `settings.gradle.kts` / `app/build.gradle.kts` compiles it, no `.so` is bundled, and the Kotlin counterpart it references (`SpotifyBridge.kt`) does **not** exist in `app/src` (`lib.rs` is all `TODO`/placeholder). There is currently **zero Spotify code in the app** — the README's "Spotify is currently broken" really means "not implemented." Treat `rust/` as inert scaffolding; do not assume a working Spotify path exists, and do not let it confuse provider audits.
+
 # Important
 
 If any agents launched report inconclusive results, research more and  if youre unsure how to do something, confirm by launhcing an agent to deep dive the web.
