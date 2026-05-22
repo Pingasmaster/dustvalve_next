@@ -188,13 +188,27 @@ class YouTubeViewModel @Inject constructor(
     private var loadedGenreCount = 0
 
     init {
+        applyDefaultSource()
+        loadDiscoveryFeed()
+    }
+
+    /**
+     * Resets the active sub-tab to the source configured in Settings. Called from
+     * [init] and on every YouTube-tab entry, so opening the tab always lands on the
+     * user's default; a manual [setActiveSource] switch is a temporary, per-visit
+     * override discarded the next time the tab is opened.
+     */
+    fun applyDefaultSource() {
         viewModelScope.launch {
             val default = settingsDataStore.youtubeDefaultSource.firstOrNull()
             val source = if (default == "youtube_music") YouTubeSource.YouTubeMusic else YouTubeSource.YouTube
-            _uiState.update { it.copy(activeSource = source) }
-            if (source == YouTubeSource.YouTubeMusic) loadYtmHome()
+            if (_uiState.value.activeSource != source) {
+                _uiState.update { it.copy(activeSource = source) }
+            }
+            if (source == YouTubeSource.YouTubeMusic && _uiState.value.ytmHome == null) {
+                loadYtmHome()
+            }
         }
-        loadDiscoveryFeed()
     }
 
     // ── Source sub-tab switching ────────────────────────────────────────
