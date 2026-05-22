@@ -312,8 +312,10 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
         }
     }
 
-    // Update checks are now opt-in from Settings → About → "Search for updates"
-    // (Pre-alpha: no auto-update at startup.)
+    // The self-update flow has two entry points: a silent cold-start check
+    // (DustvalveNextApplication.onCreate → AppUpdateController.checkSilently,
+    // gated by the "Automatic update checks" toggle in Settings → About) and
+    // the manual "Search for updates" button. Both feed the dialog hosted above.
 
     // Deep link handling
     val deepLinkUrl by activity.deepLinkUrl.collectAsStateWithLifecycle()

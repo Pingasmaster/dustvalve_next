@@ -76,6 +76,7 @@ class SettingsDataStore @Inject constructor(
         val DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE = booleanPreferencesKey("dedicated_folder_include_image_cache")
         val DEDICATED_FOLDER_INCLUDE_METADATA_CACHE = booleanPreferencesKey("dedicated_folder_include_metadata_cache")
         val BANDCAMP_CUSTOM_GENRES = stringPreferencesKey("bandcamp_custom_genres")
+        val AUTO_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_update_check_enabled")
     }
 
     companion object {
@@ -545,6 +546,20 @@ class SettingsDataStore @Inject constructor(
     suspend fun setYoutubeDefaultSource(source: String) {
         context.dataStore.edit { prefs ->
             prefs[Keys.YOUTUBE_DEFAULT_SOURCE] = source
+        }
+    }
+
+    // Gates the silent cold-start update check fired from
+    // DustvalveNextApplication.onCreate. Defaults on: pre-alpha ships several
+    // builds a day and we want users on the latest by default. The manual
+    // "Search for updates" button in Settings → About is never gated by this.
+    val autoUpdateCheckEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[Keys.AUTO_UPDATE_CHECK_ENABLED] ?: true
+    }
+
+    suspend fun setAutoUpdateCheckEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.AUTO_UPDATE_CHECK_ENABLED] = enabled
         }
     }
 

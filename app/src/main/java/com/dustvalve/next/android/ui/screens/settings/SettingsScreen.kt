@@ -1657,6 +1657,27 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.settings_check_for_updates))
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.settings_auto_update_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = stringResource(R.string.settings_auto_update_desc),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Switch(
+                                checked = state.autoUpdateCheckEnabled,
+                                onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+                            )
+                        }
                     }
                 }
             }

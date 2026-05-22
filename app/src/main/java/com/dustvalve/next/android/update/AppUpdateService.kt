@@ -27,8 +27,12 @@ import kotlin.coroutines.coroutineContext
  * compares the latest tag to [BuildConfig.VERSION_NAME], and (when newer)
  * downloads the APK + hands it to the system installer via FileProvider.
  *
- * Pre-alpha policy: this is the ONLY self-update path; nothing runs at app
- * startup. The user opts in from Settings → About → "Search for updates".
+ * Pre-alpha policy: this is the ONLY self-update mechanism (no Play Store, no
+ * WorkManager job). It runs on a silent cold-start check fired from
+ * [com.dustvalve.next.android.DustvalveNextApplication.onCreate] via
+ * [AppUpdateController.checkSilently], and on the manual "Search for updates"
+ * button in Settings → About. The cold-start check can be turned off with the
+ * "Automatic update checks" toggle (Settings → About); the manual button never.
  */
 @Singleton
 open class AppUpdateService @Inject constructor(
@@ -71,6 +75,8 @@ open class AppUpdateService @Inject constructor(
     data class AvailableUpdate(
         val versionName: String,
         val apkDownloadUrl: String,
+        /** The GitHub release body (Markdown), shown verbatim in the update dialog. Empty when none. */
+        val releaseNotes: String,
     )
 
     data class DownloadProgress(val bytesDownloaded: Long, val totalBytes: Long) {
@@ -109,7 +115,11 @@ open class AppUpdateService @Inject constructor(
         if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
         val apkAsset = latest.assets.first { it.name.endsWith(".apk") }
-        AvailableUpdate(versionName = latestVersion, apkDownloadUrl = apkAsset.browserDownloadUrl)
+        AvailableUpdate(
+            versionName = latestVersion,
+            apkDownloadUrl = apkAsset.browserDownloadUrl,
+            releaseNotes = latest.body.trim(),
+        )
     }
 
     /**
