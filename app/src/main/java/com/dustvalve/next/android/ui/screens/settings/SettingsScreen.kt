@@ -1657,6 +1657,24 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(stringResource(R.string.settings_check_for_updates))
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                uriHandler.openUri(
+                                    com.dustvalve.next.android.update.AppUpdateService.REPO_URL + "/issues"
+                                )
+                            },
+                            shapes = ButtonDefaults.shapes(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_bug_report),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringResource(R.string.settings_report_issue))
+                        }
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),

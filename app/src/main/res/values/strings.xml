@@ -254,7 +254,7 @@
     <string name="settings_search_history">Search history</string>
     <string name="settings_search_history_desc">Save recent searches for quick access</string>
     <string name="settings_search_history_per_source">Per-source toggles</string>
-    <string name="settings_search_history_clear_all">Erase all search histories</string>
+    <string name="settings_search_history_clear_all">Erase search history</string>
     <string name="settings_search_history_cleared">Cleared all search histories</string>
     <string name="settings_search_history_source_bandcamp">Bandcamp</string>
     <string name="settings_search_history_source_youtube">YouTube</string>
@@ -263,6 +263,7 @@
     <string name="settings_license">Licensed under GPLv3</string>
     <string name="settings_open_repository">Open the repository</string>
     <string name="settings_check_for_updates">Search for updates</string>
+    <string name="settings_report_issue">Report an issue</string>
     <string name="settings_update_no_update">You\'re on the latest version</string>
     <string name="settings_update_check_failed">Couldn\'t check for updates</string>
     <string name="settings_update_available_title">Update available</string>
