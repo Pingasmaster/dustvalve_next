@@ -14,7 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.util.concurrent.atomic.AtomicInteger
 import android.util.Log
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -115,16 +119,42 @@ class BandcampViewModel @Inject constructor(
 
     private fun loadPreviews() {
         viewModelScope.launch {
+            // Genre-specific previews: one discover call per genre tile so every
+            // genre (incl. those past the old chunk-by-index cutoff at "ambient")
+            // gets real, on-genre album art. Bounded concurrency keeps us from
+            // firing all ~27 requests at Bandcamp at once; tiles fill in as they
+            // arrive.
+            val semaphore = Semaphore(PREVIEW_CONCURRENCY)
+            val successes = AtomicInteger(0)
+            val attempts = AtomicInteger(0)
             try {
-                val result = discoverDustvalveUseCase()
-                Log.d(TAG, "loadPreviews: ${result.albums.size} albums returned")
-                val albums = result.albums
-                val chunks = albums.chunked(4)
-                val previews = mutableMapOf<String, List<Album>>()
-                GENRE_TAGS.forEachIndexed { index, tag ->
-                    previews[tag] = chunks.getOrElse(index) { emptyList() }
+                coroutineScope {
+                    GENRE_TAGS.forEach { tag ->
+                        launch {
+                            semaphore.withPermit {
+                                attempts.incrementAndGet()
+                                try {
+                                    val genreParam = tag.takeIf { it.isNotEmpty() }
+                                    val result = discoverDustvalveUseCase(genre = genreParam)
+                                    val preview = result.albums.take(PREVIEW_COUNT)
+                                    successes.incrementAndGet()
+                                    _uiState.update {
+                                        it.copy(categoryPreviews = it.categoryPreviews + (tag to preview))
+                                    }
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "loadPreviews($tag) failed", e)
+                                }
+                            }
+                        }
+                    }
                 }
-                _uiState.update { it.copy(categoryPreviews = previews) }
+                // Only surface the retry banner if nothing loaded at all (e.g. the
+                // network is down); partial failures just leave those tiles bare.
+                if (successes.get() == 0 && attempts.get() > 0) {
+                    _uiState.update { it.copy(previewsError = true) }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -220,6 +250,10 @@ class BandcampViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "BandcampViewModel"
+        /** Max parallel discover requests when loading per-genre previews. */
+        private const val PREVIEW_CONCURRENCY = 5
+        /** Album thumbnails fetched per genre tile (the UI fans out the first 3). */
+        private const val PREVIEW_COUNT = 4
         val GENRE_TAGS = listOf(
             "", "rock", "hip-hop-rap", "alternative", "electronic", "metal",
             "experimental", "pop", "jazz", "blues", "punk", "r-b-soul",
