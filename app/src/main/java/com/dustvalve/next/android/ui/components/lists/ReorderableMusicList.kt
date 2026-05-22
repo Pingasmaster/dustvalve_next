@@ -54,7 +54,10 @@ fun <T : Any> ReorderableMusicList(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
 
-    val displayList = remember { mutableStateListOf<T>() }
+    // Initialize with [items] so the first composed frame already has the real rows at index 0.
+    // If left empty, a list whose only first-frame item is a footer (e.g. the queue sheet) would
+    // anchor LazyListState to the footer's key and scroll away from the top once items populate.
+    val displayList = remember { mutableStateListOf<T>().apply { addAll(items) } }
     var dragStartIndex by remember { mutableIntStateOf(-1) }
 
     // Keep displayList in sync with upstream when not actively dragging.
