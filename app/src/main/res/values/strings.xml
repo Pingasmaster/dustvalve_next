@@ -5,6 +5,7 @@
 
     <!-- Common actions (used across 3+ screens) -->
     <string name="common_action_cancel">Cancel</string>
+    <string name="common_action_enable">Enable</string>
     <string name="common_action_delete">Delete</string>
     <string name="common_action_retry">Retry</string>
     <string name="common_action_save">Save</string>
@@ -12,6 +13,49 @@
     <string name="common_action_remove">Remove</string>
     <string name="common_action_disconnect">Disconnect</string>
     <string name="common_play_all">Play All</string>
+
+    <!-- Open-pasted-link feature: inline chip labels -->
+    <string name="link_open_video">Open YouTube video</string>
+    <string name="link_open_song">Open YouTube Music song</string>
+    <string name="link_open_playlist">Open YouTube playlist</string>
+    <string name="link_open_album">Open Bandcamp album</string>
+    <string name="link_open_artist">Open artist</string>
+    <string name="link_open_track">Open Bandcamp track</string>
+    <!-- Resource nouns used in the enable-provider dialog body -->
+    <string name="link_kind_video">video</string>
+    <string name="link_kind_song">song</string>
+    <string name="link_kind_playlist">playlist</string>
+    <string name="link_kind_album">album</string>
+    <string name="link_kind_artist">artist</string>
+    <string name="link_kind_track">track</string>
+    <!-- Enable-provider confirmation dialog -->
+    <string name="provider_enable_title">Enable %1$s?</string>
+    <string name="provider_enable_text">%1$s is turned off. Enable it to open this %2$s?</string>
+    <!-- Shown when a pasted/opened link is not from a supported source -->
+    <string name="snackbar_unsupported_source">This link isn\'t from a supported source.</string>
+
+    <!-- Library FAB menu + playlist export/import -->
+    <string name="library_new_playlist">New playlist</string>
+    <string name="library_import_playlist">Import playlist</string>
+    <string name="library_export_playlist">Export playlist</string>
+    <string name="library_export_title">Export playlist</string>
+    <string name="library_export_text">Export an offline-readable copy? Offline downloads every song and cover so it plays with no internet. Online keeps the file small and re-streams on import.</string>
+    <string name="library_export_offline">Offline</string>
+    <string name="library_export_lightweight">Online</string>
+    <string name="library_exporting">Exporting playlist</string>
+    <string name="library_importing">Importing playlist</string>
+
+    <!-- Bandcamp custom genres -->
+    <string name="bandcamp_add_custom_genre">Add custom genre</string>
+    <string name="bandcamp_add_genre_title">Add custom genre</string>
+    <string name="bandcamp_add_genre_hint">Enter a Bandcamp genre</string>
+    <string name="bandcamp_add_genre_validating">Checking Bandcamp…</string>
+    <string name="bandcamp_add_genre_exists">Genre already added</string>
+    <string name="bandcamp_add_genre_not_found">No releases found for that genre on Bandcamp</string>
+    <string name="bandcamp_add_genre_network">Couldn\'t reach Bandcamp. Try again.</string>
+    <string name="bandcamp_remove_genre_title">Remove genre?</string>
+    <string name="bandcamp_remove_genre_text">Remove \"%1$s\" from your genres?</string>
+    <string name="common_action_add">Add</string>
     <string name="common_play_mix">Play Mix</string>
     <string name="common_loading">Loading…</string>
     <string name="common_connected">Connected</string>

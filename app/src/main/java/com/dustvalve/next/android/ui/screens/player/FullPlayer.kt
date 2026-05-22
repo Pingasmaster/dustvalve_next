@@ -96,6 +96,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import com.dustvalve.next.android.ui.util.tick
+import com.dustvalve.next.android.ui.util.toggle
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Modifier
@@ -138,6 +141,11 @@ import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+
+/** Number of haptic segments across the seek bar (≈ticks per full-width scrub). */
+private const val SEEK_TICK_SEGMENTS = 40
+/** Number of haptic segments across a volume slider. */
+private const val VOLUME_TICK_SEGMENTS = 15
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -200,6 +208,12 @@ fun FullPlayer(
         LaunchedEffect(Unit) {
             snapshotFlow { sheetVolumeState.value }
                 .collect { playerViewModel.setVolume(it) }
+        }
+        // Tick once per volume step while the user is dragging (not on external/hardware changes).
+        LaunchedEffect(sheetVolumeState) {
+            snapshotFlow { (sheetVolumeState.value * VOLUME_TICK_SEGMENTS).toInt() }
+                .distinctUntilChanged()
+                .collect { if (sheetVolumeState.isDragging) hapticFeedback.tick() }
         }
 
         ModalBottomSheet(
@@ -583,6 +597,7 @@ fun FullPlayer(
                                                 }
                                             },
                                             onDoubleTap = {
+                                                hapticFeedback.toggle(!track.isFavorite)
                                                 playerViewModel.onToggleFavorite()
                                                 scope.launch {
                                                     heartProgress.animateTo(
@@ -653,6 +668,12 @@ fun FullPlayer(
                     LaunchedEffect(Unit) {
                         snapshotFlow { inlineVolumeState.value }
                             .collect { playerViewModel.setVolume(it) }
+                    }
+                    // Tick once per volume step while the user is dragging.
+                    LaunchedEffect(inlineVolumeState) {
+                        snapshotFlow { (inlineVolumeState.value * VOLUME_TICK_SEGMENTS).toInt() }
+                            .distinctUntilChanged()
+                            .collect { if (inlineVolumeState.isDragging) hapticFeedback.tick() }
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
@@ -759,7 +780,10 @@ fun FullPlayer(
                         // Favorite toggle.
                         TonalToggleButton(
                             checked = track.isFavorite,
-                            onCheckedChange = { playerViewModel.onToggleFavorite() },
+                            onCheckedChange = {
+                                hapticFeedback.toggle(!track.isFavorite)
+                                playerViewModel.onToggleFavorite()
+                            },
                             shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
                             modifier = Modifier.weight(1f),
                         ) {
@@ -816,6 +840,8 @@ fun FullPlayer(
                 val trackId = track.id
                 var isSeeking by remember(trackId) { mutableStateOf(false) }
                 var seekPosition by remember(trackId) { mutableFloatStateOf(0f) }
+                // Tracks the last scrub segment so we tick once per step, not per frame.
+                var lastSeekStep by remember(trackId) { mutableIntStateOf(-1) }
 
                 // Clear isSeeking once the player position catches up to the seek target
                 SideEffect {
@@ -850,6 +876,8 @@ fun FullPlayer(
                                             seekPosition = fraction
                                             val targetMs = (fraction * state.duration).toLong()
                                             playerViewModel.onSeek(targetMs)
+                                            hapticFeedback.tick()
+                                            lastSeekStep = -1
                                             // Keep showing seekPosition until player catches up
                                             isSeeking = true
                                         }
@@ -859,16 +887,24 @@ fun FullPlayer(
                                             onDragEnd = {
                                                 val targetMs = (seekPosition * state.duration).toLong()
                                                 playerViewModel.onSeek(targetMs)
+                                                lastSeekStep = -1
                                                 // Keep showing seekPosition until player catches up
                                             },
                                             onDragCancel = {
                                                 isSeeking = false
+                                                lastSeekStep = -1
                                             },
                                         ) { change, _ ->
                                             change.consume()
                                             val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
                                             isSeeking = true
                                             seekPosition = fraction
+                                            // Tick once per scrub segment for a textured feel.
+                                            val step = (fraction * SEEK_TICK_SEGMENTS).toInt()
+                                            if (step != lastSeekStep) {
+                                                hapticFeedback.tick()
+                                                lastSeekStep = step
+                                            }
                                         }
                                     }
                             } else {
@@ -951,7 +987,10 @@ fun FullPlayer(
                 ) {
                     // Previous button
                     OutlinedButton(
-                        onClick = { playerViewModel.onPrevious() },
+                        onClick = {
+                            hapticFeedback.tick()
+                            playerViewModel.onPrevious()
+                        },
                         modifier = Modifier.size(56.dp),
                         shapes = ButtonDefaults.shapes(),
                         contentPadding = PaddingValues(0.dp),
@@ -968,7 +1007,10 @@ fun FullPlayer(
                     // Play/Pause toggle button
                     ToggleButton(
                         checked = state.isPlaying,
-                        onCheckedChange = { playerViewModel.onPlayPause() },
+                        onCheckedChange = {
+                            hapticFeedback.toggle(!state.isPlaying)
+                            playerViewModel.onPlayPause()
+                        },
                         modifier = Modifier.size(80.dp),
                         colors = ToggleButtonDefaults.toggleButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -988,7 +1030,10 @@ fun FullPlayer(
 
                     // Next button
                     OutlinedButton(
-                        onClick = { playerViewModel.onNext() },
+                        onClick = {
+                            hapticFeedback.tick()
+                            playerViewModel.onNext()
+                        },
                         modifier = Modifier.size(56.dp),
                         shapes = ButtonDefaults.shapes(),
                         contentPadding = PaddingValues(0.dp),
@@ -1014,7 +1059,10 @@ fun FullPlayer(
                 ) {
                     TonalToggleButton(
                         checked = state.shuffleEnabled,
-                        onCheckedChange = { playerViewModel.onToggleShuffle() },
+                        onCheckedChange = {
+                            hapticFeedback.toggle(!state.shuffleEnabled)
+                            playerViewModel.onToggleShuffle()
+                        },
                         shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
                         modifier = Modifier.weight(1f),
                     ) {
@@ -1025,7 +1073,11 @@ fun FullPlayer(
                     }
                     TonalToggleButton(
                         checked = state.repeatMode != RepeatMode.OFF,
-                        onCheckedChange = { playerViewModel.onToggleRepeat() },
+                        onCheckedChange = {
+                            // Cycle OFF→ALL→ONE→OFF; only ONE→OFF is "turning off".
+                            hapticFeedback.toggle(state.repeatMode != RepeatMode.ONE)
+                            playerViewModel.onToggleRepeat()
+                        },
                         shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
                         modifier = Modifier.weight(1f),
                     ) {

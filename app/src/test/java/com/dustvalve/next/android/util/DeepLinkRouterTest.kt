@@ -1,10 +1,126 @@
 package com.dustvalve.next.android.util
 
+import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.ui.navigation.NavDestination
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
 class DeepLinkRouterTest {
+
+    // --- detect(): provider + type classification ---------------------------
+
+    @Test fun `detect youtube watch is video`() {
+        val d = DeepLinkRouter.detect("https://www.youtube.com/watch?v=dQw4w9WgXcQ")!!
+        assertThat(d.provider).isEqualTo(MusicProvider.YOUTUBE)
+        assertThat(d.type).isEqualTo(LinkResourceType.VIDEO)
+    }
+
+    @Test fun `detect youtube music watch is song`() {
+        val d = DeepLinkRouter.detect("https://music.youtube.com/watch?v=dQw4w9WgXcQ")!!
+        assertThat(d.type).isEqualTo(LinkResourceType.SONG)
+    }
+
+    @Test fun `detect scheme-less youtu_be`() {
+        val d = DeepLinkRouter.detect("youtu.be/dQw4w9WgXcQ")!!
+        assertThat(d.type).isEqualTo(LinkResourceType.VIDEO)
+        assertThat((d.action as DeepLinkAction.PlayYouTubeVideo).videoUrl)
+            .isEqualTo("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    }
+
+    @Test fun `detect youtu_be strips si and keeps id`() {
+        val d = DeepLinkRouter.detect("https://youtu.be/dQw4w9WgXcQ?si=AbCdEf&t=30")!!
+        assertThat((d.action as DeepLinkAction.PlayYouTubeVideo).videoUrl)
+            .isEqualTo("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    }
+
+    @Test fun `detect embed live v forms`() {
+        for (u in listOf(
+            "https://www.youtube.com/embed/dQw4w9WgXcQ",
+            "https://www.youtube.com/live/dQw4w9WgXcQ",
+            "https://www.youtube.com/v/dQw4w9WgXcQ",
+        )) {
+            assertThat(DeepLinkRouter.detect(u)?.type).isEqualTo(LinkResourceType.VIDEO)
+        }
+    }
+
+    @Test fun `detect nocookie embed`() {
+        assertThat(DeepLinkRouter.detect("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ")?.type)
+            .isEqualTo(LinkResourceType.VIDEO)
+    }
+
+    @Test fun `detect country tld`() {
+        assertThat(DeepLinkRouter.detect("https://youtube.de/watch?v=dQw4w9WgXcQ")?.type)
+            .isEqualTo(LinkResourceType.VIDEO)
+    }
+
+    @Test fun `detect playlist olak album-as-playlist`() {
+        val d = DeepLinkRouter.detect("https://music.youtube.com/playlist?list=OLAK5uy_abc123")!!
+        assertThat(d.type).isEqualTo(LinkResourceType.PLAYLIST)
+        val nav = (d.action as DeepLinkAction.Navigate).destination as NavDestination.CollectionDetail
+        assertThat(nav.url).isEqualTo("https://www.youtube.com/playlist?list=OLAK5uy_abc123")
+    }
+
+    @Test fun `detect browse VL playlist strips wrapper`() {
+        val d = DeepLinkRouter.detect("https://music.youtube.com/browse/VLPL12345")!!
+        assertThat(d.type).isEqualTo(LinkResourceType.PLAYLIST)
+        val nav = (d.action as DeepLinkAction.Navigate).destination as NavDestination.CollectionDetail
+        assertThat(nav.url).isEqualTo("https://www.youtube.com/playlist?list=PL12345")
+    }
+
+    @Test fun `detect browse UC artist`() {
+        val d = DeepLinkRouter.detect("https://music.youtube.com/browse/UCxEqaQWosMHaTih1tgzDqug")!!
+        assertThat(d.type).isEqualTo(LinkResourceType.ARTIST)
+    }
+
+    @Test fun `detect bandcamp album type and provider`() {
+        val d = DeepLinkRouter.detect("https://artist.bandcamp.com/album/the-album")!!
+        assertThat(d.provider).isEqualTo(MusicProvider.BANDCAMP)
+        assertThat(d.type).isEqualTo(LinkResourceType.ALBUM)
+    }
+
+    @Test fun `detect bandcamp track type`() {
+        assertThat(DeepLinkRouter.detect("https://artist.bandcamp.com/track/the-track")?.type)
+            .isEqualTo(LinkResourceType.TRACK)
+    }
+
+    // --- normalization / unwrapping ----------------------------------------
+
+    @Test fun `google url wrapper unwrapped`() {
+        val d = DeepLinkRouter.detect(
+            "https://www.google.com/url?q=https%3A%2F%2Fyoutu.be%2FdQw4w9WgXcQ&sa=D",
+        )!!
+        assertThat(d.type).isEqualTo(LinkResourceType.VIDEO)
+    }
+
+    @Test fun `consent redirect unwrapped`() {
+        val d = DeepLinkRouter.detect(
+            "https://consent.youtube.com/m?continue=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DdQw4w9WgXcQ",
+        )!!
+        assertThat(d.type).isEqualTo(LinkResourceType.VIDEO)
+    }
+
+    @Test fun `attribution link unwrapped`() {
+        val d = DeepLinkRouter.detect(
+            "https://www.youtube.com/attribution_link?a=x&u=%2Fwatch%3Fv%3DdQw4w9WgXcQ%26feature%3Dshare",
+        )!!
+        assertThat(d.type).isEqualTo(LinkResourceType.VIDEO)
+    }
+
+    // --- negative cases -----------------------------------------------------
+
+    @Test fun `daily blog is not a resource`() {
+        assertThat(DeepLinkRouter.detect("https://daily.bandcamp.com/")).isNull()
+        assertThat(DeepLinkRouter.detect("https://daily.bandcamp.com/features/some-article")).isNull()
+    }
+
+    @Test fun `bandcamp fan profile on apex is null`() {
+        assertThat(DeepLinkRouter.detect("https://bandcamp.com/somefan")).isNull()
+    }
+
+    @Test fun `looksLikeUrl heuristic`() {
+        assertThat(DeepLinkRouter.looksLikeUrl("music.example.com/album/x")).isTrue()
+        assertThat(DeepLinkRouter.looksLikeUrl("just some text")).isFalse()
+    }
 
     @Test fun `youtu_be short link`() {
         val r = DeepLinkRouter.route("https://youtu.be/dQw4w9WgXcQ")

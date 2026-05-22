@@ -1,10 +1,13 @@
 package com.dustvalve.next.android.ui.screens.library
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.remote.DustvalveCollectionScraper
+import com.dustvalve.next.android.data.transfer.PlaylistTransferRepository
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
@@ -16,6 +19,7 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -38,7 +42,15 @@ data class LibraryUiState(
     val renameTargetTracks: List<Track> = emptyList(),
     val deleteTarget: LibraryItem? = null,
     val shapeTarget: LibraryItem? = null,
+    /** Non-null while the export offline/lightweight choice dialog is shown. */
+    val exportTarget: Playlist? = null,
+    /** Non-null while an export/import is running (drives the progress overlay). */
+    val transfer: TransferProgress? = null,
+    /** One-shot success message for the snackbar. */
+    val message: String? = null,
 )
+
+data class TransferProgress(val importing: Boolean, val done: Int, val total: Int)
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -51,6 +63,8 @@ class LibraryViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val playlistDao: PlaylistDao,
     private val favoriteDao: FavoriteDao,
+    private val playlistTransferRepository: PlaylistTransferRepository,
+    @param:ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -106,6 +120,60 @@ class LibraryViewModel @Inject constructor(
 
     fun dismissShapeDialog() {
         _uiState.update { it.copy(shapeTarget = null) }
+    }
+
+    fun clearMessage() {
+        _uiState.update { it.copy(message = null) }
+    }
+
+    /** Show the offline/lightweight choice dialog for [playlist]. */
+    fun requestExport(playlist: Playlist) {
+        _uiState.update { it.copy(exportTarget = playlist) }
+    }
+
+    fun dismissExport() {
+        _uiState.update { it.copy(exportTarget = null) }
+    }
+
+    /** Export [playlist] to the SAF [uri]. [offline] downloads everything; otherwise metadata-only. */
+    fun exportPlaylist(playlist: Playlist, offline: Boolean, uri: Uri) {
+        _uiState.update { it.copy(exportTarget = null) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(transfer = TransferProgress(importing = false, done = 0, total = playlist.trackCount)) }
+            try {
+                val out = context.contentResolver.openOutputStream(uri)
+                    ?: throw IllegalStateException("Cannot open destination")
+                out.use { stream ->
+                    playlistTransferRepository.export(playlist.id, offline, stream) { done, total ->
+                        _uiState.update { it.copy(transfer = TransferProgress(false, done, total)) }
+                    }
+                }
+                _uiState.update { it.copy(transfer = null, message = "Exported \"${playlist.name}\"") }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(transfer = null, error = e.message ?: "Export failed") }
+            }
+        }
+    }
+
+    /** Import a `.dvplaylist` bundle from the SAF [uri]. */
+    fun importPlaylist(uri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(transfer = TransferProgress(importing = true, done = 0, total = 0)) }
+            try {
+                val inp = context.contentResolver.openInputStream(uri)
+                    ?: throw IllegalStateException("Cannot open file")
+                val playlist = inp.use { stream ->
+                    playlistTransferRepository.import(stream) { done, total ->
+                        _uiState.update { it.copy(transfer = TransferProgress(true, done, total)) }
+                    }
+                }
+                _uiState.update { it.copy(transfer = null, message = "Imported \"${playlist.name}\"") }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(transfer = null, error = e.message ?: "Import failed") }
+            }
+        }
     }
 
     fun createPlaylist(name: String, shapeKey: String? = null, iconUrl: String? = null) {
