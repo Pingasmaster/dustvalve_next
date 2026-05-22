@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.update
 
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.util.UiText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,7 +25,12 @@ sealed interface UpdateUiState {
     data object Idle : UpdateUiState
     data object Checking : UpdateUiState
     /** Server said a newer build exists. Awaiting user confirmation. */
-    data class Available(val versionName: String, val apkUrl: String) : UpdateUiState
+    data class Available(
+        val versionName: String,
+        val apkUrl: String,
+        /** GitHub release body (Markdown), shown in the update dialog. Empty when none. */
+        val releaseNotes: String,
+    ) : UpdateUiState
     /** APK is streaming. [progress] is 0f..1f, or `null` when no Content-Length was sent. */
     data class Downloading(val versionName: String, val progress: Float?) : UpdateUiState
 }
@@ -44,6 +51,7 @@ sealed interface UpdateUiState {
 @Singleton
 class AppUpdateController @Inject constructor(
     private val service: AppUpdateService,
+    private val settingsDataStore: SettingsDataStore,
 ) {
     /** Overridable in tests so a TestDispatcher can drive the internal scope. Set once, before first call. */
     internal var scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -66,13 +74,17 @@ class AppUpdateController @Inject constructor(
     /**
      * Idempotent per process. Fires once from [com.dustvalve.next.android.DustvalveNextApplication.onCreate].
      * All errors are swallowed — a startup update check must never surface
-     * a toast or block the UI.
+     * a toast or block the UI. Skips entirely when the user has turned off the
+     * "Automatic update checks" toggle (Settings → About); the manual
+     * [checkManually] path is never gated by that preference.
      */
     fun checkSilently() {
         if (silentCheckStarted) return
         silentCheckStarted = true
         scope.launch {
             try {
+                val autoCheckEnabled = settingsDataStore.autoUpdateCheckEnabled.firstOrNull() ?: true
+                if (!autoCheckEnabled) return@launch
                 val available = service.checkForUpdate() ?: return@launch
                 _state.update { current ->
                     // Respect an in-flight manual flow — the user is already
@@ -82,6 +94,7 @@ class AppUpdateController @Inject constructor(
                         else -> UpdateUiState.Available(
                             versionName = available.versionName,
                             apkUrl = available.apkDownloadUrl,
+                            releaseNotes = available.releaseNotes,
                         )
                     }
                 }
@@ -110,6 +123,7 @@ class AppUpdateController @Inject constructor(
                     _state.value = UpdateUiState.Available(
                         versionName = available.versionName,
                         apkUrl = available.apkDownloadUrl,
+                        releaseNotes = available.releaseNotes,
                     )
                 }
             } catch (e: Exception) {

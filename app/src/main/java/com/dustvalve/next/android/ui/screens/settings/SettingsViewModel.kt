@@ -80,6 +80,7 @@ data class SettingsUiState(
     val folderMigrationError: UiText? = null,
     val updateState: UpdateUiState = UpdateUiState.Idle,
     val updateMessage: UiText? = null,
+    val autoUpdateCheckEnabled: Boolean = true,
 )
 
 @HiltViewModel
@@ -139,6 +140,7 @@ class SettingsViewModel @Inject constructor(
         collectShowVolumeButton()
         collectSearchHistoryEnabled()
         collectYoutubeDefaultSource()
+        collectAutoUpdateCheckEnabled()
         collectAlbumCoverLongPressCarousel()
         collectKeepScreenOnInApp()
         collectKeepScreenOnWhilePlaying()
@@ -892,6 +894,16 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(updateMessage = null) }
     }
 
+    fun setAutoUpdateCheckEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setAutoUpdateCheckEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     fun setYoutubeDefaultSource(source: String) {
         viewModelScope.launch {
             try {
@@ -1014,6 +1026,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { source ->
                     _uiState.update { it.copy(youtubeDefaultSource = source) }
+                }
+        }
+    }
+
+    private fun collectAutoUpdateCheckEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.autoUpdateCheckEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(autoUpdateCheckEnabled = enabled) }
                 }
         }
     }
