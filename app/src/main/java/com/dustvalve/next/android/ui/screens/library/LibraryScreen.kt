@@ -29,7 +29,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonMenu
+import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -43,6 +44,10 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.dustvalve.next.android.ui.components.LoadingOverlay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -96,6 +101,34 @@ fun LibraryScreen(
         }
     }
 
+    LaunchedEffect(state.message) {
+        state.message?.let { msg ->
+            try {
+                snackbarHostState.showSnackbar(msg)
+            } finally {
+                viewModel.clearMessage()
+            }
+        }
+    }
+
+    var fabExpanded by remember { mutableStateOf(false) }
+    // Holds (playlist, offline) chosen in the export dialog until the SAF destination is picked.
+    var pendingExport by remember { mutableStateOf<Pair<Playlist, Boolean>?>(null) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> uri?.let { viewModel.importPlaylist(it) } }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip"),
+    ) { uri ->
+        val pending = pendingExport
+        pendingExport = null
+        if (uri != null && pending != null) {
+            viewModel.exportPlaylist(pending.first, pending.second, uri)
+        }
+    }
+
     if (state.isLoading) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -114,12 +147,39 @@ fun LibraryScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.showCreateDialog() },
+            FloatingActionButtonMenu(
+                expanded = fabExpanded,
+                button = {
+                    ToggleFloatingActionButton(
+                        checked = fabExpanded,
+                        onCheckedChange = { fabExpanded = it },
+                    ) {
+                        Icon(
+                            painter = painterResource(if (fabExpanded) R.drawable.ic_close else R.drawable.ic_add),
+                            contentDescription = stringResource(R.string.common_cd_create_playlist),
+                        )
+                    }
+                },
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_add),
-                    contentDescription = stringResource(R.string.common_cd_create_playlist),
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        fabExpanded = false
+                        viewModel.showCreateDialog()
+                    },
+                    text = { Text(stringResource(R.string.library_new_playlist)) },
+                    icon = {
+                        Icon(painter = painterResource(R.drawable.ic_add), contentDescription = null)
+                    },
+                )
+                FloatingActionButtonMenuItem(
+                    onClick = {
+                        fabExpanded = false
+                        importLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+                    },
+                    text = { Text(stringResource(R.string.library_import_playlist)) },
+                    icon = {
+                        Icon(painter = painterResource(R.drawable.ic_cloud_download), contentDescription = null)
+                    },
                 )
             }
         },
@@ -152,6 +212,7 @@ fun LibraryScreen(
                 onRenameClick = { playlist -> viewModel.showRenameDialog(playlist) },
                 onDeleteClick = { item -> viewModel.showDeleteDialog(item) },
                 onChangeShapeClick = { item -> viewModel.showShapeDialog(item) },
+                onExportClick = { playlist -> viewModel.requestExport(playlist) },
                 modifier = Modifier.padding(scaffoldPadding),
             )
         }
@@ -233,6 +294,48 @@ fun LibraryScreen(
             initialShapeKey = item.shapeKey ?: defaultShapeKey,
         )
     }
+
+    // Export: choose offline (download everything) vs. lightweight (online references)
+    state.exportTarget?.let { playlist ->
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissExport() },
+            title = { Text(stringResource(R.string.library_export_title)) },
+            text = { Text(stringResource(R.string.library_export_text)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingExport = playlist to true
+                        viewModel.dismissExport()
+                        exportLauncher.launch("${playlist.name}.dvplaylist")
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) { Text(stringResource(R.string.library_export_offline)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        pendingExport = playlist to false
+                        viewModel.dismissExport()
+                        exportLauncher.launch("${playlist.name}.dvplaylist")
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) { Text(stringResource(R.string.library_export_lightweight)) }
+            },
+        )
+    }
+
+    // Export / import progress
+    state.transfer?.let { progress ->
+        val total = progress.total
+        val fraction = if (total > 0) progress.done.toFloat() / total else 0f
+        LoadingOverlay(
+            title = stringResource(
+                if (progress.importing) R.string.library_importing else R.string.library_exporting,
+            ),
+            progress = fraction,
+            message = if (total > 0) "${progress.done} / $total" else null,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
@@ -248,6 +351,7 @@ private fun LibraryList(
     onRenameClick: (Playlist) -> Unit,
     onDeleteClick: (LibraryItem) -> Unit,
     onChangeShapeClick: (LibraryItem) -> Unit,
+    onExportClick: (Playlist) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var menuItem by remember { mutableStateOf<LibraryItem?>(null) }
@@ -362,6 +466,20 @@ private fun LibraryList(
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                         )
                     }
+                    ListItem(
+                        headlineContent = { Text(stringResource(R.string.library_export_playlist)) },
+                        leadingContent = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_cloud_download),
+                                contentDescription = null,
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            menuItem = null
+                            onExportClick(playlist)
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    )
                     if (playlist.isDeletable) {
                         ListItem(
                             headlineContent = {

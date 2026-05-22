@@ -52,6 +52,8 @@ import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.dustvalve.next.android.ui.util.tick
+import com.dustvalve.next.android.ui.util.toggle
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.painterResource
@@ -258,21 +260,39 @@ fun MiniPlayer(
 
                     Spacer(modifier = Modifier.width(4.dp))
 
-                    IconButton(onClick = { playerViewModel.onPrevious() }, shapes = IconButtonDefaults.shapes()) {
+                    IconButton(
+                        onClick = {
+                            hapticFeedback.tick()
+                            playerViewModel.onPrevious()
+                        },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_previous),
                             contentDescription = stringResource(R.string.player_cd_previous),
                         )
                     }
 
-                    IconButton(onClick = { playerViewModel.onPlayPause() }, shapes = IconButtonDefaults.shapes()) {
+                    IconButton(
+                        onClick = {
+                            hapticFeedback.toggle(!state.isPlaying)
+                            playerViewModel.onPlayPause()
+                        },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
                             contentDescription = stringResource(if (state.isPlaying) R.string.player_cd_pause else R.string.player_cd_play),
                         )
                     }
 
-                    IconButton(onClick = { playerViewModel.onNext() }, shapes = IconButtonDefaults.shapes()) {
+                    IconButton(
+                        onClick = {
+                            hapticFeedback.tick()
+                            playerViewModel.onNext()
+                        },
+                        shapes = IconButtonDefaults.shapes(),
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.ic_skip_next),
                             contentDescription = stringResource(R.string.player_cd_next),

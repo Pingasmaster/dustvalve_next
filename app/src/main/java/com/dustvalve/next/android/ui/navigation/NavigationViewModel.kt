@@ -2,27 +2,40 @@ package com.dustvalve.next.android.ui.navigation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.data.remote.BandcampDomainSniffer
 import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.ProviderStateUseCase
 import com.dustvalve.next.android.util.DeepLinkAction
 import com.dustvalve.next.android.util.DeepLinkRouter
+import com.dustvalve.next.android.util.LinkResourceType
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/** A compatible link whose provider is disabled — drives the "enable provider?" dialog. */
+data class PendingLink(
+    val provider: MusicProvider,
+    val type: LinkResourceType,
+    val action: DeepLinkAction,
+)
+
 @HiltViewModel
 class NavigationViewModel @Inject constructor(
     private val providerStateUseCase: ProviderStateUseCase,
     private val youtubeRepository: YouTubeRepository,
+    private val bandcampDomainSniffer: BandcampDomainSniffer,
 ) : ViewModel() {
 
     private val _activeProviders = MutableStateFlow(setOf(MusicProvider.LOCAL))
@@ -92,8 +105,55 @@ class NavigationViewModel @Inject constructor(
         _deepLinkTrack.value = null
     }
 
-    fun handleDeepLink(url: String) {
-        val action = DeepLinkRouter.route(url) ?: return
+    /** A compatible link pointing at a disabled provider; non-null shows the enable dialog. */
+    private val _pendingLinkConfirmation = MutableStateFlow<PendingLink?>(null)
+    val pendingLinkConfirmation: StateFlow<PendingLink?> = _pendingLinkConfirmation.asStateFlow()
+
+    /** Fired when an opened/pasted link isn't from a supported source. */
+    private val _unsupportedLinkEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val unsupportedLinkEvents: SharedFlow<Unit> = _unsupportedLinkEvents.asSharedFlow()
+
+    /**
+     * Open a pasted/external link. Resolves it offline first, then (only if it looks like a URL)
+     * via a single network sniff for custom-domain Bandcamp pages. If it targets a disabled
+     * provider, surfaces the enable dialog; otherwise executes immediately. Unsupported input
+     * raises an [unsupportedLinkEvents] notice.
+     */
+    fun openLink(raw: String) {
+        viewModelScope.launch {
+            val detected = DeepLinkRouter.detect(raw)
+                ?: if (DeepLinkRouter.looksLikeUrl(raw)) bandcampDomainSniffer.sniff(raw) else null
+            if (detected == null) {
+                _unsupportedLinkEvents.tryEmit(Unit)
+                return@launch
+            }
+            if (detected.provider !in _activeProviders.value) {
+                _pendingLinkConfirmation.value =
+                    PendingLink(detected.provider, detected.type, detected.action)
+            } else {
+                execute(detected.action)
+            }
+        }
+    }
+
+    /** OS deep links / shares funnel through the same path so gating + routing are shared. */
+    fun handleDeepLink(url: String) = openLink(url)
+
+    /** User accepted enabling the provider for the pending link: enable it, then open. */
+    fun confirmPendingLink() {
+        val pending = _pendingLinkConfirmation.value ?: return
+        _pendingLinkConfirmation.value = null
+        viewModelScope.launch {
+            providerStateUseCase.setEnabled(pending.provider, true)
+            execute(pending.action)
+        }
+    }
+
+    fun dismissPendingLink() {
+        _pendingLinkConfirmation.value = null
+    }
+
+    private fun execute(action: DeepLinkAction) {
         when (action) {
             is DeepLinkAction.Navigate -> navigateTo(action.destination)
             is DeepLinkAction.PlayYouTubeVideo -> {

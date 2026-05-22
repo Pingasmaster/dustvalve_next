@@ -85,10 +85,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.openInBrowser
 import com.dustvalve.next.android.util.shareUrl
 import com.dustvalve.next.android.ui.theme.AppShapes
@@ -101,6 +103,7 @@ fun YouTubeScreen(
     playerViewModel: PlayerViewModel,
     onPlaylistClick: (url: String, name: String) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
+    onOpenLink: (String) -> Unit,
     onExpandPlayer: () -> Unit = {},
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
@@ -123,6 +126,9 @@ fun YouTubeScreen(
 
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
+    val detectedLink = remember(textFieldState.text.toString()) {
+        DeepLinkRouter.detect(textFieldState.text.toString())
+    }
     val searchListState = rememberLazyListState()
 
     LaunchedEffect(textFieldState) {
@@ -187,7 +193,11 @@ fun YouTubeScreen(
         SearchBarDefaults.InputField(
             searchBarState = searchBarState,
             textFieldState = textFieldState,
-            onSearch = { viewModel.onSearch() },
+            onSearch = {
+                val q = textFieldState.text.toString()
+                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) onOpenLink(q)
+                else viewModel.onSearch()
+            },
             placeholder = { Text(stringResource(R.string.youtube_search_placeholder)) },
             leadingIcon = {
                 Icon(
@@ -348,6 +358,12 @@ fun YouTubeScreen(
                         label = { Text(stringResource(R.string.youtube_tab_tracks)) },
                     )
                 }
+
+                // Inline "open this pasted link" affordance
+                PastedLinkChip(
+                    detected = detectedLink,
+                    onClick = { onOpenLink(textFieldState.text.toString()) },
+                )
 
                 Box(
                     modifier = Modifier

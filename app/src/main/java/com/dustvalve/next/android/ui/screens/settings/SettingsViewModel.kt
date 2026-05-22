@@ -57,9 +57,6 @@ data class SettingsUiState(
     val scanMessage: UiText? = null,
     val bandcampEnabled: Boolean = false,
     val youtubeEnabled: Boolean = false,
-    val bandcampCustomGenres: List<String> = emptyList(),
-    val showAddGenreDialog: Boolean = false,
-    val newGenreText: String = "",
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
@@ -138,7 +135,6 @@ class SettingsViewModel @Inject constructor(
         collectLocalMusicUseMediaStore()
         collectBandcampEnabled()
         collectYoutubeEnabled()
-        collectBandcampCustomGenres()
         collectShowInlineVolumeSlider()
         collectShowVolumeButton()
         collectSearchHistoryEnabled()
@@ -956,49 +952,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun collectBandcampCustomGenres() {
-        viewModelScope.launch {
-            settingsDataStore.bandcampCustomGenres
-                .catch { /* ignore */ }
-                .collect { genres ->
-                    _uiState.update { it.copy(bandcampCustomGenres = genres) }
-                }
-        }
-    }
-
-    fun setShowAddGenreDialog(show: Boolean) {
-        _uiState.update { it.copy(showAddGenreDialog = show) }
-    }
-
-    fun setNewGenreText(text: String) {
-        _uiState.update { it.copy(newGenreText = text) }
-    }
-
-    fun addCustomGenre() {
-        val text = _uiState.value.newGenreText.trim()
-        if (text.isBlank()) return
-        if (text in _uiState.value.bandcampCustomGenres) return
-        viewModelScope.launch {
-            try {
-                val updated = _uiState.value.bandcampCustomGenres + text
-                settingsDataStore.setBandcampCustomGenres(updated)
-                _uiState.update { it.copy(newGenreText = "") }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
-    fun removeCustomGenre(genre: String) {
-        viewModelScope.launch {
-            try {
-                val updated = _uiState.value.bandcampCustomGenres - genre
-                settingsDataStore.setBandcampCustomGenres(updated)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
 
     private fun collectYoutubeEnabled() {
         viewModelScope.launch {

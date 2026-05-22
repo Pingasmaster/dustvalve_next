@@ -56,7 +56,12 @@ import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Text
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
@@ -88,11 +93,13 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
+import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.openInBrowser
 import com.dustvalve.next.android.util.shareUrl
 import com.dustvalve.next.android.ui.theme.AppMotion
@@ -144,6 +151,7 @@ private val discoverCategories = listOf(
 fun BandcampScreen(
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
+    onOpenLink: (String) -> Unit,
     playerViewModel: PlayerViewModel,
     onExpandPlayer: () -> Unit = {},
     viewModel: BandcampViewModel = hiltViewModel(),
@@ -156,9 +164,13 @@ fun BandcampScreen(
     val searchHistoryEnabled by searchViewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var selectedCategoryColor by remember { mutableStateOf(Color.Unspecified) }
+    var genreToRemove by remember { mutableStateOf<String?>(null) }
 
     val searchBarState = rememberSearchBarState()
     val textFieldState = rememberTextFieldState()
+    val detectedLink = remember(textFieldState.text.toString()) {
+        DeepLinkRouter.detect(textFieldState.text.toString())
+    }
     val searchListState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -298,7 +310,11 @@ fun BandcampScreen(
         SearchBarDefaults.InputField(
             searchBarState = searchBarState,
             textFieldState = textFieldState,
-            onSearch = { searchViewModel.onSearch() },
+            onSearch = {
+                val q = textFieldState.text.toString()
+                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) onOpenLink(q)
+                else searchViewModel.onSearch()
+            },
             placeholder = { Text(stringResource(R.string.bandcamp_search_placeholder)) },
             leadingIcon = {
                 Icon(
@@ -414,11 +430,47 @@ fun BandcampScreen(
                         }
                     }
 
+                    // User custom genres (validated against Bandcamp). Long-press to remove.
+                    itemsIndexed(
+                        items = state.customGenres,
+                        key = { _, g -> "custom_$g" },
+                    ) { index, genre ->
+                        val color = discoverCategories[index % discoverCategories.size].color
+                        StaggeredAnimatedItem(index = discoverCategories.size + 1 + index) {
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(72.dp)
+                                    .combinedClickable(
+                                        onClick = {
+                                            selectedCategoryColor = color
+                                            viewModel.selectCategory(slugifyGenre(genre), genre)
+                                        },
+                                        onLongClick = {
+                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            genreToRemove = genre
+                                        },
+                                    ),
+                                color = color,
+                                contentColor = Color.White,
+                            ) {
+                                Text(
+                                    text = genre,
+                                    style = MaterialTheme.typography.titleMediumEmphasized,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .wrapContentHeight(Alignment.CenterVertically)
+                                        .padding(horizontal = 20.dp),
+                                )
+                            }
+                        }
+                    }
+
                     // "Add custom genre" row
                     item(key = "add_custom_genre") {
-                        StaggeredAnimatedItem(index = discoverCategories.size + 1) {
+                        StaggeredAnimatedItem(index = discoverCategories.size + state.customGenres.size + 1) {
                             Surface(
-                                onClick = { /* TODO: open dialog */ },
+                                onClick = { viewModel.setShowAddGenreDialog(true) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp),
@@ -427,7 +479,7 @@ fun BandcampScreen(
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     Text(
-                                        text = "Add custom genre",
+                                        text = stringResource(R.string.bandcamp_add_custom_genre),
                                         style = MaterialTheme.typography.titleMediumEmphasized,
                                         modifier = Modifier
                                             .align(Alignment.CenterStart)
@@ -481,6 +533,12 @@ fun BandcampScreen(
                         label = { Text(stringResource(R.string.bandcamp_tab_tracks)) },
                     )
                 }
+
+                // Inline "open this pasted link" affordance
+                PastedLinkChip(
+                    detected = detectedLink,
+                    onClick = { onOpenLink(textFieldState.text.toString()) },
+                )
 
                 // Results area
                 Box(
@@ -726,6 +784,88 @@ fun BandcampScreen(
             onCreatePlaylist = { name, shapeKey, iconUrl ->
                 playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, trackId)
                 addToPlaylistTrackId = null
+            },
+        )
+    }
+
+    // Add custom genre — validated against Bandcamp before it's added.
+    if (state.showAddGenreDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!state.genreValidating) viewModel.setShowAddGenreDialog(false) },
+            title = { Text(stringResource(R.string.bandcamp_add_genre_title)) },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = state.newGenreText,
+                        onValueChange = { viewModel.setNewGenreText(it) },
+                        singleLine = true,
+                        enabled = !state.genreValidating,
+                        placeholder = { Text(stringResource(R.string.bandcamp_add_genre_hint)) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    val errRes = when (state.genreError) {
+                        GenreError.ALREADY_EXISTS -> R.string.bandcamp_add_genre_exists
+                        GenreError.NOT_FOUND -> R.string.bandcamp_add_genre_not_found
+                        GenreError.NETWORK -> R.string.bandcamp_add_genre_network
+                        null -> null
+                    }
+                    if (errRes != null) {
+                        Text(
+                            text = stringResource(errRes),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                    if (state.genreValidating) {
+                        CircularWavyProgressIndicator(modifier = Modifier.padding(top = 8.dp).size(20.dp))
+                        Text(
+                            text = stringResource(R.string.bandcamp_add_genre_validating),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.addCustomGenre() },
+                    enabled = !state.genreValidating && state.newGenreText.isNotBlank(),
+                    shapes = ButtonDefaults.shapes(),
+                ) { Text(stringResource(R.string.common_action_add)) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.setShowAddGenreDialog(false) },
+                    enabled = !state.genreValidating,
+                    shapes = ButtonDefaults.shapes(),
+                ) { Text(stringResource(R.string.common_action_cancel)) }
+            },
+        )
+    }
+
+    genreToRemove?.let { genre ->
+        AlertDialog(
+            onDismissRequest = { genreToRemove = null },
+            title = { Text(stringResource(R.string.bandcamp_remove_genre_title)) },
+            text = { Text(stringResource(R.string.bandcamp_remove_genre_text, genre)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.removeCustomGenre(genre)
+                        genreToRemove = null
+                    },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(
+                        text = stringResource(R.string.common_action_remove),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { genreToRemove = null }, shapes = ButtonDefaults.shapes()) {
+                    Text(stringResource(R.string.common_action_cancel))
+                }
             },
         )
     }
