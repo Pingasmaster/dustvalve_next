@@ -131,6 +131,10 @@ fun YouTubeScreen(
     }
     val searchListState = rememberLazyListState()
 
+    // Always open the YouTube tab on the sub-tab configured in Settings. Fires once
+    // per tab visit because the screen leaves/re-enters composition on navigation.
+    LaunchedEffect(Unit) { viewModel.applyDefaultSource() }
+
     LaunchedEffect(textFieldState) {
         snapshotFlow { textFieldState.text.toString() }
             .collect { viewModel.onQueryChange(it) }
