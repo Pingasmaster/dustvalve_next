@@ -105,6 +105,8 @@ IMPORTANT: Before any design actions, make sure to fully understand material you
 
 - **Spotify via librespot (scaffold only, currently dead code)**: The `rust/` directory (`librespot-ffi`, `buildLibrespot.sh`, `prepare.sh`) is a JNI-bridge scaffold added in commit `d17c361` for a future Spotify provider. It is **not wired into the build**: nothing in `settings.gradle.kts` / `app/build.gradle.kts` compiles it, no `.so` is bundled, and the Kotlin counterpart it references (`SpotifyBridge.kt`) does **not** exist in `app/src` (`lib.rs` is all `TODO`/placeholder). There is currently **zero Spotify code in the app** — the README's "Spotify is currently broken" really means "not implemented." Treat `rust/` as inert scaffolding; do not assume a working Spotify path exists, and do not let it confuse provider audits.
 
+- **Android 17 "Min Mode" AOD mini-player (deferred — re-check Aug 2026 or later)**: Rendering the now-playing mini-player on the Always-On Display via Min Mode is **not implementable yet** — as of mid-2026 it is not a public API (absent from API 37 `android.jar` and Android 17 Beta; disabled in Canary; no documented `MinModeActivity`/`MinModeProvider` contract, permission, sample, or emulator support). Google says it lands as a developer API after the June 2026 stable release. **Action: from August 2026 onward, check the Android Developers blog / API 37+ release notes for a documented Min Mode API, then implement the AOD mini-player.**
+
 # Important
 
 If any agents launched report inconclusive results, research more and  if youre unsure how to do something, confirm by launhcing an agent to deep dive the web.

@@ -21,4 +21,13 @@ class ProviderStateUseCase @Inject constructor(
             if (yt) add(MusicProvider.YOUTUBE)
         }
     }
+
+    /** Enable or disable a provider. LOCAL is always on and ignored. */
+    suspend fun setEnabled(provider: MusicProvider, enabled: Boolean) {
+        when (provider) {
+            MusicProvider.BANDCAMP -> settingsDataStore.setBandcampEnabled(enabled)
+            MusicProvider.YOUTUBE -> settingsDataStore.setYoutubeEnabled(enabled)
+            MusicProvider.LOCAL -> Unit
+        }
+    }
 }

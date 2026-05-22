@@ -2,6 +2,7 @@ package com.dustvalve.next.android.ui.screens.bandcamp
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.SubTag
 import com.dustvalve.next.android.data.remote.genreSubTags
 import com.dustvalve.next.android.domain.model.Album
@@ -11,6 +12,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import android.util.Log
@@ -31,11 +33,22 @@ data class BandcampUiState(
     val categoryError: String? = null,
     val selectedSubTag: String? = null,
     val availableSubTags: List<SubTag> = emptyList(),
+
+    /** User-added custom genres (persisted), shown as extra discover tiles. */
+    val customGenres: List<String> = emptyList(),
+    val showAddGenreDialog: Boolean = false,
+    val newGenreText: String = "",
+    /** True while validating a typed genre against Bandcamp. */
+    val genreValidating: Boolean = false,
+    val genreError: GenreError? = null,
 )
+
+enum class GenreError { ALREADY_EXISTS, NOT_FOUND, NETWORK }
 
 @HiltViewModel
 class BandcampViewModel @Inject constructor(
     private val discoverDustvalveUseCase: DiscoverDustvalveUseCase,
+    private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BandcampUiState())
@@ -45,6 +58,59 @@ class BandcampViewModel @Inject constructor(
 
     init {
         loadPreviews()
+        collectCustomGenres()
+    }
+
+    private fun collectCustomGenres() {
+        viewModelScope.launch {
+            settingsDataStore.bandcampCustomGenres
+                .catch { /* ignore */ }
+                .collect { genres -> _uiState.update { it.copy(customGenres = genres) } }
+        }
+    }
+
+    fun setShowAddGenreDialog(show: Boolean) {
+        _uiState.update { it.copy(showAddGenreDialog = show, newGenreText = "", genreError = null) }
+    }
+
+    fun setNewGenreText(text: String) {
+        _uiState.update { it.copy(newGenreText = text, genreError = null) }
+    }
+
+    /** Validate a typed genre against Bandcamp (must return ≥1 release) before persisting. */
+    fun addCustomGenre() {
+        val name = _uiState.value.newGenreText.trim()
+        if (name.isBlank()) return
+        val slug = slugifyGenre(name)
+        val existing = _uiState.value.customGenres
+        if (slug in GENRE_TAGS || existing.any { slugifyGenre(it) == slug }) {
+            _uiState.update { it.copy(genreError = GenreError.ALREADY_EXISTS) }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(genreValidating = true, genreError = null) }
+            try {
+                val result = discoverDustvalveUseCase(genre = slug)
+                if (result.albums.isEmpty()) {
+                    _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NOT_FOUND) }
+                    return@launch
+                }
+                settingsDataStore.setBandcampCustomGenres(existing + name)
+                _uiState.update {
+                    it.copy(genreValidating = false, showAddGenreDialog = false, newGenreText = "")
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NETWORK) }
+            }
+        }
+    }
+
+    fun removeCustomGenre(name: String) {
+        viewModelScope.launch {
+            val updated = _uiState.value.customGenres.filterNot { it == name }
+            settingsDataStore.setBandcampCustomGenres(updated)
+        }
     }
 
     private fun loadPreviews() {
@@ -163,3 +229,9 @@ class BandcampViewModel @Inject constructor(
         )
     }
 }
+
+/** Bandcamp genre/tag slug: lowercase, non-alphanumerics collapsed to single hyphens. */
+internal fun slugifyGenre(name: String): String =
+    name.trim().lowercase()
+        .replace(Regex("[^a-z0-9]+"), "-")
+        .trim('-')
