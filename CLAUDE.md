@@ -53,7 +53,7 @@ This project is **pre-alpha**. Until beta:
 - DB schema is wiped on every install (Room `fallbackToDestructiveMigration(dropAllTables = true)`); schema version stays at 1; no migration code, ever.
 - No "in-place upgrade" support of any kind: no SharedPreferences migrations, no DataStore version-bump handlers, no on-disk file-format upgraders.
 - If you find any such code, **delete it** without asking — it is debt that the user has no plans to keep.
-- The only self-update path is the user-triggered "Search for updates" button in Settings → About (driven by `AppUpdateService`). Do not add startup auto-checks; do not add background WorkManager update jobs.
+- Self-update has exactly two entry points, both driven by `AppUpdateService` via the process-wide `AppUpdateController` (no Play Store, no Firebase): (1) a **silent cold-start check** fired once per process from `DustvalveNextApplication.onCreate()` → `AppUpdateController.checkSilently()`, and (2) the user-triggered **"Search for updates"** button in Settings → About → `checkManually()`. The cold-start check is gated by the **"Automatic update checks"** toggle (Settings → About, DataStore key `auto_update_check_enabled`, default **on**); the manual button is never gated. Do **not** add background `WorkManager` update jobs, and do not add any *other* startup auto-check beyond the single `checkSilently()` call.
 
 ## Known Non-Bugs (Do NOT Fix)
 
