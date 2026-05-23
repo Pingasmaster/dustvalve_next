@@ -1,13 +1,19 @@
 package com.dustvalve.next.android.di
 
+import android.content.Context
 import com.dustvalve.next.android.data.remote.CookieStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Cache
+import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
+import okhttp3.brotli.BrotliInterceptor
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
@@ -35,14 +41,28 @@ object NetworkModule {
     private val rateLimitLock = Any()
     private var lastRequestTime = 0L
 
+    private const val HTTP_CACHE_BYTES = 10L * 1024 * 1024 // 10 MB
+
     @Provides
     @Singleton
-    fun provideOkHttpClient(cookieStore: CookieStore): OkHttpClient {
+    fun provideOkHttpClient(
+        @ApplicationContext context: Context,
+        cookieStore: CookieStore,
+    ): OkHttpClient {
+        val cacheDir = File(context.cacheDir, "okhttp").apply { mkdirs() }
         return OkHttpClient.Builder()
             .cookieJar(cookieStore)
+            .cache(Cache(cacheDir, HTTP_CACHE_BYTES))
+            // Brotli is ~20% smaller than gzip on JSON metadata with parity CPU
+            // on ARM64, so net less radio time.
+            .addInterceptor(BrotliInterceptor)
             .addInterceptor(userAgentInterceptor())
             .addInterceptor(rateLimitInterceptor())
             .addInterceptor(retryInterceptor())
+            // Bumped from default 5 idle since we hit several hosts concurrently
+            // (innertube, googlevideo, bandcamp). 5 min keepalive avoids the
+            // TaskRunner CPU drain seen with short values.
+            .connectionPool(ConnectionPool(8, 5, TimeUnit.MINUTES))
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
