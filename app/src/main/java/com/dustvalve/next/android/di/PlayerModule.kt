@@ -13,6 +13,7 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
@@ -114,8 +115,19 @@ object PlayerModule {
             .setUpstreamDataSourceFactory(defaultDataSourceFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
+        // Defaults are video-tuned. For audio-only HTTP streaming, bigger min/max
+        // buffers (60s/120s) cut HTTP fetch cycles ~2x per hour at 128 kbps;
+        // prioritizing time-over-size lets the player fill the time window even
+        // for high-bitrate streams. Back buffer disabled (music doesn't rewind).
+        val loadControl = DefaultLoadControl.Builder()
+            .setBufferDurationsMs(60_000, 120_000, 1_000, 2_000)
+            .setPrioritizeTimeOverSizeThresholds(true)
+            .setBackBuffer(0, false)
+            .build()
+
         val player = ExoPlayer.Builder(context)
             .setAudioAttributes(audioAttributes, true)
+            .setLoadControl(loadControl)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
                     .setDataSourceFactory(cacheDataSourceFactory)
