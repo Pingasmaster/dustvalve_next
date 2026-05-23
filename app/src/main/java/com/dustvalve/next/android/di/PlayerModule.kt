@@ -7,6 +7,7 @@ import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -113,7 +114,7 @@ object PlayerModule {
             .setUpstreamDataSourceFactory(defaultDataSourceFactory)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
-        return ExoPlayer.Builder(context)
+        val player = ExoPlayer.Builder(context)
             .setAudioAttributes(audioAttributes, true)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
@@ -121,6 +122,21 @@ object PlayerModule {
             )
             .setHandleAudioBecomingNoisy(true)
             .build()
+
+        // Stream compressed audio straight to the DSP, bypassing the CPU.
+        // Speed change must stay off for offload to engage; the speed-control
+        // path re-enables CPU decoding dynamically if the user picks != 1.0x.
+        val offloadPrefs = AudioOffloadPreferences.Builder()
+            .setAudioOffloadMode(AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
+            .setIsGaplessSupportRequired(true)
+            .setIsSpeedChangeSupportRequired(false)
+            .build()
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setAudioOffloadPreferences(offloadPrefs)
+            .build()
+
+        return player
     }
 
     @OptIn(UnstableApi::class)
