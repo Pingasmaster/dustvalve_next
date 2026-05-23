@@ -9,6 +9,7 @@ import coil3.SingletonImageLoader
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
+import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
@@ -69,7 +70,15 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
         )
         return ImageLoader.Builder(context)
             .components {
-                add(OkHttpNetworkFetcherFactory(callFactory = entryPoint.okHttpClient()))
+                // Honor server Cache-Control on image responses so the OkHttp
+                // disk Cache (NetworkModule) and Coil's own disk cache both
+                // see consistent freshness rather than diverging.
+                add(
+                    OkHttpNetworkFetcherFactory(
+                        callFactory = { entryPoint.okHttpClient() },
+                        cacheStrategy = { CacheControlCacheStrategy() },
+                    )
+                )
             }
             .memoryCache {
                 MemoryCache.Builder()

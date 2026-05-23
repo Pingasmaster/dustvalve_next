@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 238
-        versionName = "0.4.32"
+        versionCode = 239
+        versionName = "0.4.33"
     }
 
     signingConfigs {
@@ -137,6 +137,7 @@ dependencies {
     // Coil 3
     implementation("io.coil-kt.coil3:coil-compose:3.5.0-beta01")
     implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0-beta01")
+    implementation("io.coil-kt.coil3:coil-network-cache-control:3.5.0-beta01")
 
     // Palette (for extracting dominant colors from album art)
     implementation("androidx.palette:palette-ktx:1.0.0")
