@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 231
-        versionName = "0.4.25"
+        versionCode = 232
+        versionName = "0.4.26"
     }
 
     signingConfigs {
