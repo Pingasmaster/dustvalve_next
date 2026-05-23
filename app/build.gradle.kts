@@ -16,6 +16,7 @@ android {
         targetSdk = 37
         versionCode = 242
         versionName = "0.4.36"
+        versionNameSuffix = "-legacy"
     }
 
     signingConfigs {
