@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 235
-        versionName = "0.4.29"
+        versionCode = 236
+        versionName = "0.4.30"
     }
 
     signingConfigs {
@@ -125,6 +125,7 @@ dependencies {
 
     // OkHttp
     implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation("com.squareup.okhttp3:okhttp-brotli:5.3.2")
 
     // Jsoup
     implementation("org.jsoup:jsoup:1.22.2")
