@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.transfer
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.net.toUri
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
@@ -187,7 +188,7 @@ class PlaylistTransferRepository @Inject constructor(
 
     private fun openDownload(filePath: String): InputStream =
         if (filePath.startsWith("content://")) {
-            context.contentResolver.openInputStream(Uri.parse(filePath))
+            context.contentResolver.openInputStream(filePath.toUri())
                 ?: throw IllegalStateException("Cannot open $filePath")
         } else {
             File(filePath).inputStream()
