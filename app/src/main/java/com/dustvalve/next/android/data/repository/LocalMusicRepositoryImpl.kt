@@ -113,22 +113,28 @@ class LocalMusicRepositoryImpl @Inject constructor(
     }
 
     override suspend fun scheduleSyncWork() {
+        // Local-library changes rarely warrant sub-hour cadence. A 6h interval
+        // with 2h flex lets the OS batch this with other apps' idle work, and
+        // requires-device-idle keeps it off the user's hot path entirely.
         val constraints = Constraints.Builder()
             .setRequiresBatteryNotLow(true)
+            .setRequiresDeviceIdle(true)
             .build()
 
         val syncRequest = PeriodicWorkRequestBuilder<LocalMusicSyncWorker>(
-            repeatInterval = 30,
-            repeatIntervalTimeUnit = TimeUnit.MINUTES,
-            flexTimeInterval = 15,
-            flexTimeIntervalUnit = TimeUnit.MINUTES,
+            repeatInterval = 6,
+            repeatIntervalTimeUnit = TimeUnit.HOURS,
+            flexTimeInterval = 2,
+            flexTimeIntervalUnit = TimeUnit.HOURS,
         )
             .setConstraints(constraints)
             .build()
 
+        // UPDATE (not KEEP) so the new schedule replaces any existing
+        // 30-minute schedule still pinned in a previously installed build.
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             syncRequest,
         )
     }
