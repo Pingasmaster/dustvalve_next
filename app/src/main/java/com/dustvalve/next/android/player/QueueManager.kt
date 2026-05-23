@@ -22,7 +22,14 @@ private data class QueueState(
 @Singleton
 class QueueManager @Inject constructor() {
 
-    /** Permanent scope for derived StateFlows — never cancelled, since QueueManager is a singleton. */
+    /**
+     * Permanent scope for derived StateFlows — never cancelled, since QueueManager is a singleton.
+     *
+     * The derived flows use [SharingStarted.Eagerly] so their `.value` always reflects
+     * the latest [_state]. [PlaybackManager] reads `queue.value` / `currentIndex.value`
+     * synchronously from ExoPlayer event callbacks; with [SharingStarted.WhileSubscribed],
+     * a cold flow would expose a stale value when no UI is observing.
+     */
     private val flowScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Main.immediate +
             kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->

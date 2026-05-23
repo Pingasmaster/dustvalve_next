@@ -46,7 +46,7 @@ class NavigationViewModel @Inject constructor(
                 item.provider == null || item.provider in providers
             }
         }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, listOf(
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf(
             BottomNavItem.LOCAL, BottomNavItem.LIBRARY, BottomNavItem.SETTINGS,
         ))
 
