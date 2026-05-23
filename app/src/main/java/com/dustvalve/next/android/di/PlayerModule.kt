@@ -121,6 +121,7 @@ object PlayerModule {
                     .setDataSourceFactory(cacheDataSourceFactory)
             )
             .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
         // Stream compressed audio straight to the DSP, bypassing the CPU.
