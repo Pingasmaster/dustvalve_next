@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.player
 
 import android.content.Intent
+import android.os.PerformanceHintManager
+import android.os.Process
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -35,6 +37,29 @@ class PlaybackService : MediaSessionService() {
     private var idleStopJob: Job? = null
 
     /**
+     * ADPF hint session: tells the OS that the main thread has known periodic
+     * audio-callback work. Without this the kernel may opportunistically boost
+     * CPU clocks during quiet stretches between Media3 callbacks. We open the
+     * session lazily on first playback and report a conservative actual
+     * duration each time isPlaying flips so the OS sees consistent headroom.
+     *
+     * Audio offload (PlayerModule) carries the heavy lifting on supporting
+     * SoCs; this complements the non-offload path.
+     */
+    private var perfHintSession: PerformanceHintManager.Session? = null
+
+    private fun ensurePerfHintSession(): PerformanceHintManager.Session? {
+        if (perfHintSession == null) {
+            val mgr = getSystemService(PerformanceHintManager::class.java) ?: return null
+            perfHintSession = mgr.createHintSession(
+                intArrayOf(Process.myTid()),
+                TimeUnit.MILLISECONDS.toNanos(PERF_HINT_TARGET_MS),
+            )
+        }
+        return perfHintSession
+    }
+
+    /**
      * After 5 minutes of pause the FGS still pins the app's standby bucket and
      * blocks Doze entry; stopping the player + service releases both.
      */
@@ -42,8 +67,15 @@ class PlaybackService : MediaSessionService() {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             idleStopJob?.cancel()
             idleStopJob = if (isPlaying) {
+                ensurePerfHintSession()?.reportActualWorkDuration(
+                    TimeUnit.MILLISECONDS.toNanos(PERF_HINT_ACTUAL_MS),
+                )
                 null
             } else {
+                // Paused → lots of CPU headroom; nudge the OS toward lower clocks.
+                perfHintSession?.reportActualWorkDuration(
+                    TimeUnit.MICROSECONDS.toNanos(PERF_HINT_IDLE_US),
+                )
                 serviceScope.launch {
                     delay(TimeUnit.MINUTES.toMillis(IDLE_STOP_MINUTES))
                     mediaSession.player.stop()
@@ -84,6 +116,8 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         idleStopJob?.cancel()
         mediaSession.player.removeListener(pauseIdleListener)
+        perfHintSession?.close()
+        perfHintSession = null
         serviceScope.cancel()
         playbackManager.release()
         queueManager.release()
@@ -95,5 +129,9 @@ class PlaybackService : MediaSessionService() {
 
     companion object {
         private const val IDLE_STOP_MINUTES = 5L
+        // Target work-duration the OS uses to size CPU clocks.
+        private const val PERF_HINT_TARGET_MS = 10L
+        private const val PERF_HINT_ACTUAL_MS = 2L
+        private const val PERF_HINT_IDLE_US = 100L
     }
 }
