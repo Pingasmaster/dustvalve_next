@@ -61,6 +61,9 @@ class PlaybackService : MediaSessionService() {
             .build()
         notificationProvider.setSmallIcon(R.drawable.ic_notification)
         setMediaNotificationProvider(notificationProvider)
+        // An idle/un-prepared player otherwise keeps the FGS notification alive
+        // longer than needed.
+        setShowNotificationForIdlePlayer(SHOW_NOTIFICATION_FOR_IDLE_PLAYER_NEVER)
         addSession(mediaSession)
         queueManager.reinitialize()
         playbackManager.reinitialize()
