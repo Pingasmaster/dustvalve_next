@@ -99,6 +99,11 @@ import com.dustvalve.next.android.update.UpdateUiState
 import kotlin.math.roundToInt
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi as M3E
 
+// Shared left-padding for every child toggle that appears under a parent
+// switch in the settings UI. Apply via the canonical pattern:
+// AnimatedVisibility { Row(Modifier.fillMaxWidth().padding(top = 12.dp, start = SUB_TOGGLE_INDENT)) { ... } }.
+private val SUB_TOGGLE_INDENT = 16.dp
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
@@ -345,7 +350,7 @@ fun SettingsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 36.dp),
+                                        .padding(start = SUB_TOGGLE_INDENT),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
@@ -424,7 +429,7 @@ fun SettingsScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 36.dp),
+                                            .padding(start = SUB_TOGGLE_INDENT),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
                                         FilledTonalButton(
@@ -467,7 +472,7 @@ fun SettingsScreen(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(start = 36.dp),
+                                            .padding(start = SUB_TOGGLE_INDENT),
                                     ) {
                                         FilledTonalButton(
                                             onClick = { viewModel.rescanLocalMusic() },
@@ -496,7 +501,7 @@ fun SettingsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 36.dp, end = 16.dp),
+                                        .padding(start = SUB_TOGGLE_INDENT, end = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
@@ -519,7 +524,7 @@ fun SettingsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 36.dp, end = 16.dp),
+                                        .padding(start = SUB_TOGGLE_INDENT, end = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
@@ -594,7 +599,7 @@ fun SettingsScreen(
 
                             if (state.youtubeEnabled) {
                                 Spacer(modifier = Modifier.height(12.dp))
-                                Column(modifier = Modifier.padding(start = 36.dp)) {
+                                Column(modifier = Modifier.padding(start = SUB_TOGGLE_INDENT)) {
                                     Text(
                                         text = stringResource(R.string.settings_youtube_default_source_title),
                                         style = MaterialTheme.typography.titleSmall,
@@ -896,7 +901,7 @@ fun SettingsScreen(
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically(),
                             ) {
-                                Column(modifier = Modifier.padding(top = 8.dp, start = 16.dp)) {
+                                Column(modifier = Modifier.padding(top = 8.dp, start = SUB_TOGGLE_INDENT)) {
                                     // Current folder path + change button
                                     val folderLabel = remember(state.dedicatedFolderTreeUri) {
                                         val uriStr = state.dedicatedFolderTreeUri
@@ -1057,7 +1062,7 @@ fun SettingsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 12.dp, start = 16.dp),
+                                        .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
@@ -1076,6 +1081,28 @@ fun SettingsScreen(
                                         onCheckedChange = { viewModel.setAutoDownloadFavorites(it) },
                                     )
                                 }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.settings_download_notifications),
+                                        style = MaterialTheme.typography.titleSmall,
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.settings_download_notifications_desc),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                Switch(
+                                    checked = state.downloadNotificationsEnabled,
+                                    onCheckedChange = { viewModel.setDownloadNotificationsEnabled(it) },
+                                )
                             }
                         }
                     }
@@ -1294,17 +1321,21 @@ fun SettingsScreen(
                                 else -> isSystemInDarkTheme()
                             }
 
-                            if (isDarkEffective) {
-                                Spacer(modifier = Modifier.height(16.dp))
-
+                            AnimatedVisibility(
+                                visible = isDarkEffective,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically(),
+                            ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
                                         Text(
                                             text = stringResource(R.string.settings_oled_black),
-                                            style = MaterialTheme.typography.titleSmall,
+                                            style = MaterialTheme.typography.bodyMedium,
                                         )
                                         Text(
                                             text = stringResource(R.string.settings_oled_black_desc),
@@ -1487,7 +1518,7 @@ fun SettingsScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(top = 12.dp, start = 16.dp),
+                                        .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
@@ -1553,7 +1584,7 @@ fun SettingsScreen(
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically(),
                             ) {
-                                Column(modifier = Modifier.padding(top = 12.dp, start = 8.dp)) {
+                                Column(modifier = Modifier.padding(top = 12.dp, start = SUB_TOGGLE_INDENT)) {
                                     Text(
                                         text = stringResource(R.string.settings_search_history_per_source),
                                         style = MaterialTheme.typography.labelLarge,

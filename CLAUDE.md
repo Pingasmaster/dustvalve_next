@@ -107,6 +107,31 @@ IMPORTANT: Before any design actions, make sure to fully understand material you
 
 - **Android 17 "Min Mode" AOD mini-player (deferred — re-check Aug 2026 or later)**: Rendering the now-playing mini-player on the Always-On Display via Min Mode is **not implementable yet** — as of mid-2026 it is not a public API (absent from API 37 `android.jar` and Android 17 Beta; disabled in Canary; no documented `MinModeActivity`/`MinModeProvider` contract, permission, sample, or emulator support). Google says it lands as a developer API after the June 2026 stable release. **Action: from August 2026 onward, check the Android Developers blog / API 37+ release notes for a documented Min Mode API, then implement the AOD mini-player.**
 
+## No SDK version checks — raise `minSdk` instead
+
+Do **not** add `Build.VERSION.SDK_INT >= X` (or `@RequiresApi`, `if (Build.VERSION.SDK_INT …)`, `NotificationCompat`-style fallbacks) for any new feature. If a feature requires a higher API level than the current `minSdk` in `app/build.gradle.kts`, bump `minSdk` to that level instead. Master is on the bleeding edge by policy (legacy-android8 branch carries old-OS support separately); a single-codepath implementation against a known-modern OS is preferred over runtime gating. When you raise `minSdk`, also delete any now-dead SDK gates the new minimum makes obsolete (don't leave them as cruft).
+
+## Settings sub-toggle indentation
+
+Every dependent/child toggle revealed under a parent switch in `ui/screens/settings/SettingsScreen.kt` MUST use the shared `SUB_TOGGLE_INDENT` (`16.dp`) for its `start` padding, applied via the canonical pattern:
+
+```kotlin
+AnimatedVisibility(
+    visible = parent,
+    enter = fadeIn() + expandVertically(),
+    exit = fadeOut() + shrinkVertically(),
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
+        verticalAlignment = Alignment.CenterVertically,
+    ) { /* Column title/desc + Switch */ }
+}
+```
+
+Do not introduce ad-hoc indents — the codebase previously drifted to `0/8/20/36 dp` and was unified in one pass. Never reintroduce literal `start = 36.dp` (or any other literal indent) for a sub-toggle.
+
 # Important
 
 If any agents launched report inconclusive results, research more and  if youre unsure how to do something, confirm by launhcing an agent to deep dive the web.

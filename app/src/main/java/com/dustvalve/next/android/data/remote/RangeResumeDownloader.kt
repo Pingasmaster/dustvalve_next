@@ -51,6 +51,7 @@ object RangeResumeDownloader {
         backoffMillis: (attempt: Int) -> Long = { attempt ->
             500L * (1L shl (attempt - 1).coerceAtMost(4))
         },
+        onProgress: ((bytesWritten: Long, expectedTotal: Long?) -> Unit)? = null,
     ): Long {
         var bytesWritten = 0L
         var expectedTotal: Long? = null
@@ -98,6 +99,7 @@ object RangeResumeDownloader {
                             coroutineContext.ensureActive()
                             sink.write(buffer, 0, read)
                             bytesWritten += read
+                            onProgress?.invoke(bytesWritten, expectedTotal)
                         }
                     }
                 }
