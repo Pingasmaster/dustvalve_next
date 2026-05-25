@@ -43,11 +43,12 @@ fun AddToPlaylistSheet(
     onDismiss: () -> Unit,
     onPlaylistSelected: (playlistId: String) -> Unit,
     onCreatePlaylist: (name: String, shapeKey: String?, iconUrl: String?) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var showCreateSheet by remember { mutableStateOf(false) }
     val userPlaylists = playlists.filter { !it.isSystem }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Box {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(

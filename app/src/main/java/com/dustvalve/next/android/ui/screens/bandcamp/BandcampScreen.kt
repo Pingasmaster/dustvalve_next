@@ -159,6 +159,7 @@ fun BandcampScreen(
     onArtistClick: (String) -> Unit,
     onOpenLink: (String) -> Unit,
     playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
     onExpandPlayer: () -> Unit = {},
     viewModel: BandcampViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
@@ -350,6 +351,7 @@ fun BandcampScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
     ) { scaffoldPadding ->

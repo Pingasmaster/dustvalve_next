@@ -105,6 +105,7 @@ fun ArtistDetailScreen(
     onAlbumClick: (String) -> Unit,
     onBack: () -> Unit,
     playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
     viewModel: ArtistDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -171,7 +172,7 @@ fun ArtistDetailScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
         // Local val so `artist != null` smart-casts inside the matching branch
         // (Kotlin can't smart-cast through a property in a `when` clause).

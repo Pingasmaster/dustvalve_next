@@ -55,7 +55,12 @@ import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
     ExperimentalLayoutApi::class,
 )
 @Composable
-fun ShapePickerSheet(onDismiss: () -> Unit, onConfirm: (shapeKey: String?) -> Unit, initialShapeKey: String?) {
+fun ShapePickerSheet(
+    onDismiss: () -> Unit,
+    onConfirm: (shapeKey: String?) -> Unit,
+    initialShapeKey: String?,
+    modifier: Modifier = Modifier,
+) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
@@ -64,6 +69,7 @@ fun ShapePickerSheet(onDismiss: () -> Unit, onConfirm: (shapeKey: String?) -> Un
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        modifier = modifier,
         sheetState = sheetState,
     ) {
         Column(

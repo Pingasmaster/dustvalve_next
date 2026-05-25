@@ -104,6 +104,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi as M3E
 fun SettingsScreen(
     onBandcampLoginClick: () -> Unit,
     onYouTubeMusicLoginClick: () -> Unit,
+    modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -240,6 +241,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
     ) { scaffoldPadding ->

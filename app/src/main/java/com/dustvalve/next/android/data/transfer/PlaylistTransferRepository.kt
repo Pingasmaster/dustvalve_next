@@ -3,7 +3,6 @@ package com.dustvalve.next.android.data.transfer
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
-import kotlinx.coroutines.CancellationException
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
@@ -19,6 +18,7 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -73,13 +73,17 @@ class PlaylistTransferRepository @Inject constructor(
                 if (offline) {
                     var info = downloadRepository.getDownloadInfo(track.id)
                     if (info == null) {
+                        // Safety net: download paths can throw IOException,
+                        // SQLiteException, HttpException, or wrapped variants —
+                        // any failure is logged and the track is exported
+                        // without local audio. CancellationException is
+                        // rethrown so coroutine cancellation propagates.
+                        @Suppress("TooGenericExceptionCaught")
                         try {
                             downloadRepository.downloadTrack(track)
                         } catch (ce: CancellationException) {
                             throw ce
                         } catch (t: Throwable) {
-                            // Best-effort: leave info=null below, the row is
-                            // exported without a local audio file.
                             android.util.Log.w("PlaylistTransfer", "downloadTrack failed", t)
                         }
                         info = downloadRepository.getDownloadInfo(track.id)
@@ -97,6 +101,11 @@ class PlaylistTransferRepository @Inject constructor(
                     val coverFile = if (track.artUrl.isNotBlank()) {
                         coverPaths.getOrPut(track.albumId) {
                             val name = "covers/${NetworkUtils.sanitizeFileName(track.albumId)}.jpg"
+
+                            // Safety net: network fetches throw IOException,
+                            // SocketTimeout, HttpException, etc. — any failure
+                            // means we export the row without artwork.
+                            @Suppress("TooGenericExceptionCaught")
                             val bytes = try {
                                 fetchBytes(track.artUrl)
                             } catch (ce: CancellationException) {

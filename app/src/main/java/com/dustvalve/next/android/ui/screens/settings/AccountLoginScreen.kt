@@ -55,7 +55,7 @@ private val AUTH_COOKIE_NAMES = setOf("identity", "session", "client_id", "js_lo
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit) {
+fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -81,6 +81,7 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_sign_in_bandcamp)) },

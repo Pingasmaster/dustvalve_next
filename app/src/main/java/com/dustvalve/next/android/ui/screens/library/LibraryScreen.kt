@@ -84,6 +84,7 @@ fun LibraryScreen(
     onAlbumClick: (String) -> Unit,
     onPlaylistClick: (String) -> Unit,
     playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
     onArtistClick: (String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
@@ -140,6 +141,7 @@ fun LibraryScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
