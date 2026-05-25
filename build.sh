@@ -21,7 +21,7 @@ DO_CLEAN_ONLY=0
 DO_FORMAT=0
 DO_BUILD_HEALTH=0
 
-ROOT_APK="app-release.apk"
+ROOT_APK="dustvalve_next-future.apk"
 for arg in "$@"; do
     case "$arg" in
         --clean)        DO_CLEAN_ONLY=1 ;;

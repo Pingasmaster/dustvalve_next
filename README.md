@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Android-16.1%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 36.1"/>
+  <img src="https://img.shields.io/badge/Android-8%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 26 (default install)"/>
   <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin"/>
   <img src="https://img.shields.io/badge/Jetpack_Compose-1.12-4285F4?logo=jetpackcompose&logoColor=white" alt="Compose"/>
   <img src="https://img.shields.io/badge/Material_3-Expressive-E8DEF8" alt="M3 Expressive"/>
@@ -18,11 +18,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/app-release.apk"><img src="./download.svg" alt="Download latest APK" width="220"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download latest APK" width="220"/></a>
 </p>
 
 <p align="center">
-  <sub>On <b>Android 8.0 – 16</b> (or stuck on stock Android 16 without QPR1)? The main build needs Android 16 QPR1+ (API 36.1). Grab the unsupported legacy backport from the same release: <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><code>dustvalve-old.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch, updated manually, may lag behind).</sub>
+  <sub>On <b>Android 16 QPR1+</b> and want the future build with the status-bar Live Updates download chip and the full bleeding-edge stack? Grab <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/master"><code>master</code></a> branch — minSdk 36, rises to 37 once Robolectric supports API 37). The default <code>dustvalve_next.apk</code> button above covers Android 8.0 → 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch.</sub>
 </p>
 
 ---

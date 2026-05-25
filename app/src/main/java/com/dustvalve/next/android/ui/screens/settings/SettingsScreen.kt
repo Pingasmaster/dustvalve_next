@@ -901,7 +901,7 @@ fun SettingsScreen(
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically(),
                             ) {
-                                Column(modifier = Modifier.padding(top = 8.dp, start = SUB_TOGGLE_INDENT)) {
+                                Column(modifier = Modifier.padding(top = 12.dp, start = SUB_TOGGLE_INDENT)) {
                                     // Current folder path + change button
                                     val folderLabel = remember(state.dedicatedFolderTreeUri) {
                                         val uriStr = state.dedicatedFolderTreeUri
