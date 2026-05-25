@@ -33,66 +33,53 @@ class DustvalveSearchScraperTest {
         assertThat(setup.server.requestCount).isEqualTo(0)
     }
 
-    @Test fun `parses artist album and track results`() = runTest {
-        val html = """
-            <html><body>
-              <li class="searchresult">
-                <div class="art"><img src="//cdn.bcbits.com/img/album1.jpg"/></div>
-                <div class="result-info">
-                  <div class="itemtype">ALBUM</div>
-                  <div class="heading"><a href="https://a.bandcamp.com/album/x">My Album</a></div>
-                  <div class="subhead">by A Band</div>
-                  <div class="released">released 2020</div>
-                  <div class="genre">genre: rock</div>
-                </div>
-              </li>
-              <li class="searchresult">
-                <div class="art"><img src="https://cdn.bcbits.com/img/track1.jpg"/></div>
-                <div class="result-info">
-                  <div class="itemtype">TRACK</div>
-                  <div class="heading"><a href="https://a.bandcamp.com/track/y">My Track</a></div>
-                  <div class="subhead">by Some from Trouble Artist from Some Album</div>
-                </div>
-              </li>
-              <li class="searchresult">
-                <div class="art"><img src=""/></div>
-                <div class="result-info">
-                  <div class="itemtype">ARTIST</div>
-                  <div class="heading"><a href="https://a.bandcamp.com">A Band</a></div>
-                </div>
-              </li>
-              <li class="searchresult">
-                <div class="result-info">
-                  <div class="itemtype">ALBUM</div>
-                  <div class="heading"><a href="/relative/path">Skipped</a></div>
-                </div>
-              </li>
-            </body></html>
+    @Test fun `parses artist album and track results from json`() = runTest {
+        val body = """
+            {"auto":{"results":[
+              {"type":"a","name":"My Album","band_name":"A Band",
+               "item_url_path":"https://a.bandcamp.com/album/x",
+               "item_url_root":"https://a.bandcamp.com",
+               "img":"https://cdn.bcbits.com/img/album1.jpg",
+               "tag_names":["rock","indie"]},
+              {"type":"t","name":"My Track","band_name":"A Band",
+               "album_name":"My Album",
+               "item_url_path":"https://a.bandcamp.com/track/y",
+               "item_url_root":"https://a.bandcamp.com",
+               "img":"https://cdn.bcbits.com/img/track1.jpg",
+               "tag_names":[]},
+              {"type":"b","name":"A Band",
+               "item_url_root":"https://a.bandcamp.com",
+               "img":"","tag_names":[]},
+              {"type":"a","name":"Skipped relative",
+               "item_url_path":"/relative/path","tag_names":[]},
+              {"type":"x","name":"Unknown type",
+               "item_url_path":"https://a.bandcamp.com/foo"}
+            ]}}
         """.trimIndent()
-        setup.server.enqueue(MockResponse().setBody(html))
+        setup.server.enqueue(MockResponse().setBody(body))
 
         val results = scraper.search("foo", 1, null)
 
-        // Four tiles in HTML; one filtered out (relative URL) → three results expected.
+        // Five items in JSON; one filtered (relative URL), one filtered (unknown type) -> 3 results.
         assertThat(results).hasSize(3)
 
         val album = results.single { it.type == SearchResultType.ALBUM }
         assertThat(album.name).isEqualTo("My Album")
         assertThat(album.url).isEqualTo("https://a.bandcamp.com/album/x")
         assertThat(album.artist).isEqualTo("A Band")
-        assertThat(album.imageUrl).isEqualTo("https://cdn.bcbits.com/img/album1.jpg") // protocol-relative expanded
-        assertThat(album.releaseDate).isEqualTo("2020")
-        assertThat(album.genre).isEqualTo("rock")
+        assertThat(album.imageUrl).isEqualTo("https://cdn.bcbits.com/img/album1.jpg")
+        assertThat(album.genre).isEqualTo("rock, indie")
+        assertThat(album.releaseDate).isNull()
 
         val track = results.single { it.type == SearchResultType.TRACK }
-        // "by Some from Trouble Artist from Some Album" → uses lastIndexOf " from "
-        // so artist = "Some from Trouble Artist", album = "Some Album"
-        assertThat(track.artist).isEqualTo("Some from Trouble Artist")
-        assertThat(track.album).isEqualTo("Some Album")
+        assertThat(track.artist).isEqualTo("A Band")
+        assertThat(track.album).isEqualTo("My Album")
+        assertThat(track.url).isEqualTo("https://a.bandcamp.com/track/y")
 
         val artist = results.single { it.type == SearchResultType.ARTIST }
         assertThat(artist.name).isEqualTo("A Band")
-        // Empty src skipped → imageUrl null
+        assertThat(artist.url).isEqualTo("https://a.bandcamp.com")
+        // Empty img string -> imageUrl null
         assertThat(artist.imageUrl).isNull()
         assertThat(artist.artist).isNull()
     }
@@ -107,24 +94,28 @@ class DustvalveSearchScraperTest {
         }
     }
 
-    @Test fun `page parameter clamped into the request url`() = runTest {
-        setup.server.enqueue(MockResponse().setBody("<html></html>"))
-        scraper.search("q", page = 5000, type = null) // should clamp to 1000
-        val req = setup.server.takeRequest()
-        assertThat(req.path).contains("page=1000")
+    @Test fun `page above 1 returns empty without hitting server`() = runTest {
+        val results = scraper.search("q", page = 2, type = null)
+        assertThat(results).isEmpty()
+        assertThat(setup.server.requestCount).isEqualTo(0)
     }
 
-    @Test fun `page below 1 clamps to 1`() = runTest {
-        setup.server.enqueue(MockResponse().setBody("<html></html>"))
-        scraper.search("q", page = 0, type = null)
+    @Test fun `posts search_text and search_filter for album-typed query`() = runTest {
+        setup.server.enqueue(MockResponse().setBody("""{"auto":{"results":[]}}"""))
+        scraper.search("hello world", 1, SearchResultType.ALBUM)
         val req = setup.server.takeRequest()
-        assertThat(req.path).contains("page=1")
+        assertThat(req.method).isEqualTo("POST")
+        assertThat(req.path).isEqualTo("/api/bcsearch_public_api/1/autocomplete_elastic")
+        val sent = req.body.readUtf8()
+        assertThat(sent).contains("\"search_text\":\"hello world\"")
+        assertThat(sent).contains("\"search_filter\":\"a\"")
+        assertThat(sent).contains("\"full_page\":true")
     }
 
-    @Test fun `query encoded into url`() = runTest {
-        setup.server.enqueue(MockResponse().setBody("<html></html>"))
-        scraper.search("hello world", 1, null)
-        val req = setup.server.takeRequest()
-        assertThat(req.path).contains("q=hello+world")
+    @Test fun `null type sends empty search_filter`() = runTest {
+        setup.server.enqueue(MockResponse().setBody("""{"auto":{"results":[]}}"""))
+        scraper.search("q", 1, null)
+        val sent = setup.server.takeRequest().body.readUtf8()
+        assertThat(sent).contains("\"search_filter\":\"\"")
     }
 }
