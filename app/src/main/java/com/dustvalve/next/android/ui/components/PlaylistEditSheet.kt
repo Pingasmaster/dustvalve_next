@@ -66,6 +66,7 @@ import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
 fun PlaylistEditSheet(
     onDismiss: () -> Unit,
     onConfirm: (name: String, shapeKey: String?, iconUrl: String?) -> Unit,
+    modifier: Modifier = Modifier,
     initialName: String = "",
     initialShapeKey: String? = null,
     initialIconUrl: String? = null,
@@ -82,6 +83,7 @@ fun PlaylistEditSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        modifier = modifier,
         sheetState = sheetState,
     ) {
         Column(

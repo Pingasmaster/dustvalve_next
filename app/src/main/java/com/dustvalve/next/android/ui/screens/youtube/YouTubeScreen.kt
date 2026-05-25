@@ -109,6 +109,7 @@ fun YouTubeScreen(
     onPlaylistClick: (url: String, name: String) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
     onOpenLink: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onExpandPlayer: () -> Unit = {},
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
@@ -236,6 +237,7 @@ fun YouTubeScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
     ) { scaffoldPadding ->

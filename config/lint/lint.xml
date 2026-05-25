@@ -60,4 +60,24 @@
         <ignore path="**/src/test/**" />
         <ignore path="**/src/androidTest/**" />
     </issue>
+
+    <!--
+        slack-lints' RawDispatchersUse forbids direct Dispatchers.{IO,Default,Main}
+        references, arguing for Hilt-qualified CoroutineDispatcher injection so
+        tests can swap in a TestDispatcher.
+
+        Why this codebase ignores it:
+        - 41 files use Dispatchers.IO directly across repos, scrapers, scanners,
+          and player-side classes. Refactoring each to take @IoDispatcher /
+          @DefaultDispatcher constructor params cascades through Hilt modules,
+          all instantiation sites, and every test mock.
+        - The runtime behavior is unchanged — Dispatchers.IO is the same shared
+          pool whether referenced statically or injected.
+        - Existing tests don't exercise these I/O paths via the dispatcher
+          (they mock HTTP, mock DAOs, mock filesystem). Inject-and-substitute
+          wouldn't actually improve current test coverage.
+        - New code may opt into a DispatcherProvider/qualifier pattern when
+          test-substitutability is a genuine requirement.
+    -->
+    <issue id="RawDispatchersUse"              severity="ignore" />
 </lint>

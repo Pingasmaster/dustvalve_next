@@ -276,8 +276,20 @@ class MainActivity : ComponentActivity() {
 
 private data class ThemeConfig(val themeMode: String, val dynamicColor: Boolean, val oledBlack: Boolean, val albumSeedColor: Color?)
 
+// ViewModelForwarding (detekt/compose-rules): MainContent is the single-source
+// composition root that owns PlayerViewModel and NavigationViewModel for the
+// whole UI tree. It forwards them down to the one-level children that
+// genuinely operate on the player/nav singletons (MiniPlayer, AppNavigation,
+// FullPlayer, BottomNavBar). Lifting every screen to state + callbacks
+// instead would mean refactoring every UI surface in the app — disproportionate
+// for app-wide singletons whose state is genuinely consumed at multiple levels.
+//
+// LongMethod: this is the composition root branching on adaptive width +
+// expanded/collapsed player + bottom-nav placement; extracting tiny helpers
+// just to chase a line-count threshold would split related layout decisions.
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
+@Suppress("ViewModelForwarding", "LongMethod")
 private fun MainContent(
     accountRepository: AccountRepository,
     activity: MainActivity,

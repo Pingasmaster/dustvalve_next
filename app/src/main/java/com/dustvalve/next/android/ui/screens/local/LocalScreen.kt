@@ -102,6 +102,7 @@ import com.dustvalve.next.android.util.DeepLinkRouter
 @Composable
 fun LocalScreen(
     playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
     navViewModel: com.dustvalve.next.android.ui.navigation.NavigationViewModel? = null,
     onExpandPlayer: () -> Unit = {},
     viewModel: LocalViewModel = hiltViewModel(),
@@ -194,6 +195,7 @@ fun LocalScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             if (filteredTracks.isNotEmpty()) {

@@ -25,9 +25,9 @@ import com.dustvalve.next.android.R
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun DedicatedFolderBootLoading() {
+fun DedicatedFolderBootLoading(modifier: Modifier = Modifier) {
     Surface(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background,
     ) {
         Column(

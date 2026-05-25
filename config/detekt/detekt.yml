@@ -16,7 +16,16 @@ complexity:
     allowedComplexity: 20
   LongMethod:
     active: true
-    allowedLines: 80
+    # Compose UI functions are naturally vertical; 80 forces noise-extracting tiny helpers.
+    allowedLines: 120
+  TooManyFunctions:
+    active: true
+    # Scrapers/repos with many small private helpers cross 11 routinely; 25 still flags real outliers.
+    allowedFunctionsPerClass: 25
+    allowedFunctionsPerObject: 25
+    allowedFunctionsPerFile: 25
+    allowedFunctionsPerInterface: 25
+    allowedFunctionsPerEnum: 25
   LongParameterList:
     active: true
     allowedFunctionParameters: 8

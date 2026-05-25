@@ -82,6 +82,7 @@ fun CollectionDetailScreen(
     collectionName: String,
     onBack: () -> Unit,
     playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -154,7 +155,7 @@ fun CollectionDetailScreen(
             )
         },
         contentWindowInsets = WindowInsets(0),
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
         when {
             state.isLoading -> {

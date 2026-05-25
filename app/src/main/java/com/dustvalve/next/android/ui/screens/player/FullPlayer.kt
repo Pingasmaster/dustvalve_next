@@ -152,6 +152,7 @@ private const val VOLUME_TICK_SEGMENTS = 15
 fun FullPlayer(
     playerViewModel: PlayerViewModel,
     onCollapse: () -> Unit,
+    modifier: Modifier = Modifier,
     onArtistClick: (Track) -> Unit = {},
     onAlbumClick: (Track) -> Unit = {},
 ) {
@@ -358,7 +359,7 @@ fun FullPlayer(
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,

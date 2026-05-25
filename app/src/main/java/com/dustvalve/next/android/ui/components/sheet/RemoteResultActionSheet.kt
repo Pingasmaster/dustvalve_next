@@ -55,10 +55,11 @@ fun RemoteResultActionSheet(
     onEnqueueAll: () -> Unit,
     onShare: () -> Unit,
     onOpenInBrowser: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val kind = result.type.toRemoteKind() ?: return
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Text(
             text = result.name,
             style = MaterialTheme.typography.titleMedium,

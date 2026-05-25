@@ -57,7 +57,7 @@ private const val AUTH_MARKER_COOKIE = "__Secure-3PAPISID"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit) {
+fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -82,6 +82,7 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_sign_in_youtube)) },

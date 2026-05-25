@@ -89,6 +89,7 @@ fun AlbumDetailScreen(
     onArtistClick: (String) -> Unit,
     onBack: () -> Unit,
     playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
     viewModel: AlbumDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -201,7 +202,7 @@ fun AlbumDetailScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
         // Pull the property into a local val so the `album != null` smart-cast
         // works inside the matching branch — Kotlin can't smart-cast through a

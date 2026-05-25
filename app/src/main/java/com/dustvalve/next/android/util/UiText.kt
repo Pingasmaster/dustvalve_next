@@ -23,7 +23,9 @@ sealed class UiText {
 
     fun asString(context: Context): String = when (this) {
         is DynamicString -> value
+
         is StringResource -> context.getString(resId, *args.toTypedArray())
+
         // slack-lints' ArgInFormattedQuantityStringRes asks for a Slack-internal
         // LocalizationUtils.getFormattedCount() helper that doesn't exist here.
         // The standard Android plurals pattern (count as both quantity selector

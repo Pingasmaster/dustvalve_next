@@ -34,8 +34,9 @@ fun RecentSearchesList(
     onSearchClick: (String) -> Unit,
     onRemoveClick: (String) -> Unit,
     onClearAllClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    LazyColumn {
+    LazyColumn(modifier = modifier) {
         item(key = "recent_header") {
             Row(
                 modifier = Modifier
