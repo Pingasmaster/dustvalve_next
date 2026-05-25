@@ -33,22 +33,26 @@ interface FavoriteDao {
     @Query("UPDATE favorites SET shapeKey = :shapeKey WHERE id = :id")
     suspend fun setShapeKey(id: String, shapeKey: String?)
 
-    @Query("""
+    @Query(
+        """
         SELECT f.id, f.addedAt, f.isPinned, f.shapeKey,
                a.title AS albumTitle, a.artist AS albumArtist, a.artUrl AS albumArtUrl, a.url AS albumUrl
         FROM favorites f INNER JOIN albums a ON f.id = a.id
         WHERE f.type = 'album'
         ORDER BY f.isPinned DESC, f.addedAt DESC
-    """)
+    """,
+    )
     fun getFavoritedAlbumsWithInfo(): Flow<List<FavoriteAlbumInfo>>
 
-    @Query("""
+    @Query(
+        """
         SELECT f.id, f.addedAt, f.isPinned, f.shapeKey,
                ar.name AS artistName, ar.imageUrl AS artistImageUrl, ar.url AS artistUrl
         FROM favorites f INNER JOIN artists ar ON f.id = ar.id
         WHERE f.type = 'artist'
         ORDER BY f.isPinned DESC, f.addedAt DESC
-    """)
+    """,
+    )
     fun getFavoritedArtistsWithInfo(): Flow<List<FavoriteArtistInfo>>
 
     @Query("SELECT * FROM favorites")

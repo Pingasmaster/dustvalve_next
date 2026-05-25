@@ -45,10 +45,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(
-        @ApplicationContext context: Context,
-        cookieStore: CookieStore,
-    ): OkHttpClient {
+    fun provideOkHttpClient(@ApplicationContext context: Context, cookieStore: CookieStore): OkHttpClient {
         val cacheDir = File(context.cacheDir, "okhttp").apply { mkdirs() }
         return OkHttpClient.Builder()
             .cookieJar(cookieStore)

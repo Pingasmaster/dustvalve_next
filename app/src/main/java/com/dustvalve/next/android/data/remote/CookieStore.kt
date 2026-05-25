@@ -20,9 +20,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class CookieStore @Inject constructor(
-    private val settingsDataStore: SettingsDataStore
-) : CookieJar {
+class CookieStore @Inject constructor(private val settingsDataStore: SettingsDataStore) : CookieJar {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -34,7 +32,7 @@ class CookieStore @Inject constructor(
         SupervisorJob() + Dispatchers.IO +
             kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
                 android.util.Log.e("CookieStore", "Cookie persistence error", throwable)
-            }
+            },
     )
 
     private val lock = Any()
@@ -231,11 +229,9 @@ class CookieStore @Inject constructor(
      * Returns true only for bandcamp.com or *.bandcamp.com hosts.
      * Prevents lookalike domains like "evilbandcamp.com" from matching.
      */
-    private fun isDustvalveHost(host: String): Boolean {
-        return host == "bandcamp.com" || host.endsWith(".bandcamp.com") ||
-            host == "youtube.com" || host.endsWith(".youtube.com") ||
-            host == "google.com" || host.endsWith(".google.com")
-    }
+    private fun isDustvalveHost(host: String): Boolean = host == "bandcamp.com" || host.endsWith(".bandcamp.com") ||
+        host == "youtube.com" || host.endsWith(".youtube.com") ||
+        host == "google.com" || host.endsWith(".google.com")
 
     /**
      * Safe domain matching that prevents "evilbandcamp.com" from matching "bandcamp.com".

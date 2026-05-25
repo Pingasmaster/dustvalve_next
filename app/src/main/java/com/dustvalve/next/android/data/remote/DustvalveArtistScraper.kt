@@ -4,7 +4,6 @@ import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.util.HtmlUtils
 import com.dustvalve.next.android.util.NetworkUtils
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -19,11 +18,10 @@ import java.io.IOException
 import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 @Singleton
-class DustvalveArtistScraper @Inject constructor(
-    sharedClient: OkHttpClient,
-) {
+class DustvalveArtistScraper @Inject constructor(sharedClient: OkHttpClient) {
 
     /**
      * Bandcamp serves a heavily-stripped HTML when it sees a mobile User-Agent
@@ -152,7 +150,7 @@ class DustvalveArtistScraper @Inject constructor(
                     about = null,
                     tracks = emptyList(),
                     tags = emptyList(),
-                )
+                ),
             )
         }
 
@@ -212,7 +210,7 @@ class DustvalveArtistScraper @Inject constructor(
                         about = null,
                         tracks = emptyList(),
                         tags = emptyList(),
-                    )
+                    ),
                 )
             }
         }
@@ -269,9 +267,7 @@ class DustvalveArtistScraper @Inject constructor(
         }
     }
 
-    private fun normalizeUrl(url: String): String {
-        return url.trimEnd('/').substringBefore('?').substringBefore('#')
-    }
+    private fun normalizeUrl(url: String): String = url.trimEnd('/').substringBefore('?').substringBefore('#')
 
     private fun stableId(input: String): String {
         val normalized = normalizeUrl(input)

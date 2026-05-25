@@ -14,7 +14,7 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "downloads",
-    indices = [Index("albumId")]
+    indices = [Index("albumId")],
 )
 data class DownloadEntity(
     @PrimaryKey val trackId: String,

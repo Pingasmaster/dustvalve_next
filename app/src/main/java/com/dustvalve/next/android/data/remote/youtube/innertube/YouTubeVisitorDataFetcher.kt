@@ -23,9 +23,7 @@ import javax.inject.Singleton
  * having the second attempt covers transient failures.
  */
 @Singleton
-open class YouTubeVisitorDataFetcher @Inject constructor(
-    sharedOkHttpClient: OkHttpClient,
-) {
+open class YouTubeVisitorDataFetcher @Inject constructor(sharedOkHttpClient: OkHttpClient) {
 
     private val okHttpClient: OkHttpClient = sharedOkHttpClient.newBuilder()
         .cookieJar(okhttp3.CookieJar.NO_COOKIES)
@@ -52,7 +50,9 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
     }
 
     /** Invalidates the cached token so the next get() will re-scrape. */
-    fun invalidate() { cached = null }
+    fun invalidate() {
+        cached = null
+    }
 
     private suspend fun fetch(): VisitorConfig = withContext(Dispatchers.IO) {
         val primary = fetchLanding(landingUrl)
@@ -72,21 +72,26 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
                     )
                 }
             }
-        } else null
+        } else {
+            null
+        }
 
         throw IllegalStateException(
             "YouTube landing missing ytcfg.set block " +
                 "(primary=HTTP ${primary.status}, ${primary.body.length} B; " +
-                (if (fallback != null)
-                    "fallback=HTTP ${fallback.status}, ${fallback.body.length} B; "
-                else "") +
+                (
+                    if (fallback != null) {
+                        "fallback=HTTP ${fallback.status}, ${fallback.body.length} B; "
+                    } else {
+                        ""
+                    }
+                    ) +
                 "head='${primary.body.take(120).replace('\n', ' ')}')",
         )
     }
 
     private data class LandingResponse(val status: Int, val body: String) {
-        fun extract(): YouTubeYtcfgExtractor.YtcfgData? =
-            if (status in 200..299) YouTubeYtcfgExtractor.extract(body) else null
+        fun extract(): YouTubeYtcfgExtractor.YtcfgData? = if (status in 200..299) YouTubeYtcfgExtractor.extract(body) else null
     }
 
     private fun fetchLanding(url: String): LandingResponse {

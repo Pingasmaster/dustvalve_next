@@ -40,9 +40,7 @@ import javax.inject.Singleton
  *     reports the WEB (non-Music) clientVersion.
  */
 @Singleton
-open class YouTubeMusicVisitorDataFetcher @Inject constructor(
-    sharedOkHttpClient: OkHttpClient,
-) {
+open class YouTubeMusicVisitorDataFetcher @Inject constructor(sharedOkHttpClient: OkHttpClient) {
 
     /**
      * Landing fetches MUST NOT carry the shared CookieJar's cookies. A stale
@@ -79,7 +77,9 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
     }
 
     /** Invalidates the cached token so the next get() will re-scrape. */
-    fun invalidate() { cached = null }
+    fun invalidate() {
+        cached = null
+    }
 
     private suspend fun fetch(): VisitorConfig = withContext(Dispatchers.IO) {
         val primary = fetchLanding(landingUrl)
@@ -114,8 +114,7 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
     }
 
     private data class LandingResponse(val status: Int, val body: String) {
-        fun extract(): YouTubeYtcfgExtractor.YtcfgData? =
-            if (status in 200..299) YouTubeYtcfgExtractor.extract(body) else null
+        fun extract(): YouTubeYtcfgExtractor.YtcfgData? = if (status in 200..299) YouTubeYtcfgExtractor.extract(body) else null
     }
 
     private fun fetchLanding(url: String): LandingResponse {

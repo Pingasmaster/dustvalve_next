@@ -17,14 +17,17 @@ import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
 import com.dustvalve.next.android.update.AppUpdateController
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
-import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 @HiltAndroidApp
-class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Configuration.Provider {
+class DustvalveNextApplication :
+    Application(),
+    SingletonImageLoader.Factory,
+    Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -77,7 +80,7 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
                     OkHttpNetworkFetcherFactory(
                         callFactory = { entryPoint.okHttpClient() },
                         cacheStrategy = { CacheControlCacheStrategy() },
-                    )
+                    ),
                 )
             }
             .memoryCache {

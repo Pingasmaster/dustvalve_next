@@ -34,9 +34,11 @@ class YouTubeMusicVisitorDataFetcherTest {
     }
 
     @Test fun `extracts visitorData and clientVersion from primary ytcfg`() = runTest {
-        primary.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"VD_VALUE_42","clientName":"WEB_REMIX"}},"INNERTUBE_CLIENT_VERSION":"1.20260999.99.99"});</script>"""
-        ))
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"VD_VALUE_42","clientName":"WEB_REMIX"}},"INNERTUBE_CLIENT_VERSION":"1.20260999.99.99"});</script>""",
+            ),
+        )
 
         val cfg = fetcher.get()
         assertThat(cfg.visitorData).isEqualTo("VD_VALUE_42")
@@ -48,9 +50,11 @@ class YouTubeMusicVisitorDataFetcherTest {
     }
 
     @Test fun `landing GET sends navigation-style headers and dual consent cookies`() = runTest {
-        primary.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"VISITOR_DATA":"x","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>"""
-        ))
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"x","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>""",
+            ),
+        )
         fetcher.get()
         val request = primary.takeRequest()
         assertThat(request.headers["Sec-Fetch-Mode"]).isEqualTo("navigate")
@@ -65,9 +69,11 @@ class YouTubeMusicVisitorDataFetcherTest {
     }
 
     @Test fun `caches across calls (only one network request)`() = runTest {
-        primary.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"VISITOR_DATA":"only_once","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>"""
-        ))
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"only_once","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>""",
+            ),
+        )
         val a = fetcher.get()
         val b = fetcher.get()
         assertThat(a.visitorData).isEqualTo("only_once")
@@ -76,12 +82,16 @@ class YouTubeMusicVisitorDataFetcherTest {
     }
 
     @Test fun `invalidate forces refetch`() = runTest {
-        primary.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"VISITOR_DATA":"first","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>"""
-        ))
-        primary.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"VISITOR_DATA":"second","INNERTUBE_CLIENT_VERSION":"2.0.0"});</script>"""
-        ))
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"first","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>""",
+            ),
+        )
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"second","INNERTUBE_CLIENT_VERSION":"2.0.0"});</script>""",
+            ),
+        )
 
         assertThat(fetcher.get().visitorData).isEqualTo("first")
         fetcher.invalidate()
@@ -95,9 +105,11 @@ class YouTubeMusicVisitorDataFetcherTest {
     }
 
     @Test fun `falls back to default clientVersion when ytcfg missing it`() = runTest {
-        primary.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"VISITOR_DATA":"x"});</script>"""
-        ))
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"x"});</script>""",
+            ),
+        )
         val cfg = fetcher.get()
         assertThat(cfg.visitorData).isEqualTo("x")
         assertThat(cfg.clientVersion)
@@ -106,13 +118,17 @@ class YouTubeMusicVisitorDataFetcherTest {
 
     @Test fun `falls back to www_youtube_com when primary has no ytcfg`() = runTest {
         // Browser-deprecated stub — primary has no ytcfg at all.
-        primary.enqueue(MockResponse().setBody(
-            "<html><body>Browser is deprecated</body></html>"
-        ))
+        primary.enqueue(
+            MockResponse().setBody(
+                "<html><body>Browser is deprecated</body></html>",
+            ),
+        )
         // Fallback (www.youtube.com mock) returns a normal WEB ytcfg.
-        fallback.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"www_VD","clientName":"WEB"}},"INNERTUBE_CLIENT_VERSION":"2.20260424.01.00"});</script>"""
-        ))
+        fallback.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"www_VD","clientName":"WEB"}},"INNERTUBE_CLIENT_VERSION":"2.20260424.01.00"});</script>""",
+            ),
+        )
 
         val cfg = fetcher.get()
         assertThat(cfg.visitorData).isEqualTo("www_VD")
@@ -126,9 +142,11 @@ class YouTubeMusicVisitorDataFetcherTest {
 
     @Test fun `falls back when primary is non-2xx`() = runTest {
         primary.enqueue(MockResponse().setResponseCode(503))
-        fallback.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"VISITOR_DATA":"vd_after_503"});</script>"""
-        ))
+        fallback.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"vd_after_503"});</script>""",
+            ),
+        )
 
         val cfg = fetcher.get()
         assertThat(cfg.visitorData).isEqualTo("vd_after_503")
@@ -168,9 +186,11 @@ class YouTubeMusicVisitorDataFetcherTest {
             fallbackUrl = fallback.url("/").toString(),
         )
 
-        primary.enqueue(MockResponse().setBody(
-            """<script>ytcfg.set({"VISITOR_DATA":"post_fix","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>""",
-        ))
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"post_fix","INNERTUBE_CLIENT_VERSION":"1.0.0"});</script>""",
+            ),
+        )
 
         val cfg = fetcher.get()
         assertThat(cfg.visitorData).isEqualTo("post_fix")
@@ -181,11 +201,7 @@ class YouTubeMusicVisitorDataFetcherTest {
         assertThat(cookie).doesNotContain("SID=")
     }
 
-    private class TestableFetcher(
-        client: OkHttpClient,
-        primaryUrl: String,
-        fallbackUrl: String,
-    ) : YouTubeMusicVisitorDataFetcher(client) {
+    private class TestableFetcher(client: OkHttpClient, primaryUrl: String, fallbackUrl: String) : YouTubeMusicVisitorDataFetcher(client) {
         override val landingUrl: String = primaryUrl
         override val fallbackLandingUrl: String = fallbackUrl
     }

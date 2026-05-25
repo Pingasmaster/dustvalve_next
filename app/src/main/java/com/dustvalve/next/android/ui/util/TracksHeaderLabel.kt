@@ -21,12 +21,15 @@ fun tracksHeaderLabel(trackCount: Int, totalDurationSec: Long): String {
         else -> pluralStringResource(R.plurals.track_count, trackCount, trackCount)
     }
     if (totalDurationSec <= 0L) return countPart
-    val totalMinutes = ((totalDurationSec + 30L) / 60L).toInt()  // round to nearest minute
+    val totalMinutes = ((totalDurationSec + 30L) / 60L).toInt() // round to nearest minute
     val durationPart = if (totalMinutes >= 60) {
         val hours = totalMinutes / 60
         val mins = totalMinutes % 60
-        if (mins == 0) stringResource(R.string.detail_duration_hours_only, hours)
-        else stringResource(R.string.detail_duration_hours_minutes, hours, mins)
+        if (mins == 0) {
+            stringResource(R.string.detail_duration_hours_only, hours)
+        } else {
+            stringResource(R.string.detail_duration_hours_minutes, hours, mins)
+        }
     } else {
         // For sub-minute totals (e.g. a 30 s skit), still show "1 min" so the
         // dot-separator pattern stays uniform.

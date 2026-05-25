@@ -22,11 +22,7 @@ import com.dustvalve.next.android.ui.theme.AppShapes
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun AlbumCard(
-    album: Album,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun AlbumCard(album: Album, onClick: () -> Unit, modifier: Modifier = Modifier) {
     ElevatedCard(
         onClick = onClick,
         modifier = modifier,

@@ -1,9 +1,11 @@
 package com.dustvalve.next.android.ui.screens.local
 
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
@@ -30,8 +32,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import androidx.annotation.StringRes
-import com.dustvalve.next.android.R
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -204,8 +204,9 @@ class LocalViewModel @Inject constructor(
                 .drop(1)
                 .collect { (name, reverse) ->
                     if (settingsDataStore.keepLocalSort.first()) {
-                        try { settingsDataStore.setLocalSort(name, reverse) }
-                        catch (_: Throwable) { }
+                        try {
+                            settingsDataStore.setLocalSort(name, reverse)
+                        } catch (_: Throwable) { }
                     }
                 }
         }
@@ -349,13 +350,19 @@ class LocalViewModel @Inject constructor(
 
     private fun getSortComparator(option: LocalSortOption): Comparator<Track> = when (option) {
         LocalSortOption.TITLE_AZ -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+
         LocalSortOption.ARTIST_AZ -> compareBy<Track, String>(String.CASE_INSENSITIVE_ORDER) { it.artist }
             .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+
         LocalSortOption.ALBUM_AZ -> compareBy<Track, String>(String.CASE_INSENSITIVE_ORDER) { it.albumTitle }
             .thenBy { it.trackNumber }
+
         LocalSortOption.SHORTEST -> compareBy { it.duration }
+
         LocalSortOption.LONGEST -> compareByDescending { it.duration }
+
         LocalSortOption.DATE_ADDED -> compareByDescending { it.dateAdded }
+
         LocalSortOption.RELEASE_YEAR -> compareByDescending<Track> { it.year }
             .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
     }

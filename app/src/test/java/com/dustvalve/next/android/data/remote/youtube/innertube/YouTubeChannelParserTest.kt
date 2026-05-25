@@ -8,7 +8,10 @@ import org.junit.Test
 class YouTubeChannelParserTest {
 
     private val parser = YouTubeChannelParser()
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Test fun `parses real WEB channel-videos response into Tracks`() {
         val page = parser.parse(
@@ -50,7 +53,7 @@ class YouTubeChannelParserTest {
                 "continuationCommand":{"token":"NEXT_CHAN"}
               }}}
             ]}}]}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val page = parser.parseContinuation(cont, "UCabcdefghijklmnopqrstuv", channelName = "Some Chan", startIndex = 11)
         assertThat(page.tracks).hasSize(1)
@@ -76,7 +79,7 @@ class YouTubeChannelParserTest {
                 "thumbnail":{"thumbnails":[]}
               }}}}
             ]}}]}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val page = parser.parseContinuation(cont, "UC", channelName = "C", startIndex = 1)
         // 1*3600 + 2*60 + 3 = 3723

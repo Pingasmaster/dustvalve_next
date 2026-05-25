@@ -21,11 +21,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.dustvalve.next.android.ui.components.getPlaylistIconRes
-import com.dustvalve.next.android.ui.components.lists.MusicRow
-import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
-import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
@@ -74,8 +69,13 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.components.getPlaylistIconRes
+import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
+import com.dustvalve.next.android.ui.theme.segmentedItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -171,6 +171,7 @@ fun PlaylistDetailScreen(
                     ContainedLoadingIndicator()
                 }
             }
+
             state.error != null && state.playlist == null -> {
                 ErrorState(
                     message = state.error ?: stringResource(R.string.playlist_error_load),
@@ -178,6 +179,7 @@ fun PlaylistDetailScreen(
                     modifier = Modifier.padding(paddingValues),
                 )
             }
+
             state.playlist != null -> {
                 PlaylistContent(
                     playlist = state.playlist!!,
@@ -517,8 +519,11 @@ private fun PlaylistActionBar(
                 } else {
                     Icon(
                         painter = painterResource(
-                            if (allTracksDownloaded) R.drawable.ic_download_done
-                            else R.drawable.ic_download
+                            if (allTracksDownloaded) {
+                                R.drawable.ic_download_done
+                            } else {
+                                R.drawable.ic_download
+                            },
                         ),
                         contentDescription = if (allTracksDownloaded) {
                             stringResource(R.string.playlist_cd_all_downloaded)
@@ -536,10 +541,7 @@ private val ActionBarSpacing = 8.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun EmptyPlaylistState(
-    isSystem: Boolean,
-    modifier: Modifier = Modifier,
-) {
+private fun EmptyPlaylistState(isSystem: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center,
@@ -564,7 +566,13 @@ private fun EmptyPlaylistState(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = if (isSystem) stringResource(R.string.playlist_empty_system_title) else stringResource(R.string.playlist_empty_custom_title),
+                text = if (isSystem) {
+                    stringResource(
+                        R.string.playlist_empty_system_title,
+                    )
+                } else {
+                    stringResource(R.string.playlist_empty_custom_title)
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -585,11 +593,7 @@ private fun EmptyPlaylistState(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ErrorState(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,

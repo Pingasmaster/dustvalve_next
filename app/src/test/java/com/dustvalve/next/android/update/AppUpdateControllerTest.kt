@@ -1,12 +1,12 @@
 package com.dustvalve.next.android.update
 
+import app.cash.turbine.test
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import app.cash.turbine.test
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -40,7 +40,10 @@ class AppUpdateControllerTest {
         // Default: auto-update checks enabled, so checkSilently runs the check.
         every { settingsDataStore.autoUpdateCheckEnabled } returns flowOf(true)
     }
-    @After fun tearDown() { Dispatchers.resetMain() }
+
+    @After fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test fun `checkSilently moves state to Available when service returns an update`() = runTest(dispatcher) {
         coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
@@ -81,12 +84,13 @@ class AppUpdateControllerTest {
         advanceUntilIdle()
 
         assertThat(controller.state.value).isEqualTo(UpdateUiState.Idle)
-        assertThat(messagesSeen).isEmpty()  // silent = no user-visible toast
+        assertThat(messagesSeen).isEmpty() // silent = no user-visible toast
     }
 
     @Test fun `checkSilently is idempotent per process - second call is a no-op`() = runTest(dispatcher) {
         coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
-            versionName = "9.9.9", apkDownloadUrl = "https://x/app-release.apk",
+            versionName = "9.9.9",
+            apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
         val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
@@ -102,7 +106,8 @@ class AppUpdateControllerTest {
     @Test fun `checkSilently is a no-op when auto-update checks are disabled`() = runTest(dispatcher) {
         every { settingsDataStore.autoUpdateCheckEnabled } returns flowOf(false)
         coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
-            versionName = "9.9.9", apkDownloadUrl = "https://x/app-release.apk",
+            versionName = "9.9.9",
+            apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
         val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
@@ -118,7 +123,8 @@ class AppUpdateControllerTest {
     @Test fun `checkManually still checks even when auto-update is disabled`() = runTest(dispatcher) {
         every { settingsDataStore.autoUpdateCheckEnabled } returns flowOf(false)
         coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
-            versionName = "9.9.9", apkDownloadUrl = "https://x/app-release.apk",
+            versionName = "9.9.9",
+            apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
         val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
@@ -136,7 +142,8 @@ class AppUpdateControllerTest {
         // already moved to Downloading, the silent success must NOT reset it
         // to Available.
         coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
-            versionName = "9.9.9", apkDownloadUrl = "https://x/app-release.apk",
+            versionName = "9.9.9",
+            apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
         val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
@@ -183,7 +190,8 @@ class AppUpdateControllerTest {
 
     @Test fun `dismiss moves Available state back to Idle`() = runTest(dispatcher) {
         coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
-            versionName = "9.9.9", apkDownloadUrl = "https://x/app-release.apk",
+            versionName = "9.9.9",
+            apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
         val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }

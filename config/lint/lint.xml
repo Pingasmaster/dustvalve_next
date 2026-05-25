@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <issue id="MissingTranslation"            severity="ignore" />
+    <issue id="GoogleAppIndexingWarning"      severity="ignore" />
+    <issue id="ObsoleteSdkInt"                severity="informational" />
+
+    <issue id="UnusedResources"               severity="error" />
+    <issue id="HardcodedText"                 severity="error" />
+    <issue id="ContentDescription"            severity="error" />
+
+    <issue id="NewApi"                        severity="error" />
+    <issue id="InlinedApi"                    severity="error" />
+    <issue id="MissingPermission"             severity="error" />
+    <issue id="ForegroundServiceType"         severity="error" />
+    <issue id="BatteryLife"                   severity="error" />
+
+    <issue id="StopShip"                      severity="error" />
+    <issue id="VisibleForTests"               severity="error" />
+
+    <issue id="ComposableNaming"              severity="error" />
+    <issue id="RememberInComposition"         severity="error" />
+    <issue id="ProduceStateDoesNotAssignValue" severity="error" />
+    <issue id="UnrememberedMutableState"      severity="error" />
+    <issue id="ModifierParameter"             severity="error" />
+    <issue id="ComposeUnstableCollections"    severity="warning" />
+</lint>

@@ -50,7 +50,8 @@ class DustvalveDiscoverScraperTest {
         val body = """{
             "results":[{"result_type":"a","title":"T","band_name":"Band","album_artist":"Actual Artist","item_url":"https://x.bandcamp.com/album/1","id":1}],
             "result_count":1,"cursor":null
-        }""".trimIndent()
+        }
+        """.trimIndent()
         setup.server.enqueue(MockResponse().setBody(body))
         val r = scraper.discover()
         assertThat(r.albums.single().artist).isEqualTo("Actual Artist")

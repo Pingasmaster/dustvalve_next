@@ -12,16 +12,13 @@ import java.io.File
 object StoragePaths {
 
     /** Top-level downloads pool. Audio + image subdirs live here. */
-    fun downloadsDir(context: Context): File =
-        File(context.filesDir, "downloads").also { it.mkdirs() }
+    fun downloadsDir(context: Context): File = File(context.filesDir, "downloads").also { it.mkdirs() }
 
     /** Coil's persistent image disk cache. */
-    fun imagesDir(context: Context): File =
-        File(downloadsDir(context), "images").also { it.mkdirs() }
+    fun imagesDir(context: Context): File = File(downloadsDir(context), "images").also { it.mkdirs() }
 
     /** ExoPlayer's media cache directory (managed by Media3 SimpleCache). */
-    fun mediaCacheDir(context: Context): File =
-        File(context.cacheDir, "media_cache")
+    fun mediaCacheDir(context: Context): File = File(context.cacheDir, "media_cache")
 
     /** Recursive directory size in bytes. Returns 0 for missing dirs. */
     fun calculateDirSize(dir: File): Long {

@@ -98,7 +98,7 @@ class YouTubeViewModelSearchDispatchTest {
 
     @Test fun `YouTubeMusic source search routes through YouTubeMusicRepository`() = runTest {
         coEvery { ytmRepo.search("daft punk", null) } returns listOf(
-            track("https://www.youtube.com/watch?v=B")
+            track("https://www.youtube.com/watch?v=B"),
         )
 
         val vm = newViewModel()
@@ -119,7 +119,7 @@ class YouTubeViewModelSearchDispatchTest {
             }
             assertThat(state.results).hasSize(1)
             assertThat(state.results.first().url).isEqualTo("https://www.youtube.com/watch?v=B")
-            assertThat(state.hasMore).isFalse()  // YTM has no pagination
+            assertThat(state.hasMore).isFalse() // YTM has no pagination
             cancelAndIgnoreRemainingEvents()
         }
 

@@ -24,6 +24,7 @@ import kotlin.coroutines.cancellation.CancellationException
 sealed interface UpdateUiState {
     data object Idle : UpdateUiState
     data object Checking : UpdateUiState
+
     /** Server said a newer build exists. Awaiting user confirmation. */
     data class Available(
         val versionName: String,
@@ -31,6 +32,7 @@ sealed interface UpdateUiState {
         /** GitHub release body (Markdown), shown in the update dialog. Empty when none. */
         val releaseNotes: String,
     ) : UpdateUiState
+
     /** APK is streaming. [progress] is 0f..1f, or `null` when no Content-Length was sent. */
     data class Downloading(val versionName: String, val progress: Float?) : UpdateUiState
 }
@@ -49,10 +51,7 @@ sealed interface UpdateUiState {
  * listens to — we don't want startup toasts).
  */
 @Singleton
-class AppUpdateController @Inject constructor(
-    private val service: AppUpdateService,
-    private val settingsDataStore: SettingsDataStore,
-) {
+class AppUpdateController @Inject constructor(private val service: AppUpdateService, private val settingsDataStore: SettingsDataStore) {
     /** Overridable in tests so a TestDispatcher can drive the internal scope. Set once, before first call. */
     internal var scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -91,6 +90,7 @@ class AppUpdateController @Inject constructor(
                     // looking at a dialog, we don't want to reset their state.
                     when (current) {
                         is UpdateUiState.Downloading, is UpdateUiState.Available -> current
+
                         else -> UpdateUiState.Available(
                             versionName = available.versionName,
                             apkUrl = available.apkDownloadUrl,

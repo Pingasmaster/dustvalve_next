@@ -13,6 +13,7 @@ interface AlbumRepository {
     suspend fun toggleFavorite(albumId: String)
     suspend fun setAutoDownload(albumId: String, autoDownload: Boolean)
     suspend fun updatePurchaseInfo(albumId: String, purchaseInfo: PurchaseInfo)
+
     /**
      * Fetches the per-track price for a single Bandcamp track URL. Returns
      * null when the track isn't priced individually or any fetch/parse error

@@ -10,9 +10,7 @@ sealed interface LibraryItem {
     val addedAt: Long
     val shapeKey: String?
 
-    data class PlaylistItem(
-        val playlist: Playlist,
-    ) : LibraryItem {
+    data class PlaylistItem(val playlist: Playlist) : LibraryItem {
         override val id get() = "playlist_${playlist.id}"
         override val name get() = playlist.name
         override val isPinned get() = playlist.isPinned

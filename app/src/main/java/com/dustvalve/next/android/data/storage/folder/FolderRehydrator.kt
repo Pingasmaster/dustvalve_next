@@ -52,7 +52,11 @@ class FolderRehydrator @Inject constructor(
 ) {
     suspend fun rehydrateAll() = withContext(Dispatchers.IO) {
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return@withContext
-        val uri = try { uriStr.toUri() } catch (_: Exception) { return@withContext }
+        val uri = try {
+            uriStr.toUri()
+        } catch (_: Exception) {
+            return@withContext
+        }
 
         // Settings first so downstream reads pick up the user's prefs.
         FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_SETTINGS, SettingsFile.serializer())?.let { file ->
@@ -153,19 +157,19 @@ class FolderRehydrator @Inject constructor(
         }
     }
 
-    private suspend fun readMetadataCacheFromCacheDir(
-        uri: android.net.Uri,
-    ): MetadataCacheFile? = withContext(Dispatchers.IO) {
+    private suspend fun readMetadataCacheFromCacheDir(uri: android.net.Uri): MetadataCacheFile? = withContext(Dispatchers.IO) {
         val file = DedicatedFolderPaths.findInCache(
-            context, uri, DedicatedFolderPaths.FILE_METADATA_CACHE,
+            context,
+            uri,
+            DedicatedFolderPaths.FILE_METADATA_CACHE,
         ) ?: return@withContext null
         val text = context.contentResolver.openInputStream(file.uri)?.use {
             it.bufferedReader().readText()
         } ?: return@withContext null
         if (text.isBlank()) return@withContext null
         FolderSnapshotSerializer.json.decodeFromString(
-            MetadataCacheFile.serializer(), text,
+            MetadataCacheFile.serializer(),
+            text,
         )
     }
 }
-

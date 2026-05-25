@@ -2,6 +2,7 @@ package com.dustvalve.next.android.ui.screens.artist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.Track
@@ -12,7 +13,6 @@ import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.GetArtistDetailUseCase
 import com.dustvalve.next.android.domain.usecase.ToggleFavoriteUseCase
 import com.dustvalve.next.android.util.UiText
-import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -146,7 +146,8 @@ class ArtistDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -169,7 +170,8 @@ class ArtistDetailViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _uiState.update {
                     it.copy(
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed),
                         isSnackbarError = true,
                     )
                 }

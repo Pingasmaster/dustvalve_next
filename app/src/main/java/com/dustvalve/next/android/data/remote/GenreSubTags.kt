@@ -1,9 +1,6 @@
 package com.dustvalve.next.android.data.remote
 
-data class SubTag(
-    val label: String,
-    val slug: String,
-)
+data class SubTag(val label: String, val slug: String)
 
 /**
  * Hardcoded sub-genre tags per parent genre, sourced from Dustvalve's

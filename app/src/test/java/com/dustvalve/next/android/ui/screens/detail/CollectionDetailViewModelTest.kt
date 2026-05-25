@@ -61,10 +61,14 @@ class CollectionDetailViewModelTest {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
-            id = url, url = url, name = "Chill Mix", owner = "",
+            id = url,
+            url = url,
+            name = "Chill Mix",
+            owner = "",
             coverUrl = "cover.jpg",
             tracks = listOf(track("yt_1"), track("yt_2")),
-            continuation = null, hasMore = false,
+            continuation = null,
+            hasMore = false,
         )
         every { sources["youtube"] } returns source
         coEvery { favoriteDao.isFavorite(url) } returns false
@@ -126,8 +130,14 @@ class CollectionDetailViewModelTest {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
-            id = url, url = url, name = "My Mix", owner = "",
-            coverUrl = null, tracks = listOf(track("a")), continuation = null, hasMore = false,
+            id = url,
+            url = url,
+            name = "My Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("a")),
+            continuation = null,
+            hasMore = false,
         )
         every { sources["youtube"] } returns source
         coEvery { favoriteDao.isFavorite(url) } returns true

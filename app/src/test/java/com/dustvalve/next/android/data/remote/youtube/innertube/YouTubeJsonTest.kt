@@ -61,7 +61,7 @@ class YouTubeJsonTest {
 
     @Test fun `runsText prefers first run text`() {
         val obj = json.parseToJsonElement(
-            """{"title":{"runs":[{"text":"Foo"},{"text":"Bar"}]}}"""
+            """{"title":{"runs":[{"text":"Foo"},{"text":"Bar"}]}}""",
         )
         assertThat(obj.runsText("title")).isEqualTo("Foo")
     }
@@ -92,7 +92,7 @@ class YouTubeJsonTest {
                 ]
               }
             }
-            """.trimIndent()
+            """.trimIndent(),
         )
         assertThat(obj.extractThumbnail()).isEqualTo("https://i.ytimg.com/vi/x/hq720.jpg")
     }
@@ -134,7 +134,7 @@ class YouTubeJsonTest {
 
     @Test fun `extractThumbnail handles bare thumbnails array fallback`() {
         val obj = json.parseToJsonElement(
-            """{"thumbnails":[{"url":"https://x/img","width":50}]}"""
+            """{"thumbnails":[{"url":"https://x/img","width":50}]}""",
         )
         assertThat(obj.extractThumbnail()).isEqualTo("https://x/img")
     }

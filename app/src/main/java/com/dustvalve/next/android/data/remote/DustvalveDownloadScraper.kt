@@ -17,9 +17,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveDownloadScraper @Inject constructor(
-    private val client: OkHttpClient,
-) {
+class DustvalveDownloadScraper @Inject constructor(private val client: OkHttpClient) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -27,9 +25,7 @@ class DustvalveDownloadScraper @Inject constructor(
     }
 
     @Serializable
-    data class BlobData(
-        @SerialName("digital_items") val digitalItems: List<DigitalItem> = emptyList(),
-    )
+    data class BlobData(@SerialName("digital_items") val digitalItems: List<DigitalItem> = emptyList())
 
     @Serializable
     data class DigitalItem(
@@ -39,19 +35,13 @@ class DustvalveDownloadScraper @Inject constructor(
     )
 
     @Serializable
-    data class DownloadInfo(
-        val url: String? = null,
-        @SerialName("size_mb") val sizeMb: Float = 0f,
-        val description: String = "",
-    )
+    data class DownloadInfo(val url: String? = null, @SerialName("size_mb") val sizeMb: Float = 0f, val description: String = "")
 
     /**
      * Fetches the download page for a purchased item and returns a map of
      * [AudioFormat] to download URL.
      */
-    suspend fun getDownloadUrls(
-        purchaseInfo: PurchaseInfo,
-    ): Map<AudioFormat, String> = withContext(Dispatchers.IO) {
+    suspend fun getDownloadUrls(purchaseInfo: PurchaseInfo): Map<AudioFormat, String> = withContext(Dispatchers.IO) {
         val downloadPageUrl = "https://bandcamp.com/download?" +
             "from=collection&id=${purchaseInfo.saleItemId}&type=${purchaseInfo.saleItemType}"
 

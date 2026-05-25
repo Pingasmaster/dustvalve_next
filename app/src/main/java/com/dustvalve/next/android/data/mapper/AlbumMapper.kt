@@ -39,7 +39,9 @@ fun AlbumEntity.toDomain(tracks: List<Track>, isFavorite: Boolean): Album = Albu
     autoDownload = autoDownload,
     purchaseInfo = if (saleItemId != null && saleItemType != null) {
         PurchaseInfo(saleItemId, saleItemType)
-    } else null,
+    } else {
+        null
+    },
     discographyOffer = if (
         discogPriceAmount != null && !discogPriceCurrency.isNullOrBlank() && !discogUrl.isNullOrBlank()
     ) {
@@ -48,10 +50,14 @@ fun AlbumEntity.toDomain(tracks: List<Track>, isFavorite: Boolean): Album = Albu
             url = discogUrl,
             name = discogName ?: "",
         )
-    } else null,
+    } else {
+        null
+    },
     singleTrackPrice = if (singleTrackPriceAmount != null && !singleTrackPriceCurrency.isNullOrBlank()) {
         AlbumPrice(amount = singleTrackPriceAmount, currency = singleTrackPriceCurrency)
-    } else null,
+    } else {
+        null
+    },
 )
 
 fun Album.toEntity(): AlbumEntity = AlbumEntity(

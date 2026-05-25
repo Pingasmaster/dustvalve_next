@@ -44,9 +44,11 @@ object TlsTestServer {
         val client = OkHttpClient.Builder()
             .sslSocketFactory(clientCerts.sslSocketFactory(), clientCerts.trustManager)
             .dns(object : Dns {
-                override fun lookup(hostname: String): List<InetAddress> =
-                    if (hostname in ALL_HOSTS) listOf(InetAddress.getByName("127.0.0.1"))
-                    else Dns.SYSTEM.lookup(hostname)
+                override fun lookup(hostname: String): List<InetAddress> = if (hostname in ALL_HOSTS) {
+                    listOf(InetAddress.getByName("127.0.0.1"))
+                } else {
+                    Dns.SYSTEM.lookup(hostname)
+                }
             })
             // The scrapers call e.g. https://bandcamp.com/... with no explicit port, but our
             // MockWebServer listens on an ephemeral port. We rewrite the URL on the way out.
@@ -55,7 +57,9 @@ object TlsTestServer {
                 val host = req.url.host
                 val newReq = if (host in ALL_HOSTS && req.url.port != port) {
                     req.newBuilder().url(req.url.newBuilder().port(port).build()).build()
-                } else req
+                } else {
+                    req
+                }
                 chain.proceed(newReq)
             }
             .build()

@@ -32,11 +32,7 @@ import com.dustvalve.next.android.update.UpdateUiState
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun AppUpdateDialog(
-    state: UpdateUiState,
-    onConfirmDownload: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+fun AppUpdateDialog(state: UpdateUiState, onConfirmDownload: () -> Unit, onDismiss: () -> Unit) {
     when (state) {
         is UpdateUiState.Available -> {
             AlertDialog(
@@ -82,6 +78,7 @@ fun AppUpdateDialog(
                 },
             )
         }
+
         is UpdateUiState.Downloading -> {
             AlertDialog(
                 onDismissRequest = { /* not dismissable while downloading */ },
@@ -106,6 +103,7 @@ fun AppUpdateDialog(
                 confirmButton = {},
             )
         }
+
         else -> Unit
     }
 }

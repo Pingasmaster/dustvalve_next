@@ -1,9 +1,9 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.remote.youtube.innertube.PlayerStreamInfo
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeChannelParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeNextParser
-import com.dustvalve.next.android.data.remote.youtube.innertube.PlayerStreamInfo
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser
@@ -63,7 +63,10 @@ class YouTubeRepositoryImplTest {
     @Test fun `getStreamUrl extracts videoId and dispatches to player`() = runTest {
         coEvery { client.player("dQw4w9WgXcQ") } returns empty
         every { playerParser.parsePlayerStreamInfo(empty) } returns PlayerStreamInfo(
-            streamUrl = "https://stream/x", format = AudioFormat.OPUS, bitrate = 128000, mimeType = "audio/webm; codecs=\"opus\"",
+            streamUrl = "https://stream/x",
+            format = AudioFormat.OPUS,
+            bitrate = 128000,
+            mimeType = "audio/webm; codecs=\"opus\"",
         )
 
         val url = repo.getStreamUrl("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
@@ -73,8 +76,7 @@ class YouTubeRepositoryImplTest {
 
     @Test fun `getStreamUrl handles youtu_be short links`() = runTest {
         coEvery { client.player("abcdefghijk") } returns empty
-        every { playerParser.parsePlayerStreamInfo(empty) } returns PlayerStreamInfo(
-            "u", AudioFormat.OPUS, 0, "")
+        every { playerParser.parsePlayerStreamInfo(empty) } returns PlayerStreamInfo("u", AudioFormat.OPUS, 0, "")
         repo.getStreamUrl("https://youtu.be/abcdefghijk")
         coVerify { client.player("abcdefghijk") }
     }
@@ -87,7 +89,10 @@ class YouTubeRepositoryImplTest {
     @Test fun `getDownloadableStream returns url and format`() = runTest {
         coEvery { client.player("vidvidvid12") } returns empty
         every { playerParser.parsePlayerStreamInfo(empty) } returns PlayerStreamInfo(
-            "https://x", AudioFormat.AAC, 256000, "audio/mp4"
+            "https://x",
+            AudioFormat.AAC,
+            256000,
+            "audio/mp4",
         )
 
         val (url, fmt) = repo.getDownloadableStream("https://www.youtube.com/watch?v=vidvidvid12")
@@ -126,7 +131,7 @@ class YouTubeRepositoryImplTest {
 
     @Test fun `getRecommendations calls next and parses`() = runTest {
         val results = listOf(
-            SearchResult(SearchResultType.YOUTUBE_TRACK, "n", "u", null, null, null, null, null)
+            SearchResult(SearchResultType.YOUTUBE_TRACK, "n", "u", null, null, null, null, null),
         )
         coEvery { client.next("vidvidvid12") } returns empty
         every { nextParser.parse(empty) } returns results

@@ -20,24 +20,12 @@ import javax.inject.Singleton
 @Singleton
 class YouTubePlaylistParser @Inject constructor() {
 
-    data class PlaylistPage(
-        val tracks: List<Track>,
-        val title: String?,
-        val continuation: String?,
-    )
+    data class PlaylistPage(val tracks: List<Track>, val title: String?, val continuation: String?)
 
     /** Next-page cursor for a Mix (nullable fields mean "not available"). */
-    data class MixContinuation(
-        val lastVideoId: String,
-        val playlistIndex: Int,
-        val params: String?,
-    )
+    data class MixContinuation(val lastVideoId: String, val playlistIndex: Int, val params: String?)
 
-    data class MixPage(
-        val tracks: List<Track>,
-        val title: String?,
-        val continuation: MixContinuation?,
-    )
+    data class MixPage(val tracks: List<Track>, val title: String?, val continuation: MixContinuation?)
 
     fun parse(root: JsonElement, playlistId: String): PlaylistPage {
         val title = extractTitle(root)
@@ -119,7 +107,9 @@ class YouTubePlaylistParser @Inject constructor() {
         val channelId = pvr.runsBrowseId("shortBylineText")
         val artistUrl = if (!channelId.isNullOrBlank()) {
             "https://www.youtube.com/channel/$channelId"
-        } else ""
+        } else {
+            ""
+        }
         val durationSec = pvr.str("lengthSeconds")?.toFloatOrNull() ?: 0f
         val art = pvr.path("thumbnail")?.extractThumbnail() ?: ""
         return Track(
@@ -148,12 +138,7 @@ class YouTubePlaylistParser @Inject constructor() {
      * tracks on each paginated /next — we rely on the response's currentIndex
      * to slice, and also dedupe via [seenVideoIds] as a belt-and-braces guard).
      */
-    fun parseMix(
-        root: JsonElement,
-        playlistId: String,
-        startIndex: Int = 1,
-        seenVideoIds: Set<String> = emptySet(),
-    ): MixPage {
+    fun parseMix(root: JsonElement, playlistId: String, startIndex: Int = 1, seenVideoIds: Set<String> = emptySet()): MixPage {
         val playlistPanel = findPlaylistPanel(root)
             ?: return MixPage(emptyList(), null, null)
 
@@ -220,7 +205,9 @@ class YouTubePlaylistParser @Inject constructor() {
             ?: pvr.runsBrowseId("shortBylineText")
         val artistUrl = if (!channelId.isNullOrBlank()) {
             "https://www.youtube.com/channel/$channelId"
-        } else ""
+        } else {
+            ""
+        }
         // playlistPanelVideoRenderer carries lengthText (e.g. "3:45"), not lengthSeconds.
         val durationSec = pvr.str("lengthSeconds")?.toFloatOrNull()
             ?: pvr.runsText("lengthText")?.let { parseLengthText(it) }
@@ -261,13 +248,19 @@ class YouTubePlaylistParser @Inject constructor() {
         return when {
             playlistId.startsWith("RDAMVM") && playlistId.length >= 17 ->
                 safe(playlistId.substring(6, 17))
+
             playlistId.startsWith("RDCLAK") && playlistId.length >= 17 ->
                 safe(playlistId.substring(6, 17))
+
             playlistId.startsWith("RDMM") && playlistId.length >= 15 ->
                 safe(playlistId.substring(4, 15))
+
             playlistId.startsWith("RDGMEM") -> null
+
             playlistId.startsWith("RDEM") -> null
+
             playlistId.length == 13 -> safe(playlistId.substring(2, 13))
+
             else -> null
         }
     }

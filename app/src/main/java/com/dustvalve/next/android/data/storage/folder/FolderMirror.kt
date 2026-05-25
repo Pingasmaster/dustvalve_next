@@ -64,6 +64,7 @@ class FolderMirror @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var activeJobs: MutableList<Job> = mutableListOf()
     private val metadataJobs: MutableList<Job> = mutableListOf()
+
     @Volatile private var suspendUntil: Long = 0L
 
     /**
@@ -93,25 +94,28 @@ class FolderMirror @Inject constructor(
 
     private suspend fun treeUri(): Uri? {
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return null
-        return try { uriStr.toUri() } catch (_: Exception) { null }
+        return try {
+            uriStr.toUri()
+        } catch (_: Exception) {
+            null
+        }
     }
 
-    private fun <T> mirrorFlow(flow: Flow<T>, write: suspend (T, Uri) -> Unit): Job =
-        flow
-            .drop(1)
-            .debounce(500)
-            .onEach { value ->
-                if (isSuspended()) return@onEach
-                val uri = treeUri() ?: return@onEach
-                try {
-                    write(value, uri)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (t: Throwable) {
-                    android.util.Log.w("FolderMirror", "write failed: ${t.message}")
-                }
+    private fun <T> mirrorFlow(flow: Flow<T>, write: suspend (T, Uri) -> Unit): Job = flow
+        .drop(1)
+        .debounce(500)
+        .onEach { value ->
+            if (isSuspended()) return@onEach
+            val uri = treeUri() ?: return@onEach
+            try {
+                write(value, uri)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (t: Throwable) {
+                android.util.Log.w("FolderMirror", "write failed: ${t.message}")
             }
-            .launchIn(scope)
+        }
+        .launchIn(scope)
 
     private fun startMirrorJobs() {
         stopMirrorJobs()
@@ -123,45 +127,62 @@ class FolderMirror @Inject constructor(
             combine(
                 playlistDao.getAllPlaylists(),
                 playlistDao.getAllPlaylistTrackMappings(),
-            ) { _, _ -> Unit }
+            ) { _, _ -> Unit },
         ) { _, _ -> writePlaylists() }
 
         jobs += mirrorFlow(favoriteDao.getAllFlow()) { list, uri ->
             FolderIo.writeJson(
-                context, uri, DedicatedFolderPaths.FILE_FAVORITES,
-                FavoritesFile.serializer(), FavoritesFile(list.map { it.toSnapshot() }),
+                context,
+                uri,
+                DedicatedFolderPaths.FILE_FAVORITES,
+                FavoritesFile.serializer(),
+                FavoritesFile(list.map { it.toSnapshot() }),
             )
         }
         jobs += mirrorFlow(trackDao.getAllFlow()) { list, uri ->
             FolderIo.writeJson(
-                context, uri, DedicatedFolderPaths.FILE_TRACKS,
-                TracksFile.serializer(), TracksFile(list.map { it.toSnapshot() }),
+                context,
+                uri,
+                DedicatedFolderPaths.FILE_TRACKS,
+                TracksFile.serializer(),
+                TracksFile(list.map { it.toSnapshot() }),
             )
         }
         jobs += mirrorFlow(albumDao.getAllFlow()) { list, uri ->
             FolderIo.writeJson(
-                context, uri, DedicatedFolderPaths.FILE_ALBUMS,
-                AlbumsFile.serializer(), AlbumsFile(list.map { it.toSnapshot() }),
+                context,
+                uri,
+                DedicatedFolderPaths.FILE_ALBUMS,
+                AlbumsFile.serializer(),
+                AlbumsFile(list.map { it.toSnapshot() }),
             )
         }
         jobs += mirrorFlow(artistDao.getAllFlow()) { list, uri ->
             FolderIo.writeJson(
-                context, uri, DedicatedFolderPaths.FILE_ARTISTS,
-                ArtistsFile.serializer(), ArtistsFile(list.map { it.toSnapshot() }),
+                context,
+                uri,
+                DedicatedFolderPaths.FILE_ARTISTS,
+                ArtistsFile.serializer(),
+                ArtistsFile(list.map { it.toSnapshot() }),
             )
         }
         jobs += mirrorFlow(downloadDao.getAll()) { list, uri ->
             FolderIo.writeJson(
-                context, uri, DedicatedFolderPaths.FILE_DOWNLOADS,
-                DownloadsFile.serializer(), DownloadsFile(list.map { it.toSnapshot() }),
+                context,
+                uri,
+                DedicatedFolderPaths.FILE_DOWNLOADS,
+                DownloadsFile.serializer(),
+                DownloadsFile(list.map { it.toSnapshot() }),
             )
         }
         jobs += mirrorFlow(
-            combine(recentTrackDao.getAllFlow(), recentSearchDao.getAllFlow()) { t, s -> t to s }
+            combine(recentTrackDao.getAllFlow(), recentSearchDao.getAllFlow()) { t, s -> t to s },
         ) { pair, uri ->
             val (tracks, searches) = pair
             FolderIo.writeJson(
-                context, uri, DedicatedFolderPaths.FILE_HISTORY,
+                context,
+                uri,
+                DedicatedFolderPaths.FILE_HISTORY,
                 HistoryFile.serializer(),
                 HistoryFile(tracks.map { it.toSnapshot() }, searches.map { it.toSnapshot() }),
             )
@@ -170,8 +191,11 @@ class FolderMirror @Inject constructor(
         // Settings mirror — the raw preferences Flow.
         jobs += mirrorFlow(settingsDataStore.rawPreferencesFlow) { _, uri ->
             FolderIo.writeJson(
-                context, uri, DedicatedFolderPaths.FILE_SETTINGS,
-                SettingsFile.serializer(), captureSettingsFile(),
+                context,
+                uri,
+                DedicatedFolderPaths.FILE_SETTINGS,
+                SettingsFile.serializer(),
+                captureSettingsFile(),
             )
         }
 
@@ -193,7 +217,7 @@ class FolderMirror @Inject constructor(
                 ytVideoDao.getAllFlow(),
                 ytPlaylistDao.getAllFlow(),
                 ytmHomeDao.getAllFlow(),
-            ) { _, _, _ -> Unit }
+            ) { _, _, _ -> Unit },
         ) { _, uri ->
             val file = MetadataCacheFile(
                 videos = ytVideoDao.getAllSync().map { it.toSnapshot() },
@@ -216,8 +240,11 @@ class FolderMirror @Inject constructor(
         val playlists = playlistDao.getAllPlaylistsSync().map { it.toSnapshot() }
         val mappings = playlistDao.getAllPlaylistTrackMappingsSync().map { it.toSnapshot() }
         FolderIo.writeJson(
-            context, uri, DedicatedFolderPaths.FILE_PLAYLISTS,
-            PlaylistsFile.serializer(), PlaylistsFile(playlists, mappings),
+            context,
+            uri,
+            DedicatedFolderPaths.FILE_PLAYLISTS,
+            PlaylistsFile.serializer(),
+            PlaylistsFile(playlists, mappings),
         )
     }
 
@@ -232,7 +259,9 @@ class FolderMirror @Inject constructor(
         } ?: return
         val renamed = try {
             tmp.renameTo(DedicatedFolderPaths.FILE_METADATA_CACHE)
-        } catch (_: Exception) { false }
+        } catch (_: Exception) {
+            false
+        }
         if (!renamed) {
             val target = cache.findFile(DedicatedFolderPaths.FILE_METADATA_CACHE)
                 ?: cache.createFile(DedicatedFolderPaths.JSON_MIME, DedicatedFolderPaths.FILE_METADATA_CACHE)
@@ -251,14 +280,20 @@ class FolderMirror @Inject constructor(
         val entries = raw.mapValues { (_, v) ->
             when (v) {
                 is Boolean -> SettingValue.BoolV(v)
+
                 is Int -> SettingValue.IntV(v)
+
                 is Long -> SettingValue.LongV(v)
+
                 is Float -> SettingValue.FloatV(v)
+
                 is String -> SettingValue.StringV(v)
+
                 is Set<*> -> {
                     @Suppress("UNCHECKED_CAST")
                     SettingValue.StringSetV((v as Set<String>))
                 }
+
                 else -> SettingValue.StringV(v.toString())
             }
         }

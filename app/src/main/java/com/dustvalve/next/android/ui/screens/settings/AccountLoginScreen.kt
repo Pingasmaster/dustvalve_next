@@ -2,22 +2,21 @@ package com.dustvalve.next.android.ui.screens.settings
 
 import android.annotation.SuppressLint
 import android.view.WindowManager
-import androidx.activity.compose.LocalActivity
-import androidx.core.net.toUri
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -35,9 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
+import com.dustvalve.next.android.R
 
 private const val LOGIN_URL = "https://bandcamp.com/login"
 
@@ -46,10 +46,7 @@ private val AUTH_COOKIE_NAMES = setOf("identity", "session", "client_id", "js_lo
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun AccountLoginScreen(
-    onLoginSuccess: (Map<String, String>) -> Unit,
-    onBack: () -> Unit,
-) {
+fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -112,7 +109,7 @@ fun AccountLoginScreen(
                                     if (name != null) {
                                         cookieManager.setCookie(
                                             "https://bandcamp.com",
-                                            "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com"
+                                            "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com",
                                         )
                                     }
                                 }
@@ -120,10 +117,7 @@ fun AccountLoginScreen(
                         }
 
                         webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                            ): Boolean {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString() ?: return false
                                 // Block navigation to non-Dustvalve domains
                                 if (!isDustvalveHost(url)) return true

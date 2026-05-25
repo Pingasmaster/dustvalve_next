@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.repository
 
 import android.content.Context
 import android.content.Intent
+import androidx.core.net.toUri
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -9,14 +10,13 @@ import androidx.work.WorkManager
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.scanner.LocalMusicScanner
+import com.dustvalve.next.android.data.local.scanner.LocalMusicSyncWorker
 import com.dustvalve.next.android.data.local.scanner.MediaStoreScanner
 import com.dustvalve.next.android.data.local.scanner.ScanResult
-import com.dustvalve.next.android.data.local.scanner.LocalMusicSyncWorker
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import androidx.core.net.toUri
 import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -143,7 +143,5 @@ class LocalMusicRepositoryImpl @Inject constructor(
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
     }
 
-    override fun getLocalTrackCount(): Flow<Int> {
-        return trackDao.getLocalTracks().map { it.size }
-    }
+    override fun getLocalTrackCount(): Flow<Int> = trackDao.getLocalTracks().map { it.size }
 }

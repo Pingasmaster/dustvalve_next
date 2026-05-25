@@ -6,21 +6,17 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonPrimitive
 
-internal fun JsonElement.path(key: String): JsonElement? =
-    (this as? JsonObject)?.get(key)
+internal fun JsonElement.path(key: String): JsonElement? = (this as? JsonObject)?.get(key)
 
 internal fun JsonElement.arr(): JsonArray? = this as? JsonArray
 
-internal fun JsonElement.str(): String? =
-    (this as? JsonPrimitive)?.let { if (it.isString) it.content else null }
+internal fun JsonElement.str(): String? = (this as? JsonPrimitive)?.let { if (it.isString) it.content else null }
 
 internal fun JsonElement.str(key: String): String? = path(key)?.str()
 
-internal fun JsonElement.int(key: String): Int? =
-    (path(key) as? JsonPrimitive)?.content?.toIntOrNull()
+internal fun JsonElement.int(key: String): Int? = (path(key) as? JsonPrimitive)?.content?.toIntOrNull()
 
-internal fun JsonElement.long(key: String): Long? =
-    (path(key) as? JsonPrimitive)?.content?.toLongOrNull()
+internal fun JsonElement.long(key: String): Long? = (path(key) as? JsonPrimitive)?.content?.toLongOrNull()
 
 internal fun JsonElement.runsText(key: String): String? {
     val runs = path(key)?.path("runs")?.arr()

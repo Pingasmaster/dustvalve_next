@@ -38,9 +38,14 @@ class YouTubeMusicRepositoryImplTest {
     private val emptyJson: JsonElement = buildJsonObject {}
     private val sampleHome = YouTubeMusicHomeFeed(
         chips = emptyList(),
-        shelves = listOf(Shelf.Tiles("T", listOf(
-            TileItem(TileKind.PLAYLIST, "id1", "title", "sub", null)
-        ))),
+        shelves = listOf(
+            Shelf.Tiles(
+                "T",
+                listOf(
+                    TileItem(TileKind.PLAYLIST, "id1", "title", "sub", null),
+                ),
+            ),
+        ),
     )
 
     @Before fun setUp() {
@@ -50,7 +55,11 @@ class YouTubeMusicRepositoryImplTest {
         ytInnertube = mockk()
         ytPlayerParser = mockk()
         repo = YouTubeMusicRepositoryImpl(
-            client, parser, searchParser, ytInnertube, ytPlayerParser,
+            client,
+            parser,
+            searchParser,
+            ytInnertube,
+            ytPlayerParser,
             homeCache = mockk(relaxed = true),
         )
     }
@@ -118,8 +127,13 @@ class YouTubeMusicRepositoryImplTest {
     @Test fun `search returns parsed results`() = runTest {
         val r = SearchResult(
             type = SearchResultType.YOUTUBE_TRACK,
-            name = "n", url = "u", imageUrl = null, artist = null,
-            album = null, genre = null, releaseDate = null,
+            name = "n",
+            url = "u",
+            imageUrl = null,
+            artist = null,
+            album = null,
+            genre = null,
+            releaseDate = null,
         )
         coEvery { client.search(query = any(), params = any()) } returns emptyJson
         every { searchParser.parse(emptyJson) } returns listOf(r)

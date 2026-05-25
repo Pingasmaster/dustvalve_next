@@ -1,16 +1,12 @@
 package com.dustvalve.next.android.ui.screens.player
 
-import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
-
 import android.graphics.Matrix
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
-
 import androidx.compose.animation.core.withInfiniteAnimationFrameMillis
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -23,9 +19,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialShapes
@@ -36,36 +32,38 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposePath
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
-import com.dustvalve.next.android.ui.util.tick
-import com.dustvalve.next.android.ui.util.toggle
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import com.dustvalve.next.android.R
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
-import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
+import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
+import com.dustvalve.next.android.ui.util.tick
+import com.dustvalve.next.android.ui.util.toggle
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -174,11 +172,13 @@ fun MiniPlayer(
                                             scope.launch { swipeOffsetY.snapTo(0f) }
                                             onDragUpProgress(0f)
                                         }
+
                                         swipeOffsetY.value < -upThreshold -> {
                                             onExpandClick()
                                             scope.launch { swipeOffsetY.snapTo(0f) }
                                             onDragUpProgress(0f)
                                         }
+
                                         else -> {
                                             scope.launch { swipeOffsetY.animateTo(0f, swipeSpec) }
                                             onDragUpProgress(0f)
@@ -224,7 +224,7 @@ fun MiniPlayer(
                             MorphShape(
                                 morph = morph,
                                 progress = morphProgress,
-                            )
+                            ),
                         )
                     if (track.artUrl.isNotBlank()) {
                         AsyncImage(
@@ -343,20 +343,13 @@ fun MiniPlayer(
  * A shape that morphs between two RoundedPolygon states.
  * Rotation is handled externally via graphicsLayer.
  */
-private class MorphShape(
-    private val morph: Morph,
-    private val progress: Float,
-) : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline {
+private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val path = morph.toPath(progress = progress)
 
         // Use graphics-shapes native bounds calculation
         val bounds = morph.calculateBounds()
-        val pathWidth = bounds[2] - bounds[0]  // right - left
+        val pathWidth = bounds[2] - bounds[0] // right - left
         val pathHeight = bounds[3] - bounds[1] // bottom - top
         val centerX = (bounds[0] + bounds[2]) / 2f
         val centerY = (bounds[1] + bounds[3]) / 2f

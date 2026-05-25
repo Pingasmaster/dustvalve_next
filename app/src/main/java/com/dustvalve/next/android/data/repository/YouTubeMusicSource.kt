@@ -25,9 +25,7 @@ import javax.inject.Singleton
  * through this source.
  */
 @Singleton
-class YouTubeMusicSource @Inject constructor(
-    private val youTubeMusicRepository: YouTubeMusicRepository,
-) : MusicSource {
+class YouTubeMusicSource @Inject constructor(private val youTubeMusicRepository: YouTubeMusicRepository) : MusicSource {
 
     override val provider: MusicProvider = MusicProvider.YOUTUBE
     override val id: String = "youtube_music"
@@ -38,21 +36,13 @@ class YouTubeMusicSource @Inject constructor(
     override suspend fun search(query: String, filter: String?): List<SearchResult> =
         youTubeMusicRepository.search(query = query, filter = filter)
 
-    override suspend fun getArtist(url: String): Artist =
-        throw UnsupportedSourceOperation(id, SourceConcept.ARTIST)
+    override suspend fun getArtist(url: String): Artist = throw UnsupportedSourceOperation(id, SourceConcept.ARTIST)
 
-    override suspend fun getArtistTracks(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection =
+    override suspend fun getArtistTracks(url: String, continuation: Any?): MusicCollection =
         throw UnsupportedSourceOperation(id, SourceConcept.ARTIST_TRACKS)
 
-    override suspend fun getAlbum(url: String): Album =
-        throw UnsupportedSourceOperation(id, SourceConcept.ALBUM)
+    override suspend fun getAlbum(url: String): Album = throw UnsupportedSourceOperation(id, SourceConcept.ALBUM)
 
-    override suspend fun getCollection(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection =
+    override suspend fun getCollection(url: String, continuation: Any?): MusicCollection =
         throw UnsupportedSourceOperation(id, SourceConcept.COLLECTION)
 }

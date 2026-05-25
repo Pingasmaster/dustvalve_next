@@ -204,12 +204,7 @@ class AppUpdateServiceTest {
         override val installedVersion: String = installed
     }
 
-    private fun release(
-        tag: String,
-        prerelease: Boolean = false,
-        draft: Boolean = false,
-        assetName: String? = "app-release.apk",
-    ): String {
+    private fun release(tag: String, prerelease: Boolean = false, draft: Boolean = false, assetName: String? = "app-release.apk"): String {
         val assetsJson = if (assetName == null) {
             "[]"
         } else {

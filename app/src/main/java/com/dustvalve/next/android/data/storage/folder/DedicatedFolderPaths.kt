@@ -38,8 +38,7 @@ object DedicatedFolderPaths {
     const val JSON_MIME = "application/json"
 
     /** Top-level tree `DocumentFile`, or null if the URI is no longer accessible. */
-    fun treeRoot(context: Context, treeUri: Uri): DocumentFile? =
-        DocumentFile.fromTreeUri(context, treeUri)
+    fun treeRoot(context: Context, treeUri: Uri): DocumentFile? = DocumentFile.fromTreeUri(context, treeUri)
 
     /** `dustvalve/` subdir, creating if missing. */
     fun dustvalveRoot(context: Context, treeUri: Uri): DocumentFile? {

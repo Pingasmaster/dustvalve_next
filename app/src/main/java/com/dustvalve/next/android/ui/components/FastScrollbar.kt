@@ -32,10 +32,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun FastScrollbar(
-    listState: LazyListState,
-    modifier: Modifier = Modifier,
-) {
+fun FastScrollbar(listState: LazyListState, modifier: Modifier = Modifier) {
     val totalItems by remember { derivedStateOf { listState.layoutInfo.totalItemsCount } }
     if (totalItems <= 0) return
 
@@ -46,7 +43,9 @@ fun FastScrollbar(
     val firstVisible by remember { derivedStateOf { listState.firstVisibleItemIndex } }
     val scrollFraction = if (totalItems > 1) {
         firstVisible.toFloat() / (totalItems - 1).toFloat()
-    } else 0f
+    } else {
+        0f
+    }
 
     // Auto-hide
     var visible by remember { mutableStateOf(false) }

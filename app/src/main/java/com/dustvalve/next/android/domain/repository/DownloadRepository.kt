@@ -16,8 +16,11 @@ data class DownloadInfo(
 ) {
     /** ExoPlayer-ready URI string; wraps file paths with `file://`. */
     val streamUri: String
-        get() = if (filePath.startsWith("content://")) filePath
-            else android.net.Uri.fromFile(java.io.File(filePath)).toString()
+        get() = if (filePath.startsWith("content://")) {
+            filePath
+        } else {
+            android.net.Uri.fromFile(java.io.File(filePath)).toString()
+        }
 }
 
 interface DownloadRepository {

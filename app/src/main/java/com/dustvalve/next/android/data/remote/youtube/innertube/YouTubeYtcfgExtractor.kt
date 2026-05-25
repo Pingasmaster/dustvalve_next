@@ -28,10 +28,7 @@ internal object YouTubeYtcfgExtractor {
         isLenient = true
     }
 
-    data class YtcfgData(
-        val visitorData: String,
-        val clientVersion: String?,
-    )
+    data class YtcfgData(val visitorData: String, val clientVersion: String?)
 
     /**
      * Returns the first ytcfg body that yields a non-empty visitorData, or
@@ -96,14 +93,18 @@ internal object YouTubeYtcfgExtractor {
                     i = skipQuotedString(s, i, c)
                     if (i < 0) return -1
                 }
+
                 '{' -> {
-                    depth++; i++
+                    depth++
+                    i++
                 }
+
                 '}' -> {
                     depth--
                     if (depth == 0) return i
                     i++
                 }
+
                 else -> i++
             }
         }
@@ -129,5 +130,4 @@ internal object YouTubeYtcfgExtractor {
         }
         return -1
     }
-
 }

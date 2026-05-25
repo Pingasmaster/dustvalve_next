@@ -8,7 +8,10 @@ import org.junit.Test
 class YouTubeNextParserTest {
 
     private val parser = YouTubeNextParser()
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Test fun `parses real MWEB next response into related video results`() {
         val items = parser.parse(Fixtures.load("next_mweb.json"))
@@ -33,7 +36,7 @@ class YouTubeNextParserTest {
                 }}
               ]}}
             ]}}}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val items = parser.parse(r)
         assertThat(items).hasSize(1)
@@ -56,7 +59,7 @@ class YouTubeNextParserTest {
                 "thumbnail":{"thumbnails":[{"url":"https://t/y","width":120}]}
               }}
             ]}}}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val items = parser.parse(r)
         assertThat(items).hasSize(1)
@@ -72,7 +75,7 @@ class YouTubeNextParserTest {
                 {"videoMetadataCarouselViewModel":{}}
               ]}}
             ]}}}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val items = parser.parse(r)
         assertThat(items).isEmpty()

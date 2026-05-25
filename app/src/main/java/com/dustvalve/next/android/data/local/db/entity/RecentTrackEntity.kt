@@ -6,9 +6,6 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "recent_tracks",
-    indices = [Index("playedAt")]
+    indices = [Index("playedAt")],
 )
-data class RecentTrackEntity(
-    @PrimaryKey val trackId: String,
-    val playedAt: Long = System.currentTimeMillis()
-)
+data class RecentTrackEntity(@PrimaryKey val trackId: String, val playedAt: Long = System.currentTimeMillis())

@@ -17,11 +17,11 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -110,7 +110,11 @@ class ArtistRepositoryImpl @Inject constructor(
             (if (cleanUrl != originalUrl) albumDao.getByArtistUrl(originalUrl) else emptyList())
         val albumMap = albumEntities.distinctBy { it.id }.associateBy { it.id }
         val orderedIds = cachedArtist.albumIdOrder?.let {
-            try { orderJson.decodeFromString<List<String>>(it) } catch (_: Exception) { null }
+            try {
+                orderJson.decodeFromString<List<String>>(it)
+            } catch (_: Exception) {
+                null
+            }
         }
         val albums = if (orderedIds != null) {
             val ordered = orderedIds.mapNotNull { albumMap[it] }
@@ -140,7 +144,11 @@ class ArtistRepositoryImpl @Inject constructor(
 
         // Check if content actually changed
         val storedAlbumIds = cachedArtist?.albumIdOrder?.let {
-            try { orderJson.decodeFromString<List<String>>(it) } catch (_: Exception) { null }
+            try {
+                orderJson.decodeFromString<List<String>>(it)
+            } catch (_: Exception) {
+                null
+            }
         }
         val scrapedAlbumIds = artist.albums.map { it.id }
         val contentChanged = storedAlbumIds == null || storedAlbumIds != scrapedAlbumIds
@@ -180,12 +188,13 @@ class ArtistRepositoryImpl @Inject constructor(
         return artist.copy(isFavorite = isFavorite, autoDownload = previousAutoDownload)
     }
 
-    private fun didArtistChange(
-        cachedEntity: com.dustvalve.next.android.data.local.db.entity.ArtistEntity,
-        freshArtist: Artist,
-    ): Boolean {
+    private fun didArtistChange(cachedEntity: com.dustvalve.next.android.data.local.db.entity.ArtistEntity, freshArtist: Artist): Boolean {
         val storedAlbumIds = cachedEntity.albumIdOrder?.let {
-            try { orderJson.decodeFromString<List<String>>(it) } catch (_: Exception) { null }
+            try {
+                orderJson.decodeFromString<List<String>>(it)
+            } catch (_: Exception) {
+                null
+            }
         }
         val freshAlbumIds = freshArtist.albums.map { it.id }
         return storedAlbumIds != freshAlbumIds
@@ -206,14 +215,10 @@ class ArtistRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun isFavorite(artistId: String): Boolean {
-        return favoriteDao.isFavorite(artistId)
-    }
+    override suspend fun isFavorite(artistId: String): Boolean = favoriteDao.isFavorite(artistId)
 
-    override fun getFavoriteArtists(): Flow<List<Artist>> {
-        return artistDao.getFavoriteArtists().map { entities ->
-            entities.map { it.toDomain(emptyList(), isFavorite = true) }
-        }
+    override fun getFavoriteArtists(): Flow<List<Artist>> = artistDao.getFavoriteArtists().map { entities ->
+        entities.map { it.toDomain(emptyList(), isFavorite = true) }
     }
 
     override suspend fun getArtistMixTracks(albumIds: List<String>): List<Track> {

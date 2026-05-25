@@ -8,6 +8,7 @@ import java.net.URLDecoder
 sealed interface DeepLinkAction {
     /** Navigate to a destination screen. */
     data class Navigate(val destination: NavDestination) : DeepLinkAction
+
     /** Fetch track info from YouTube and play it immediately. */
     data class PlayYouTubeVideo(val videoUrl: String) : DeepLinkAction
 }
@@ -16,11 +17,7 @@ sealed interface DeepLinkAction {
 enum class LinkResourceType { VIDEO, SONG, PLAYLIST, ALBUM, ARTIST, TRACK }
 
 /** A pasted/opened link that resolved to something the app can open. */
-data class DetectedLink(
-    val provider: MusicProvider,
-    val type: LinkResourceType,
-    val action: DeepLinkAction,
-)
+data class DetectedLink(val provider: MusicProvider, val type: LinkResourceType, val action: DeepLinkAction)
 
 /**
  * Pure, offline URL classifier for the platforms the app supports (YouTube, YouTube Music,
@@ -67,7 +64,9 @@ object DeepLinkRouter {
         return when {
             host in YOUTU_BE_HOSTS || host == YT_MUSIC_HOST || YT_HOST_RE.matches(host) ->
                 routeYouTube(uri, host)
+
             BANDCAMP_HOST_RE.matches(host) -> routeBandcamp(uri, host)
+
             else -> null
         }
     }
@@ -237,6 +236,5 @@ object DeepLinkRouter {
         }
     }
 
-    private fun navAlbum(url: String): DeepLinkAction =
-        DeepLinkAction.Navigate(NavDestination.AlbumDetail(url))
+    private fun navAlbum(url: String): DeepLinkAction = DeepLinkAction.Navigate(NavDestination.AlbumDetail(url))
 }

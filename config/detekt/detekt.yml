@@ -1,0 +1,124 @@
+config:
+  validation: true
+  warningsAsErrors: false
+  checkExhaustiveness: false
+
+processors:
+  active: true
+
+console-reports:
+  active: true
+
+complexity:
+  active: true
+  CyclomaticComplexMethod:
+    active: true
+    allowedComplexity: 20
+  LongMethod:
+    active: true
+    allowedLines: 80
+  LongParameterList:
+    active: true
+    allowedFunctionParameters: 8
+    allowedConstructorParameters: 8
+    ignoreAnnotatedParameter: ['Composable', 'Preview']
+
+empty-blocks:
+  active: true
+  EmptyFunctionBlock:
+    active: true
+    ignoreAnnotated: ['Composable']
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Composable']
+  TopLevelPropertyNaming:
+    active: true
+    ignoreAnnotated: ['Composable']
+
+style:
+  active: true
+  MagicNumber:
+    active: true
+    ignoreNumbers: ['-1', '0', '1', '2', '8', '16', '24', '32', '48', '64', '100', '255', '1000']
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotated: ['Composable', 'Preview']
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+    excludePackageStatements: true
+    excludeImportStatements: true
+    excludeCommentStatements: true
+  ReturnCount:
+    active: true
+    max: 4
+    excludeGuardClauses: true
+  UnusedPrivateProperty:
+    active: true
+    ignoreAnnotated: ['Preview', 'PreviewParameter']
+  UnusedPrivateFunction:
+    active: true
+    ignoreAnnotated: ['Preview', 'PreviewParameter']
+  UnusedPrivateClass:
+    active: true
+  WildcardImport:
+    active: true
+    excludeImports:
+      - 'androidx.compose.ui.unit.*'
+      - 'kotlinx.coroutines.flow.*'
+
+# Compose ruleset (mrmans0n/compose-rules detekt variant).
+Compose:
+  ComposableAnnotationNaming:
+    active: true
+  ComposableNaming:
+    active: true
+  ComposableParamOrder:
+    active: true
+  CompositionLocalAllowlist:
+    active: false
+  ContentEmitterReturningValues:
+    active: true
+  ContentTrailingLambda:
+    active: true
+  DefaultsVisibility:
+    active: true
+  ModifierComposed:
+    active: true
+  ModifierMissing:
+    active: true
+  ModifierNotUsedAtRoot:
+    active: true
+  ModifierReused:
+    active: true
+  ModifierWithoutDefault:
+    active: true
+  MultipleEmitters:
+    active: true
+  MutableParams:
+    active: true
+  MutableStateAutoboxing:
+    active: true
+  MutableStateParam:
+    active: true
+  ParameterNaming:
+    active: true
+  PreviewAnnotationNaming:
+    active: true
+  PreviewNaming:
+    active: false
+  PreviewPublic:
+    active: true
+  RememberContentMissing:
+    active: true
+  RememberMissing:
+    active: true
+  UnstableCollections:
+    active: false
+  ViewModelForwarding:
+    active: true
+  ViewModelInjection:
+    active: true

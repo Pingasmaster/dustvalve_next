@@ -70,9 +70,12 @@ open class YouTubeInnertubeClient @Inject constructor(
                     visitor = cfg,
                     queryParams = "",
                     body = buildJsonObject {
-                        put("context", buildJsonObject {
-                            put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
-                        })
+                        put(
+                            "context",
+                            buildJsonObject {
+                                put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                            },
+                        )
                         put("videoId", videoId)
                         put("contentCheckOk", true)
                         put("racyCheckOk", true)
@@ -87,7 +90,7 @@ open class YouTubeInnertubeClient @Inject constructor(
                 "(playabilityStatus=${response.path("playabilityStatus")?.path("status")?.toString()})"
         }
         throw IllegalStateException(
-            "YouTube /player failed for videoId=$videoId across all clients: $lastError"
+            "YouTube /player failed for videoId=$videoId across all clients: $lastError",
         )
     }
 
@@ -100,9 +103,12 @@ open class YouTubeInnertubeClient @Inject constructor(
             visitor = cfg,
             queryParams = "",
             body = buildJsonObject {
-                put("context", buildJsonObject {
-                    put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
-                })
+                put(
+                    "context",
+                    buildJsonObject {
+                        put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                    },
+                )
                 put("query", query)
                 if (params != null) put("params", params)
             },
@@ -116,17 +122,23 @@ open class YouTubeInnertubeClient @Inject constructor(
      */
     suspend fun browse(browseId: String, params: String? = null): JsonElement {
         val cfg = visitorDataFetcher.get()
-        val client = if (browseId.startsWith("VL")) YouTubeClient.MWEB_NO_AUTH
-                     else YouTubeClient.WEB_NO_AUTH
+        val client = if (browseId.startsWith("VL")) {
+            YouTubeClient.MWEB_NO_AUTH
+        } else {
+            YouTubeClient.WEB_NO_AUTH
+        }
         return post(
             client = client,
             endpointPath = "browse",
             visitor = cfg,
             queryParams = "",
             body = buildJsonObject {
-                put("context", buildJsonObject {
-                    put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
-                })
+                put(
+                    "context",
+                    buildJsonObject {
+                        put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                    },
+                )
                 put("browseId", browseId)
                 if (params != null) put("params", params)
             },
@@ -143,9 +155,12 @@ open class YouTubeInnertubeClient @Inject constructor(
             visitor = cfg,
             queryParams = "&continuation=$continuation&type=next",
             body = buildJsonObject {
-                put("context", buildJsonObject {
-                    put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
-                })
+                put(
+                    "context",
+                    buildJsonObject {
+                        put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                    },
+                )
             },
         )
     }
@@ -172,9 +187,12 @@ open class YouTubeInnertubeClient @Inject constructor(
             visitor = cfg,
             queryParams = "",
             body = buildJsonObject {
-                put("context", buildJsonObject {
-                    put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
-                })
+                put(
+                    "context",
+                    buildJsonObject {
+                        put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                    },
+                )
                 if (videoId != null) put("videoId", videoId)
                 if (playlistId != null) put("playlistId", playlistId)
                 if (playlistIndex != null) put("playlistIndex", playlistIndex)
@@ -217,7 +235,7 @@ open class YouTubeInnertubeClient @Inject constructor(
             val text = response.body.string()
             if (!response.isSuccessful) {
                 throw IllegalStateException(
-                    "YouTube Innertube POST /$endpointPath failed: HTTP ${response.code} - ${text.take(200)}"
+                    "YouTube Innertube POST /$endpointPath failed: HTTP ${response.code} - ${text.take(200)}",
                 )
             }
             if (text.isEmpty()) {

@@ -14,7 +14,7 @@ data class AlbumEntity(
     val artUrl: String,
     val releaseDate: String?,
     val about: String?,
-    val tags: String,  // JSON-serialized list
+    val tags: String, // JSON-serialized list
     val cachedAt: Long = System.currentTimeMillis(),
     val autoDownload: Boolean = false,
     val saleItemId: Long? = null,

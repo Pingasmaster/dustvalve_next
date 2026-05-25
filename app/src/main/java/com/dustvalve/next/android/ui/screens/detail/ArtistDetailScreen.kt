@@ -180,6 +180,7 @@ fun ArtistDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) { ContainedLoadingIndicator() }
             }
+
             state.error != null && state.artist == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -199,6 +200,7 @@ fun ArtistDetailScreen(
                     }
                 }
             }
+
             state.artist != null -> {
                 val artist = state.artist!!
                 val renderFlatTracks = artist.albums.isEmpty() &&
@@ -216,8 +218,11 @@ fun ArtistDetailScreen(
                         onDownload = {
                             val allDownloaded = state.tracks.isNotEmpty() &&
                                 state.tracks.all { it.id in state.downloadedTrackIds }
-                            if (allDownloaded) showDeleteDialog = true
-                            else viewModel.downloadAll()
+                            if (allDownloaded) {
+                                showDeleteDialog = true
+                            } else {
+                                viewModel.downloadAll()
+                            }
                         },
                         onLoadMore = viewModel::loadMore,
                         onTrackClick = { idx -> playerViewModel.playAlbum(state.tracks, idx) },
@@ -236,8 +241,11 @@ fun ArtistDetailScreen(
                         onDownload = {
                             val allDownloaded = artist.albums.isNotEmpty() &&
                                 artist.albums.all { it.id in state.downloadedAlbumIds }
-                            if (allDownloaded) showDeleteDialog = true
-                            else viewModel.downloadAll()
+                            if (allDownloaded) {
+                                showDeleteDialog = true
+                            } else {
+                                viewModel.downloadAll()
+                            }
                         },
                     )
                 }
@@ -533,8 +541,11 @@ private fun ActionBar(
                 painter = painterResource(
                     if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
                 ),
-                contentDescription = if (isFavorite) stringResource(R.string.detail_cd_remove_favorites)
-                    else stringResource(R.string.detail_cd_add_favorites),
+                contentDescription = if (isFavorite) {
+                    stringResource(R.string.detail_cd_remove_favorites)
+                } else {
+                    stringResource(R.string.detail_cd_add_favorites)
+                },
             )
         }
 
@@ -552,8 +563,11 @@ private fun ActionBar(
                     painter = painterResource(
                         if (allDownloaded) R.drawable.ic_download_done else R.drawable.ic_download,
                     ),
-                    contentDescription = if (allDownloaded) stringResource(R.string.detail_cd_delete_all_downloads)
-                        else stringResource(R.string.detail_cd_download_all),
+                    contentDescription = if (allDownloaded) {
+                        stringResource(R.string.detail_cd_delete_all_downloads)
+                    } else {
+                        stringResource(R.string.detail_cd_download_all)
+                    },
                 )
             }
         }
@@ -562,11 +576,7 @@ private fun ActionBar(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3ComponentOverrideApi::class)
 @Composable
-private fun BuyDiscographySplitButton(
-    artistUrl: String,
-    onOpen: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun BuyDiscographySplitButton(artistUrl: String, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
     // Sizing mirrors the album-page Buy split-button (min 80.dp height,
     // 32×18 content padding, 28 dp icon, titleLarge) so the artist CTA
     // matches in visual weight.

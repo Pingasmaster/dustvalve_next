@@ -24,12 +24,11 @@ class DustvalveDiscographyOfferTest {
     private val albumScraper = DustvalveAlbumScraper(OkHttpClient())
     private val artistScraper = DustvalveArtistScraper(OkHttpClient())
 
-    private fun load(name: String): String =
-        checkNotNull(this::class.java.classLoader)
-            .getResourceAsStream("fixtures/bandcamp/$name")
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            ?: error("missing fixture fixtures/bandcamp/$name")
+    private fun load(name: String): String = checkNotNull(this::class.java.classLoader)
+        .getResourceAsStream("fixtures/bandcamp/$name")
+        ?.bufferedReader()
+        ?.use { it.readText() }
+        ?: error("missing fixture fixtures/bandcamp/$name")
 
     @Test fun `moeshop HARDCODED track page surfaces 25_49 USD discography bundle`() {
         val offer = albumScraper.extractDiscographyOffer(load("track_moeshop_hardcoded.html"))
@@ -83,7 +82,7 @@ class DustvalveDiscographyOfferTest {
 
     @Test fun `extractMeetsBuyFullDiscography returns false when flag missing`() {
         val flag = artistScraper.extractMeetsBuyFullDiscography(
-            load("artist_taylor_moore_single_album.html")
+            load("artist_taylor_moore_single_album.html"),
         )
         // Taylor Moore's data-band JSON does not include this flag; absence
         // must read as "no offer", not as "true by accident from a near

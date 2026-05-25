@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 #
 # Usage:
-#   ./build.sh                 # clean + test + assemble + release + bump version
-#   ./build.sh --clean         # gradle clean + remove APK + exit
+#   ./build.sh                    # clean + ktlintCheck + detekt + lintRelease + test + assemble + bump version
+#   ./build.sh --clean            # gradle clean + remove APK + exit
+#   ./build.sh --format           # ktlintFormat + exit (no build)
+#   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
 #
 # IMPORTANT: Do NOT manually remove .build.lock unless you have user approval
 # and have confirmed no process is currently using it (check with `fuser
@@ -16,12 +18,16 @@ cd "$SCRIPT_DIR"
 
 # Argument parsing
 DO_CLEAN_ONLY=0
+DO_FORMAT=0
+DO_BUILD_HEALTH=0
 
 ROOT_APK="app-release.apk"
 for arg in "$@"; do
     case "$arg" in
-        --clean) DO_CLEAN_ONLY=1 ;;
-        *) echo "Unknown arg: $arg (accepted: --clean)" >&2; exit 2 ;;
+        --clean)        DO_CLEAN_ONLY=1 ;;
+        --format)       DO_FORMAT=1 ;;
+        --build-health) DO_BUILD_HEALTH=1 ;;
+        *) echo "Unknown arg: $arg (accepted: --clean, --format, --build-health)" >&2; exit 2 ;;
     esac
 done
 
@@ -45,14 +51,22 @@ if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     exit 0
 fi
 
+# --format: ktlintFormat only, no build, no version bump
+if [[ "$DO_FORMAT" -eq 1 ]]; then
+    acquire_lock
+    JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew ktlintFormat
+    echo "ktlintFormat complete. Re-run ./build.sh without --format to verify."
+    exit 0
+fi
+
 # Default: full build (always starts with clean, includes test if available)
 acquire_lock
 
 GRADLE_APK="app/build/outputs/apk/release/app-release.apk"
 BUILD_GRADLE="app/build.gradle.kts"
 
-# Build tasks: always start with clean
-GRADLE_TASKS=(clean lint assembleDebug assembleRelease)
+# Build tasks: lint stages first (cheap, fail fast), then assemble.
+GRADLE_TASKS=(clean ktlintCheck detekt lintRelease assembleDebug assembleRelease)
 
 # Add test task if project has test sources
 if [[ -d "app/src/test" ]]; then
@@ -60,6 +74,13 @@ if [[ -d "app/src/test" ]]; then
 fi
 
 JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew "${GRADLE_TASKS[@]}"
+
+# Optional: dependency-analysis report (informational; not a build gate).
+if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
+    JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew buildHealth || true
+    REPORT="build/reports/dependency-analysis/build-health-report.txt"
+    [[ -f "$REPORT" ]] && echo "Dependency-analysis report: $REPORT"
+fi
 
 # Replace root APK with fresh build
 rm -f "$ROOT_APK"

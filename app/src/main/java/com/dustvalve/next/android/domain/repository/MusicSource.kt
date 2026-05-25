@@ -60,10 +60,7 @@ interface MusicSource {
      * a per-artist flat track feed (Bandcamp — all Bandcamp tracks live under
      * an album, not directly under the artist).
      */
-    suspend fun getArtistTracks(
-        url: String,
-        continuation: Any? = null,
-    ): MusicCollection
+    suspend fun getArtistTracks(url: String, continuation: Any? = null): MusicCollection
 
     /** Load album detail. Throws [UnsupportedSourceOperation] on sources without an album concept. */
     suspend fun getAlbum(url: String): Album
@@ -72,16 +69,14 @@ interface MusicSource {
      * Load a collection (playlist / radio / mix). Throws
      * [UnsupportedSourceOperation] on sources without a collection concept.
      */
-    suspend fun getCollection(
-        url: String,
-        continuation: Any? = null,
-    ): MusicCollection
+    suspend fun getCollection(url: String, continuation: Any? = null): MusicCollection
 }
 
 /** The browse concepts a [MusicSource] may expose. */
 enum class SourceConcept {
     SEARCH,
     ARTIST,
+
     /** Per-artist flat track feed — distinct from ARTIST because Bandcamp supports the artist concept but not a flat track list. */
     ARTIST_TRACKS,
     ALBUM,
@@ -89,9 +84,7 @@ enum class SourceConcept {
 }
 
 /** Thrown when callers invoke a [MusicSource] method the source doesn't support. */
-class UnsupportedSourceOperation(
-    sourceId: String,
-    concept: SourceConcept,
-) : UnsupportedOperationException(
-    "Source '$sourceId' does not support ${concept.name.lowercase()}",
-)
+class UnsupportedSourceOperation(sourceId: String, concept: SourceConcept) :
+    UnsupportedOperationException(
+        "Source '$sourceId' does not support ${concept.name.lowercase()}",
+    )

@@ -27,79 +27,55 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): DustvalveNextDatabase {
-        return Room.databaseBuilder(
-            context,
-            DustvalveNextDatabase::class.java,
-            "dustvalve_database",
-        )
-            .fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
-    }
+    fun provideDatabase(@ApplicationContext context: Context): DustvalveNextDatabase = Room.databaseBuilder(
+        context,
+        DustvalveNextDatabase::class.java,
+        "dustvalve_database",
+    )
+        .fallbackToDestructiveMigration(dropAllTables = true)
+        .build()
 
     @Provides
     @Singleton
-    fun provideAlbumDao(database: DustvalveNextDatabase): AlbumDao {
-        return database.albumDao()
-    }
+    fun provideAlbumDao(database: DustvalveNextDatabase): AlbumDao = database.albumDao()
 
     @Provides
     @Singleton
-    fun provideTrackDao(database: DustvalveNextDatabase): TrackDao {
-        return database.trackDao()
-    }
+    fun provideTrackDao(database: DustvalveNextDatabase): TrackDao = database.trackDao()
 
     @Provides
     @Singleton
-    fun provideArtistDao(database: DustvalveNextDatabase): ArtistDao {
-        return database.artistDao()
-    }
+    fun provideArtistDao(database: DustvalveNextDatabase): ArtistDao = database.artistDao()
 
     @Provides
     @Singleton
-    fun provideFavoriteDao(database: DustvalveNextDatabase): FavoriteDao {
-        return database.favoriteDao()
-    }
+    fun provideFavoriteDao(database: DustvalveNextDatabase): FavoriteDao = database.favoriteDao()
 
     @Provides
     @Singleton
-    fun provideRecentTrackDao(database: DustvalveNextDatabase): RecentTrackDao {
-        return database.recentTrackDao()
-    }
+    fun provideRecentTrackDao(database: DustvalveNextDatabase): RecentTrackDao = database.recentTrackDao()
 
     @Provides
     @Singleton
-    fun provideDownloadDao(database: DustvalveNextDatabase): DownloadDao {
-        return database.downloadDao()
-    }
+    fun provideDownloadDao(database: DustvalveNextDatabase): DownloadDao = database.downloadDao()
 
     @Provides
     @Singleton
-    fun providePlaylistDao(database: DustvalveNextDatabase): PlaylistDao {
-        return database.playlistDao()
-    }
+    fun providePlaylistDao(database: DustvalveNextDatabase): PlaylistDao = database.playlistDao()
 
     @Provides
     @Singleton
-    fun provideRecentSearchDao(database: DustvalveNextDatabase): RecentSearchDao {
-        return database.recentSearchDao()
-    }
+    fun provideRecentSearchDao(database: DustvalveNextDatabase): RecentSearchDao = database.recentSearchDao()
 
     @Provides
     @Singleton
-    fun provideYouTubeVideoCacheDao(database: DustvalveNextDatabase): YouTubeVideoCacheDao {
-        return database.youtubeVideoCacheDao()
-    }
+    fun provideYouTubeVideoCacheDao(database: DustvalveNextDatabase): YouTubeVideoCacheDao = database.youtubeVideoCacheDao()
 
     @Provides
     @Singleton
-    fun provideYouTubePlaylistCacheDao(database: DustvalveNextDatabase): YouTubePlaylistCacheDao {
-        return database.youtubePlaylistCacheDao()
-    }
+    fun provideYouTubePlaylistCacheDao(database: DustvalveNextDatabase): YouTubePlaylistCacheDao = database.youtubePlaylistCacheDao()
 
     @Provides
     @Singleton
-    fun provideYouTubeMusicHomeCacheDao(database: DustvalveNextDatabase): YouTubeMusicHomeCacheDao {
-        return database.youtubeMusicHomeCacheDao()
-    }
+    fun provideYouTubeMusicHomeCacheDao(database: DustvalveNextDatabase): YouTubeMusicHomeCacheDao = database.youtubeMusicHomeCacheDao()
 }

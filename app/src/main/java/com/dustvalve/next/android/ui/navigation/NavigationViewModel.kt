@@ -25,11 +25,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /** A compatible link whose provider is disabled — drives the "enable provider?" dialog. */
-data class PendingLink(
-    val provider: MusicProvider,
-    val type: LinkResourceType,
-    val action: DeepLinkAction,
-)
+data class PendingLink(val provider: MusicProvider, val type: LinkResourceType, val action: DeepLinkAction)
 
 @HiltViewModel
 class NavigationViewModel @Inject constructor(
@@ -46,9 +42,15 @@ class NavigationViewModel @Inject constructor(
                 item.provider == null || item.provider in providers
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), listOf(
-            BottomNavItem.LOCAL, BottomNavItem.LIBRARY, BottomNavItem.SETTINGS,
-        ))
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            listOf(
+                BottomNavItem.LOCAL,
+                BottomNavItem.LIBRARY,
+                BottomNavItem.SETTINGS,
+            ),
+        )
 
     private val _currentTab = MutableStateFlow(BottomNavItem.LOCAL)
     val currentTab: StateFlow<BottomNavItem> = _currentTab.asStateFlow()
@@ -60,7 +62,7 @@ class NavigationViewModel @Inject constructor(
             BottomNavItem.YOUTUBE to listOf(NavDestination.YouTubeHome),
             BottomNavItem.LIBRARY to listOf(NavDestination.Library),
             BottomNavItem.SETTINGS to listOf(NavDestination.Settings),
-        )
+        ),
     )
 
     private val _backStack = MutableStateFlow<List<NavDestination>>(listOf(NavDestination.LocalHome))
@@ -156,6 +158,7 @@ class NavigationViewModel @Inject constructor(
     private fun execute(action: DeepLinkAction) {
         when (action) {
             is DeepLinkAction.Navigate -> navigateTo(action.destination)
+
             is DeepLinkAction.PlayYouTubeVideo -> {
                 navigateTo(NavDestination.YouTubeHome)
                 viewModelScope.launch {
@@ -191,8 +194,10 @@ class NavigationViewModel @Inject constructor(
             when (dest) {
                 is NavDestination.AlbumDetail ->
                     if (!NetworkUtils.isValidHttpsUrl(dest.url)) return
+
                 is NavDestination.ArtistDetail ->
                     if (!NetworkUtils.isValidHttpsUrl(dest.url)) return
+
                 else -> {}
             }
             val currentStack = _backStack.value

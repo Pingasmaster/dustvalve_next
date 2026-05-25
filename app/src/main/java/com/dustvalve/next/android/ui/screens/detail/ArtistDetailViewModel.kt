@@ -103,12 +103,7 @@ class ArtistDetailViewModel @Inject constructor(
      * image, so the caller passes the thumbnail it already has from the
      * SearchResult.
      */
-    fun load(
-        sourceId: String,
-        url: String,
-        name: String? = null,
-        imageUrl: String? = null,
-    ) {
+    fun load(sourceId: String, url: String, name: String? = null, imageUrl: String? = null) {
         val key = "$sourceId|$url"
         if (loadedKey == key && _uiState.value.artist != null) return
         loadedKey = key
@@ -117,8 +112,12 @@ class ArtistDetailViewModel @Inject constructor(
         // Seed with the caller-provided hint so the top bar isn't blank.
         val seed = if (name != null || imageUrl != null) {
             Artist(
-                id = url, name = name.orEmpty(), url = url,
-                imageUrl = imageUrl, bio = null, location = null,
+                id = url,
+                name = name.orEmpty(),
+                url = url,
+                imageUrl = imageUrl,
+                bio = null,
+                location = null,
                 albums = emptyList(),
             )
         } else {

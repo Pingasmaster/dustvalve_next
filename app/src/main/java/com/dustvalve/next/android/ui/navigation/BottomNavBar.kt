@@ -1,8 +1,6 @@
 package com.dustvalve.next.android.ui.navigation
 
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
+import androidx.annotation.DrawableRes
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationRail
@@ -12,7 +10,9 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import com.dustvalve.next.android.R
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

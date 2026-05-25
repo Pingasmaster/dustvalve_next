@@ -18,10 +18,7 @@ import javax.inject.Singleton
  * eviction; this policy only governs `downloads` table rows.
  */
 @Singleton
-class AssetEvictionPolicy @Inject constructor(
-    private val database: DustvalveNextDatabase,
-    private val downloadDao: DownloadDao,
-) {
+class AssetEvictionPolicy @Inject constructor(private val database: DustvalveNextDatabase, private val downloadDao: DownloadDao) {
 
     /** Evicts unpinned entries oldest-first until at least [targetBytes] freed. */
     suspend fun evict(targetBytes: Long) {
@@ -46,7 +43,9 @@ class AssetEvictionPolicy @Inject constructor(
             for (entry in toEvict) downloadDao.delete(entry.trackId)
         }
         for (entry in toEvict) {
-            try { File(entry.filePath).delete() } catch (_: Exception) {}
+            try {
+                File(entry.filePath).delete()
+            } catch (_: Exception) {}
         }
     }
 }

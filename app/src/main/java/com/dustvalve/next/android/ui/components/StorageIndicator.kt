@@ -2,12 +2,12 @@ package com.dustvalve.next.android.ui.components
 
 import android.os.Environment
 import android.os.StatFs
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -29,10 +29,7 @@ import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun StorageIndicator(
-    cacheInfo: CacheInfo,
-    modifier: Modifier = Modifier,
-) {
+fun StorageIndicator(cacheInfo: CacheInfo, modifier: Modifier = Modifier) {
     val progress = (cacheInfo.usagePercent / 100f).coerceIn(0f, 1f)
     val targetColor = when {
         cacheInfo.usagePercent >= 95f -> MaterialTheme.colorScheme.error
@@ -68,7 +65,12 @@ fun StorageIndicator(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = stringResource(R.string.storage_info, StorageUtils.formatFileSize(cacheInfo.downloadSizeBytes), StorageUtils.formatFileSize(cacheSizeBytes), StorageUtils.formatFileSize(freeBytes)),
+                text = stringResource(
+                    R.string.storage_info,
+                    StorageUtils.formatFileSize(cacheInfo.downloadSizeBytes),
+                    StorageUtils.formatFileSize(cacheSizeBytes),
+                    StorageUtils.formatFileSize(freeBytes),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -15,13 +15,11 @@ class LocalMusicSyncWorker @AssistedInject constructor(
     private val localMusicRepository: LocalMusicRepository,
 ) : CoroutineWorker(appContext, params) {
 
-    override suspend fun doWork(): Result {
-        return try {
-            localMusicRepository.scan()
-            Result.success()
-        } catch (e: Exception) {
-            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-            Result.retry()
-        }
+    override suspend fun doWork(): Result = try {
+        localMusicRepository.scan()
+        Result.success()
+    } catch (e: Exception) {
+        if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+        Result.retry()
     }
 }

@@ -8,11 +8,17 @@ object NetworkUtils {
 
     private val DUSTVALVE_HOST_REGEX = Regex(
         """^(?:[\w-]+\.)?bandcamp\.com$""",
-        RegexOption.IGNORE_CASE
+        RegexOption.IGNORE_CASE,
     )
 
     private val NON_ARTIST_PATHS = setOf(
-        "search", "discover", "api", "login", "signup", "tag", "help"
+        "search",
+        "discover",
+        "api",
+        "login",
+        "signup",
+        "tag",
+        "help",
     )
 
     /**
@@ -86,9 +92,7 @@ object NetworkUtils {
      * Builds the art/image URL for a given Dustvalve art ID.
      * Returns a URL in the format used by Dustvalve's CDN for album/artist artwork.
      */
-    fun buildArtUrl(artId: Long): String {
-        return "https://f4.bcbits.com/img/a${artId}_10.jpg"
-    }
+    fun buildArtUrl(artId: Long): String = "https://f4.bcbits.com/img/a${artId}_10.jpg"
 
     /**
      * Sanitizes a file name by replacing any character not in [a-zA-Z0-9._-] with underscore.

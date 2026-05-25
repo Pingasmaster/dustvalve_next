@@ -8,7 +8,10 @@ import org.junit.Test
 class YouTubeMusicSearchParserTest {
 
     private val parser = YouTubeMusicSearchParser()
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Test fun `parses songs filter response`() {
         val results = parser.parse(Fixtures.load("search_songs.json"))
@@ -75,7 +78,7 @@ class YouTubeMusicSearchParserTest {
             {"contents":{"tabbedSearchResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
               "sectionListRenderer":{"contents":[]}
             }}}]}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         assertThat(parser.parse(empty)).isEmpty()
     }
@@ -117,7 +120,7 @@ class YouTubeMusicSearchParserTest {
                 ]}}
               ]}
             }}}]}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val results = parser.parse(nested)
         assertThat(results).hasSize(1)

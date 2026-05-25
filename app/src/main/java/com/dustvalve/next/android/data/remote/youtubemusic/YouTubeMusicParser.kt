@@ -39,7 +39,7 @@ class YouTubeMusicParser @Inject constructor() {
             val typeTree = rawShelves.joinToString(",") { describeRenderer(it) }
                 .ifEmpty { "(none)" }
             throw IllegalStateException(
-                "YouTube Music returned an empty home response (raw shelves: $typeTree)"
+                "YouTube Music returned an empty home response (raw shelves: $typeTree)",
             )
         }
         return YouTubeMusicHomeFeed(chips = chips, shelves = shelves)
@@ -86,7 +86,9 @@ class YouTubeMusicParser @Inject constructor() {
                 val inner = section.path(key)?.path("contents")?.arr() ?: return emptyList()
                 inner.flatMap { flattenShelf(it) }
             }
+
             "musicTastebuilderShelfRenderer", "musicNotifierShelfRenderer" -> emptyList()
+
             else -> listOf(section)
         }
     }
@@ -159,6 +161,7 @@ class YouTubeMusicParser @Inject constructor() {
                 val items = contents.mapNotNull { parseResponsiveListItemAsSong(it) }
                 if (items.isEmpty()) null else Shelf.QuickPicks(title, items)
             }
+
             firstChild.containsKey("musicTwoRowItemRenderer") -> {
                 val tiles = contents.mapNotNull { parseTwoRowItem(it) }
                 if (tiles.isEmpty()) return null
@@ -171,6 +174,7 @@ class YouTubeMusicParser @Inject constructor() {
                     if (filtered.isEmpty()) null else Shelf.Tiles(title, filtered)
                 }
             }
+
             else -> null
         }
     }
@@ -246,14 +250,20 @@ class YouTubeMusicParser @Inject constructor() {
 
         return when {
             watchVideo != null -> RawTile(RawKind.SONG, watchVideo, title, subtitle, thumbnail)
+
             watchPlaylist != null -> RawTile(RawKind.PLAYLIST, watchPlaylist, title, subtitle, thumbnail)
+
             browseId != null && pageType?.contains("ALBUM") == true ->
                 RawTile(RawKind.ALBUM, browseId, title, subtitle, thumbnail)
+
             browseId != null && pageType?.contains("PLAYLIST") == true ->
                 RawTile(RawKind.PLAYLIST, browseId, title, subtitle, thumbnail)
+
             browseId != null && pageType?.contains("ARTIST") == true ->
                 RawTile(RawKind.ARTIST_PLACEHOLDER, browseId, title, subtitle, thumbnail)
+
             browseId != null -> RawTile(RawKind.PLAYLIST, browseId, title, subtitle, thumbnail)
+
             else -> null
         }
     }
@@ -271,21 +281,18 @@ class YouTubeMusicParser @Inject constructor() {
         )
     }
 
-    private fun JsonElement.carouselTitle(): String? {
-        return path("header")?.path("musicCarouselShelfBasicHeaderRenderer")
-            ?.runsText("title")
-    }
+    private fun JsonElement.carouselTitle(): String? = path("header")?.path("musicCarouselShelfBasicHeaderRenderer")
+        ?.runsText("title")
 
-    private data class RawTile(
-        val kind: RawKind,
-        val id: String,
-        val title: String,
-        val subtitle: String,
-        val thumbnailUrl: String?,
-    )
+    private data class RawTile(val kind: RawKind, val id: String, val title: String, val subtitle: String, val thumbnailUrl: String?)
 
     private enum class RawKind {
-        SONG, ALBUM, PLAYLIST, VIDEO, ARTIST_PLACEHOLDER;
+        SONG,
+        ALBUM,
+        PLAYLIST,
+        VIDEO,
+        ARTIST_PLACEHOLDER,
+        ;
 
         fun toDomain(): TileKind = when (this) {
             SONG -> TileKind.SONG

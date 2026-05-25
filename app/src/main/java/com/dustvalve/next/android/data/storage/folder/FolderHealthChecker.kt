@@ -28,7 +28,11 @@ class FolderHealthChecker @Inject constructor(
         val enabled = settingsDataStore.getDedicatedFolderEnabledSync()
         if (!enabled) return@withContext true
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return@withContext false
-        val uri = try { uriStr.toUri() } catch (_: Exception) { return@withContext false }
+        val uri = try {
+            uriStr.toUri()
+        } catch (_: Exception) {
+            return@withContext false
+        }
 
         val granted = context.contentResolver.persistedUriPermissions.any {
             it.uri == uri && it.isReadPermission && it.isWritePermission
