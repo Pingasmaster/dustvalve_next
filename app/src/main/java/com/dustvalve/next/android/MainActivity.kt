@@ -278,9 +278,12 @@ private data class ThemeConfig(val themeMode: String, val dynamicColor: Boolean,
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MainContent(accountRepository: AccountRepository, activity: MainActivity) {
-    val playerViewModel: PlayerViewModel = hiltViewModel()
-    val navViewModel: NavigationViewModel = hiltViewModel()
+private fun MainContent(
+    accountRepository: AccountRepository,
+    activity: MainActivity,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+    navViewModel: NavigationViewModel = hiltViewModel(),
+) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val dragProgress by navViewModel.playerDragProgress.collectAsStateWithLifecycle()

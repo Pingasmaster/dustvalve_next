@@ -39,8 +39,13 @@ internal object YouTubeYtcfgExtractor {
      */
     fun extract(html: String): YtcfgData? {
         for (body in allYtcfgBodies(html)) {
-            val obj = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
-                ?: continue
+            val obj = try {
+                json.parseToJsonElement(body).jsonObject
+            } catch (_: kotlinx.serialization.SerializationException) {
+                continue
+            } catch (_: IllegalArgumentException) {
+                continue
+            }
             val visitor = obj["INNERTUBE_CONTEXT"]?.jsonObject
                 ?.get("client")?.jsonObject
                 ?.get("visitorData")?.jsonPrimitive?.content

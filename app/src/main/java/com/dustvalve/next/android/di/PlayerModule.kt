@@ -121,8 +121,13 @@ object PlayerModule {
             .setAudioAttributes(audioAttributes, true)
             .setLoadControl(loadControl)
             .setMediaSourceFactory(
-                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
-                    .setDataSourceFactory(cacheDataSourceFactory),
+                // Pass the DataSource.Factory directly: Media3 1.10 deprecated
+                // the (Context) ctor + setDataSourceFactory() flow. The
+                // remaining DeprecatedCall warning is a slack-lints false
+                // positive (class has some @Deprecated methods so any
+                // constructor call is flagged); kotlinc emits no warning.
+                @Suppress("DeprecatedCall")
+                androidx.media3.exoplayer.source.DefaultMediaSourceFactory(cacheDataSourceFactory),
             )
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)

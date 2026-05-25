@@ -63,6 +63,16 @@ android {
         buildConfig = true
     }
 
+    composeCompiler {
+        // Treat kotlin.collections.{List,Set,Map,Collection} as stable so
+        // composables that take them as params can skip on equal-reference
+        // recompositions. The codebase consistently emits these from read-only
+        // Flows (Room, JSON parsing) and never mutates them after emission.
+        stabilityConfigurationFiles.add(
+            rootProject.layout.projectDirectory.file("compose_stability_config.conf"),
+        )
+    }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
@@ -190,6 +200,9 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
+
+    // Immutable collections (stable Compose params for List/Set types)
+    implementation(libs.collections.immutable)
 
     // Reorderable lists (drag & drop for LazyColumn / LazyRow)
     implementation(libs.reorderable)

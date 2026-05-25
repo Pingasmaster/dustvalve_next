@@ -1,3 +1,8 @@
+// slack-lints DeprecatedCall flags ButtonGroup by function name (other
+// overloads are @Deprecated). Our call resolves to the non-deprecated
+// overload; kotlinc agrees. Suppress at file level.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.youtube
 
 import androidx.compose.animation.AnimatedContent
@@ -255,7 +260,7 @@ fun YouTubeScreen(
                     stringResource(R.string.youtube_tab_source_ytm),
                 )
                 ButtonGroup(
-                    overflowIndicator = {},
+                    overflowIndicator = { _ -> },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),

@@ -173,15 +173,18 @@ fun ArtistDetailScreen(
         contentWindowInsets = WindowInsets(0),
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
+        // Local val so `artist != null` smart-casts inside the matching branch
+        // (Kotlin can't smart-cast through a property in a `when` clause).
+        val artist = state.artist
         when {
-            state.isLoading && state.artist == null -> {
+            state.isLoading && artist == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,
                 ) { ContainedLoadingIndicator() }
             }
 
-            state.error != null && state.artist == null -> {
+            state.error != null && artist == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,
@@ -201,8 +204,7 @@ fun ArtistDetailScreen(
                 }
             }
 
-            state.artist != null -> {
-                val artist = state.artist!!
+            artist != null -> {
                 val renderFlatTracks = artist.albums.isEmpty() &&
                     (state.tracks.isNotEmpty() || state.hasMore || sourceId != "bandcamp")
                 if (renderFlatTracks) {

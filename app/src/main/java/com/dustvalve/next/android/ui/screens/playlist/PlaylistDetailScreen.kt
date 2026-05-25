@@ -160,6 +160,9 @@ fun PlaylistDetailScreen(
         contentWindowInsets = WindowInsets(0),
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { paddingValues ->
+        // Local val so `playlist != null` smart-casts inside the matching branch
+        // (Kotlin can't smart-cast through a property in a `when` clause).
+        val playlist = state.playlist
         when {
             state.isLoading -> {
                 Box(
@@ -172,7 +175,7 @@ fun PlaylistDetailScreen(
                 }
             }
 
-            state.error != null && state.playlist == null -> {
+            state.error != null && playlist == null -> {
                 ErrorState(
                     message = state.error ?: stringResource(R.string.playlist_error_load),
                     onRetry = { viewModel.refreshPlaylist() },
@@ -180,9 +183,9 @@ fun PlaylistDetailScreen(
                 )
             }
 
-            state.playlist != null -> {
+            playlist != null -> {
                 PlaylistContent(
-                    playlist = state.playlist!!,
+                    playlist = playlist,
                     tracks = state.tracks,
                     currentTrackId = playerState.currentTrack?.id,
                     isPlaying = playerState.isPlaying,

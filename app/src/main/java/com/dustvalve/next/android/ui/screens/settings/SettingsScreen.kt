@@ -1,3 +1,10 @@
+// slack-lints' DeprecatedCall matches by function NAME — every call to a
+// ButtonGroup or FlowRow site is flagged because OTHER overloads of those
+// names carry @Deprecated. kotlinc emits no deprecation warning for the
+// overloads we call (verified via compile output + javap). Suppress at
+// file level rather than per-call.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.Manifest
@@ -603,7 +610,7 @@ fun SettingsScreen(
                                     )
                                     val ytSourceSelected = ytSourceOptions.indexOf(state.youtubeDefaultSource).coerceAtLeast(0)
                                     ButtonGroup(
-                                        overflowIndicator = {},
+                                        overflowIndicator = { _ -> },
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
                                         ytSourceOptions.forEachIndexed { index, value ->
@@ -894,9 +901,14 @@ fun SettingsScreen(
                                         if (uriStr.isNullOrBlank()) {
                                             null
                                         } else {
-                                            runCatching {
+                                            // toUri() / lastPathSegment can't throw, but be defensive
+                                            // against a future surprise (e.g. SecurityException from
+                                            // a custom Uri implementation).
+                                            try {
                                                 uriStr.toUri().lastPathSegment?.substringAfterLast(':')
-                                            }.getOrNull()
+                                            } catch (_: Exception) {
+                                                null
+                                            }
                                         }
                                     }
                                     Row(
@@ -1202,7 +1214,7 @@ fun SettingsScreen(
                             val selectedIndex = themeOptions.indexOf(state.themeMode).coerceAtLeast(0)
 
                             ButtonGroup(
-                                overflowIndicator = {},
+                                overflowIndicator = { _ -> },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 themeOptions.forEachIndexed { index, mode ->
@@ -1323,7 +1335,7 @@ fun SettingsScreen(
                                     stringResource(R.string.settings_progress_bar_style_linear),
                                 )
                                 ButtonGroup(
-                                    overflowIndicator = {},
+                                    overflowIndicator = { _ -> },
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     styleOptions.forEachIndexed { i, opt ->
