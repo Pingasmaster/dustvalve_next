@@ -73,22 +73,6 @@ class NetworkUtilsTest {
         assertThat(NetworkUtils.extractArtistSlug("not a url")).isNull()
     }
 
-    @Test fun `buildSearchUrl encodes query`() {
-        val url = NetworkUtils.buildSearchUrl("hello world", 1, null)
-        assertThat(url).isEqualTo("https://bandcamp.com/search?q=hello+world&page=1")
-    }
-
-    @Test fun `buildSearchUrl includes item type`() {
-        val url = NetworkUtils.buildSearchUrl("foo", 2, "a")
-        assertThat(url).isEqualTo("https://bandcamp.com/search?q=foo&page=2&item_type=a")
-    }
-
-    @Test fun `buildSearchUrl handles special chars`() {
-        val url = NetworkUtils.buildSearchUrl("foo & bar", 3, null)
-        assertThat(url).contains("q=foo+%26+bar")
-        assertThat(url).contains("page=3")
-    }
-
     @Test fun `buildArtUrl for positive id`() {
         assertThat(NetworkUtils.buildArtUrl(12345L)).isEqualTo("https://f4.bcbits.com/img/a12345_10.jpg")
     }

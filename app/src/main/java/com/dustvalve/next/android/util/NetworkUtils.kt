@@ -3,7 +3,6 @@ package com.dustvalve.next.android.util
 import android.content.Context
 import android.net.ConnectivityManager
 import java.net.URI
-import java.net.URLEncoder
 
 object NetworkUtils {
 
@@ -80,19 +79,6 @@ object NetworkUtils {
             null
         } catch (e: Exception) {
             null
-        }
-    }
-
-    /**
-     * Builds a Dustvalve search URL with the given query, page number, and optional item type filter.
-     */
-    fun buildSearchUrl(query: String, page: Int, itemType: String?): String {
-        val encodedQuery = URLEncoder.encode(query, "UTF-8")
-        val baseUrl = "https://bandcamp.com/search?q=$encodedQuery&page=$page"
-        return if (itemType != null) {
-            "$baseUrl&item_type=${URLEncoder.encode(itemType, "UTF-8")}"
-        } else {
-            baseUrl
         }
     }
 
