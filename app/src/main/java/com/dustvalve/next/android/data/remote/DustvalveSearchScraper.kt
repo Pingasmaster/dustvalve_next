@@ -7,9 +7,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import org.jsoup.Jsoup
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -19,14 +23,44 @@ class DustvalveSearchScraper @Inject constructor(
     private val client: OkHttpClient
 ) {
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        encodeDefaults = true
+    }
+
+    @Serializable
+    private data class SearchRequest(
+        @SerialName("search_text") val searchText: String,
+        @SerialName("search_filter") val searchFilter: String,
+        @SerialName("full_page") val fullPage: Boolean = true,
+        @SerialName("fan_id") val fanId: String? = null,
+    )
+
+    @Serializable
+    private data class SearchEnvelope(val auto: AutoBlock = AutoBlock())
+
+    @Serializable
+    private data class AutoBlock(val results: List<SearchItem> = emptyList())
+
+    @Serializable
+    private data class SearchItem(
+        val type: String = "",
+        val name: String = "",
+        @SerialName("band_name") val bandName: String? = null,
+        @SerialName("album_name") val albumName: String? = null,
+        @SerialName("item_url_path") val itemUrlPath: String? = null,
+        @SerialName("item_url_root") val itemUrlRoot: String? = null,
+        val img: String? = null,
+        @SerialName("tag_names") val tagNames: List<String> = emptyList(),
+    )
+
     suspend fun search(
         query: String,
         page: Int = 1,
         type: SearchResultType? = null
     ): List<SearchResult> = withContext(Dispatchers.IO) {
-        val safePage = page.coerceIn(1, 1000)
-
-        val itemType = when (type) {
+        val searchFilter = when (type) {
             SearchResultType.ARTIST -> "b"
             SearchResultType.ALBUM -> "a"
             SearchResultType.TRACK -> "t"
@@ -35,94 +69,91 @@ class DustvalveSearchScraper @Inject constructor(
             SearchResultType.YOUTUBE_ALBUM,
             SearchResultType.YOUTUBE_ARTIST,
             SearchResultType.YOUTUBE_PLAYLIST -> return@withContext emptyList()
-            null -> null
+            null -> ""
         }
 
-        val searchUrl = NetworkUtils.buildSearchUrl(query, safePage, itemType)
+        // The autocomplete_elastic endpoint returns a single batch (~50
+        // results) and has no pagination; subsequent pages are empty.
+        if (page > 1) return@withContext emptyList()
+
+        val bodyJson = json.encodeToString(
+            SearchRequest.serializer(),
+            SearchRequest(searchText = query, searchFilter = searchFilter)
+        )
 
         val request = Request.Builder()
-            .url(searchUrl)
+            .url(SEARCH_API_URL)
+            .post(bodyJson.toRequestBody(JSON_MEDIA))
+            .header("Content-Type", "application/json")
             .build()
 
         val call = client.newCall(request)
         coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
-        val html = call.execute().use { response ->
+        val responseBody = call.execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
         ensureActive()
 
-        val document = Jsoup.parse(html, searchUrl)
-        val results = mutableListOf<SearchResult>()
+        val envelope = json.decodeFromString(SearchEnvelope.serializer(), responseBody)
 
-        document.select(".searchresult .result-info").forEach { element ->
-            val resultType = element.selectFirst(".itemtype")?.text()?.trim()?.lowercase()
-            val searchResultType = when {
-                resultType?.contains("artist") == true || resultType?.contains("band") == true -> SearchResultType.ARTIST
-                resultType?.contains("album") == true -> SearchResultType.ALBUM
-                resultType?.contains("track") == true -> SearchResultType.TRACK
-                else -> return@forEach
+        envelope.auto.results.mapNotNull { item ->
+            val searchResultType = when (item.type) {
+                "b" -> SearchResultType.ARTIST
+                "a" -> SearchResultType.ALBUM
+                "t" -> SearchResultType.TRACK
+                else -> return@mapNotNull null
             }
 
-            val name = element.selectFirst(".heading a")?.text()?.trim() ?: return@forEach
-            val url = element.selectFirst(".heading a")?.attr("href")?.trim() ?: return@forEach
+            val name = item.name.trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
 
-            // Skip results with non-Dustvalve URLs
-            if (!NetworkUtils.isValidHttpsUrl(url)) return@forEach
+            val url = when (searchResultType) {
+                SearchResultType.ARTIST -> item.itemUrlRoot
+                else -> item.itemUrlPath
+            }?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
 
-            val artElement = element.parent()?.selectFirst(".art img")
-            val imageUrl = artElement?.attr("src")
-                ?.takeIf { it.isNotBlank() && (it.startsWith("https://") || it.startsWith("//")) }
-                ?.let { if (it.startsWith("//")) "https:$it" else it }
+            if (!NetworkUtils.isValidHttpsUrl(url)) return@mapNotNull null
 
-            val subhead = element.selectFirst(".subhead")?.text()?.trim()
-            val releaseDate = element.selectFirst(".released")?.text()
-                ?.replace("released ", "")?.trim()
-            val genre = element.selectFirst(".genre")?.text()
-                ?.replace("genre: ", "")?.trim()
+            val imageUrl = item.img?.trim()?.takeIf { it.startsWith("https://") }
 
             val artist: String?
             val album: String?
             when (searchResultType) {
                 SearchResultType.ALBUM -> {
-                    artist = subhead?.removePrefix("by ")?.trim()
+                    artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
                     album = null
                 }
                 SearchResultType.TRACK -> {
-                    // Parse "by Artist from Album" using lastIndexOf to handle artists
-                    // with " from " in their name. Ambiguous if album title contains " from ".
-                    val byStripped = subhead?.removePrefix("by ")
-                    val fromIndex = byStripped?.lastIndexOf(" from ")
-                    if (fromIndex != null && fromIndex >= 0) {
-                        artist = byStripped.substring(0, fromIndex).trim()
-                        album = byStripped.substring(fromIndex + 6).trim()
-                    } else {
-                        artist = subhead?.removePrefix("by ")?.trim()
-                        album = null
-                    }
+                    artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
+                    album = item.albumName?.trim()?.takeIf { it.isNotEmpty() }
                 }
-                SearchResultType.ARTIST, SearchResultType.LOCAL_TRACK,
-                SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> {
+                else -> {
                     artist = null
                     album = null
                 }
             }
 
-            results.add(
-                SearchResult(
-                    type = searchResultType,
-                    name = name,
-                    url = url,
-                    imageUrl = imageUrl,
-                    artist = artist,
-                    album = album,
-                    genre = genre,
-                    releaseDate = releaseDate,
-                )
+            val genre = item.tagNames
+                .mapNotNull { it.trim().takeIf { tag -> tag.isNotEmpty() } }
+                .joinToString(", ")
+                .takeIf { it.isNotEmpty() }
+
+            SearchResult(
+                type = searchResultType,
+                name = name,
+                url = url,
+                imageUrl = imageUrl,
+                artist = artist,
+                album = album,
+                genre = genre,
+                releaseDate = null,
             )
         }
+    }
 
-        results
+    private companion object {
+        const val SEARCH_API_URL =
+            "https://bandcamp.com/api/bcsearch_public_api/1/autocomplete_elastic"
+        val JSON_MEDIA = "application/json; charset=utf-8".toMediaType()
     }
 }
