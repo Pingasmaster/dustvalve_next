@@ -33,10 +33,13 @@ jobs:
       - name: Build release APK
         run: ./gradlew assembleRelease
 
+      - name: Rename APK to dustvalve_next-future.apk
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve_next-future.apk
+
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v3.0.0
         with:
-          files: app/build/outputs/apk/release/app-release.apk
+          files: app/build/outputs/apk/release/dustvalve_next-future.apk
 
   build-legacy:
     runs-on: ubuntu-latest
@@ -65,10 +68,10 @@ jobs:
       - name: Build legacy release APK
         run: ./gradlew assembleRelease
 
-      - name: Rename APK to dustvalve-old.apk
-        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve-old.apk
+      - name: Rename APK to dustvalve_next.apk
+        run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve_next.apk
 
       - name: Upload legacy APK to GitHub Release
         uses: softprops/action-gh-release@v3.0.0
         with:
-          files: app/build/outputs/apk/release/dustvalve-old.apk
+          files: app/build/outputs/apk/release/dustvalve_next.apk

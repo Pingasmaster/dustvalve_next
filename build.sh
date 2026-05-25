@@ -17,7 +17,7 @@ cd "$SCRIPT_DIR"
 # Argument parsing
 DO_CLEAN_ONLY=0
 
-ROOT_APK="app-release.apk"
+ROOT_APK="dustvalve_next.apk"
 for arg in "$@"; do
     case "$arg" in
         --clean) DO_CLEAN_ONLY=1 ;;

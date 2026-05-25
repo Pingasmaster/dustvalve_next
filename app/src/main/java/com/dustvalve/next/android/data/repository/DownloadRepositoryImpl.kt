@@ -1,15 +1,20 @@
 package com.dustvalve.next.android.data.repository
 
 import android.content.Context
+import androidx.core.net.toUri
 import androidx.room.withTransaction
+import com.dustvalve.next.android.cache.StorageTracker
+import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
+import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.getByIds
+import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.data.storage.folder.DedicatedFolderPaths
@@ -24,30 +29,20 @@ import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
-import com.dustvalve.next.android.cache.StorageTracker
-import com.dustvalve.next.android.data.local.db.dao.AlbumDao
-import com.dustvalve.next.android.data.local.db.dao.getByIds
-import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
-import kotlin.coroutines.cancellation.CancellationException
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
-import okhttp3.Request
-import androidx.core.net.toUri
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-
+import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
 class DownloadRepositoryImpl @Inject constructor(
@@ -131,7 +126,9 @@ class DownloadRepositoryImpl @Inject constructor(
         val preferredFormatKey = settingsDataStore.getDownloadFormatSync()
         val preferredFormat = formatOverride ?: AudioFormat.fromKey(preferredFormatKey) ?: AudioFormat.FLAC
 
-        // Try HQ download for purchased content, fall back to mp3-128 stream
+        // Three sources, in order: HQ for purchased content (with mp3-128
+        // fallback), YouTube watch-page → resolved audio stream, otherwise
+        // the raw streamUrl as mp3-128.
         val (downloadUrl, format) = if (purchaseInfo != null) {
             resolveHqDownloadUrl(purchaseInfo, preferredFormat)
                 ?: (track.streamUrl to AudioFormat.MP3_128)
@@ -177,8 +174,9 @@ class DownloadRepositoryImpl @Inject constructor(
             throw IOException("Download URL must use HTTPS: ${downloadUrl.take(50)}")
         }
 
-        // Branch: SAF folder mode vs. app-internal mode. Both write via a
-        // temp sibling then replace on success.
+        // Branch: SAF folder mode vs. app-internal mode. Internal writes go
+        // via a temp sibling and atomic rename; SAF deletes any pre-existing
+        // target and writes directly to the DocumentFile.
         val (finalPath, fileSize) = if (settingsDataStore.getDedicatedFolderEnabledSync()) {
             writeDownloadToFolder(safeAlbumId, fileName, format, downloadUrl, track.id)
         } else {
@@ -377,7 +375,7 @@ class DownloadRepositoryImpl @Inject constructor(
             .build()
     }
 
-    /** Thin wrapper preserving the existing call-site shape. */
+    /** Thin wrapper: preserves the call-site shape and forwards byte progress to the download notification chip. */
     private suspend fun streamWithResume(
         url: String,
         trackId: String,

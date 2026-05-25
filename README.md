@@ -19,9 +19,9 @@
 
 > ## Legacy backport branch
 >
-> This is the **`legacy-android8`** branch: an unsupported backport that runs on **Android 8.0 (API 26) through Android 12L (API 32)**. It is updated manually by cherry-picking from `master` and may lag behind. The official build APK is named **`dustvalve-old.apk`** and is published on the same GitHub Release as the modern `app-release.apk`.
+> This is the **`legacy-android8`** branch: the **default-shipped** backport that runs on **Android 8.0 (API 26) through Android 16 (API 36)**. It is updated manually by cherry-picking from `master` and may lag behind. The official build APK is named **`dustvalve_next.apk`** and is the main download button on the project README; the future Android 17+ build is named **`dustvalve_next-future.apk`** and ships alongside it on the same GitHub Release.
 >
-> **On Android 13 or newer?** Use the [`master` branch](https://github.com/Pingasmaster/dustvalve_next/tree/master) and grab `app-release.apk` from the [latest release](https://github.com/Pingasmaster/dustvalve_next/releases/latest).
+> **On Android 17?** Use the [`master` branch](https://github.com/Pingasmaster/dustvalve_next/tree/master) and grab `dustvalve_next-future.apk` from the [latest release](https://github.com/Pingasmaster/dustvalve_next/releases/latest) for the bleeding-edge stack with the status-bar Live Updates download chip.
 >
 > Known degradations vs. master:
 > - No predictive-back gesture animation (API 33+ only).
@@ -29,11 +29,11 @@
 > - Notification posting works without a runtime prompt on API < 33 (no degradation, just behavior).
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><img src="./download.svg" alt="Download APK (legacy)" width="220"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download latest APK" width="220"/></a>
 </p>
 
 <p align="center">
-  <sub>On <b>Android 8.0 – 16</b> (or stuck on stock Android 16 without QPR1)? The main build needs Android 16 QPR1+ (API 36.1). Grab the unsupported legacy backport from the same release: <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><code>dustvalve-old.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch, updated manually, may lag behind).</sub>
+  <sub>On <b>Android 16 QPR1+</b> and want the future build with the status-bar Live Updates download chip and the full bleeding-edge stack? Grab <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/master"><code>master</code></a> branch — minSdk 36, rises to 37 once Robolectric supports API 37). The default <code>dustvalve_next.apk</code> button above covers Android 8.0 → 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch.</sub>
 </p>
 
 ---

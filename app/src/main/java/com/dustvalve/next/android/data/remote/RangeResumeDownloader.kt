@@ -40,6 +40,11 @@ object RangeResumeDownloader {
      * @param sink Destination. Must be positioned at its start; the helper
      *   appends bytes as they arrive and never seeks.
      * @param trackId Tag for error messages only.
+     * @param maxRetries Resume attempts after the initial request fails mid-flight.
+     * @param backoffMillis Function returning the delay between attempt N and N+1.
+     * @param onProgress Optional callback invoked after every successful write,
+     *   carrying (bytesWritten, expectedTotal). `expectedTotal` is null until
+     *   the first response headers are parsed.
      * @return Total bytes written.
      */
     suspend fun stream(

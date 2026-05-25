@@ -41,9 +41,14 @@ import javax.inject.Singleton
  *  - On API 36+ (Android 16+) we try the Live Update chip
  *    (`Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
  *    `setShortCriticalText(...)`). Devices on stock Android 16 without
- *    QPR1 will silently fall back to the regular progress notification.
+ *    QPR1 will silently fall back to the regular progress notification
+ *    via a NoSuchMethodError catch.
  *  - On API < 36 we render a normal ongoing progress notification via
  *    `NotificationCompat.Builder.setProgress(...)`.
+ *
+ * Pre-conditions: POST_NOTIFICATIONS runtime permission is only checked on
+ * API 33+ (auto-granted below); notification channels are only created on
+ * API 26+ (channels don't exist on older OS).
  *
  * The center supports nested batches (e.g. an artist download internally
  * wraps album downloads); the outer-most batch wins so the chip stays on
