@@ -37,31 +37,29 @@ class StorageTracker @Inject constructor(
         _sizeUpdateTrigger.update { it + 1 }
     }
 
-    fun getCacheInfo(): Flow<CacheInfo> {
-        return combine(_sizeUpdateTrigger, settingsDataStore.storageLimit) { _, limitBytes ->
-            val pinnedSize = downloadDao.getPinnedSize()
-            val totalDownloads = downloadDao.getTotalSize()
-            val unpinnedAudioSize = (totalDownloads - pinnedSize).coerceAtLeast(0L)
-            val imagesSize = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
-            val mediaCacheSize = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
+    fun getCacheInfo(): Flow<CacheInfo> = combine(_sizeUpdateTrigger, settingsDataStore.storageLimit) { _, limitBytes ->
+        val pinnedSize = downloadDao.getPinnedSize()
+        val totalDownloads = downloadDao.getTotalSize()
+        val unpinnedAudioSize = (totalDownloads - pinnedSize).coerceAtLeast(0L)
+        val imagesSize = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
+        val mediaCacheSize = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
 
-            val totalSize = totalDownloads + imagesSize + mediaCacheSize
-            val usagePercent = when {
-                limitBytes <= 0L -> 0f
-                limitBytes == Long.MAX_VALUE -> 0f
-                else -> (totalSize.toFloat() / limitBytes.toFloat() * 100f).coerceIn(0f, 100f)
-            }
+        val totalSize = totalDownloads + imagesSize + mediaCacheSize
+        val usagePercent = when {
+            limitBytes <= 0L -> 0f
+            limitBytes == Long.MAX_VALUE -> 0f
+            else -> (totalSize.toFloat() / limitBytes.toFloat() * 100f).coerceIn(0f, 100f)
+        }
 
-            CacheInfo(
-                totalSizeBytes = totalSize,
-                limitBytes = limitBytes,
-                audioSizeBytes = unpinnedAudioSize + mediaCacheSize,
-                imageSizeBytes = imagesSize,
-                downloadSizeBytes = pinnedSize,
-                usagePercent = usagePercent,
-            )
-        }.flowOn(Dispatchers.IO)
-    }
+        CacheInfo(
+            totalSizeBytes = totalSize,
+            limitBytes = limitBytes,
+            audioSizeBytes = unpinnedAudioSize + mediaCacheSize,
+            imageSizeBytes = imagesSize,
+            downloadSizeBytes = pinnedSize,
+            usagePercent = usagePercent,
+        )
+    }.flowOn(Dispatchers.IO)
 
     suspend fun isOverLimit(): Boolean = withContext(Dispatchers.IO) {
         val limit = settingsDataStore.getStorageLimitSync()

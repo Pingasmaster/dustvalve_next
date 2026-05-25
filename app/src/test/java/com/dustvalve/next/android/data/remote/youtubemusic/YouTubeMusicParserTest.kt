@@ -40,7 +40,7 @@ class YouTubeMusicParserTest {
         // Either the message-renderer extraction OR the type-tree diagnostic.
         // (Android shells contain musicNotifierShelfRenderer / itemSectionRenderer wrapping elementRenderer.)
         assertThat(ex!!.message).containsMatch(
-            "YouTube Music returned an empty home response \\(raw shelves: .*elementRenderer.*\\)"
+            "YouTube Music returned an empty home response \\(raw shelves: .*elementRenderer.*\\)",
         )
     }
 
@@ -54,7 +54,7 @@ class YouTubeMusicParserTest {
         assertThat(tiles.items.first().title).isEqualTo("Album Title")
         assertThat(tiles.items.first().subtitle).isEqualTo("Artist X")
         assertThat(tiles.items.first().thumbnailUrl).isEqualTo(
-            "https://yt3.example/img=w720-h720-l90-rj"
+            "https://yt3.example/img=w720-h720-l90-rj",
         )
     }
 
@@ -72,7 +72,7 @@ class YouTubeMusicParserTest {
         }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
         assertThat(ex!!.message).isEqualTo(
-            "YouTube Music: YouTube Music isn't available in your country — Try again later."
+            "YouTube Music: YouTube Music isn't available in your country — Try again later.",
         )
     }
 }

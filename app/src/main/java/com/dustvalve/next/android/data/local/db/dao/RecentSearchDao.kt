@@ -27,7 +27,7 @@ interface RecentSearchDao {
         DELETE FROM recent_searches WHERE source = :source AND `query` NOT IN (
             SELECT `query` FROM recent_searches WHERE source = :source ORDER BY searchedAt DESC LIMIT :keepCount
         )
-        """
+        """,
     )
     suspend fun deleteOld(source: String, keepCount: Int = 20)
 

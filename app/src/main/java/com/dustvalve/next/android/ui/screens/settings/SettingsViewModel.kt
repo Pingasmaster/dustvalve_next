@@ -3,29 +3,29 @@ package com.dustvalve.next.android.ui.screens.settings
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
+import com.dustvalve.next.android.cache.StorageTracker
+import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.data.storage.folder.StorageMigrator
 import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
-import com.dustvalve.next.android.cache.StorageTracker
-import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.update.AppUpdateController
-import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
+import com.dustvalve.next.android.update.AppUpdateController
+import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.util.UiText
-import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -342,22 +342,31 @@ class SettingsViewModel @Inject constructor(
 
     fun setProgressBarStyle(style: String) {
         viewModelScope.launch {
-            try { settingsDataStore.setProgressBarStyle(style) }
-            catch (e: Exception) { if (e is CancellationException) throw e }
+            try {
+                settingsDataStore.setProgressBarStyle(style)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
     fun setProgressBarSizeDp(sizeDp: Int) {
         viewModelScope.launch {
-            try { settingsDataStore.setProgressBarSizeDp(sizeDp) }
-            catch (e: Exception) { if (e is CancellationException) throw e }
+            try {
+                settingsDataStore.setProgressBarSizeDp(sizeDp)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
     fun setAutoDownloadFavorites(enabled: Boolean) {
         viewModelScope.launch {
-            try { settingsDataStore.setAutoDownloadFavorites(enabled) }
-            catch (e: Exception) { if (e is CancellationException) throw e }
+            try {
+                settingsDataStore.setAutoDownloadFavorites(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -365,7 +374,9 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val bytes = when {
-                    gb < 0f -> Long.MAX_VALUE // unlimited
+                    gb < 0f -> Long.MAX_VALUE
+
+                    // unlimited
                     else -> (gb * 1024 * 1024 * 1024).toLong()
                 }
                 settingsDataStore.setStorageLimit(bytes)
@@ -456,7 +467,7 @@ class SettingsViewModel @Inject constructor(
                             if (name != null) {
                                 cm.setCookie(
                                     "https://bandcamp.com",
-                                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com"
+                                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com",
                                 )
                             }
                         }
@@ -692,7 +703,9 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
+                        scanMessage =
+                        e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
+                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
                     )
                 }
             }
@@ -718,7 +731,9 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
+                        scanMessage =
+                        e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
+                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
                     )
                 }
             }
@@ -748,7 +763,11 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = UiText.PluralsResource(R.plurals.scan_found_detailed, result.total, listOf(result.total, result.added, result.removed)),
+                        scanMessage = UiText.PluralsResource(
+                            R.plurals.scan_found_detailed,
+                            result.total,
+                            listOf(result.total, result.added, result.removed),
+                        ),
                     )
                 }
             } catch (e: Exception) {
@@ -756,7 +775,9 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isScanning = false,
-                        scanMessage = e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) } ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
+                        scanMessage =
+                        e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
+                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
                     )
                 }
             }
@@ -964,7 +985,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-
     private fun collectYoutubeEnabled() {
         viewModelScope.launch {
             settingsDataStore.youtubeEnabled
@@ -1092,15 +1112,21 @@ class SettingsViewModel @Inject constructor(
 
     fun setKeepLocalSort(enabled: Boolean) {
         viewModelScope.launch {
-            try { settingsDataStore.setKeepLocalSort(enabled) }
-            catch (e: Exception) { if (e is CancellationException) throw e }
+            try {
+                settingsDataStore.setKeepLocalSort(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
     fun setKeepLocalFilters(enabled: Boolean) {
         viewModelScope.launch {
-            try { settingsDataStore.setKeepLocalFilters(enabled) }
-            catch (e: Exception) { if (e is CancellationException) throw e }
+            try {
+                settingsDataStore.setKeepLocalFilters(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -1117,13 +1143,13 @@ class SettingsViewModel @Inject constructor(
 
     companion object {
         private val STORAGE_STEPS_BYTES = listOf(
-            100L * 1024 * 1024,               // 100 MB
+            100L * 1024 * 1024, // 100 MB
             (0.5 * 1024 * 1024 * 1024).toLong(), // 500 MB
-            1L * 1024 * 1024 * 1024,           // 1 GB
-            2L * 1024 * 1024 * 1024,           // 2 GB
-            5L * 1024 * 1024 * 1024,           // 5 GB
-            10L * 1024 * 1024 * 1024,          // 10 GB
-            Long.MAX_VALUE,                     // Unlimited
+            1L * 1024 * 1024 * 1024, // 1 GB
+            2L * 1024 * 1024 * 1024, // 2 GB
+            5L * 1024 * 1024 * 1024, // 5 GB
+            10L * 1024 * 1024 * 1024, // 10 GB
+            Long.MAX_VALUE, // Unlimited
         )
 
         private fun bytesToSliderIndex(bytes: Long): Int {

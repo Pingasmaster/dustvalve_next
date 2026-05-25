@@ -99,17 +99,27 @@ class ArtistDetailViewModelTest {
         val ytSource = sourceWith(
             id = "youtube",
             capabilities = setOf(
-                SourceConcept.SEARCH, SourceConcept.ARTIST,
-                SourceConcept.ARTIST_TRACKS, SourceConcept.COLLECTION,
+                SourceConcept.SEARCH,
+                SourceConcept.ARTIST,
+                SourceConcept.ARTIST_TRACKS,
+                SourceConcept.COLLECTION,
             ),
         )
         val url = "https://youtube.com/channel/UC1"
         val artist = Artist(
-            id = url, name = "YT Channel", url = url,
-            imageUrl = null, bio = null, location = null, albums = emptyList(),
+            id = url,
+            name = "YT Channel",
+            url = url,
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = emptyList(),
         )
         val firstPage = MusicCollection(
-            id = url, url = url, name = "YT Channel", owner = "YT Channel",
+            id = url,
+            url = url,
+            name = "YT Channel",
+            owner = "YT Channel",
             coverUrl = null,
             tracks = listOf(track("yt_1"), track("yt_2"), track("yt_3")),
             continuation = "cont_token",
@@ -137,23 +147,39 @@ class ArtistDetailViewModelTest {
         val ytSource = sourceWith(
             id = "youtube",
             capabilities = setOf(
-                SourceConcept.ARTIST, SourceConcept.ARTIST_TRACKS,
+                SourceConcept.ARTIST,
+                SourceConcept.ARTIST_TRACKS,
             ),
         )
         val url = "https://youtube.com/channel/UC1"
         val page1 = MusicCollection(
-            id = url, url = url, name = "Ch", owner = "Ch", coverUrl = null,
+            id = url,
+            url = url,
+            name = "Ch",
+            owner = "Ch",
+            coverUrl = null,
             tracks = listOf(track("yt_1")),
-            continuation = "T1", hasMore = true,
+            continuation = "T1",
+            hasMore = true,
         )
         val page2 = MusicCollection(
-            id = url, url = url, name = "Ch", owner = "Ch", coverUrl = null,
+            id = url,
+            url = url,
+            name = "Ch",
+            owner = "Ch",
+            coverUrl = null,
             tracks = listOf(track("yt_2"), track("yt_3")),
-            continuation = null, hasMore = false,
+            continuation = null,
+            hasMore = false,
         )
         coEvery { ytSource.getArtist(url) } returns Artist(
-            id = url, name = "Ch", url = url, imageUrl = null, bio = null,
-            location = null, albums = emptyList(),
+            id = url,
+            name = "Ch",
+            url = url,
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = emptyList(),
         )
         coEvery { ytSource.getArtistTracks(url, continuation = null) } returns page1
         coEvery { ytSource.getArtistTracks(url, continuation = "T1") } returns page2
@@ -188,8 +214,13 @@ class ArtistDetailViewModelTest {
     @Test fun `bandcamp toggleFavorite delegates to ArtistRepository, YT hits FavoriteDao directly`() = runTest(dispatcher) {
         val bc = sourceWith("bandcamp", setOf(SourceConcept.ARTIST, SourceConcept.ALBUM))
         val artist = Artist(
-            id = "bc_id", name = "A", url = "https://foo.bandcamp.com",
-            imageUrl = null, bio = null, location = null, albums = emptyList(),
+            id = "bc_id",
+            name = "A",
+            url = "https://foo.bandcamp.com",
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = emptyList(),
         )
         coEvery { bc.getArtist(artist.url) } returns artist
         every { sources["bandcamp"] } returns bc
@@ -234,5 +265,4 @@ class ArtistDetailViewModelTest {
         trackNumber = 0, duration = 0f, streamUrl = null, artUrl = "",
         albumTitle = "", source = TrackSource.YOUTUBE,
     )
-
 }

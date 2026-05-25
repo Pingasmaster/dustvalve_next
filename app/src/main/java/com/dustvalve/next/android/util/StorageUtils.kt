@@ -12,14 +12,17 @@ object StorageUtils {
         val absBytes = if (bytes < 0) 0L else bytes
         return when {
             absBytes < 1024L -> "$absBytes B"
+
             absBytes < 1024L * 1024L -> {
                 val kb = absBytes / 1024.0
                 String.format(Locale.getDefault(), "%.1f KB", kb)
             }
+
             absBytes < 1024L * 1024L * 1024L -> {
                 val mb = absBytes / (1024.0 * 1024.0)
                 String.format(Locale.getDefault(), "%.1f MB", mb)
             }
+
             else -> {
                 val gb = absBytes / (1024.0 * 1024.0 * 1024.0)
                 String.format(Locale.getDefault(), "%.1f GB", gb)
@@ -30,21 +33,15 @@ object StorageUtils {
     /**
      * Converts bytes to megabytes.
      */
-    fun bytesToMB(bytes: Long): Float {
-        return bytes / (1024f * 1024f)
-    }
+    fun bytesToMB(bytes: Long): Float = bytes / (1024f * 1024f)
 
     /**
      * Converts megabytes to bytes.
      */
-    fun mbToBytes(mb: Float): Long {
-        return (mb * 1024f * 1024f).toLong()
-    }
+    fun mbToBytes(mb: Float): Long = (mb * 1024f * 1024f).toLong()
 
     /**
      * Converts gigabytes to bytes.
      */
-    fun gbToBytes(gb: Float): Long {
-        return (gb * 1024f * 1024f * 1024f).toLong()
-    }
+    fun gbToBytes(gb: Float): Long = (gb * 1024f * 1024f * 1024f).toLong()
 }

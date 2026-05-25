@@ -35,10 +35,7 @@ import kotlin.coroutines.coroutineContext
  * "Automatic update checks" toggle (Settings → About); the manual button never.
  */
 @Singleton
-open class AppUpdateService @Inject constructor(
-    private val client: OkHttpClient,
-    @param:ApplicationContext private val context: Context,
-) {
+open class AppUpdateService @Inject constructor(private val client: OkHttpClient, @param:ApplicationContext private val context: Context) {
 
     /**
      * Overridable in tests so MockWebServer can answer the releases GET.
@@ -67,10 +64,7 @@ open class AppUpdateService @Inject constructor(
     )
 
     @Serializable
-    private data class GitHubAsset(
-        val name: String = "",
-        @SerialName("browser_download_url") val browserDownloadUrl: String = "",
-    )
+    private data class GitHubAsset(val name: String = "", @SerialName("browser_download_url") val browserDownloadUrl: String = "")
 
     data class AvailableUpdate(
         val versionName: String,
@@ -82,7 +76,9 @@ open class AppUpdateService @Inject constructor(
     data class DownloadProgress(val bytesDownloaded: Long, val totalBytes: Long) {
         val fraction: Float get() = if (totalBytes > 0L) {
             (bytesDownloaded.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
-        } else 0f
+        } else {
+            0f
+        }
     }
 
     /**

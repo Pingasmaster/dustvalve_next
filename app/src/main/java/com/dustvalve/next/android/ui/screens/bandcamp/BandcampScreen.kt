@@ -11,7 +11,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -20,12 +19,14 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -33,15 +34,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -51,18 +51,15 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.TextButton
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberSearchBarState
@@ -84,12 +81,15 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
@@ -99,20 +99,16 @@ import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
-import com.dustvalve.next.android.util.DeepLinkRouter
-import com.dustvalve.next.android.util.openInBrowser
-import com.dustvalve.next.android.util.shareUrl
 import com.dustvalve.next.android.ui.theme.AppMotion
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
+import com.dustvalve.next.android.util.DeepLinkRouter
+import com.dustvalve.next.android.util.openInBrowser
+import com.dustvalve.next.android.util.shareUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private data class GenreCategory(
-    val name: String,
-    val tag: String,
-    val color: Color,
-)
+private data class GenreCategory(val name: String, val tag: String, val color: Color)
 
 private val discoverCategories = listOf(
     // Original 12 with original colors (pre-bad-commit)
@@ -146,7 +142,12 @@ private val discoverCategories = listOf(
     GenreCategory("podcasts", "podcasts", Color(0xFFD6BE48)),
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalFoundationApi::class,
+    ExperimentalLayoutApi::class,
+)
 @Composable
 fun BandcampScreen(
     onAlbumClick: (String) -> Unit,
@@ -312,8 +313,11 @@ fun BandcampScreen(
             textFieldState = textFieldState,
             onSearch = {
                 val q = textFieldState.text.toString()
-                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) onOpenLink(q)
-                else searchViewModel.onSearch()
+                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) {
+                    onOpenLink(q)
+                } else {
+                    searchViewModel.onSearch()
+                }
             },
             placeholder = { Text(stringResource(R.string.bandcamp_search_placeholder)) },
             leadingIcon = {
@@ -560,11 +564,13 @@ fun BandcampScreen(
                                 )
                             }
                         }
+
                         searchState.isLoading && searchState.results.isEmpty() -> {
                             ContainedLoadingIndicator(
                                 modifier = Modifier.align(Alignment.Center),
                             )
                         }
+
                         searchState.error != null && searchState.results.isEmpty() -> {
                             Text(
                                 text = searchState.error ?: stringResource(R.string.common_search_failed),
@@ -573,6 +579,7 @@ fun BandcampScreen(
                                 modifier = Modifier.align(Alignment.Center),
                             )
                         }
+
                         searchState.results.isEmpty() && searchState.query.isNotBlank() && !searchState.isLoading -> {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -594,6 +601,7 @@ fun BandcampScreen(
                                 )
                             }
                         }
+
                         else -> {
                             LazyColumn(
                                 state = searchListState,
@@ -638,18 +646,23 @@ fun BandcampScreen(
                                                     scope.launch { searchBarState.animateToCollapsed() }
                                                     when (result.type) {
                                                         SearchResultType.ALBUM -> onAlbumClick(result.url)
+
                                                         SearchResultType.ARTIST -> onArtistClick(result.url)
+
                                                         SearchResultType.TRACK -> {
                                                             searchViewModel.playBandcampTrack(result.url, result.name, playerViewModel)
                                                             onExpandPlayer()
                                                         }
+
                                                         SearchResultType.LOCAL_TRACK -> {
                                                             val trackId = result.url.removePrefix("local://")
                                                             searchViewModel.playLocalTrack(trackId, playerViewModel)
                                                             onExpandPlayer()
                                                         }
+
                                                         SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                                                        SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> { /* not applicable */ }
+                                                        SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
+                                                        -> { /* not applicable */ }
                                                     }
                                                 },
                                                 onLongClick = {
@@ -872,9 +885,7 @@ fun BandcampScreen(
 }
 
 @Composable
-private fun SearchResultItem(
-    result: SearchResult,
-) {
+private fun SearchResultItem(result: SearchResult) {
     val thumbnailShape = when (result.type) {
         SearchResultType.ARTIST -> AppShapes.SearchResultArtist
         SearchResultType.ALBUM -> AppShapes.SearchResultAlbum
@@ -899,9 +910,11 @@ private fun SearchResultItem(
             val supporting = buildString {
                 when (result.type) {
                     SearchResultType.ARTIST -> append(artistLabel)
+
                     SearchResultType.ALBUM -> {
                         result.artist?.let { append(it) }
                     }
+
                     SearchResultType.TRACK -> {
                         result.artist?.let { append(it) }
                         result.album?.let {
@@ -909,6 +922,7 @@ private fun SearchResultItem(
                             append(it)
                         }
                     }
+
                     SearchResultType.LOCAL_TRACK -> {
                         append(localLabel)
                         result.artist?.let {
@@ -916,13 +930,18 @@ private fun SearchResultItem(
                             append(it)
                         }
                         result.album?.let {
-                            if (result.artist != null) append(" - ")
-                            else append(" \u00B7 ")
+                            if (result.artist != null) {
+                                append(" - ")
+                            } else {
+                                append(" \u00B7 ")
+                            }
                             append(it)
                         }
                     }
+
                     SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
-                    SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST -> {
+                    SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
+                    -> {
                         result.artist?.let { append(it) }
                     }
                 }
@@ -973,10 +992,7 @@ private fun SearchResultItem(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CategorySheetContent(
-    albums: List<Album>,
-    onAlbumClick: (String) -> Unit,
-) {
+private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> Unit) {
     val carouselAlbums = albums.take(10)
     val listAlbums = albums.drop(10)
 
@@ -1016,8 +1032,10 @@ private fun CategorySheetContent(
                     color = Color.White.copy(alpha = 0.8f),
                     modifier = Modifier
                         .padding(
-                            start = 20.dp, end = 20.dp,
-                            top = 16.dp, bottom = 8.dp,
+                            start = 20.dp,
+                            end = 20.dp,
+                            top = 16.dp,
+                            bottom = 8.dp,
                         )
                         .animateItem(),
                 )
@@ -1095,11 +1113,7 @@ private fun CategorySheetContent(
 }
 
 @Composable
-private fun CarouselAlbumItem(
-    album: Album,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun CarouselAlbumItem(album: Album, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -1121,7 +1135,7 @@ private fun CarouselAlbumItem(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
-                    )
+                    ),
                 ),
         )
         // Text overlay -- extra bottom padding to clear rounded corner clip
@@ -1150,10 +1164,7 @@ private fun CarouselAlbumItem(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun StaggeredAnimatedItem(
-    index: Int,
-    content: @Composable () -> Unit,
-) {
+private fun StaggeredAnimatedItem(index: Int, content: @Composable () -> Unit) {
     val progress = remember { Animatable(0f) }
     val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     LaunchedEffect(Unit) {

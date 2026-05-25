@@ -98,7 +98,9 @@ class PlaylistTransferRepository @Inject constructor(
                                 "" // mark attempted-but-missing so we don't refetch
                             }
                         }.takeIf { it.isNotEmpty() }
-                    } else null
+                    } else {
+                        null
+                    }
                     entries.add(BundleEntry(track.toSnapshot(), audioFile, coverFile, formatKey))
                 } else {
                     entries.add(BundleEntry(track.toSnapshot()))
@@ -118,81 +120,81 @@ class PlaylistTransferRepository @Inject constructor(
     }
 
     /** Read a `.dvplaylist` ZIP from [inp] and create a new playlist. Returns the created playlist. */
-    suspend fun import(
-        inp: InputStream,
-        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> },
-    ): Playlist = withContext(Dispatchers.IO) {
-        val files = HashMap<String, ByteArray>()
-        var manifestJson: String? = null
-        ZipInputStream(inp.buffered()).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                val bytes = zip.readBytes()
-                if (entry.name == "manifest.json") manifestJson = bytes.decodeToString()
-                else files[entry.name] = bytes
-                zip.closeEntry()
-                entry = zip.nextEntry
-            }
-        }
-        val manifest = json.decodeFromString<PlaylistBundleManifest>(
-            manifestJson ?: throw IllegalStateException("Bundle missing manifest.json"),
-        )
-
-        val playlist = playlistRepository.createPlaylist(
-            name = manifest.playlist.name,
-            shapeKey = manifest.playlist.shapeKey,
-            iconUrl = manifest.playlist.iconUrl,
-        )
-        val total = manifest.entries.size
-        val trackEntities = ArrayList<com.dustvalve.next.android.data.local.db.entity.TrackEntity>(total)
-
-        manifest.entries.forEachIndexed { index, bundleEntry ->
-            coroutineContext.ensureActive()
-            var snap = bundleEntry.track
-            if (manifest.offline) {
-                val audioBytes = bundleEntry.audioFile?.let { files[it] }
-                if (audioBytes != null) {
-                    val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
-                    val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
-                    val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
-                    val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
-                    val audio = File(dir, "$safeTrack.${format.extension}")
-                    audio.writeBytes(audioBytes)
-                    downloadDao.insert(
-                        DownloadEntity(
-                            trackId = snap.id,
-                            albumId = snap.albumId,
-                            filePath = audio.absolutePath,
-                            sizeBytes = audio.length(),
-                            format = format.key,
-                            pinned = true,
-                        ),
-                    )
-                }
-                // Persist the cover locally and point artUrl at it so covers show offline.
-                val coverBytes = bundleEntry.coverFile?.let { files[it] }
-                if (coverBytes != null) {
-                    val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
-                    cover.writeBytes(coverBytes)
-                    snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
+    suspend fun import(inp: InputStream, onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }): Playlist =
+        withContext(Dispatchers.IO) {
+            val files = HashMap<String, ByteArray>()
+            var manifestJson: String? = null
+            ZipInputStream(inp.buffered()).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    val bytes = zip.readBytes()
+                    if (entry.name == "manifest.json") {
+                        manifestJson = bytes.decodeToString()
+                    } else {
+                        files[entry.name] = bytes
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
                 }
             }
-            trackEntities.add(snap.toEntity())
-            onProgress(index + 1, total)
+            val manifest = json.decodeFromString<PlaylistBundleManifest>(
+                manifestJson ?: throw IllegalStateException("Bundle missing manifest.json"),
+            )
+
+            val playlist = playlistRepository.createPlaylist(
+                name = manifest.playlist.name,
+                shapeKey = manifest.playlist.shapeKey,
+                iconUrl = manifest.playlist.iconUrl,
+            )
+            val total = manifest.entries.size
+            val trackEntities = ArrayList<com.dustvalve.next.android.data.local.db.entity.TrackEntity>(total)
+
+            manifest.entries.forEachIndexed { index, bundleEntry ->
+                coroutineContext.ensureActive()
+                var snap = bundleEntry.track
+                if (manifest.offline) {
+                    val audioBytes = bundleEntry.audioFile?.let { files[it] }
+                    if (audioBytes != null) {
+                        val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
+                        val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
+                        val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
+                        val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
+                        val audio = File(dir, "$safeTrack.${format.extension}")
+                        audio.writeBytes(audioBytes)
+                        downloadDao.insert(
+                            DownloadEntity(
+                                trackId = snap.id,
+                                albumId = snap.albumId,
+                                filePath = audio.absolutePath,
+                                sizeBytes = audio.length(),
+                                format = format.key,
+                                pinned = true,
+                            ),
+                        )
+                    }
+                    // Persist the cover locally and point artUrl at it so covers show offline.
+                    val coverBytes = bundleEntry.coverFile?.let { files[it] }
+                    if (coverBytes != null) {
+                        val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
+                        cover.writeBytes(coverBytes)
+                        snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
+                    }
+                }
+                trackEntities.add(snap.toEntity())
+                onProgress(index + 1, total)
+            }
+
+            trackDao.insertAll(trackEntities)
+            playlistRepository.addTracksToPlaylist(playlist.id, manifest.entries.map { it.track.id })
+            playlist
         }
 
-        trackDao.insertAll(trackEntities)
-        playlistRepository.addTracksToPlaylist(playlist.id, manifest.entries.map { it.track.id })
-        playlist
+    private fun openDownload(filePath: String): InputStream = if (filePath.startsWith("content://")) {
+        context.contentResolver.openInputStream(filePath.toUri())
+            ?: throw IllegalStateException("Cannot open $filePath")
+    } else {
+        File(filePath).inputStream()
     }
-
-    private fun openDownload(filePath: String): InputStream =
-        if (filePath.startsWith("content://")) {
-            context.contentResolver.openInputStream(filePath.toUri())
-                ?: throw IllegalStateException("Cannot open $filePath")
-        } else {
-            File(filePath).inputStream()
-        }
 
     private fun fetchBytes(url: String): ByteArray {
         val request = Request.Builder().url(url).build()

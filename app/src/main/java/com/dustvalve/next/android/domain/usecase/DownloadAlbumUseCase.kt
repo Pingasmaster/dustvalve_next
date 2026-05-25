@@ -52,7 +52,7 @@ class DownloadAlbumUseCase @Inject constructor(
         }
         if (errors.size == artist.albums.size) {
             throw IOException(
-                "Failed to download all ${artist.albums.size} albums: ${errors.first().message}"
+                "Failed to download all ${artist.albums.size} albums: ${errors.first().message}",
             )
         }
     }

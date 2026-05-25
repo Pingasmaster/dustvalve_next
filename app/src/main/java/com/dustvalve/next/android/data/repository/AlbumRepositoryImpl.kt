@@ -102,12 +102,10 @@ class AlbumRepositoryImpl @Inject constructor(
     private suspend fun findCachedAlbum(
         cleanUrl: String,
         originalUrl: String,
-    ): com.dustvalve.next.android.data.local.db.entity.AlbumEntity? {
-        return albumDao.getByUrl(cleanUrl)
-            ?: albumDao.getByUrl(cleanUrl.lowercase())
-            ?: albumDao.getByUrl(originalUrl)
-            ?: albumDao.getByUrl(originalUrl.trimEnd('/'))
-    }
+    ): com.dustvalve.next.android.data.local.db.entity.AlbumEntity? = albumDao.getByUrl(cleanUrl)
+        ?: albumDao.getByUrl(cleanUrl.lowercase())
+        ?: albumDao.getByUrl(originalUrl)
+        ?: albumDao.getByUrl(originalUrl.trimEnd('/'))
 
     private suspend fun buildCachedAlbum(
         cachedAlbum: com.dustvalve.next.android.data.local.db.entity.AlbumEntity,
@@ -229,10 +227,8 @@ class AlbumRepositoryImpl @Inject constructor(
         albumDao.updatePurchaseInfo(albumId, purchaseInfo.saleItemId, purchaseInfo.saleItemType)
     }
 
-    override suspend fun fetchBandcampTrackPrice(
-        trackUrl: String,
-        fallbackCurrency: String,
-    ): AlbumPrice? = albumScraper.fetchTrackPrice(trackUrl, fallbackCurrency)
+    override suspend fun fetchBandcampTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? =
+        albumScraper.fetchTrackPrice(trackUrl, fallbackCurrency)
 
     override suspend fun toggleFavorite(albumId: String) {
         database.withTransaction {

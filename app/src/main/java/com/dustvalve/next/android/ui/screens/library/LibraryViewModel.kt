@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
+import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.remote.DustvalveCollectionScraper
 import com.dustvalve.next.android.data.transfer.PlaylistTransferRepository
 import com.dustvalve.next.android.domain.model.Album
@@ -13,7 +14,6 @@ import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AccountRepository
-import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
@@ -317,7 +317,7 @@ class LibraryViewModel @Inject constructor(
                 }
                 (playlistItems + albumItems + artistItems).sortedWith(
                     compareByDescending<LibraryItem> { it.isPinned }
-                        .thenByDescending { it.addedAt }
+                        .thenByDescending { it.addedAt },
                 )
             }
                 .catch { e ->

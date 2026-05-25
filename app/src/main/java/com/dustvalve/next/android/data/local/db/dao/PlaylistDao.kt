@@ -43,8 +43,16 @@ interface PlaylistDao {
     @Query("UPDATE playlists SET name = :name, updatedAt = :updatedAt WHERE id = :playlistId AND isSystem = 0")
     suspend fun renamePlaylist(playlistId: String, name: String, updatedAt: Long = System.currentTimeMillis()): Int
 
-    @Query("UPDATE playlists SET name = :name, shapeKey = :shapeKey, iconUrl = :iconUrl, updatedAt = :updatedAt WHERE id = :playlistId AND isSystem = 0")
-    suspend fun updatePlaylistAppearance(playlistId: String, name: String, shapeKey: String?, iconUrl: String?, updatedAt: Long = System.currentTimeMillis()): Int
+    @Query(
+        "UPDATE playlists SET name = :name, shapeKey = :shapeKey, iconUrl = :iconUrl, updatedAt = :updatedAt WHERE id = :playlistId AND isSystem = 0",
+    )
+    suspend fun updatePlaylistAppearance(
+        playlistId: String,
+        name: String,
+        shapeKey: String?,
+        iconUrl: String?,
+        updatedAt: Long = System.currentTimeMillis(),
+    ): Int
 
     @Query("UPDATE playlists SET isPinned = :isPinned WHERE id = :playlistId")
     suspend fun setPlaylistPinned(playlistId: String, isPinned: Boolean): Int
@@ -66,20 +74,24 @@ interface PlaylistDao {
 
     // Playlist tracks operations
 
-    @Query("""
+    @Query(
+        """
         SELECT t.* FROM tracks t
         INNER JOIN playlist_tracks pt ON t.id = pt.trackId
         WHERE pt.playlistId = :playlistId
         ORDER BY pt.position ASC
-    """)
+    """,
+    )
     fun getTracksInPlaylist(playlistId: String): Flow<List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>>
 
-    @Query("""
+    @Query(
+        """
         SELECT t.* FROM tracks t
         INNER JOIN playlist_tracks pt ON t.id = pt.trackId
         WHERE pt.playlistId = :playlistId
         ORDER BY pt.position ASC
-    """)
+    """,
+    )
     suspend fun getTracksInPlaylistSync(playlistId: String): List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>
 
     @Query("SELECT COUNT(*) FROM playlist_tracks WHERE playlistId = :playlistId")

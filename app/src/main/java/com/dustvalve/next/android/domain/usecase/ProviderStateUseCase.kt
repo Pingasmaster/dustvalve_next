@@ -8,9 +8,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class ProviderStateUseCase @Inject constructor(
-    private val settingsDataStore: SettingsDataStore,
-) {
+class ProviderStateUseCase @Inject constructor(private val settingsDataStore: SettingsDataStore) {
     val activeProviders: Flow<Set<MusicProvider>> = combine(
         settingsDataStore.bandcampEnabled,
         settingsDataStore.youtubeEnabled,

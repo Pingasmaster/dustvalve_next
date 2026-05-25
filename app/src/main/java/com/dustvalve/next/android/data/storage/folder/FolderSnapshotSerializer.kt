@@ -50,18 +50,10 @@ data class PlaylistSnapshot(
 )
 
 @Serializable
-data class PlaylistTrackSnapshot(
-    val playlistId: String,
-    val trackId: String,
-    val position: Int,
-    val addedAt: Long = 0L,
-)
+data class PlaylistTrackSnapshot(val playlistId: String, val trackId: String, val position: Int, val addedAt: Long = 0L)
 
 @Serializable
-data class PlaylistsFile(
-    val playlists: List<PlaylistSnapshot> = emptyList(),
-    val mappings: List<PlaylistTrackSnapshot> = emptyList(),
-)
+data class PlaylistsFile(val playlists: List<PlaylistSnapshot> = emptyList(), val mappings: List<PlaylistTrackSnapshot> = emptyList())
 
 fun PlaylistEntity.toSnapshot() = PlaylistSnapshot(
     id = id, name = name, iconUrl = iconUrl, shapeKey = shapeKey,
@@ -217,10 +209,24 @@ data class DownloadSnapshot(
 data class DownloadsFile(val downloads: List<DownloadSnapshot> = emptyList())
 
 fun DownloadEntity.toSnapshot() = DownloadSnapshot(
-    trackId, albumId, filePath, sizeBytes, downloadedAt, format, pinned, lastAccessed,
+    trackId,
+    albumId,
+    filePath,
+    sizeBytes,
+    downloadedAt,
+    format,
+    pinned,
+    lastAccessed,
 )
 fun DownloadSnapshot.toEntity() = DownloadEntity(
-    trackId, albumId, filePath, sizeBytes, downloadedAt, format, pinned, lastAccessed,
+    trackId,
+    albumId,
+    filePath,
+    sizeBytes,
+    downloadedAt,
+    format,
+    pinned,
+    lastAccessed,
 )
 
 // ─── History (recent tracks + recent searches) ────────────────────────────
@@ -232,10 +238,7 @@ data class RecentTrackSnapshot(val trackId: String, val playedAt: Long = 0L)
 data class RecentSearchSnapshot(val query: String, val source: String, val searchedAt: Long = 0L)
 
 @Serializable
-data class HistoryFile(
-    val tracks: List<RecentTrackSnapshot> = emptyList(),
-    val searches: List<RecentSearchSnapshot> = emptyList(),
-)
+data class HistoryFile(val tracks: List<RecentTrackSnapshot> = emptyList(), val searches: List<RecentSearchSnapshot> = emptyList())
 
 fun RecentTrackEntity.toSnapshot() = RecentTrackSnapshot(trackId, playedAt)
 fun RecentTrackSnapshot.toEntity() = RecentTrackEntity(trackId, playedAt)
@@ -258,19 +261,10 @@ data class YtVideoSnapshot(
 )
 
 @Serializable
-data class YtPlaylistSnapshot(
-    val playlistId: String,
-    val title: String,
-    val videoIdsJson: String,
-    val cachedAt: Long = 0L,
-)
+data class YtPlaylistSnapshot(val playlistId: String, val title: String, val videoIdsJson: String, val cachedAt: Long = 0L)
 
 @Serializable
-data class YtmHomeSnapshot(
-    val key: String,
-    val feedJson: String,
-    val cachedAt: Long = 0L,
-)
+data class YtmHomeSnapshot(val key: String, val feedJson: String, val cachedAt: Long = 0L)
 
 @Serializable
 data class MetadataCacheFile(
@@ -302,10 +296,16 @@ fun YtVideoSnapshot.toEntity() = YouTubeVideoCacheEntity(
     cachedAt = cachedAt,
 )
 fun YouTubePlaylistCacheEntity.toSnapshot() = YtPlaylistSnapshot(
-    playlistId, title, videoIdsJson, cachedAt,
+    playlistId,
+    title,
+    videoIdsJson,
+    cachedAt,
 )
 fun YtPlaylistSnapshot.toEntity() = YouTubePlaylistCacheEntity(
-    playlistId, title, videoIdsJson, cachedAt,
+    playlistId,
+    title,
+    videoIdsJson,
+    cachedAt,
 )
 fun YouTubeMusicHomeCacheEntity.toSnapshot() = YtmHomeSnapshot(key, feedJson, cachedAt)
 fun YtmHomeSnapshot.toEntity() = YouTubeMusicHomeCacheEntity(key, feedJson, cachedAt)

@@ -48,7 +48,7 @@ class YouTubeMusicJsonTest {
 
     @Test fun `runsText prefers first run text`() {
         val obj = json.parseToJsonElement(
-            """{"title":{"runs":[{"text":"Foo"},{"text":"Bar"}]}}"""
+            """{"title":{"runs":[{"text":"Foo"},{"text":"Bar"}]}}""",
         )
         assertThat(obj.runsText("title")).isEqualTo("Foo")
     }
@@ -78,7 +78,7 @@ class YouTubeMusicJsonTest {
                 }
               }
             }
-            """.trimIndent()
+            """.trimIndent(),
         )
         // Largest = 544, but extractMusicThumbnail also normalizes to w544-h544 anyway
         assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=w720-h720-l90-rj")
@@ -98,7 +98,7 @@ class YouTubeMusicJsonTest {
                 }
               }
             }
-            """.trimIndent()
+            """.trimIndent(),
         )
         assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img=w720-h720")
     }
@@ -111,7 +111,7 @@ class YouTubeMusicJsonTest {
                 "thumbnails": [ {"url":"https://x.example/img","width":50,"height":50} ]
               }
             }
-            """.trimIndent()
+            """.trimIndent(),
         )
         // No size suffix => stays as-is (no =wH-hH match to replace)
         assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img")

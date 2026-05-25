@@ -9,22 +9,20 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.dustvalve.next.android.util.CookieEncryption
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import com.dustvalve.next.android.util.CookieEncryption
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
-class SettingsDataStore @Inject constructor(
-    @param:ApplicationContext private val context: Context
-) {
+class SettingsDataStore @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     private object Keys {
         val THEME_MODE = stringPreferencesKey("theme_mode")
@@ -224,12 +222,21 @@ class SettingsDataStore @Inject constructor(
      */
     suspend fun setAccountInfo(username: String?, avatarUrl: String?, fanId: Long?) {
         context.dataStore.edit { prefs ->
-            if (username != null) prefs[Keys.ACCOUNT_USERNAME] = username
-            else prefs.remove(Keys.ACCOUNT_USERNAME)
-            if (avatarUrl != null) prefs[Keys.ACCOUNT_AVATAR] = avatarUrl
-            else prefs.remove(Keys.ACCOUNT_AVATAR)
-            if (fanId != null) prefs[Keys.ACCOUNT_FAN_ID] = fanId
-            else prefs.remove(Keys.ACCOUNT_FAN_ID)
+            if (username != null) {
+                prefs[Keys.ACCOUNT_USERNAME] = username
+            } else {
+                prefs.remove(Keys.ACCOUNT_USERNAME)
+            }
+            if (avatarUrl != null) {
+                prefs[Keys.ACCOUNT_AVATAR] = avatarUrl
+            } else {
+                prefs.remove(Keys.ACCOUNT_AVATAR)
+            }
+            if (fanId != null) {
+                prefs[Keys.ACCOUNT_FAN_ID] = fanId
+            } else {
+                prefs.remove(Keys.ACCOUNT_FAN_ID)
+            }
         }
     }
 
@@ -243,10 +250,8 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun getStorageLimitSync(): Long {
-        return context.dataStore.data.firstOrNull()?.get(Keys.STORAGE_LIMIT)
-            ?: DEFAULT_STORAGE_LIMIT
-    }
+    suspend fun getStorageLimitSync(): Long = context.dataStore.data.firstOrNull()?.get(Keys.STORAGE_LIMIT)
+        ?: DEFAULT_STORAGE_LIMIT
 
     suspend fun setAutoDownloadCollection(enabled: Boolean) {
         context.dataStore.edit { prefs ->
@@ -260,9 +265,8 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun getAutoDownloadFutureContentSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.AUTO_DOWNLOAD_FUTURE_CONTENT) ?: false
-    }
+    suspend fun getAutoDownloadFutureContentSync(): Boolean =
+        context.dataStore.data.firstOrNull()?.get(Keys.AUTO_DOWNLOAD_FUTURE_CONTENT) ?: false
 
     suspend fun setDownloadFormat(formatKey: String) {
         context.dataStore.edit { prefs ->
@@ -312,21 +316,13 @@ class SettingsDataStore @Inject constructor(
         context.dataStore.edit { prefs -> prefs[Keys.AUTO_DOWNLOAD_FAVORITES] = enabled }
     }
 
-    suspend fun getDownloadFormatSync(): String {
-        return context.dataStore.data.firstOrNull()?.get(Keys.DOWNLOAD_FORMAT) ?: "flac"
-    }
+    suspend fun getDownloadFormatSync(): String = context.dataStore.data.firstOrNull()?.get(Keys.DOWNLOAD_FORMAT) ?: "flac"
 
-    suspend fun getProgressiveDownloadSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.PROGRESSIVE_DOWNLOAD) ?: true
-    }
+    suspend fun getProgressiveDownloadSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.PROGRESSIVE_DOWNLOAD) ?: true
 
-    suspend fun getSeamlessQualityUpgradeSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.SEAMLESS_QUALITY_UPGRADE) ?: false
-    }
+    suspend fun getSeamlessQualityUpgradeSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.SEAMLESS_QUALITY_UPGRADE) ?: false
 
-    suspend fun getSaveDataOnMeteredSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.SAVE_DATA_ON_METERED) ?: true
-    }
+    suspend fun getSaveDataOnMeteredSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.SAVE_DATA_ON_METERED) ?: true
 
     suspend fun clearAccount() {
         context.dataStore.edit { prefs ->
@@ -397,18 +393,15 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
-    suspend fun getLocalMusicEnabledSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
-    }
+    suspend fun getLocalMusicEnabledSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
 
     suspend fun getLocalMusicFolderUrisSync(): List<String> {
         val json = context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS)
         return if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
     }
 
-    suspend fun getLocalMusicUseMediaStoreSync(): Boolean {
-        return context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true
-    }
+    suspend fun getLocalMusicUseMediaStoreSync(): Boolean =
+        context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true
 
     val bandcampEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.BANDCAMP_ENABLED] ?: false
@@ -638,11 +631,9 @@ class SettingsDataStore @Inject constructor(
         it[Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE] ?: false
     }
 
-    suspend fun getDedicatedFolderEnabledSync(): Boolean =
-        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_ENABLED) ?: false
+    suspend fun getDedicatedFolderEnabledSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_ENABLED) ?: false
 
-    suspend fun getDedicatedFolderTreeUriSync(): String? =
-        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_TREE_URI)
+    suspend fun getDedicatedFolderTreeUriSync(): String? = context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_TREE_URI)
 
     suspend fun getDedicatedFolderIncludeImageCacheSync(): Boolean =
         context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE) ?: false
@@ -727,10 +718,15 @@ class SettingsDataStore @Inject constructor(
                 if (name in skip) continue
                 when (value) {
                     is Boolean -> prefs[booleanPreferencesKey(name)] = value
+
                     is Int -> prefs[androidx.datastore.preferences.core.intPreferencesKey(name)] = value
+
                     is Long -> prefs[longPreferencesKey(name)] = value
+
                     is Float -> prefs[androidx.datastore.preferences.core.floatPreferencesKey(name)] = value
+
                     is String -> prefs[stringPreferencesKey(name)] = value
+
                     is Set<*> -> {
                         @Suppress("UNCHECKED_CAST")
                         prefs[stringSetPreferencesKey(name)] = (value as Set<String>)

@@ -1,23 +1,20 @@
 package com.dustvalve.next.android.player
 
 import com.dustvalve.next.android.domain.model.Track
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private data class QueueState(
-    val tracks: List<Track> = emptyList(),
-    val currentIndex: Int = -1,
-)
+private data class QueueState(val tracks: List<Track> = emptyList(), val currentIndex: Int = -1)
 
 @Singleton
 class QueueManager @Inject constructor() {
@@ -34,7 +31,7 @@ class QueueManager @Inject constructor() {
         SupervisorJob() + Dispatchers.Main.immediate +
             kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
                 android.util.Log.e("QueueManager", "Unhandled coroutine error", throwable)
-            }
+            },
     )
 
     private val _state = MutableStateFlow(QueueState())
@@ -48,20 +45,14 @@ class QueueManager @Inject constructor() {
 
     val currentTrack: StateFlow<Track?> = createCurrentTrackFlow()
 
-    private fun createQueueFlow(): StateFlow<List<Track>> {
-        return _state.map { it.tracks }
-            .stateIn(flowScope, SharingStarted.Eagerly, emptyList())
-    }
+    private fun createQueueFlow(): StateFlow<List<Track>> = _state.map { it.tracks }
+        .stateIn(flowScope, SharingStarted.Eagerly, emptyList())
 
-    private fun createCurrentIndexFlow(): StateFlow<Int> {
-        return _state.map { it.currentIndex }
-            .stateIn(flowScope, SharingStarted.Eagerly, -1)
-    }
+    private fun createCurrentIndexFlow(): StateFlow<Int> = _state.map { it.currentIndex }
+        .stateIn(flowScope, SharingStarted.Eagerly, -1)
 
-    private fun createCurrentTrackFlow(): StateFlow<Track?> {
-        return _state.map { it.tracks.getOrNull(it.currentIndex) }
-            .stateIn(flowScope, SharingStarted.Eagerly, null)
-    }
+    private fun createCurrentTrackFlow(): StateFlow<Track?> = _state.map { it.tracks.getOrNull(it.currentIndex) }
+        .stateIn(flowScope, SharingStarted.Eagerly, null)
 
     fun setQueue(tracks: List<Track>, startIndex: Int = 0) {
         originalQueue = null
@@ -81,7 +72,12 @@ class QueueManager @Inject constructor() {
             var changed = false
             val patched = s.tracks.map { t ->
                 val newFav = t.id in trackFavoriteIds
-                if (t.isFavorite == newFav) t else { changed = true; t.copy(isFavorite = newFav) }
+                if (t.isFavorite == newFav) {
+                    t
+                } else {
+                    changed = true
+                    t.copy(isFavorite = newFav)
+                }
             }
             if (!changed) s else s.copy(tracks = patched)
         }
@@ -154,9 +150,11 @@ class QueueManager @Inject constructor() {
 
             val newIndex = when (ci) {
                 from -> to
+
                 in (minOf(from, to)..maxOf(from, to)) -> {
                     if (from < to) ci - 1 else ci + 1
                 }
+
                 else -> ci
             }
 

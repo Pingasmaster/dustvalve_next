@@ -82,8 +82,11 @@ fun MusicRow(
     )
 
     val headlineColor by animateColorAsState(
-        targetValue = if (isCurrentTrack) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface,
+        targetValue = if (isCurrentTrack) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
         animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
         label = "musicRowHeadlineColor",
     )
@@ -150,8 +153,11 @@ fun MusicRow(
         headlineContent = {
             Text(
                 text = track.title,
-                style = if (isCurrentTrack) MaterialTheme.typography.titleMediumEmphasized
-                    else MaterialTheme.typography.titleMedium,
+                style = if (isCurrentTrack) {
+                    MaterialTheme.typography.titleMediumEmphasized
+                } else {
+                    MaterialTheme.typography.titleMedium
+                },
                 color = headlineColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -187,8 +193,11 @@ private fun defaultSupportingText(track: Track, priceSuffix: String?): String {
         if (track.artist.isNotBlank()) add(track.artist)
         if (track.albumTitle.isNotBlank()) add(track.albumTitle)
     }
-    val base = if (parts.isNotEmpty()) parts.joinToString("  ·  ")
-        else TimeUtils.formatDuration(track.duration)
+    val base = if (parts.isNotEmpty()) {
+        parts.joinToString("  ·  ")
+    } else {
+        TimeUtils.formatDuration(track.duration)
+    }
     return if (!priceSuffix.isNullOrBlank()) "$base  ·  $priceSuffix" else base
 }
 
@@ -218,11 +227,17 @@ private fun trailingContentOrNull(
                             if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
                         ),
                         contentDescription = stringResource(
-                            if (isFavorite) R.string.player_cd_remove_from_favorites
-                            else R.string.player_cd_add_to_favorites,
+                            if (isFavorite) {
+                                R.string.player_cd_remove_from_favorites
+                            } else {
+                                R.string.player_cd_add_to_favorites
+                            },
                         ),
-                        tint = if (isFavorite) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = if (isFavorite) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -239,12 +254,18 @@ private fun trailingContentOrNull(
                     } else {
                         Icon(
                             painter = painterResource(
-                                if (isDownloaded) R.drawable.ic_download_done
-                                else R.drawable.ic_download,
+                                if (isDownloaded) {
+                                    R.drawable.ic_download_done
+                                } else {
+                                    R.drawable.ic_download
+                                },
                             ),
                             contentDescription = stringResource(
-                                if (isDownloaded) R.string.player_cd_delete_download
-                                else R.string.player_cd_download_track,
+                                if (isDownloaded) {
+                                    R.string.player_cd_delete_download
+                                } else {
+                                    R.string.player_cd_download_track
+                                },
                             ),
                             modifier = Modifier.size(18.dp),
                         )

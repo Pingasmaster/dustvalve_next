@@ -30,10 +30,14 @@ class YouTubeMusicSourceTest {
     @Test fun `search delegates verbatim to YouTubeMusicRepository`() = runTest {
         val expected = listOf(
             SearchResult(
-                type = SearchResultType.YOUTUBE_TRACK, name = "Song",
+                type = SearchResultType.YOUTUBE_TRACK,
+                name = "Song",
                 url = "https://music.youtube.com/watch?v=x",
-                imageUrl = null, artist = "A", album = null,
-                genre = null, releaseDate = null,
+                imageUrl = null,
+                artist = "A",
+                album = null,
+                genre = null,
+                releaseDate = null,
             ),
         )
         coEvery { ytMusicRepo.search(query = "q", filter = null) } returns expected

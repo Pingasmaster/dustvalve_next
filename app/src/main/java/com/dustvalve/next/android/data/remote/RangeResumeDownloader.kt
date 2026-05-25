@@ -1,13 +1,13 @@
 package com.dustvalve.next.android.data.remote
 
-import kotlin.coroutines.cancellation.CancellationException
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import java.io.OutputStream
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 
 /**
  * Streams an HTTP resource into an [OutputStream] using a `Range: bytes=0-`

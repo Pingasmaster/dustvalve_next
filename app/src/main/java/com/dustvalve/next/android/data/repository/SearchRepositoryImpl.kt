@@ -8,15 +8,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class SearchRepositoryImpl @Inject constructor(
-    private val searchScraper: DustvalveSearchScraper,
-) : SearchRepository {
+class SearchRepositoryImpl @Inject constructor(private val searchScraper: DustvalveSearchScraper) : SearchRepository {
 
-    override suspend fun search(
-        query: String,
-        page: Int,
-        type: SearchResultType?
-    ): List<SearchResult> {
-        return searchScraper.search(query = query, page = page, type = type)
-    }
+    override suspend fun search(query: String, page: Int, type: SearchResultType?): List<SearchResult> =
+        searchScraper.search(query = query, page = page, type = type)
 }

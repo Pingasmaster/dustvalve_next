@@ -18,11 +18,9 @@ class PlaylistDaoTest : DbTestBase() {
         albumTitle = "", source = "bandcamp",
     )
 
-    private fun userPlaylist(id: String = "p1", name: String = "My", pinned: Boolean = false, sortOrder: Int = 0) =
-        PlaylistEntity(id = id, name = name, isPinned = pinned, sortOrder = sortOrder)
+    private fun userPlaylist(id: String = "p1", name: String = "My", pinned: Boolean = false, sortOrder: Int = 0) = PlaylistEntity(id = id, name = name, isPinned = pinned, sortOrder = sortOrder)
 
-    private fun systemPlaylist(id: String, type: String) =
-        PlaylistEntity(id = id, name = "sys", isSystem = true, systemType = type)
+    private fun systemPlaylist(id: String, type: String) = PlaylistEntity(id = id, name = "sys", isSystem = true, systemType = type)
 
     @Test fun `addTrackToPlaylist assigns increasing positions`() = runTest {
         val dao = db.playlistDao()

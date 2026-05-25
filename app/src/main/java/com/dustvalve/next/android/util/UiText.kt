@@ -10,16 +10,9 @@ import androidx.compose.ui.res.stringResource
 sealed class UiText {
     data class DynamicString(val value: String) : UiText()
 
-    class StringResource(
-        @param:StringRes val resId: Int,
-        val args: List<Any> = emptyList(),
-    ) : UiText()
+    class StringResource(@param:StringRes val resId: Int, val args: List<Any> = emptyList()) : UiText()
 
-    class PluralsResource(
-        @param:PluralsRes val resId: Int,
-        val count: Int,
-        val args: List<Any> = listOf(count),
-    ) : UiText()
+    class PluralsResource(@param:PluralsRes val resId: Int, val count: Int, val args: List<Any> = listOf(count)) : UiText()
 
     @Composable
     fun asString(): String = when (this) {

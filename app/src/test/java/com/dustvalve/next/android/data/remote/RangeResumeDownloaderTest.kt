@@ -26,6 +26,7 @@ import java.io.IOException
 class RangeResumeDownloaderTest {
 
     private lateinit var server: MockWebServer
+
     // No connection pooling — each request gets a fresh socket. MockWebServer
     // gets confused when a single connection is reused across enqueued
     // responses in our retry-based test shapes.

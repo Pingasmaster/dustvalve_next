@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.components.lists
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -13,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.padding
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 
 /**
@@ -39,12 +39,18 @@ fun SegmentedListItem(
     shadowElevationWhenLifted: Dp = 2.dp,
     content: @Composable () -> Unit,
 ) {
-    val shape: Shape = if (isDragging) MaterialTheme.shapes.large
-        else segmentedItemShape(index, count)
+    val shape: Shape = if (isDragging) {
+        MaterialTheme.shapes.large
+    } else {
+        segmentedItemShape(index, count)
+    }
 
     val containerColor by animateColorAsState(
-        targetValue = if (isDragging) MaterialTheme.colorScheme.surfaceContainer
-            else MaterialTheme.colorScheme.surfaceContainerLow,
+        targetValue = if (isDragging) {
+            MaterialTheme.colorScheme.surfaceContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainerLow
+        },
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "segmentedContainerColor",
     )
@@ -80,8 +86,11 @@ fun SegmentedListItem(
     shadowElevationWhenLifted: Dp = 2.dp,
     content: @Composable () -> Unit,
 ) {
-    val shape: Shape = if (isDragging) MaterialTheme.shapes.large
-        else segmentedItemShape(index, count)
+    val shape: Shape = if (isDragging) {
+        MaterialTheme.shapes.large
+    } else {
+        segmentedItemShape(index, count)
+    }
 
     val elevation by animateDpAsState(
         targetValue = if (isDragging) shadowElevationWhenLifted else 0.dp,
@@ -99,10 +108,9 @@ fun SegmentedListItem(
     }
 }
 
-private fun defaultSegmentedPadding(index: Int, count: Int): PaddingValues =
-    PaddingValues(
-        start = 16.dp,
-        end = 16.dp,
-        top = if (index == 0) 8.dp else 1.dp,
-        bottom = if (index == count - 1) 0.dp else 1.dp,
-    )
+private fun defaultSegmentedPadding(index: Int, count: Int): PaddingValues = PaddingValues(
+    start = 16.dp,
+    end = 16.dp,
+    top = if (index == 0) 8.dp else 1.dp,
+    bottom = if (index == count - 1) 0.dp else 1.dp,
+)

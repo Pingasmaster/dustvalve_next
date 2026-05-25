@@ -8,7 +8,10 @@ import org.junit.Test
 class YouTubeSearchParserTest {
 
     private val parser = YouTubeSearchParser()
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Test fun `parses real WEB search response with videos channels and playlists`() {
         val page = parser.parse(Fixtures.load("search_daft_punk_web.json"))
@@ -51,7 +54,7 @@ class YouTubeSearchParserTest {
             {"contents":{"twoColumnSearchResultsRenderer":{"primaryContents":{
               "sectionListRenderer":{"contents":[]}
             }}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val out = parser.parse(empty)
         assertThat(out.items).isEmpty()
@@ -80,7 +83,7 @@ class YouTubeSearchParserTest {
                 ]}}
               ]}
             }}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val out = parser.parse(v)
         assertThat(out.items).hasSize(1)
@@ -107,7 +110,7 @@ class YouTubeSearchParserTest {
                 ]}}
               ]}
             }}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val out = parser.parse(v)
         assertThat(out.items).hasSize(1)
@@ -130,7 +133,7 @@ class YouTubeSearchParserTest {
                 ]}}
               ]}
             }}}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val out = parser.parse(v)
         assertThat(out.items).isEmpty()

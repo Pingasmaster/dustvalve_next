@@ -45,21 +45,13 @@ class BandcampMusicSource @Inject constructor(
         return searchRepository.search(query = query, type = type)
     }
 
-    override suspend fun getArtist(url: String): Artist =
-        artistRepository.getArtistDetail(url)
+    override suspend fun getArtist(url: String): Artist = artistRepository.getArtistDetail(url)
 
-    override suspend fun getArtistTracks(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection =
+    override suspend fun getArtistTracks(url: String, continuation: Any?): MusicCollection =
         throw UnsupportedSourceOperation(id, SourceConcept.ARTIST_TRACKS)
 
-    override suspend fun getAlbum(url: String): Album =
-        albumRepository.getAlbumDetail(url)
+    override suspend fun getAlbum(url: String): Album = albumRepository.getAlbumDetail(url)
 
-    override suspend fun getCollection(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection =
+    override suspend fun getCollection(url: String, continuation: Any?): MusicCollection =
         throw UnsupportedSourceOperation(id, SourceConcept.COLLECTION)
 }

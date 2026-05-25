@@ -14,10 +14,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MediaStoreScanner @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-    private val trackDao: TrackDao,
-) {
+class MediaStoreScanner @Inject constructor(@param:ApplicationContext private val context: Context, private val trackDao: TrackDao) {
 
     companion object {
         private const val FOLDER_URI_SENTINEL = "mediastore"
@@ -140,7 +137,10 @@ class MediaStoreScanner @Inject constructor(
 
         // Remove tracks that no longer exist in MediaStore
         val removedIds = if (scannedIds.isEmpty() && existingIds.isNotEmpty()) {
-            android.util.Log.w("MediaStoreScanner", "Scan returned 0 files but DB has ${existingIds.size} tracks — skipping deletion (possible permission issue)")
+            android.util.Log.w(
+                "MediaStoreScanner",
+                "Scan returned 0 files but DB has ${existingIds.size} tracks — skipping deletion (possible permission issue)",
+            )
             emptySet()
         } else {
             existingIds - scannedIds

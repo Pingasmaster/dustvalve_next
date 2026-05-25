@@ -15,7 +15,7 @@ object HtmlUtils {
         // Match patterns like: var TralbumData = {...}; or variableName = {...};
         val varPattern = Regex(
             """(?:var\s+)?${Regex.escape(variableName)}\s*=\s*""",
-            RegexOption.MULTILINE
+            RegexOption.MULTILINE,
         )
         val matchResult = varPattern.find(html) ?: return null
         val startOfJson = matchResult.range.last + 1
@@ -94,6 +94,7 @@ object HtmlUtils {
 
             when (c) {
                 openChar -> depth++
+
                 closeChar -> {
                     depth--
                     if (depth == 0) {
@@ -212,27 +213,27 @@ object HtmlUtils {
         // Try double-quoted content first, then single-quoted.
         // Each pattern only excludes its own delimiter, so the other quote type is allowed.
         val dqPattern = Regex(
-            """<meta\s+[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*content\s*=\s*"([^"]*)"[^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*"([^"]*)"[^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         dqPattern.find(html)?.let { return it.groupValues[1] }
 
         val sqPattern = Regex(
-            """<meta\s+[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*content\s*=\s*'([^']*)'[^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*'([^']*)'[^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         sqPattern.find(html)?.let { return it.groupValues[1] }
 
         // Also try reversed attribute order: content before property/name
         val dqReversed = Regex(
-            """<meta\s+[^>]*content\s*=\s*"([^"]*)"[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*content\s*=\s*"([^"]*)"[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         dqReversed.find(html)?.let { return it.groupValues[1] }
 
         val sqReversed = Regex(
-            """<meta\s+[^>]*content\s*=\s*'([^']*)'[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*content\s*=\s*'([^']*)'[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         sqReversed.find(html)?.let { return it.groupValues[1] }
 

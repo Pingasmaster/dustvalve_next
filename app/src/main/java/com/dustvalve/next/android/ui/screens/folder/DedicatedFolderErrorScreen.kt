@@ -33,10 +33,7 @@ import com.dustvalve.next.android.R
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun DedicatedFolderErrorScreen(
-    onLocateFolder: (Uri) -> Unit,
-    onTurnOff: () -> Unit,
-) {
+fun DedicatedFolderErrorScreen(onLocateFolder: (Uri) -> Unit, onTurnOff: () -> Unit) {
     val folderPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri: Uri? ->
@@ -91,4 +88,3 @@ fun DedicatedFolderErrorScreen(
         }
     }
 }
-

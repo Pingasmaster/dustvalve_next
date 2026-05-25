@@ -24,26 +24,26 @@ class YouTubePlayerParser @Inject constructor() {
         val formats = playerJson.path("streamingData")?.path("adaptiveFormats")?.arr()
             ?: throw IllegalStateException(
                 "YouTube /player response has no streamingData.adaptiveFormats: " +
-                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(200)}"
+                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(200)}",
             )
 
         val audio = formats.filter { it.str("mimeType")?.startsWith("audio/") == true }
         if (audio.isEmpty()) {
             throw IllegalStateException(
                 "YouTube /player response has no audio formats (had ${formats.size} adaptiveFormats); " +
-                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(200)}"
+                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(200)}",
             )
         }
 
         val best = audio.maxWithOrNull(
             compareBy<JsonElement> { it.int("bitrate") ?: 0 }
-                .thenBy { if (it.str("mimeType")?.contains("opus") == true) 1 else 0 }
+                .thenBy { if (it.str("mimeType")?.contains("opus") == true) 1 else 0 },
         ) ?: audio.first()
 
         val mime = best.str("mimeType") ?: ""
         val url = best.str("url")
             ?: throw IllegalStateException(
-                "YouTube /player best audio format missing url field; mime=$mime"
+                "YouTube /player best audio format missing url field; mime=$mime",
             )
         val bitrate = best.int("bitrate") ?: 0
 
@@ -71,7 +71,9 @@ class YouTubePlayerParser @Inject constructor() {
         val channelId = details.str("channelId")
         val artistUrl = if (!channelId.isNullOrBlank()) {
             "https://www.youtube.com/channel/$channelId"
-        } else ""
+        } else {
+            ""
+        }
         return Track(
             id = "yt_$videoId",
             albumId = "yt_album_$videoId",
@@ -94,9 +96,4 @@ class YouTubePlayerParser @Inject constructor() {
     }
 }
 
-data class PlayerStreamInfo(
-    val streamUrl: String,
-    val format: AudioFormat,
-    val bitrate: Int,
-    val mimeType: String,
-)
+data class PlayerStreamInfo(val streamUrl: String, val format: AudioFormat, val bitrate: Int, val mimeType: String)

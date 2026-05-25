@@ -19,9 +19,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveSearchScraper @Inject constructor(
-    private val client: OkHttpClient
-) {
+class DustvalveSearchScraper @Inject constructor(private val client: OkHttpClient) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -55,20 +53,21 @@ class DustvalveSearchScraper @Inject constructor(
         @SerialName("tag_names") val tagNames: List<String> = emptyList(),
     )
 
-    suspend fun search(
-        query: String,
-        page: Int = 1,
-        type: SearchResultType? = null
-    ): List<SearchResult> = withContext(Dispatchers.IO) {
+    suspend fun search(query: String, page: Int = 1, type: SearchResultType? = null): List<SearchResult> = withContext(Dispatchers.IO) {
         val searchFilter = when (type) {
             SearchResultType.ARTIST -> "b"
+
             SearchResultType.ALBUM -> "a"
+
             SearchResultType.TRACK -> "t"
+
             SearchResultType.LOCAL_TRACK,
             SearchResultType.YOUTUBE_TRACK,
             SearchResultType.YOUTUBE_ALBUM,
             SearchResultType.YOUTUBE_ARTIST,
-            SearchResultType.YOUTUBE_PLAYLIST -> return@withContext emptyList()
+            SearchResultType.YOUTUBE_PLAYLIST,
+            -> return@withContext emptyList()
+
             null -> ""
         }
 
@@ -78,7 +77,7 @@ class DustvalveSearchScraper @Inject constructor(
 
         val bodyJson = json.encodeToString(
             SearchRequest.serializer(),
-            SearchRequest(searchText = query, searchFilter = searchFilter)
+            SearchRequest(searchText = query, searchFilter = searchFilter),
         )
 
         val request = Request.Builder()
@@ -123,10 +122,12 @@ class DustvalveSearchScraper @Inject constructor(
                     artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
                     album = null
                 }
+
                 SearchResultType.TRACK -> {
                     artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
                     album = item.albumName?.trim()?.takeIf { it.isNotEmpty() }
                 }
+
                 else -> {
                     artist = null
                     album = null

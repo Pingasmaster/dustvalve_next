@@ -127,7 +127,6 @@ object AppShapes {
         @Composable
         get() = MaterialShapes.Pentagon.toShape()
 
-
     /** Clover shape for user-created playlist thumbnails */
     val PlaylistUser: Shape
         @Composable
@@ -144,10 +143,7 @@ object AppShapes {
         get() = MaterialShapes.Arch.toShape()
 }
 
-data class PlaylistShapeOption(
-    val key: String,
-    @param:StringRes val labelRes: Int,
-)
+data class PlaylistShapeOption(val key: String, @param:StringRes val labelRes: Int)
 
 val PlaylistShapeOptions: List<PlaylistShapeOption> = listOf(
     PlaylistShapeOption("clover4leaf", R.string.shape_clover),
@@ -168,24 +164,22 @@ val PlaylistShapeOptions: List<PlaylistShapeOption> = listOf(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun resolvePlaylistShape(shapeKey: String?): Shape {
-    return when (shapeKey) {
-        "clover4leaf" -> MaterialShapes.Clover4Leaf.toShape()
-        "heart" -> MaterialShapes.Heart.toShape()
-        "cookie9sided" -> MaterialShapes.Cookie9Sided.toShape()
-        "softburst" -> MaterialShapes.SoftBurst.toShape()
-        "pentagon" -> MaterialShapes.Pentagon.toShape()
-        "gem" -> MaterialShapes.Gem.toShape()
-        "flower" -> MaterialShapes.Flower.toShape()
-        "pill" -> MaterialShapes.Pill.toShape()
-        "ghostish" -> MaterialShapes.Ghostish.toShape()
-        "slanted" -> MaterialShapes.Slanted.toShape()
-        "pixelcircle" -> MaterialShapes.PixelCircle.toShape()
-        "pixeltriangle" -> MaterialShapes.PixelTriangle.toShape()
-        "sunny" -> MaterialShapes.Sunny.toShape()
-        "arch" -> MaterialShapes.Arch.toShape()
-        else -> MaterialShapes.Clover4Leaf.toShape()
-    }
+fun resolvePlaylistShape(shapeKey: String?): Shape = when (shapeKey) {
+    "clover4leaf" -> MaterialShapes.Clover4Leaf.toShape()
+    "heart" -> MaterialShapes.Heart.toShape()
+    "cookie9sided" -> MaterialShapes.Cookie9Sided.toShape()
+    "softburst" -> MaterialShapes.SoftBurst.toShape()
+    "pentagon" -> MaterialShapes.Pentagon.toShape()
+    "gem" -> MaterialShapes.Gem.toShape()
+    "flower" -> MaterialShapes.Flower.toShape()
+    "pill" -> MaterialShapes.Pill.toShape()
+    "ghostish" -> MaterialShapes.Ghostish.toShape()
+    "slanted" -> MaterialShapes.Slanted.toShape()
+    "pixelcircle" -> MaterialShapes.PixelCircle.toShape()
+    "pixeltriangle" -> MaterialShapes.PixelTriangle.toShape()
+    "sunny" -> MaterialShapes.Sunny.toShape()
+    "arch" -> MaterialShapes.Arch.toShape()
+    else -> MaterialShapes.Clover4Leaf.toShape()
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

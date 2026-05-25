@@ -23,8 +23,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -171,9 +171,7 @@ class SearchViewModel @Inject constructor(
             ?: album.tracks.firstOrNull()
     }
 
-    suspend fun resolveBandcampAlbumTracks(albumUrl: String): List<Track> {
-        return getAlbumDetailUseCase(albumUrl).tracks
-    }
+    suspend fun resolveBandcampAlbumTracks(albumUrl: String): List<Track> = getAlbumDetailUseCase(albumUrl).tracks
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
@@ -259,20 +257,18 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    private suspend fun searchLocalTracks(query: String): List<SearchResult> {
-        return withContext(Dispatchers.IO) {
-            trackDao.searchLocalTracks(query).map { entity ->
-                SearchResult(
-                    type = SearchResultType.LOCAL_TRACK,
-                    name = entity.title,
-                    url = "local://${entity.id}",
-                    imageUrl = entity.artUrl.ifBlank { null },
-                    artist = entity.artist,
-                    album = entity.albumTitle,
-                    genre = null,
-                    releaseDate = null,
-                )
-            }
+    private suspend fun searchLocalTracks(query: String): List<SearchResult> = withContext(Dispatchers.IO) {
+        trackDao.searchLocalTracks(query).map { entity ->
+            SearchResult(
+                type = SearchResultType.LOCAL_TRACK,
+                name = entity.title,
+                url = "local://${entity.id}",
+                imageUrl = entity.artUrl.ifBlank { null },
+                artist = entity.artist,
+                album = entity.albumTitle,
+                genre = null,
+                releaseDate = null,
+            )
         }
     }
 }

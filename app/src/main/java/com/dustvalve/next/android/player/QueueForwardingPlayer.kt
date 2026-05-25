@@ -11,29 +11,24 @@ import androidx.media3.common.util.UnstableApi
  * shows functional skip buttons even though ExoPlayer only has a single MediaItem.
  */
 @OptIn(UnstableApi::class)
-class QueueForwardingPlayer(
-    player: Player,
-    private val playbackManager: PlaybackManager,
-    private val queueManager: QueueManager,
-) : ForwardingPlayer(player) {
+class QueueForwardingPlayer(player: Player, private val playbackManager: PlaybackManager, private val queueManager: QueueManager) :
+    ForwardingPlayer(player) {
 
-    override fun getAvailableCommands(): Player.Commands {
-        return super.getAvailableCommands().buildUpon()
-            .add(Player.COMMAND_SEEK_TO_NEXT)
-            .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
-            .add(Player.COMMAND_SEEK_TO_PREVIOUS)
-            .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
-            .build()
-    }
+    override fun getAvailableCommands(): Player.Commands = super.getAvailableCommands().buildUpon()
+        .add(Player.COMMAND_SEEK_TO_NEXT)
+        .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+        .add(Player.COMMAND_SEEK_TO_PREVIOUS)
+        .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+        .build()
 
-    override fun isCommandAvailable(command: Int): Boolean {
-        return when (command) {
-            Player.COMMAND_SEEK_TO_NEXT,
-            Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-            Player.COMMAND_SEEK_TO_PREVIOUS,
-            Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> true
-            else -> super.isCommandAvailable(command)
-        }
+    override fun isCommandAvailable(command: Int): Boolean = when (command) {
+        Player.COMMAND_SEEK_TO_NEXT,
+        Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
+        Player.COMMAND_SEEK_TO_PREVIOUS,
+        Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
+        -> true
+
+        else -> super.isCommandAvailable(command)
     }
 
     override fun hasNextMediaItem(): Boolean = queueManager.hasNext()

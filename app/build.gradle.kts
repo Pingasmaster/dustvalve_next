@@ -1,9 +1,11 @@
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.devtools.ksp")
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 android {
@@ -14,8 +16,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 33
         targetSdk = 37
-        versionCode = 243
-        versionName = "0.4.37"
+        versionCode = 244
+        versionName = "0.4.38"
     }
 
     signingConfigs {
@@ -23,7 +25,9 @@ android {
             val passwordFile = rootProject.file(".password-signing-keys")
             val signingPassword = if (passwordFile.exists()) {
                 passwordFile.readText().trim()
-            } else ""
+            } else {
+                ""
+            }
             storeFile = file("../release-keystore.jks")
             storePassword = signingPassword
             keyAlias = "dustvalve"
@@ -37,7 +41,7 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
             signingConfig = signingConfigs.getByName("release")
         }
@@ -75,101 +79,141 @@ android {
             )
         }
     }
+
+    lint {
+        abortOnError = true
+        warningsAsErrors = false
+        checkDependencies = true
+        checkReleaseBuilds = true
+        explainIssues = true
+        showAll = true
+        htmlReport = true
+        xmlReport = true
+        sarifReport = true
+        baseline = file("lint-baseline.xml")
+        lintConfig = rootProject.file("config/lint/lint.xml")
+    }
+}
+
+ktlint {
+    version.set(libs.versions.ktlint.engine.get())
+    android.set(true)
+    ignoreFailures.set(false)
+    filter {
+        exclude { it.file.path.contains("/build/") }
+    }
+    reporters {
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
+        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.SARIF)
+    }
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+    baseline = rootProject.file("config/detekt/detekt-baseline.xml")
+    parallel = true
 }
 
 dependencies {
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2026.05.01")
+    val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
 
-    // Material 3 Expressive + compatible compose libs (all pinned to 1.12.0-alpha03)
-    implementation("androidx.compose.runtime:runtime:1.12.0-alpha03")
-    implementation("androidx.compose.ui:ui:1.12.0-alpha03")
-    implementation("androidx.compose.ui:ui-graphics:1.12.0-alpha03")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.12.0-alpha03")
-    debugImplementation("androidx.compose.ui:ui-tooling:1.12.0-alpha03")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha20")
-    implementation("androidx.compose.foundation:foundation:1.12.0-alpha03")
-    implementation("androidx.compose.animation:animation:1.12.0-alpha03")
+    // Material 3 Expressive + compatible compose libs
+    implementation(libs.compose.runtime)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.tooling.preview)
+    debugImplementation(libs.compose.ui.tooling)
+    implementation(libs.material3)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.animation)
 
     // Graphics Shapes (for MaterialShapes)
-    implementation("androidx.graphics:graphics-shapes:1.1.0")
+    implementation(libs.graphics.shapes)
 
     // Lifecycle
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0-beta02")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0-beta02")
+    implementation(libs.lifecycle.viewmodel.compose)
+    implementation(libs.lifecycle.runtime.compose)
 
     // Activity
-    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation(libs.activity.compose)
 
     // Hilt
-    implementation("com.google.dagger:hilt-android:2.59.2")
-    ksp("com.google.dagger:hilt-android-compiler:2.59.2")
-    implementation("androidx.hilt:hilt-lifecycle-viewmodel-compose:1.4.0-beta01")
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.lifecycle.viewmodel.compose)
 
     // WorkManager + Hilt Work
-    implementation("androidx.work:work-runtime-ktx:2.11.2")
-    implementation("androidx.hilt:hilt-work:1.4.0-beta01")
-    ksp("androidx.hilt:hilt-compiler:1.4.0-beta01")
+    implementation(libs.work.runtime.ktx)
+    implementation(libs.hilt.work)
+    ksp(libs.hilt.compiler)
 
     // Room
-    implementation("androidx.room:room-runtime:2.8.4")
-    implementation("androidx.room:room-ktx:2.8.4")
-    ksp("androidx.room:room-compiler:2.8.4")
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.3.0-alpha09")
+    implementation(libs.datastore.preferences)
 
     // DocumentFile (SAF directory/file creation for export)
-    implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation(libs.documentfile)
 
     // OkHttp
-    implementation("com.squareup.okhttp3:okhttp:5.3.2")
-    implementation("com.squareup.okhttp3:okhttp-brotli:5.3.2")
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.brotli)
 
     // Jsoup
-    implementation("org.jsoup:jsoup:1.22.2")
+    implementation(libs.jsoup)
 
     // Coil 3
-    implementation("io.coil-kt.coil3:coil-compose:3.5.0-beta01")
-    implementation("io.coil-kt.coil3:coil-network-okhttp:3.5.0-beta01")
-    implementation("io.coil-kt.coil3:coil-network-cache-control:3.5.0-beta01")
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.network.cache.control)
 
     // Palette (for extracting dominant colors from album art)
-    implementation("androidx.palette:palette-ktx:1.0.0")
+    implementation(libs.palette.ktx)
 
     // MaterialKolor (generate M3 ColorScheme from seed color)
-    implementation("com.materialkolor:material-kolor:5.0.0-alpha07")
+    implementation(libs.material.kolor)
 
     // Media3
-    implementation("androidx.media3:media3-exoplayer:1.10.1")
-    implementation("androidx.media3:media3-session:1.10.1")
-    implementation("androidx.media3:media3-datasource-okhttp:1.10.1")
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.session)
+    implementation(libs.media3.datasource.okhttp)
 
     // Kotlinx Serialization
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation(libs.kotlinx.serialization.json)
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation(libs.coroutines.android)
 
     // Reorderable lists (drag & drop for LazyColumn / LazyRow)
-    implementation("sh.calvin.reorderable:reorderable:3.1.0")
+    implementation(libs.reorderable)
 
     // Core KTX
-    implementation("androidx.core:core-ktx:1.19.0-rc01")
+    implementation(libs.core.ktx)
 
     // --- Unit test dependencies ---
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("com.google.truth:truth:1.4.5")
-    testImplementation("io.mockk:mockk:1.14.9")
-    testImplementation("org.robolectric:robolectric:4.16.1")
-    testImplementation("androidx.test:core:1.7.0")
-    testImplementation("androidx.test.ext:junit:1.3.0")
-    testImplementation("androidx.room:room-testing:2.8.4")
-    testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
-    testImplementation("com.squareup.okhttp3:okhttp-tls:5.3.2")
-    testImplementation("app.cash.turbine:turbine:1.2.1")
-    testImplementation("androidx.compose.ui:ui-test-junit4:1.12.0-alpha03")
-    debugImplementation("androidx.compose.ui:ui-test-manifest:1.12.0-alpha03")
+    testImplementation(libs.junit)
+    testImplementation(libs.coroutines.test)
+    testImplementation(libs.truth)
+    testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.okhttp.tls)
+    testImplementation(libs.turbine)
+    testImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.test.manifest)
+
+    // Static analysis plugins / lint checks
+    detektPlugins(libs.detekt.compose)
+    lintChecks(libs.lint.slack.checks)
+    lintChecks(libs.lint.slack.compose)
 }

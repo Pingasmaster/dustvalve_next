@@ -75,7 +75,7 @@ class YouTubeRepositoryCacheTest {
             artistUrl = "https://www.youtube.com/channel/UCx",
             durationSec = 233f,
             artUrl = "https://i.ytimg.com/vi/abc12345678/hqdefault.jpg",
-            albumLookupDone = true,  // Already-resolved row — fully complete cache hit.
+            albumLookupDone = true, // Already-resolved row — fully complete cache hit.
         )
 
         val track = repo.getTrackInfo("https://www.youtube.com/watch?v=abc12345678")
@@ -84,7 +84,7 @@ class YouTubeRepositoryCacheTest {
         assertThat(track.artist).isEqualTo("Cached Artist")
         assertThat(track.duration).isEqualTo(233f)
         assertThat(track.source).isEqualTo(TrackSource.YOUTUBE)
-        assertThat(track.streamUrl).isNull()  // Stream URLs are never cached.
+        assertThat(track.streamUrl).isNull() // Stream URLs are never cached.
         coVerify(exactly = 0) { client.player(any()) }
     }
 
@@ -132,16 +132,24 @@ class YouTubeRepositoryCacheTest {
             playlistId = playlistId,
             title = "My Playlist",
             videoIdsJson = "[\"vid00000001\",\"vid00000002\"]",
-            cachedAt = System.currentTimeMillis(),  // Fresh — no background revalidate.
+            cachedAt = System.currentTimeMillis(), // Fresh — no background revalidate.
         )
         coEvery { videoCache.getByIds(listOf("vid00000001", "vid00000002")) } returns listOf(
             YouTubeVideoCacheEntity(
-                videoId = "vid00000001", title = "First", artist = "A",
-                artistUrl = "", durationSec = 60f, artUrl = "",
+                videoId = "vid00000001",
+                title = "First",
+                artist = "A",
+                artistUrl = "",
+                durationSec = 60f,
+                artUrl = "",
             ),
             YouTubeVideoCacheEntity(
-                videoId = "vid00000002", title = "Second", artist = "B",
-                artistUrl = "", durationSec = 90f, artUrl = "",
+                videoId = "vid00000002",
+                title = "Second",
+                artist = "B",
+                artistUrl = "",
+                durationSec = 90f,
+                artUrl = "",
             ),
         )
 
@@ -162,8 +170,12 @@ class YouTubeRepositoryCacheTest {
         )
         coEvery { videoCache.getByIds(any()) } returns listOf(
             YouTubeVideoCacheEntity(
-                videoId = "vid00000001", title = "Just one", artist = "X",
-                artistUrl = "", durationSec = 30f, artUrl = "",
+                videoId = "vid00000001",
+                title = "Just one",
+                artist = "X",
+                artistUrl = "",
+                durationSec = 30f,
+                artUrl = "",
             ),
         )
         // Network response for the fall-through.

@@ -1,15 +1,20 @@
 package com.dustvalve.next.android.data.repository
 
 import android.content.Context
+import androidx.core.net.toUri
 import androidx.room.withTransaction
+import com.dustvalve.next.android.cache.StorageTracker
+import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
+import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.getByIds
+import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.data.storage.folder.DedicatedFolderPaths
@@ -23,12 +28,6 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
-import com.dustvalve.next.android.cache.StorageTracker
-import com.dustvalve.next.android.data.local.db.dao.AlbumDao
-import com.dustvalve.next.android.data.local.db.dao.getByIds
-import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
-import kotlin.coroutines.cancellation.CancellationException
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -39,14 +38,14 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
-import androidx.core.net.toUri
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
-
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 
 @Singleton
 class DownloadRepositoryImpl @Inject constructor(
@@ -91,11 +90,14 @@ class DownloadRepositoryImpl @Inject constructor(
         if (errors.isNotEmpty()) {
             val skippedMsg = if (skipped > 0) " ($skipped tracks unavailable for streaming)" else ""
             throw IOException(
-                "Failed to download ${errors.size} of ${album.tracks.size} tracks$skippedMsg: ${errors.first().message}"
+                "Failed to download ${errors.size} of ${album.tracks.size} tracks$skippedMsg: ${errors.first().message}",
             )
         }
         if (skipped > 0) {
-            android.util.Log.w("DownloadRepo", "Downloaded ${album.tracks.size - skipped} of ${album.tracks.size} tracks; $skipped tracks lacked stream URLs")
+            android.util.Log.w(
+                "DownloadRepo",
+                "Downloaded ${album.tracks.size - skipped} of ${album.tracks.size} tracks; $skipped tracks lacked stream URLs",
+            )
         }
     }
 
@@ -141,7 +143,9 @@ class DownloadRepositoryImpl @Inject constructor(
                 return@withContext
             }
             // Delete old lower-quality file before upgrading
-            try { deleteByPath(existingDownload.filePath) } catch (_: Exception) {}
+            try {
+                deleteByPath(existingDownload.filePath)
+            } catch (_: Exception) {}
         }
 
         val safeAlbumId = NetworkUtils.sanitizeFileName(track.albumId)
@@ -174,7 +178,7 @@ class DownloadRepositoryImpl @Inject constructor(
                     sizeBytes = fileSize,
                     format = format.key,
                     pinned = true,
-                )
+                ),
             )
         }
 
@@ -264,7 +268,9 @@ class DownloadRepositoryImpl @Inject constructor(
                 )
             } ?: throw IOException("Failed to open output stream for $fileName")
         } catch (e: Exception) {
-            try { newFile.delete() } catch (_: Exception) {}
+            try {
+                newFile.delete()
+            } catch (_: Exception) {}
             throw e
         }
         return newFile.uri.toString() to size
@@ -278,7 +284,9 @@ class DownloadRepositoryImpl @Inject constructor(
                 val uri = path.toUri()
                 val doc = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)
                 doc?.exists() == true
-            } catch (_: Exception) { false }
+            } catch (_: Exception) {
+                false
+            }
         } else {
             File(path).exists()
         }
@@ -293,7 +301,9 @@ class DownloadRepositoryImpl @Inject constructor(
                 androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)?.delete()
             } catch (_: Exception) {}
         } else {
-            try { File(path).delete() } catch (_: Exception) {}
+            try {
+                File(path).delete()
+            } catch (_: Exception) {}
         }
     }
 
@@ -306,10 +316,7 @@ class DownloadRepositoryImpl @Inject constructor(
         }
     }
 
-    private suspend fun resolveHqDownloadUrl(
-        purchaseInfo: PurchaseInfo,
-        preferredFormat: AudioFormat,
-    ): Pair<String, AudioFormat>? {
+    private suspend fun resolveHqDownloadUrl(purchaseInfo: PurchaseInfo, preferredFormat: AudioFormat): Pair<String, AudioFormat>? {
         return try {
             val urls = downloadScraper.getDownloadUrls(purchaseInfo)
             // Try preferred format first, then fall back through quality tiers
@@ -353,11 +360,7 @@ class DownloadRepositoryImpl @Inject constructor(
     }
 
     /** Thin wrapper preserving the existing call-site shape. */
-    private suspend fun streamWithResume(
-        url: String,
-        trackId: String,
-        sink: OutputStream,
-    ): Long = RangeResumeDownloader.stream(
+    private suspend fun streamWithResume(url: String, trackId: String, sink: OutputStream): Long = RangeResumeDownloader.stream(
         client = downloadClient,
         url = url,
         sink = sink,
@@ -382,33 +385,33 @@ class DownloadRepositoryImpl @Inject constructor(
             val favoriteAlbumIds = favoriteDao.getFavoriteIds(albumIds).toSet()
 
             grouped.mapNotNull { (albumId, albumDownloads) ->
-                    val tracks = albumDownloads.mapNotNull { download ->
-                        // Skip downloads whose files no longer exist on disk
-                        if (!downloadPathExists(download.filePath)) return@mapNotNull null
-                        val entity = trackEntitiesById[download.trackId] ?: return@mapNotNull null
-                        entity.toDomain(isFavorite = download.trackId in favoriteIds).copy(
-                            streamUrl = playableStreamUrl(download.filePath)
-                        )
-                    }
-                    if (tracks.isEmpty()) return@mapNotNull null
-
-                    val albumEntity = albumEntitiesById[albumId]
-                    val firstTrack = tracks.first()
-
-                    Album(
-                        id = albumId,
-                        url = albumEntity?.url ?: "",
-                        title = albumEntity?.title ?: firstTrack.albumTitle,
-                        artist = albumEntity?.artist ?: firstTrack.artist,
-                        artistUrl = albumEntity?.artistUrl ?: "",
-                        artUrl = albumEntity?.artUrl ?: firstTrack.artUrl,
-                        releaseDate = albumEntity?.releaseDate,
-                        about = albumEntity?.about,
-                        tracks = tracks.sortedBy { it.trackNumber },
-                        tags = emptyList(),
-                        isFavorite = albumId in favoriteAlbumIds,
+                val tracks = albumDownloads.mapNotNull { download ->
+                    // Skip downloads whose files no longer exist on disk
+                    if (!downloadPathExists(download.filePath)) return@mapNotNull null
+                    val entity = trackEntitiesById[download.trackId] ?: return@mapNotNull null
+                    entity.toDomain(isFavorite = download.trackId in favoriteIds).copy(
+                        streamUrl = playableStreamUrl(download.filePath),
                     )
                 }
+                if (tracks.isEmpty()) return@mapNotNull null
+
+                val albumEntity = albumEntitiesById[albumId]
+                val firstTrack = tracks.first()
+
+                Album(
+                    id = albumId,
+                    url = albumEntity?.url ?: "",
+                    title = albumEntity?.title ?: firstTrack.albumTitle,
+                    artist = albumEntity?.artist ?: firstTrack.artist,
+                    artistUrl = albumEntity?.artistUrl ?: "",
+                    artUrl = albumEntity?.artUrl ?: firstTrack.artUrl,
+                    releaseDate = albumEntity?.releaseDate,
+                    about = albumEntity?.about,
+                    tracks = tracks.sortedBy { it.trackNumber },
+                    tags = emptyList(),
+                    isFavorite = albumId in favoriteAlbumIds,
+                )
+            }
         }.flowOn(Dispatchers.IO)
     }
 
@@ -425,20 +428,20 @@ class DownloadRepositoryImpl @Inject constructor(
                 // Skip downloads whose files no longer exist on disk
                 if (!downloadPathExists(download.filePath)) return@mapNotNull null
                 trackEntitiesById[download.trackId]?.toDomain(
-                    isFavorite = download.trackId in favoriteIds
+                    isFavorite = download.trackId in favoriteIds,
                 )?.copy(streamUrl = playableStreamUrl(download.filePath))
             }
         }.flowOn(Dispatchers.IO)
     }
 
     /** Produces a streamable URI for ExoPlayer from either a local path or a tree URI. */
-    private fun playableStreamUrl(filePath: String): String =
-        if (filePath.startsWith("content://")) filePath
-        else android.net.Uri.fromFile(File(filePath)).toString()
-
-    override suspend fun isTrackDownloaded(trackId: String): Boolean {
-        return downloadDao.getByTrackId(trackId) != null
+    private fun playableStreamUrl(filePath: String): String = if (filePath.startsWith("content://")) {
+        filePath
+    } else {
+        android.net.Uri.fromFile(File(filePath)).toString()
     }
+
+    override suspend fun isTrackDownloaded(trackId: String): Boolean = downloadDao.getByTrackId(trackId) != null
 
     override suspend fun getDownloadInfo(trackId: String): DownloadInfo? {
         val download = downloadDao.getByTrackId(trackId) ?: return null
@@ -454,13 +457,9 @@ class DownloadRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getDownloadedTrackIds(): Flow<List<String>> {
-        return downloadDao.getAllTrackIds()
-    }
+    override fun getDownloadedTrackIds(): Flow<List<String>> = downloadDao.getAllTrackIds()
 
-    override fun getDownloadedAlbumIds(): Flow<List<String>> {
-        return downloadDao.getDownloadedAlbumIds()
-    }
+    override fun getDownloadedAlbumIds(): Flow<List<String>> = downloadDao.getDownloadedAlbumIds()
 
     override suspend fun deleteDownload(trackId: String) {
         val download = downloadDao.getByTrackId(trackId) ?: return
@@ -481,10 +480,16 @@ class DownloadRepositoryImpl @Inject constructor(
         val all = downloadDao.getAllSync()
         for (row in all) {
             deleteByPath(row.filePath)
-            try { downloadDao.delete(row.trackId) } catch (_: Exception) {}
+            try {
+                downloadDao.delete(row.trackId)
+            } catch (_: Exception) {}
         }
-        try { com.dustvalve.next.android.data.asset.StoragePaths.imagesDir(context).deleteRecursively() } catch (_: Exception) {}
-        try { com.dustvalve.next.android.data.asset.StoragePaths.mediaCacheDir(context).deleteRecursively() } catch (_: Exception) {}
+        try {
+            com.dustvalve.next.android.data.asset.StoragePaths.imagesDir(context).deleteRecursively()
+        } catch (_: Exception) {}
+        try {
+            com.dustvalve.next.android.data.asset.StoragePaths.mediaCacheDir(context).deleteRecursively()
+        } catch (_: Exception) {}
         storageTracker.notifyChanged()
     }
 }

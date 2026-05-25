@@ -4,6 +4,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -19,8 +21,6 @@ import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
-import android.os.Handler
-import android.os.Looper
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.repository.LibraryRepository
@@ -35,14 +35,14 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -66,11 +66,7 @@ object PlayerModule {
     @OptIn(UnstableApi::class)
     @Provides
     @Singleton
-    fun provideExoPlayer(
-        @ApplicationContext context: Context,
-        okHttpClient: OkHttpClient,
-        simpleCache: SimpleCache,
-    ): ExoPlayer {
+    fun provideExoPlayer(@ApplicationContext context: Context, okHttpClient: OkHttpClient, simpleCache: SimpleCache): ExoPlayer {
         // ExoPlayer.Builder.build() must run on the main thread.
         // Use Handler.post + CountDownLatch instead of runBlocking(Dispatchers.Main)
         // to avoid potential deadlock with the coroutine dispatcher.
@@ -97,11 +93,7 @@ object PlayerModule {
     }
 
     @OptIn(UnstableApi::class)
-    private fun buildExoPlayer(
-        context: Context,
-        okHttpClient: OkHttpClient,
-        simpleCache: SimpleCache,
-    ): ExoPlayer {
+    private fun buildExoPlayer(context: Context, okHttpClient: OkHttpClient, simpleCache: SimpleCache): ExoPlayer {
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
@@ -130,7 +122,7 @@ object PlayerModule {
             .setLoadControl(loadControl)
             .setMediaSourceFactory(
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(context)
-                    .setDataSourceFactory(cacheDataSourceFactory)
+                    .setDataSourceFactory(cacheDataSourceFactory),
             )
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
@@ -176,10 +168,7 @@ object PlayerModule {
         )
 
         val callback = object : MediaSession.Callback {
-            override fun onConnect(
-                session: MediaSession,
-                controller: MediaSession.ControllerInfo,
-            ): MediaSession.ConnectionResult {
+            override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
                 val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                     .add(MediaSessionConstants.COMMAND_TOGGLE_FAVORITE)
                     .build()

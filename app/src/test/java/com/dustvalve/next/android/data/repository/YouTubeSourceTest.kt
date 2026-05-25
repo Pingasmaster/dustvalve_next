@@ -104,8 +104,14 @@ class YouTubeSourceTest {
     }
 
     private fun result(name: String, type: SearchResultType) = SearchResult(
-        type = type, name = name, url = "https://x",
-        imageUrl = null, artist = null, album = null, genre = null, releaseDate = null,
+        type = type,
+        name = name,
+        url = "https://x",
+        imageUrl = null,
+        artist = null,
+        album = null,
+        genre = null,
+        releaseDate = null,
     )
 
     private fun track(id: String) = Track(

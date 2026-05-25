@@ -48,10 +48,7 @@ private const val AUTH_MARKER_COOKIE = "__Secure-3PAPISID"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun YouTubeMusicLoginScreen(
-    onLoginSuccess: (Map<String, String>) -> Unit,
-    onBack: () -> Unit,
-) {
+fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -116,10 +113,7 @@ fun YouTubeMusicLoginScreen(
                         }
 
                         webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                            ): Boolean {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString() ?: return false
                                 // Allow Google and YouTube domains for the login flow
                                 if (!isAllowedHost(url)) return true
@@ -229,7 +223,7 @@ private fun clearDomainCookies(cookieManager: CookieManager, url: String) {
                 val domain = url.toUri().host?.let { ".$it" } ?: return@forEach
                 cookieManager.setCookie(
                     url,
-                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain"
+                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain",
                 )
             }
         }

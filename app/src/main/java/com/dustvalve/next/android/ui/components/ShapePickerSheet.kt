@@ -18,9 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,9 +25,9 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,7 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.theme.PlaylistShapeOptions
 import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
 
@@ -51,11 +51,7 @@ import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
     ExperimentalLayoutApi::class,
 )
 @Composable
-fun ShapePickerSheet(
-    onDismiss: () -> Unit,
-    onConfirm: (shapeKey: String?) -> Unit,
-    initialShapeKey: String?,
-) {
+fun ShapePickerSheet(onDismiss: () -> Unit, onConfirm: (shapeKey: String?) -> Unit, initialShapeKey: String?) {
     val sheetState = rememberBottomSheetState(
         initialValue = SheetValue.Hidden,
         enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
@@ -86,10 +82,11 @@ fun ShapePickerSheet(
                     val isSelected = selectedShapeKey == option.key
                     val shape = resolvePlaylistShape(option.key)
                     val borderColor by animateColorAsState(
-                        targetValue = if (isSelected)
+                        targetValue = if (isSelected) {
                             MaterialTheme.colorScheme.primary
-                        else
-                            Color.Transparent,
+                        } else {
+                            Color.Transparent
+                        },
                         animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
                         label = "shapeBorder",
                     )
@@ -105,10 +102,11 @@ fun ShapePickerSheet(
                                 .size(56.dp)
                                 .clip(shape)
                                 .background(
-                                    if (isSelected)
+                                    if (isSelected) {
                                         MaterialTheme.colorScheme.primaryContainer
-                                    else
+                                    } else {
                                         MaterialTheme.colorScheme.secondaryContainer
+                                    },
                                 )
                                 .border(
                                     width = 2.dp,
@@ -121,10 +119,11 @@ fun ShapePickerSheet(
                                 painter = painterResource(R.drawable.ic_music_note),
                                 contentDescription = null,
                                 modifier = Modifier.size(24.dp),
-                                tint = if (isSelected)
+                                tint = if (isSelected) {
                                     MaterialTheme.colorScheme.onPrimaryContainer
-                                else
-                                    MaterialTheme.colorScheme.onSecondaryContainer,
+                                } else {
+                                    MaterialTheme.colorScheme.onSecondaryContainer
+                                },
                             )
                         }
                         Spacer(Modifier.height(4.dp))

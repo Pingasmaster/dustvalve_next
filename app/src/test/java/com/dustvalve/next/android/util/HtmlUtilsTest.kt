@@ -62,7 +62,7 @@ class HtmlUtilsTest {
     }
 
     @Test fun `extractJsonFromScript returns null for truncated json`() {
-        val html = """var X = {"k":1"""  // unclosed
+        val html = """var X = {"k":1""" // unclosed
         assertThat(HtmlUtils.extractJsonFromScript(html, "X")).isNull()
     }
 

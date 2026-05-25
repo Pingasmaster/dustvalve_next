@@ -11,15 +11,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -27,21 +26,26 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.storage.folder.FolderHealthChecker
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.data.storage.folder.FolderRehydrator
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.ui.navigation.AppNavigation
 import com.dustvalve.next.android.ui.navigation.BottomNavBar
 import com.dustvalve.next.android.ui.navigation.BottomNavItem
-import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.ui.navigation.NavDestination
 import com.dustvalve.next.android.ui.navigation.NavigationViewModel
 import com.dustvalve.next.android.ui.navigation.SideNavRail
@@ -50,11 +54,7 @@ import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
-import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleStartEffect
 import dagger.hilt.android.AndroidEntryPoint
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -109,7 +109,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private val notificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestPermission(),
     ) { /* Result not needed — media session works without it, just no notification */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -154,12 +154,15 @@ class MainActivity : ComponentActivity() {
                 val boot by bootState.collectAsStateWithLifecycle()
                 when (boot) {
                     BootState.Loading -> com.dustvalve.next.android.ui.components.DedicatedFolderBootLoading()
+
                     BootState.DedicatedFolderUnreachable -> com.dustvalve.next.android.ui.screens.folder.DedicatedFolderErrorScreen(
                         onLocateFolder = { uri ->
                             lifecycleScope.launch(Dispatchers.IO) {
                                 try {
                                     val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                                    try { contentResolver.takePersistableUriPermission(uri, flags) } catch (_: Exception) {}
+                                    try {
+                                        contentResolver.takePersistableUriPermission(uri, flags)
+                                    } catch (_: Exception) {}
                                     settingsDataStore.setDedicatedFolder(enabled = true, treeUri = uri.toString())
                                     folderMirror.suspendFor(5_000L)
                                     folderRehydrator.rehydrateAll()
@@ -180,6 +183,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                     )
+
                     BootState.Ready -> MainContent(accountRepository = accountRepository, activity = this@MainActivity)
                 }
 
@@ -200,8 +204,10 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 if (settingsDataStore.getLocalMusicEnabledSync() &&
-                    (settingsDataStore.getLocalMusicUseMediaStoreSync() ||
-                        settingsDataStore.getLocalMusicFolderUrisSync().isNotEmpty())
+                    (
+                        settingsDataStore.getLocalMusicUseMediaStoreSync() ||
+                            settingsDataStore.getLocalMusicFolderUrisSync().isNotEmpty()
+                        )
                 ) {
                     localMusicRepository.scan()
                 }
@@ -247,9 +253,11 @@ class MainActivity : ComponentActivity() {
         if (intent == null) return
         val url = when (intent.action) {
             Intent.ACTION_VIEW -> intent.data?.toString()
+
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()?.let { text ->
                 Regex("https?://\\S+").find(text)?.value
             }
+
             else -> null
         }
         if (url != null) {
@@ -266,12 +274,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private data class ThemeConfig(
-    val themeMode: String,
-    val dynamicColor: Boolean,
-    val oledBlack: Boolean,
-    val albumSeedColor: Color?,
-)
+private data class ThemeConfig(val themeMode: String, val dynamicColor: Boolean, val oledBlack: Boolean, val albumSeedColor: Color?)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -437,14 +440,16 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                         navViewModel.collapsePlayer()
                         when {
                             track.isLocal -> navViewModel.requestLocalArtistFilter(track.artist)
+
                             track.source == TrackSource.YOUTUBE -> navViewModel.navigateTo(
                                 NavDestination.ArtistDetail(
                                     url = track.artistUrl,
                                     sourceId = "youtube",
                                     name = track.artist,
                                     imageUrl = null,
-                                )
+                                ),
                             )
+
                             else -> navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
                         }
                     },
@@ -466,6 +471,7 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
                                     playerViewModel.showNoAlbumSnackbar()
                                 }
                             }
+
                             track.albumUrl.isNotBlank() -> {
                                 navViewModel.collapsePlayer()
                                 navViewModel.navigateTo(NavDestination.AlbumDetail(track.albumUrl))

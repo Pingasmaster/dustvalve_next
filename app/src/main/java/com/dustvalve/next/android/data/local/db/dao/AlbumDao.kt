@@ -33,7 +33,7 @@ interface AlbumDao {
         INNER JOIN favorites ON albums.id = favorites.id
         WHERE favorites.type = 'album'
         ORDER BY favorites.addedAt DESC
-        """
+        """,
     )
     fun getFavorites(): Flow<List<AlbumEntity>>
 

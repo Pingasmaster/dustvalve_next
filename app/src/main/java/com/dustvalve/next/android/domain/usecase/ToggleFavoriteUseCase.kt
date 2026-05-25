@@ -14,9 +14,7 @@ class ToggleFavoriteUseCase @Inject constructor(
         albumRepository.toggleFavorite(albumId)
     }
 
-    suspend fun toggleTrackFavorite(trackId: String): Boolean {
-        return libraryRepository.toggleTrackFavorite(trackId)
-    }
+    suspend fun toggleTrackFavorite(trackId: String): Boolean = libraryRepository.toggleTrackFavorite(trackId)
 
     suspend fun toggleArtistFavorite(artistId: String) {
         artistRepository.toggleFavorite(artistId)

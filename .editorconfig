@@ -1,0 +1,28 @@
+root = true
+
+[*.{kt,kts}]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+max_line_length = 140
+ij_kotlin_allow_trailing_comma = true
+ij_kotlin_allow_trailing_comma_on_call_site = true
+ktlint_code_style = intellij_idea
+ktlint_standard_function-naming = disabled
+ktlint_standard_filename = disabled
+ktlint_standard_no-wildcard-imports = disabled
+ktlint_standard_property-naming = disabled
+# StateFlow `_state` / `state.asStateFlow()` pattern is standard; ktlint's
+# backing-property-naming check rejects it.
+ktlint_standard_backing-property-naming = disabled
+
+# Tests often embed long JSON fixtures; lift the line-length cap there.
+[**/src/test/**.{kt,kts}]
+max_line_length = off
+ktlint_standard_max-line-length = disabled
+
+[**/src/androidTest/**.{kt,kts}]
+max_line_length = off
+ktlint_standard_max-line-length = disabled

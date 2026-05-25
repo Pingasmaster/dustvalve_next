@@ -31,22 +31,18 @@ class LibraryRepositoryImpl @Inject constructor(
         private const val MAX_RECENT_TRACKS = 100
     }
 
-    override fun getFavoriteTracks(): Flow<List<Track>> {
-        return trackDao.getFavorites().map { trackEntities ->
-            trackEntities.map { it.toDomain(isFavorite = true) }
-        }.flowOn(Dispatchers.IO)
-    }
+    override fun getFavoriteTracks(): Flow<List<Track>> = trackDao.getFavorites().map { trackEntities ->
+        trackEntities.map { it.toDomain(isFavorite = true) }
+    }.flowOn(Dispatchers.IO)
 
-    override suspend fun toggleTrackFavorite(trackId: String): Boolean {
-        return database.withTransaction {
-            val isFavorite = favoriteDao.isFavorite(trackId)
-            if (isFavorite) {
-                favoriteDao.delete(trackId)
-            } else {
-                favoriteDao.insert(FavoriteEntity(id = trackId, type = "track"))
-            }
-            !isFavorite
+    override suspend fun toggleTrackFavorite(trackId: String): Boolean = database.withTransaction {
+        val isFavorite = favoriteDao.isFavorite(trackId)
+        if (isFavorite) {
+            favoriteDao.delete(trackId)
+        } else {
+            favoriteDao.insert(FavoriteEntity(id = trackId, type = "track"))
         }
+        !isFavorite
     }
 
     override fun getRecentTracks(): Flow<List<Track>> {
@@ -72,7 +68,7 @@ class LibraryRepositoryImpl @Inject constructor(
                 RecentTrackEntity(
                     trackId = track.id,
                     playedAt = System.currentTimeMillis(),
-                )
+                ),
             )
 
             // Clean up old entries (keepCount must be >= 1 to avoid deleting all)
