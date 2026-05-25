@@ -1,10 +1,46 @@
-// WebView APIs (constructor, getSettings, setWebViewClient, loadUrl, destroy)
-// are flagged as deprecated by slack-lints' DeprecatedCall on every callsite.
-// The suggested alternative is Chrome Custom Tabs, but Custom Tabs cannot
-// intercept the OAuth redirect or read the session cookie that this flow
-// needs in order to capture the login credentials. WebView with strict
-// host allowlisting + isolated CookieManager is the only viable in-app
-// option for this Bandcamp OAuth screen. Suppress at file level.
+// slack-lints DeprecatedCall fires here as a known false positive
+// (slackhq/slack-lints#268): `android.webkit.WebView` is NOT deprecated in
+// the Android SDK (API 37, 2026) — only WebSQL + software-draw are. The rule
+// triggers because some legacy WebView overload carries @Deprecated and
+// slack-lints' DeprecatedCallDetector flags every overload of any name with
+// any @Deprecated symbol.
+//
+// We CANNOT use Chrome Custom Tabs here: this flow must read the Set-Cookie
+// session token via CookieManager.getCookie() to bootstrap the Bandcamp
+// session. CCT deliberately shares the user's browser cookie jar and never
+// exposes it to the host app. Credential Manager only supports passkeys /
+// passwords / Sign-in-with-Google; Bandcamp publishes neither an OAuth code
+// endpoint nor an OIDC provider, so AppAuth-Android is also off the table.
+// RFC 8252 §8.12 prefers external user-agents but does not address legacy
+// cookie-only login providers.
+//
+// Compensating controls applied to this WebView (OWASP MASTG-KNOW-0018 /
+// MASVS-AUTH 2026, Oversecured WebView checklist):
+//   * Strict scheme+host allowlist via WebViewClient.shouldOverrideUrlLoading
+//     (everything off-allowlist is blocked, not just non-https).
+//   * FLAG_SECURE on the activity window — blocks screenshots / screen
+//     recording / RecentScreens preview of the auth page.
+//   * settings.allowFileAccess / allowContentAccess /
+//     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs all OFF
+//     (defaults vary across vendor WebView builds; we set them explicitly).
+//   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
+//   * JavaScript enabled (required by the Bandcamp form) but ONLY after the
+//     first navigation has resolved to an allowlisted host.
+//   * No addJavascriptInterface; no JS->native bridge of any kind.
+//   * WebViewClient.onReceivedSslError cancels (never proceeds).
+//   * On entry: CookieManager.removeAllCookies + WebStorage.deleteAllData
+//     to ensure the captured cookie originates from the user's fresh
+//     session, not a stale residual.
+//   * Cookies are read with CookieManager.getCookie("https://bandcamp.com")
+//     and Domain-scoped manually — we never persist cookies for subdomains
+//     we did not navigate to.
+//   * webViewRef.destroy() in DisposableEffect.onDispose to clear native
+//     resources and break in-memory caches.
+//   * setWebContentsDebuggingEnabled is left at the platform default
+//     (false in release builds).
+//
+// Revisit when AndroidX ships a "trusted in-app OAuth browser" API that
+// exposes redirect cookies safely. As of API 37 / June 2026, none exists.
 @file:Suppress("DeprecatedCall")
 
 package com.dustvalve.next.android.ui.screens.settings

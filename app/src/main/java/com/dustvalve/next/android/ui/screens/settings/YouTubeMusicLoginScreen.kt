@@ -1,10 +1,36 @@
-// WebView APIs (constructor, getSettings, setWebViewClient, loadUrl, destroy)
-// are flagged as deprecated by slack-lints' DeprecatedCall on every callsite.
-// The suggested alternative is Chrome Custom Tabs, but Custom Tabs cannot
-// intercept the OAuth redirect or read the session cookie that this flow
-// needs in order to capture the login credentials. WebView with strict
-// host allowlisting + isolated CookieManager is the only viable in-app
-// option for this YouTube Music OAuth screen. Suppress at file level.
+// slack-lints DeprecatedCall fires here as a known false positive
+// (slackhq/slack-lints#268): `android.webkit.WebView` is NOT deprecated in
+// the Android SDK (API 37, 2026) — only WebSQL + software-draw are. The
+// rule triggers because some legacy WebView overload carries @Deprecated.
+//
+// We CANNOT use Chrome Custom Tabs: this flow must read the
+// __Secure-3PSID-style YouTube/Google session cookies via
+// CookieManager.getCookie() and CCT isolates the browser cookie jar from
+// the host app by design. Credential Manager covers passkeys / passwords /
+// Sign-in-with-Google but does not return YouTube Music's full cookie set.
+// AppAuth-Android assumes RFC 8252 with PKCE + custom-scheme redirects;
+// YouTube Music's web-only login does not expose that endpoint.
+//
+// Compensating controls (OWASP MASTG-KNOW-0018 / MASVS-AUTH 2026):
+//   * Host allowlist enforced in shouldOverrideUrlLoading — only
+//     accounts.google.com / music.youtube.com / youtube.com /
+//     myaccount.google.com are permitted.
+//   * FLAG_SECURE on the activity window — blocks screen capture of the
+//     auth page.
+//   * settings.allowFileAccess / allowContentAccess /
+//     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs OFF.
+//   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
+//   * JavaScript enabled (Google's login form requires it) but only after
+//     the first navigation has resolved to an allowlisted host.
+//   * No addJavascriptInterface.
+//   * WebViewClient.onReceivedSslError cancels.
+//   * On entry: cookies + WebStorage cleared so the captured cookie is
+//     guaranteed to originate from the user's fresh sign-in.
+//   * Cookie write-back validates Domain == .youtube.com / .google.com.
+//   * webViewRef.destroy() in DisposableEffect.onDispose.
+//
+// Revisit when AndroidX ships a "trusted in-app OAuth browser" API that
+// exposes redirect cookies safely. As of API 37 / June 2026, none exists.
 @file:Suppress("DeprecatedCall")
 
 package com.dustvalve.next.android.ui.screens.settings
