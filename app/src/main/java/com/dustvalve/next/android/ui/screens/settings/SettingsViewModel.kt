@@ -50,6 +50,7 @@ data class SettingsUiState(
     val progressBarStyle: String = "wavy",
     val progressBarSizeDp: Int = 24,
     val autoDownloadFavorites: Boolean = false,
+    val downloadNotificationsEnabled: Boolean = true,
     val localMusicEnabled: Boolean = false,
     val localMusicFolderUris: List<String> = emptyList(),
     val localMusicUseMediaStore: Boolean = true,
@@ -128,6 +129,7 @@ class SettingsViewModel @Inject constructor(
         collectSaveDataOnMetered()
         collectProgressiveDownload()
         collectSeamlessQualityUpgrade()
+        collectDownloadNotificationsEnabled()
         collectOledBlack()
         collectAlbumArtTheme()
         collectProgressBar()
@@ -358,6 +360,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             try { settingsDataStore.setAutoDownloadFavorites(enabled) }
             catch (e: Exception) { if (e is CancellationException) throw e }
+        }
+    }
+
+    fun setDownloadNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setDownloadNotificationsEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
         }
     }
 
@@ -612,6 +624,16 @@ class SettingsViewModel @Inject constructor(
                 .catch { /* ignore */ }
                 .collect { enabled ->
                     _uiState.update { it.copy(seamlessQualityUpgrade = enabled) }
+                }
+        }
+    }
+
+    private fun collectDownloadNotificationsEnabled() {
+        viewModelScope.launch {
+            settingsDataStore.downloadNotificationsEnabled
+                .catch { /* ignore */ }
+                .collect { enabled ->
+                    _uiState.update { it.copy(downloadNotificationsEnabled = enabled) }
                 }
         }
     }

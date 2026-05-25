@@ -21,6 +21,7 @@ import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
+import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.dustvalve.next.android.cache.StorageTracker
@@ -60,6 +61,7 @@ class DownloadRepositoryImpl @Inject constructor(
     private val downloadScraper: DustvalveDownloadScraper,
     private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
+    private val notificationCenter: DownloadNotificationCenter,
     @param:ApplicationContext private val context: Context,
 ) : DownloadRepository {
 
@@ -67,6 +69,17 @@ class DownloadRepositoryImpl @Inject constructor(
         if (album.tracks.isEmpty()) {
             throw IOException("No tracks to download — album has an empty track list")
         }
+        notificationCenter.withBatch(
+            label = album.title,
+            totalTracks = album.tracks.count { it.streamUrl != null },
+            kind = DownloadNotificationCenter.BatchKind.ALBUM,
+        ) {
+            downloadAlbumInner(album)
+        }
+    }
+
+    @Suppress("ThrowsCount")
+    private suspend fun downloadAlbumInner(album: Album) {
         val errors = mutableListOf<Exception>()
         var skipped = 0
         for (track in album.tracks) {
@@ -100,6 +113,18 @@ class DownloadRepositoryImpl @Inject constructor(
     }
 
     override suspend fun downloadTrack(track: Track, formatOverride: AudioFormat?) = withContext(Dispatchers.IO) {
+        notificationCenter.trackStarted(track.id, track.title)
+        var success = false
+        try {
+            downloadTrackInner(track, formatOverride)
+            success = true
+        } finally {
+            notificationCenter.trackFinished(track.id, success)
+        }
+    }
+
+    @Suppress("ThrowsCount")
+    private suspend fun downloadTrackInner(track: Track, formatOverride: AudioFormat?) {
         // Resolve purchase info for HQ download
         val purchaseInfo = resolvePurchaseInfo(track)
 
@@ -138,7 +163,7 @@ class DownloadRepositoryImpl @Inject constructor(
                 existingFormat.qualityRank >= format.qualityRank &&
                 downloadPathExists(existingDownload.filePath)
             ) {
-                return@withContext
+                return
             }
             // Delete old lower-quality file before upgrading
             try { deleteByPath(existingDownload.filePath) } catch (_: Exception) {}
@@ -362,6 +387,7 @@ class DownloadRepositoryImpl @Inject constructor(
         url = url,
         sink = sink,
         trackId = trackId,
+        onProgress = { written, total -> notificationCenter.trackProgress(trackId, written, total) },
     )
 
     override fun getDownloadedAlbums(): Flow<List<Album>> {

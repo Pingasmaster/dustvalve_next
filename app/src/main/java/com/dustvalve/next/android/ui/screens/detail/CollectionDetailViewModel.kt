@@ -221,14 +221,15 @@ class CollectionDetailViewModel @Inject constructor(
     fun downloadAll() {
         val tracks = _uiState.value.tracks
         if (tracks.isEmpty() || _uiState.value.isDownloading) return
+        val pending = tracks.filter { it.id !in _uiState.value.downloadedTrackIds }
+        if (pending.isEmpty()) return
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             try {
-                for (track in tracks) {
-                    if (track.id !in _uiState.value.downloadedTrackIds) {
-                        downloadAlbumUseCase.downloadTrack(track)
-                    }
-                }
+                downloadAlbumUseCase.downloadPlaylist(
+                    label = _uiState.value.name.ifEmpty { "playlist" },
+                    tracks = pending,
+                )
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }

@@ -14,8 +14,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 243
-        versionName = "0.4.37"
+        versionCode = 247
+        versionName = "0.4.41"
         versionNameSuffix = "-legacy"
     }
 

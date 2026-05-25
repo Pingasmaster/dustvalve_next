@@ -14,6 +14,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
+import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.update.AppUpdateController
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -38,8 +39,12 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
     @Inject
     lateinit var appUpdateController: AppUpdateController
 
+    @Inject
+    lateinit var downloadNotificationCenter: DownloadNotificationCenter
+
     override fun onCreate() {
         super.onCreate()
+        downloadNotificationCenter.ensureChannel()
         // Idempotent — observes the "Auto-download favorites" toggle and
         // enqueues downloads for any favorited tracks not already on disk.
         autoDownloadFavoritesCoordinator.start()
