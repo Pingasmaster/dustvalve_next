@@ -63,21 +63,20 @@
 
     <!--
         slack-lints' RawDispatchersUse forbids direct Dispatchers.{IO,Default,Main}
-        references, arguing for Hilt-qualified CoroutineDispatcher injection so
-        tests can swap in a TestDispatcher.
+        references in favour of injected, Hilt-qualified CoroutineDispatcher.
 
-        Why this codebase ignores it:
-        - 41 files use Dispatchers.IO directly across repos, scrapers, scanners,
-          and player-side classes. Refactoring each to take @IoDispatcher /
-          @DefaultDispatcher constructor params cascades through Hilt modules,
-          all instantiation sites, and every test mock.
-        - The runtime behavior is unchanged — Dispatchers.IO is the same shared
-          pool whether referenced statically or injected.
-        - Existing tests don't exercise these I/O paths via the dispatcher
-          (they mock HTTP, mock DAOs, mock filesystem). Inject-and-substitute
-          wouldn't actually improve current test coverage.
-        - New code may opt into a DispatcherProvider/qualifier pattern when
-          test-substitutability is a genuine requirement.
+        Strategy here is "ratchet, don't refactor everything at once":
+        - Set severity = error so any NEW Dispatchers.{IO,Default} usage breaks
+          the build.
+        - lint-baseline.xml freezes the existing ~69 sites; they don't fail the
+          build but are listed as known debt.
+        - New code (and any refactor that touches an existing site) must inject
+          @Dispatcher(AppDispatchers.IO) / @Dispatcher(AppDispatchers.Default)
+          via the Hilt module at app/src/main/.../di/DispatchersModule.kt.
+
+        Dispatchers.Main / Main.immediate is not policed — its only sensible
+        replacement is TestDispatcher swapping at the Dispatchers.setMain
+        level, which doesn't need a qualifier.
     -->
-    <issue id="RawDispatchersUse"              severity="ignore" />
+    <issue id="RawDispatchersUse"             severity="error" />
 </lint>

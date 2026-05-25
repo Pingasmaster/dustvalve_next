@@ -276,20 +276,20 @@ class MainActivity : ComponentActivity() {
 
 private data class ThemeConfig(val themeMode: String, val dynamicColor: Boolean, val oledBlack: Boolean, val albumSeedColor: Color?)
 
-// ViewModelForwarding (detekt/compose-rules): MainContent is the single-source
-// composition root that owns PlayerViewModel and NavigationViewModel for the
-// whole UI tree. It forwards them down to the one-level children that
-// genuinely operate on the player/nav singletons (MiniPlayer, AppNavigation,
-// FullPlayer, BottomNavBar). Lifting every screen to state + callbacks
-// instead would mean refactoring every UI surface in the app — disproportionate
-// for app-wide singletons whose state is genuinely consumed at multiple levels.
-//
-// LongMethod: this is the composition root branching on adaptive width +
-// expanded/collapsed player + bottom-nav placement; extracting tiny helpers
+// LongMethod: MainContent is the composition root branching on adaptive width
+// + expanded/collapsed player + bottom-nav placement; extracting tiny helpers
 // just to chase a line-count threshold would split related layout decisions.
+//
+// ViewModelForwarding is no longer suppressed: MiniPlayer, FullPlayer, and
+// AppNavigation now obtain PlayerViewModel / NavigationViewModel via their
+// own `hiltViewModel()` default param. Because MainActivity is the
+// ViewModelStoreOwner, every hiltViewModel<PlayerViewModel>() /
+// hiltViewModel<NavigationViewModel>() call from this composition returns
+// the SAME activity-scoped instance — no VM is passed as a parameter and
+// the lint rule no longer fires.
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-@Suppress("ViewModelForwarding", "LongMethod")
+@Suppress("LongMethod")
 private fun MainContent(
     accountRepository: AccountRepository,
     activity: MainActivity,
@@ -380,15 +380,12 @@ private fun MainContent(
                 Scaffold(
                     bottomBar = {
                         MiniPlayer(
-                            playerViewModel = playerViewModel,
                             onExpandClick = { navViewModel.expandPlayer() },
                             onDragUpProgress = { navViewModel.setPlayerDragProgress(it) },
                         )
                     },
                 ) { innerPadding ->
                     AppNavigation(
-                        navViewModel = navViewModel,
-                        playerViewModel = playerViewModel,
                         accountRepository = accountRepository,
                         modifier = Modifier
                             .fillMaxSize()
@@ -402,7 +399,6 @@ private fun MainContent(
                 bottomBar = {
                     Column {
                         MiniPlayer(
-                            playerViewModel = playerViewModel,
                             onExpandClick = { navViewModel.expandPlayer() },
                             onDragUpProgress = { navViewModel.setPlayerDragProgress(it) },
                         )
@@ -415,8 +411,6 @@ private fun MainContent(
                 },
             ) { innerPadding ->
                 AppNavigation(
-                    navViewModel = navViewModel,
-                    playerViewModel = playerViewModel,
                     accountRepository = accountRepository,
                     modifier = Modifier
                         .fillMaxSize()
@@ -449,7 +443,6 @@ private fun MainContent(
                     },
             ) {
                 FullPlayer(
-                    playerViewModel = playerViewModel,
                     onCollapse = { navViewModel.collapsePlayer() },
                     onArtistClick = { track ->
                         navViewModel.collapsePlayer()

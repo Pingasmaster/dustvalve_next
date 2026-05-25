@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
@@ -68,10 +69,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MiniPlayer(
-    playerViewModel: PlayerViewModel,
     onExpandClick: () -> Unit,
     modifier: Modifier = Modifier,
     onDragUpProgress: (Float) -> Unit = {},
+    // Activity-scoped: hiltViewModel() resolves to MainActivity, so this is
+    // the same PlayerViewModel instance the rest of the UI sees.
+    playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
 

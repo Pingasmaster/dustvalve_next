@@ -120,6 +120,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.toPath
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
@@ -150,11 +151,13 @@ private const val VOLUME_TICK_SEGMENTS = 15
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun FullPlayer(
-    playerViewModel: PlayerViewModel,
     onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
     onArtistClick: (Track) -> Unit = {},
     onAlbumClick: (Track) -> Unit = {},
+    // Activity-scoped: hiltViewModel() resolves to MainActivity, so this is
+    // the same PlayerViewModel instance the rest of the UI sees.
+    playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
     val track = state.currentTrack

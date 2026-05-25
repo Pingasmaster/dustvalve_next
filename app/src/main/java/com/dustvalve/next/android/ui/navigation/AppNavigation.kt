@@ -50,10 +50,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AppNavigation(
-    navViewModel: NavigationViewModel,
-    playerViewModel: PlayerViewModel,
     accountRepository: AccountRepository,
     modifier: Modifier = Modifier,
+    // Activity-scoped: hiltViewModel() resolves to MainActivity's
+    // ViewModelStoreOwner, so this is the same instance MainContent owns.
+    navViewModel: NavigationViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val isForward by navViewModel.lastNavigationForward.collectAsStateWithLifecycle()
