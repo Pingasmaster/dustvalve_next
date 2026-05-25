@@ -113,9 +113,10 @@ class PlaylistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         downloadJob = viewModelScope.launch {
             try {
-                tracks.forEach { track ->
-                    downloadAlbumUseCase.downloadTrack(track)
-                }
+                downloadAlbumUseCase.downloadPlaylist(
+                    label = playlist?.name ?: "playlist",
+                    tracks = tracks,
+                )
                 // Enable auto-download for this playlist if the global setting is on
                 if (settingsDataStore.getAutoDownloadFutureContentSync()) {
                     currentPlaylistId?.let { id ->

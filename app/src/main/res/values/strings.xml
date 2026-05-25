@@ -2,6 +2,14 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Dustvalve Next</string>
     <string name="playback_notification_channel">Now Playing</string>
+    <string name="notification_channel_downloads">Downloads</string>
+    <string name="notification_channel_downloads_desc">Live progress while songs are downloading</string>
+    <string name="notification_downloading_single">Downloading %1$s</string>
+    <string name="notification_downloading_batch_album">Downloading album · %1$s</string>
+    <string name="notification_downloading_batch_artist">Downloading artist · %1$s</string>
+    <string name="notification_downloading_batch_playlist">Downloading playlist · %1$s</string>
+    <string name="notification_downloading_batch_progress">Track %1$d of %2$d — %3$s</string>
+    <string name="notification_downloading_batch_progress_idle">Track %1$d of %2$d</string>
 
     <!-- Common actions (used across 3+ screens) -->
     <string name="common_action_cancel">Cancel</string>
@@ -238,6 +246,8 @@
     <string name="settings_progress_bar_size">Bar size: %1$d dp</string>
     <string name="settings_auto_download_favorites">Auto-download favorites</string>
     <string name="settings_auto_download_favorites_desc">Also download every favorited track in the background</string>
+    <string name="settings_download_notifications">Download notifications</string>
+    <string name="settings_download_notifications_desc">Show a live notification with progress while songs are downloading</string>
     <string name="player_cd_open_artist">Open artist page</string>
     <string name="player_cd_open_album">Open album page</string>
     <string name="snackbar_no_album_for_track">No album for this track</string>

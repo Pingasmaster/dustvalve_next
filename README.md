@@ -6,11 +6,11 @@
 
 <p align="center">
   <b>An emotional music player for Android, made with intention</b><br/>
-  Touch, swipe, drag, double-tap, and slide your way through Bandcamp, YouTube, and your local library.
+  Touch, swipe, drag, double-tap, and slide your way through Bandcamp, YouTube, YouTube Music, and your local library.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 33"/>
+  <img src="https://img.shields.io/badge/Android-16.1%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 36.1"/>
   <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin"/>
   <img src="https://img.shields.io/badge/Jetpack_Compose-1.12-4285F4?logo=jetpackcompose&logoColor=white" alt="Compose"/>
   <img src="https://img.shields.io/badge/Material_3-Expressive-E8DEF8" alt="M3 Expressive"/>
@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <sub>On <b>Android 8.0 – 12L</b>? The main build needs Android 13+ (API 33). Grab the unsupported legacy backport from the same release: <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><code>dustvalve-old.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch, updated manually, may lag behind).</sub>
+  <sub>On <b>Android 8.0 – 16</b> (or stuck on stock Android 16 without QPR1)? The main build needs Android 16 QPR1+ (API 36.1). Grab the unsupported legacy backport from the same release: <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve-old.apk"><code>dustvalve-old.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch, updated manually, may lag behind).</sub>
 </p>
 
 ---
@@ -55,7 +55,7 @@
 
 ## About
 
-Play your music from a single, snappy and emotional interface no matter the source: bandcamp, youtube music, or just your local music folder.
+Play your music from a single, snappy and emotional interface no matter the source: bandcamp, youtube, youtube music, or just your local music folder.
 See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from, all in a nicely designed, lightweight (~7MB download), extremely fast and no-nonsense GPLv3 Material you 3 Expressive app.
 
 > **Pre-alpha**. Report any bugs. We will add more sources once we get out of alpha and have unified the player features. Spotify is currently broken as is account link for any platforms.
@@ -68,7 +68,7 @@ We provide progressive streaming, automatic caching (never redownloads a song or
 
 We have no tracking or bullshit, you choose whether you want to allow music access storage permissions or per-folder access which does not require any storage permissions at all. This software is designed to respect you and your privacy. We provide instructions to build the app yourself from this repo in the build section.
 
-We heavily follow all Material you 3 Expressive guidelines and recommendations with a touch of expressiveness on top to make it all as much android-native and intentional as possible, though I'm a dev not a designer so feel free to create some Issues for any suggestions. The APK is ~7MB (classes.dex and resources ship uncompressed for faster install and lower runtime memory on Android 13+), takes around 32Mb of storage space once installed, has configurable caching storage limits and most importantly starts up instantly, no splash screen for 5 seconds on slow devices.
+We heavily follow all Material you 3 Expressive guidelines and recommendations with a touch of expressiveness on top to make it all as much android-native and intentional as possible, though I'm a dev not a designer so feel free to create some Issues for any suggestions. The APK is ~7MB (classes.dex and resources ship uncompressed for faster install and lower runtime memory on Android 16.1+), takes around 32Mb of storage space once installed, has configurable caching storage limits and most importantly starts up instantly, no splash screen for 5 seconds on slow devices.
 
 **Gestures**
 - **Tap** album art to play/pause, **double-tap** to favorite
