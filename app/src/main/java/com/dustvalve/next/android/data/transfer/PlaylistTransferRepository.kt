@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.transfer
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
+import kotlinx.coroutines.CancellationException
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
@@ -72,7 +73,15 @@ class PlaylistTransferRepository @Inject constructor(
                 if (offline) {
                     var info = downloadRepository.getDownloadInfo(track.id)
                     if (info == null) {
-                        runCatching { downloadRepository.downloadTrack(track) }
+                        try {
+                            downloadRepository.downloadTrack(track)
+                        } catch (ce: CancellationException) {
+                            throw ce
+                        } catch (t: Throwable) {
+                            // Best-effort: leave info=null below, the row is
+                            // exported without a local audio file.
+                            android.util.Log.w("PlaylistTransfer", "downloadTrack failed", t)
+                        }
                         info = downloadRepository.getDownloadInfo(track.id)
                     }
                     var audioFile: String? = null
@@ -88,7 +97,13 @@ class PlaylistTransferRepository @Inject constructor(
                     val coverFile = if (track.artUrl.isNotBlank()) {
                         coverPaths.getOrPut(track.albumId) {
                             val name = "covers/${NetworkUtils.sanitizeFileName(track.albumId)}.jpg"
-                            val bytes = runCatching { fetchBytes(track.artUrl) }.getOrNull()
+                            val bytes = try {
+                                fetchBytes(track.artUrl)
+                            } catch (ce: CancellationException) {
+                                throw ce
+                            } catch (_: Throwable) {
+                                null
+                            }
                             if (bytes != null) {
                                 zip.putNextEntry(ZipEntry(name))
                                 zip.write(bytes)

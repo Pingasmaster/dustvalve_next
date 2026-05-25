@@ -1,3 +1,12 @@
+// WebView APIs (constructor, getSettings, setWebViewClient, loadUrl, destroy)
+// are flagged as deprecated by slack-lints' DeprecatedCall on every callsite.
+// The suggested alternative is Chrome Custom Tabs, but Custom Tabs cannot
+// intercept the OAuth redirect or read the session cookie that this flow
+// needs in order to capture the login credentials. WebView with strict
+// host allowlisting + isolated CookieManager is the only viable in-app
+// option for this YouTube Music OAuth screen. Suppress at file level.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.annotation.SuppressLint

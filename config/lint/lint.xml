@@ -22,5 +22,42 @@
     <issue id="ProduceStateDoesNotAssignValue" severity="error" />
     <issue id="UnrememberedMutableState"      severity="error" />
     <issue id="ModifierParameter"             severity="error" />
-    <issue id="ComposeUnstableCollections"    severity="warning" />
+    <!--
+        slack-compose-lints' ComposeUnstableCollections flags every composable
+        parameter typed as List<T>/Set<T>/Map<T>. The runtime concern (Compose
+        treats kotlin.collections.* as unstable so composables can't skip on
+        equal-reference recompositions) is addressed by the project's
+        compose_stability_config.conf, which the Compose Compiler reads and
+        which marks these as @Stable. The lint check doesn't read that config
+        file, so the warnings are noise here. Suppressed globally.
+    -->
+    <issue id="ComposeUnstableCollections"    severity="ignore" />
+
+    <!--
+        slack-lints' AvoidUsingNotNullOperator flags every `!!` usage. In test
+        code `!!` is the idiomatic "I'm asserting this is non-null in this
+        test path; if it isn't, NPE fails the test with a stack trace pointing
+        to the offending line" — equivalent to `requireNotNull(x) { "..." }`
+        but more concise, especially in JSON / assertion chains. Refactoring
+        ~90 test sites to requireNotNull adds noise without changing failure
+        semantics. Suppressed only under src/test and src/androidTest.
+    -->
+    <issue id="AvoidUsingNotNullOperator">
+        <ignore path="**/src/test/**" />
+        <ignore path="**/src/androidTest/**" />
+    </issue>
+
+    <!--
+        slack-lints' DenyListedApi forbids runCatching because in suspend
+        contexts it silently swallows CancellationException. In test code
+        runCatching{ ... }.exceptionOrNull() is the canonical pattern for
+        capturing exceptions in non-suspend assertions, and the
+        CancellationException concern does not apply. Production-source
+        runCatching calls remain flagged; they are replaced with try/catch +
+        explicit cancellation rethrow.
+    -->
+    <issue id="DenyListedApi">
+        <ignore path="**/src/test/**" />
+        <ignore path="**/src/androidTest/**" />
+    </issue>
 </lint>

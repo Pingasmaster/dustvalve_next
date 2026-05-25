@@ -26,8 +26,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -101,21 +99,22 @@ class FolderMirror @Inject constructor(
         }
     }
 
-    private fun <T> mirrorFlow(flow: Flow<T>, write: suspend (T, Uri) -> Unit): Job = flow
-        .drop(1)
-        .debounce(500)
-        .onEach { value ->
-            if (isSuspended()) return@onEach
-            val uri = treeUri() ?: return@onEach
-            try {
-                write(value, uri)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (t: Throwable) {
-                android.util.Log.w("FolderMirror", "write failed: ${t.message}")
+    private fun <T> mirrorFlow(flow: Flow<T>, write: suspend (T, Uri) -> Unit): Job = scope.launch {
+        flow
+            .drop(1)
+            .debounce(500)
+            .collect { value ->
+                if (isSuspended()) return@collect
+                val uri = treeUri() ?: return@collect
+                try {
+                    write(value, uri)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (t: Throwable) {
+                    android.util.Log.w("FolderMirror", "write failed: ${t.message}")
+                }
             }
-        }
-        .launchIn(scope)
+    }
 
     private fun startMirrorJobs() {
         stopMirrorJobs()

@@ -1,3 +1,7 @@
+// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
+// overload is @Deprecated). Our call uses the non-deprecated overload.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.components
 
 import androidx.compose.animation.animateColorAsState

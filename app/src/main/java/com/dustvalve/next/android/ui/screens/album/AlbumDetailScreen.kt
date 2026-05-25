@@ -1,3 +1,8 @@
+// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
+// overload is @Deprecated). Our call uses the non-deprecated overload;
+// kotlinc emits no warning. Suppress at file level.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.album
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -198,6 +203,10 @@ fun AlbumDetailScreen(
         contentWindowInsets = WindowInsets(0),
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
+        // Pull the property into a local val so the `album != null` smart-cast
+        // works inside the matching branch — Kotlin can't smart-cast through a
+        // property access in a `when` clause.
+        val album = state.album
         when {
             state.isLoading -> {
                 Box(
@@ -231,9 +240,7 @@ fun AlbumDetailScreen(
                 }
             }
 
-            state.album != null -> {
-                val album = state.album!!
-
+            album != null -> {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()

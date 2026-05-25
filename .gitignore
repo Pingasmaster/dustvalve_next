@@ -1,7 +1,14 @@
 # Gradle
 .gradle/
 build/
+**/build/
 !gradle-wrapper.jar
+
+# Static analysis stack:
+# tracked: gradle/libs.versions.toml, config/detekt/detekt.yml,
+#          config/detekt/detekt-baseline.xml, config/lint/lint.xml,
+#          app/lint-baseline.xml, .editorconfig
+# ignored: ktlint / detekt / lint reports live under build/ (covered above)
 
 # Android
 /app/build

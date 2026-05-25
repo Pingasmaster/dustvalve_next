@@ -168,7 +168,7 @@ class LocalViewModel @Inject constructor(
                     val sortName = settingsDataStore.localSortOption.first()
                     val reverse = settingsDataStore.localReverseOrder.first()
                     val parsed = sortName?.let { name ->
-                        runCatching { LocalSortOption.valueOf(name) }.getOrNull()
+                        LocalSortOption.entries.firstOrNull { it.name == name }
                     }
                     if (parsed != null) {
                         _filterState.update { it.copy(sortOption = parsed, reverseOrder = reverse) }
@@ -178,7 +178,7 @@ class LocalViewModel @Inject constructor(
                     val artists = settingsDataStore.localSelectedArtists.first()
                     val albums = settingsDataStore.localSelectedAlbums.first()
                     val durations = settingsDataStore.localSelectedDurations.first()
-                        .mapNotNull { runCatching { DurationRange.valueOf(it) }.getOrNull() }
+                        .mapNotNull { name -> DurationRange.entries.firstOrNull { it.name == name } }
                         .toSet()
                     val favoritesOnly = settingsDataStore.localFavoritesOnly.first()
                     val folders = settingsDataStore.localSelectedFolders.first()

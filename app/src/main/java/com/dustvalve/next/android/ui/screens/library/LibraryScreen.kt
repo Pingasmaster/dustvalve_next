@@ -82,9 +82,9 @@ import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 @Composable
 fun LibraryScreen(
     onAlbumClick: (String) -> Unit,
-    onArtistClick: (String) -> Unit = {},
     onPlaylistClick: (String) -> Unit,
     playerViewModel: PlayerViewModel,
+    onArtistClick: (String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

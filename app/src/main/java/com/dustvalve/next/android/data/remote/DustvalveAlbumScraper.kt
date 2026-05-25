@@ -124,7 +124,7 @@ class DustvalveAlbumScraper @Inject constructor(private val client: OkHttpClient
             val trackKey = trackInfo.id?.toString() ?: "idx${index + 1}"
             val trackPageUrl = trackInfo.titleLink
                 ?.takeIf { it.isNotBlank() }
-                ?.let { runCatching { URL(parsedUrl, it).toString() }.getOrNull() }
+                ?.let { resolveAgainst(parsedUrl, it) }
                 ?.takeIf { NetworkUtils.isValidHttpsUrl(it) }
             Track(
                 id = "${albumId}_$trackKey",
@@ -358,6 +358,15 @@ class DustvalveAlbumScraper @Inject constructor(private val client: OkHttpClient
     private fun extractTags(html: String): List<String> {
         val regex = Regex("""<a[^>]*\bclass="[^"]*\btag\b[^"]*"[^>]*>([^<]+)</a>""")
         return regex.findAll(html).map { HtmlUtils.decodeHtmlEntities(it.groupValues[1].trim()) }.toList()
+    }
+
+    // Resolve a possibly-relative href against `base`, returning null if the
+    // URL is malformed. URL(URL, String) throws MalformedURLException for bad
+    // input; this is a narrow non-suspend wrapper.
+    private fun resolveAgainst(base: URL, href: String): String? = try {
+        URL(base, href).toString()
+    } catch (_: java.net.MalformedURLException) {
+        null
     }
 
     private fun normalizeUrl(url: String): String = url.trimEnd('/').substringBefore('?').substringBefore('#')

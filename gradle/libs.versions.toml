@@ -27,6 +27,7 @@ material-kolor = "5.0.0-alpha07"
 media3 = "1.10.1"
 serialization = "1.11.0"
 coroutines = "1.11.0"
+collections-immutable = "0.5.0-beta01"
 reorderable = "3.1.0"
 
 junit = "4.13.2"
@@ -113,6 +114,7 @@ media3-datasource-okhttp = { group = "androidx.media3", name = "media3-datasourc
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
+collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "collections-immutable" }
 
 # Test
 junit = { group = "junit", name = "junit", version.ref = "junit" }
