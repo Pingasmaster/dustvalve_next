@@ -25,19 +25,19 @@ Even though Gradle's build log keeps suggesting configuration cache, leave it of
 
 Auto-commit and push is acceptable when the user has explicitly requested automated workflows (e.g., cron jobs). Otherwise, follow the user's explicit instructions.
 
-The README download badge uses `releases/latest/download/app-release.apk` which always resolves to the latest GitHub release automatically. No manual badge update is needed on commit and push.
+The README download buttons use `releases/latest/download/dustvalve_next.apk` (legacy, default install) and `releases/latest/download/dustvalve_next-future.apk` (Android 17 master build). Both always resolve to the latest GitHub release automatically. No manual badge update is needed on commit and push.
 
-## Legacy Android 8-12L branch (`legacy-android8`)
+## Legacy Android 8-16 branch (`legacy-android8`)
 
-A long-lived, **unsupported** backport branch named `legacy-android8` exists for users on Android 8.0 (API 26) through Android 12L (API 32). Master targets Android 13+ (`minSdk=33`) and uses bleeding-edge alpha deps; the legacy branch carries a minimal patch set on top of whatever master HEAD it was last cherry-picked from:
+A long-lived, **default-shipped** backport branch named `legacy-android8` exists for users on Android 8.0 (API 26) through Android 16 (API 36). Master is the bleeding-edge "future" build (`minSdk=36`, target Android 17) and uses Android 16 QPR1 Live Updates APIs; the legacy branch carries a minimal patch set on top of whatever master HEAD it was last cherry-picked from, and is what the README's main download button serves. minSdk will rise to 37 once Robolectric supports API 37 for unit tests (4.16.1 caps at 36).
 
 - `minSdk=26`, `versionNameSuffix="-legacy"`, `coreLibraryDesugaring` enabled.
 - Manifest gates: `FOREGROUND_SERVICE_MEDIA_PLAYBACK` (`minSdkVersion="34"`), `READ_MEDIA_AUDIO` (`minSdkVersion="33"`), `READ_EXTERNAL_STORAGE` (`maxSdkVersion="32"`); no `enableOnBackInvokedCallback`.
 - Runtime guards: `Build.VERSION.SDK_INT` checks for POST_NOTIFICATIONS prompt and the audio permission picker (`util/LegacyPermissions.kt::legacyAudioPermission()`).
 
 ### Goals
-- Give Android 8-12L users a working APK on every release without compromising master's modern stack.
-- Ship as `dustvalve-old.apk` on the **same** GitHub Release as the modern `app-release.apk` (release workflow has a `build-legacy` job that checks out `legacy-android8` and uploads it).
+- Give Android 8-16 users a working APK on every release without compromising master's bleeding-edge Android 17 stack.
+- Ship as `dustvalve_next.apk` (the **default** install) on the **same** GitHub Release as the modern `dustvalve_next-future.apk` (the Android 17 build). The release workflow has a `build-legacy` job that checks out `legacy-android8` and uploads it.
 - Zero dependency forks: legacy stays on the same dep versions as master so cherry-picks are mostly clean.
 
 ### Maintenance rules — important
@@ -107,13 +107,17 @@ IMPORTANT: Before any design actions, make sure to fully understand material you
 
 - **Android 17 "Min Mode" AOD mini-player (deferred — re-check Aug 2026 or later)**: Rendering the now-playing mini-player on the Always-On Display via Min Mode is **not implementable yet** — as of mid-2026 it is not a public API (absent from API 37 `android.jar` and Android 17 Beta; disabled in Canary; no documented `MinModeActivity`/`MinModeProvider` contract, permission, sample, or emulator support). Google says it lands as a developer API after the June 2026 stable release. **Action: from August 2026 onward, check the Android Developers blog / API 37+ release notes for a documented Min Mode API, then implement the AOD mini-player.**
 
-## No SDK version checks — raise `minSdk` instead
+## No SDK version checks — raise `minSdk` instead (master only)
 
-Do **not** add `Build.VERSION.SDK_INT >= X` (or `@RequiresApi`, `if (Build.VERSION.SDK_INT …)`, `NotificationCompat`-style fallbacks) for any new feature. If a feature requires a higher API level than the current `minSdk` in `app/build.gradle.kts`, bump `minSdk` to that level instead. Master is on the bleeding edge by policy (legacy-android8 branch carries old-OS support separately); a single-codepath implementation against a known-modern OS is preferred over runtime gating. When you raise `minSdk`, also delete any now-dead SDK gates the new minimum makes obsolete (don't leave them as cruft).
+Do **not** add `Build.VERSION.SDK_INT >= X` (or `@RequiresApi`, `if (Build.VERSION.SDK_INT …)`, `NotificationCompat`-style fallbacks) for any new feature on master. If a feature requires a higher API level than the current `minSdk` in `app/build.gradle.kts`, bump `minSdk` to that level instead. Master is on the bleeding edge by policy and targets the newest OS; a single-codepath implementation against a known-modern OS is preferred over runtime gating. When you raise `minSdk`, also delete any now-dead SDK gates the new minimum makes obsolete (don't leave them as cruft). The `legacy-android8` branch is explicitly **exempt** — its whole purpose is SDK_INT runtime guards covering Android 8–16.
+
+**Tooling blocker (re-check periodically):** master currently sits at `minSdk=36` rather than the desired `minSdk=37` because Robolectric 4.16.1 supports only up to API 36 in its host-test environment. When Robolectric 4.17+ ships with API 37 support, raise `minSdk` to 37 and remove the `@android.annotation.SuppressLint("NewApi")` on `DownloadNotificationCenter.buildNotification` (the only lint suppression in the codebase, present specifically because `setRequestPromotedOngoing` / `setShortCriticalText` formally require API 36.1 / QPR1).
 
 ## Settings sub-toggle indentation
 
-Every dependent/child toggle revealed under a parent switch in `ui/screens/settings/SettingsScreen.kt` MUST use the shared `SUB_TOGGLE_INDENT` (`16.dp`) for its `start` padding, applied via the canonical pattern:
+**Required:** any settings child block (revealed under a parent switch or section) MUST use `start = SUB_TOGGLE_INDENT` (`16.dp`) for its left padding — never `0/8/20/36 dp` literals. The constant is defined in `ui/screens/settings/SettingsScreen.kt`.
+
+**Preferred for newly-revealed toggle rows:** wrap in an `AnimatedVisibility` with the canonical reveal/hide animation:
 
 ```kotlin
 AnimatedVisibility(
@@ -130,7 +134,7 @@ AnimatedVisibility(
 }
 ```
 
-Do not introduce ad-hoc indents — the codebase previously drifted to `0/8/20/36 dp` and was unified in one pass. Never reintroduce literal `start = 36.dp` (or any other literal indent) for a sub-toggle.
+Some older sub-blocks (sources → local, search history) use `if + Spacer + padding(start = SUB_TOGGLE_INDENT)` instead. That is acceptable as long as the indent constant is used — don't reintroduce literal indents.
 
 # Important
 

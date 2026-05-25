@@ -32,10 +32,13 @@ import javax.inject.Singleton
 
 /**
  * Owns the single user-visible "downloads in progress" notification —
- * always rendered as the Android 16 status-bar **Live Update** chip via
- * `Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
- * `setShortCriticalText(...)`. The app's `minSdk = 36` so no fallback path
- * is needed.
+ * always rendered as the Android 16 QPR1+ status-bar **Live Update** chip
+ * via `Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
+ * `setShortCriticalText(...)`. The app's `minSdk = 36` (Android 16 base);
+ * the Live Update APIs technically require API 36.1 (QPR1) — we accept
+ * that residual risk pre-QPR1, see `@SuppressLint("NewApi")` on
+ * `buildNotification`. minSdk will rise to 37 (Android 17) once Robolectric
+ * supports it for unit tests.
  *
  * The center supports nested batches (e.g. an artist download internally
  * wraps album downloads); the outer-most batch wins so the chip stays on
@@ -177,11 +180,10 @@ class DownloadNotificationCenter @Inject constructor(
     ) == PackageManager.PERMISSION_GRANTED
 
     // setRequestPromotedOngoing + setShortCriticalText are API 36.1 (Android
-    // 16 QPR1) APIs. minSdk is 36 (Android 16 base). We accept the residual
-    // risk that devices on pre-QPR1 Android 16 will hit a NoSuchMethodError;
-    // QPR1 ships within the first ~3 months of the OS release and we don't
-    // gate at runtime per the project rule (no SDK_INT checks). Lint
-    // surfaces this as NewApi; suppress here.
+    // 16 QPR1) APIs. minSdk is 36 (Android 16 base) until Robolectric 4.17+
+    // supports API 37 for tests. We accept the residual risk that devices on
+    // pre-QPR1 Android 16 will hit a NoSuchMethodError; QPR1 ships within the
+    // first ~3 months of the OS release.
     @android.annotation.SuppressLint("NewApi")
     private fun buildNotification(snapshot: State): Notification? {
         val outer = snapshot.batchStack.firstOrNull()
