@@ -18,11 +18,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download latest APK" width="220"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download for Android 8 to Android 16" width="260"/></a>
 </p>
 
 <p align="center">
-  <sub>Are you on <b>Android 16 QPR1+ or Android 17</b> and want the battery-optimized and perf-focused build with all the latest bleeding-edge stack? Grab <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a>. If you aren't on android 17, the download button above covers Android 8.0 to 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch.</sub>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><img src="./download-future.svg" alt="Android 17 only version" width="260"/></a>
+</p>
+
+<p align="center">
+  <sub>The first button serves Android 8.0 to Android 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch. The second button is the battery-optimized, perf-focused, bleeding-edge stack build for <b>Android 17</b> only (<a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a>).</sub>
 </p>
 
 ---
