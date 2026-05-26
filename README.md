@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <sub>On <b>Android 16 QPR1+</b> and want the future build with the status-bar Live Updates download chip and the full bleeding-edge stack? Grab <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/master"><code>master</code></a> branch — minSdk 36, rises to 37 once Robolectric supports API 37). The default <code>dustvalve_next.apk</code> button above covers Android 8.0 → 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch.</sub>
+  <sub>Are you on <b>Android 16 QPR1+ or Android 17</b> and want the battery-optimized and perf-focused build with all the latest bleeding-edge stack? Grab <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a>. If you aren't on android 17, the download button above covers Android 8.0 to 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch.</sub>
 </p>
 
 ---
