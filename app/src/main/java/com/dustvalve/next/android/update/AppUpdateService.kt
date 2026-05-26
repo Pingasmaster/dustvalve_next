@@ -101,16 +101,19 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
 
         // Pre-alpha: every CI build ships as a GitHub prerelease, so we
         // MUST include them here. Drafts (unpublished) are still skipped.
-        // Releases with no .apk asset (doc-only / assets-not-yet-uploaded)
-        // are skipped — we have nothing to install from them.
+        // Each release ships TWO apks: dustvalve_next.apk (legacy-android8,
+        // Android 8-16) and dustvalve_next-future.apk (this modern build,
+        // Android 17). Match ONLY the future asset so Android 17 installs
+        // never download the legacy APK. Releases without the future asset
+        // are skipped: nothing to install.
         val latest = releases.firstOrNull { release ->
-            !release.draft && release.assets.any { it.name.endsWith(".apk") }
+            !release.draft && release.assets.any { it.name == FUTURE_APK_ASSET }
         } ?: return@withContext null
 
         val latestVersion = latest.tagName.removePrefix("v")
         if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
-        val apkAsset = latest.assets.first { it.name.endsWith(".apk") }
+        val apkAsset = latest.assets.first { it.name == FUTURE_APK_ASSET }
         AvailableUpdate(
             versionName = latestVersion,
             apkDownloadUrl = apkAsset.browserDownloadUrl,
@@ -180,6 +183,9 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
 
     companion object {
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
+
+        /** GitHub-release asset name produced by the `build-modern` workflow job (master → Android 17 build). */
+        const val FUTURE_APK_ASSET = "dustvalve_next-future.apk"
 
         /** True when [remote] is a strictly higher dotted-int version than [local]. */
         fun isNewer(remote: String, local: String): Boolean {
