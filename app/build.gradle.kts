@@ -1,3 +1,8 @@
+@file:Suppress("UnstableApiUsage")
+
+import com.android.build.gradle.internal.lint.AndroidLintTask
+import org.gradle.api.file.RegularFile
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -16,8 +21,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 36
         targetSdk = 37
-        versionCode = 248
-        versionName = "0.4.42"
+        versionCode = 249
+        versionName = "0.4.43"
     }
 
     signingConfigs {
@@ -230,3 +235,17 @@ dependencies {
     lintChecks(libs.lint.slack.checks)
     lintChecks(libs.lint.slack.compose)
 }
+
+// lintVital* runs with --fatalOnly during assembleRelease, so the
+// RawDispatchersUse error-severity entries in lint-baseline.xml are never
+// reported and the baseline looks 100% stale to this task — printing both
+// "N entries not found" and "creation variant ... different" warnings on
+// every CI build. Clearing the baseline for lintVital* only silences both,
+// while lintRelease (used by ./build.sh) keeps the baseline and continues
+// to enforce the ratchet documented in config/lint/lint.xml.
+tasks.withType<AndroidLintTask>()
+    .matching { it.name.startsWith("lintVital") }
+    .configureEach {
+        projectInputs.lintOptions.baseline.set(null as RegularFile?)
+        missingBaselineIsEmptyBaseline.set(true)
+    }
