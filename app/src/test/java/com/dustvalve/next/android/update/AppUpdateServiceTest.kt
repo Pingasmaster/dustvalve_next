@@ -40,7 +40,7 @@ class AppUpdateServiceTest {
         val update = svc.checkForUpdate()
         assertThat(update).isNotNull()
         assertThat(update!!.versionName).isEqualTo("0.3.50")
-        assertThat(update.apkDownloadUrl).endsWith("dustvalve-old.apk")
+        assertThat(update.apkDownloadUrl).endsWith("dustvalve_next.apk")
     }
 
     @Test fun `detects a newer stable release too`() = runTest {
@@ -102,7 +102,7 @@ class AppUpdateServiceTest {
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v0.3.60", prerelease = true, assetName = "source.zip"),
-                    release(tag = "v0.3.55", prerelease = true, assetName = "dustvalve-old.apk"),
+                    release(tag = "v0.3.55", prerelease = true, assetName = "dustvalve_next.apk"),
                 ),
             ),
         )
@@ -176,6 +176,51 @@ class AppUpdateServiceTest {
         assertThat(svc.checkForUpdate()?.versionName).isEqualTo("1.0.0")
     }
 
+    @Test fun `picks dustvalve_next-apk when release also ships the modern dustvalve_next-future-apk`() = runTest {
+        // Each release now ships TWO apks side by side:
+        //   dustvalve_next.apk         -> this legacy build (Android 8-16)
+        //   dustvalve_next-future.apk  -> the master/Android 17 build
+        // Legacy users MUST NOT be auto-downgraded to the future apk, which
+        // they cannot install (its minSdk is Android 17).
+        val release = """
+            {
+              "tag_name": "v1.2.3",
+              "name": "v1.2.3",
+              "body": "notes",
+              "prerelease": true,
+              "draft": false,
+              "assets": [
+                {"name": "dustvalve_next-future.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next-future.apk"},
+                {"name": "dustvalve_next.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next.apk"}
+              ]
+            }
+        """.trimIndent()
+        server.enqueue(MockResponse().setBody("[$release]"))
+        val svc = testService(installed = "1.0.0")
+
+        val update = svc.checkForUpdate()
+        assertThat(update?.apkDownloadUrl).endsWith("dustvalve_next.apk")
+    }
+
+    @Test fun `skips release that only has the modern dustvalve_next-future-apk (legacy never installs Android 17 build)`() = runTest {
+        val release = """
+            {
+              "tag_name": "v9.9.9",
+              "name": "v9.9.9",
+              "body": "notes",
+              "prerelease": true,
+              "draft": false,
+              "assets": [
+                {"name": "dustvalve_next-future.apk", "browser_download_url": "https://releases.example/v9.9.9/dustvalve_next-future.apk"}
+              ]
+            }
+        """.trimIndent()
+        server.enqueue(MockResponse().setBody("[$release]"))
+        val svc = testService(installed = "1.0.0")
+
+        assertThat(svc.checkForUpdate()).isNull()
+    }
+
     @Test fun `falls through when the top release has no asset yet (CI still uploading)`() = runTest {
         // Shape: newest tag was just published and its APK hasn't finished
         // uploading (assets=0), while the next-newest is a prerelease that DOES
@@ -186,8 +231,8 @@ class AppUpdateServiceTest {
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v9.9.9", prerelease = false, assetName = null),
-                    release(tag = "v9.9.8", prerelease = true, assetName = "dustvalve-old.apk"),
-                    release(tag = "v9.9.7", prerelease = true, assetName = "dustvalve-old.apk"),
+                    release(tag = "v9.9.8", prerelease = true, assetName = "dustvalve_next.apk"),
+                    release(tag = "v9.9.7", prerelease = true, assetName = "dustvalve_next.apk"),
                 ),
             ),
         )
@@ -208,7 +253,7 @@ class AppUpdateServiceTest {
         tag: String,
         prerelease: Boolean = false,
         draft: Boolean = false,
-        assetName: String? = "dustvalve-old.apk",
+        assetName: String? = "dustvalve_next.apk",
     ): String {
         val assetsJson = if (assetName == null) {
             "[]"
