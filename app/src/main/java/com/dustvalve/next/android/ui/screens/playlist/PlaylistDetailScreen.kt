@@ -84,8 +84,8 @@ fun PlaylistDetailScreen(
     onBack: () -> Unit,
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

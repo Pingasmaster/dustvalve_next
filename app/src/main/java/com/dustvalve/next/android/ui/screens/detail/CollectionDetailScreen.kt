@@ -81,8 +81,8 @@ fun CollectionDetailScreen(
     collectionUrl: String,
     collectionName: String,
     onBack: () -> Unit,
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

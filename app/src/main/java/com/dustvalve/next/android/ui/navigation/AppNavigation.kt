@@ -38,7 +38,6 @@ import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
 import com.dustvalve.next.android.ui.screens.detail.CollectionDetailScreen
 import com.dustvalve.next.android.ui.screens.library.LibraryScreen
 import com.dustvalve.next.android.ui.screens.local.LocalScreen
-import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
@@ -49,13 +48,19 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
+// LongMethod / CyclomaticComplexMethod: AppNavigation is the single NavDestination
+// when-router; its size and branching are intrinsic to that role (one arm per
+// destination), so they are suppressed rather than split into artificial helpers.
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 fun AppNavigation(
     accountRepository: AccountRepository,
     modifier: Modifier = Modifier,
     // Activity-scoped: hiltViewModel() resolves to MainActivity's
     // ViewModelStoreOwner, so this is the same instance MainContent owns.
+    // Each child screen self-injects PlayerViewModel via its own
+    // hiltViewModel() default, which resolves to this same shared instance,
+    // so we hoist navigation state here and never forward a ViewModel down.
     navViewModel: NavigationViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val isForward by navViewModel.lastNavigationForward.collectAsStateWithLifecycle()
@@ -93,8 +98,6 @@ fun AppNavigation(
         ) { destination ->
             when (destination) {
                 is NavDestination.LocalHome -> LocalScreen(
-                    playerViewModel = playerViewModel,
-                    navViewModel = navViewModel,
                     onExpandPlayer = { navViewModel.expandPlayer() },
                 )
 
@@ -102,12 +105,10 @@ fun AppNavigation(
                     onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                     onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                     onOpenLink = { navViewModel.openLink(it) },
-                    playerViewModel = playerViewModel,
                     onExpandPlayer = { navViewModel.expandPlayer() },
                 )
 
                 is NavDestination.YouTubeHome -> YouTubeScreen(
-                    playerViewModel = playerViewModel,
                     onPlaylistClick = { url, name ->
                         navViewModel.navigateTo(
                             NavDestination.CollectionDetail(url = url, sourceId = "youtube", name = name),
@@ -138,7 +139,6 @@ fun AppNavigation(
                         navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
                     },
                     onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
-                    playerViewModel = playerViewModel,
                 )
 
                 is NavDestination.Settings -> SettingsScreen(
@@ -150,7 +150,6 @@ fun AppNavigation(
                     albumUrl = destination.url,
                     onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                     onBack = { navViewModel.navigateBack() },
-                    playerViewModel = playerViewModel,
                     viewModel = hiltViewModel(key = destination.url),
                 )
 
@@ -161,7 +160,6 @@ fun AppNavigation(
                     artistImageHint = destination.imageUrl,
                     onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                     onBack = { navViewModel.navigateBack() },
-                    playerViewModel = playerViewModel,
                     viewModel = hiltViewModel(key = "${destination.sourceId}|${destination.url}"),
                 )
 
@@ -170,7 +168,6 @@ fun AppNavigation(
                     onBack = { navViewModel.navigateBack() },
                     onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                     onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
-                    playerViewModel = playerViewModel,
                     viewModel = hiltViewModel(key = destination.playlistId),
                 )
 
@@ -179,7 +176,6 @@ fun AppNavigation(
                     collectionUrl = destination.url,
                     collectionName = destination.name,
                     onBack = { navViewModel.navigateBack() },
-                    playerViewModel = playerViewModel,
                     viewModel = hiltViewModel(key = "${destination.sourceId}|${destination.url}"),
                 )
 

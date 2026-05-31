@@ -74,7 +74,6 @@ import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.components.ShapePickerSheet
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
-import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 
@@ -83,7 +82,6 @@ import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 fun LibraryScreen(
     onAlbumClick: (String) -> Unit,
     onPlaylistClick: (String) -> Unit,
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
     onArtistClick: (String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
