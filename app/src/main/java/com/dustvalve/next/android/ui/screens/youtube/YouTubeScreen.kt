@@ -105,12 +105,12 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun YouTubeScreen(
-    playerViewModel: PlayerViewModel,
     onPlaylistClick: (url: String, name: String) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier,
     onExpandPlayer: () -> Unit = {},
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

@@ -101,10 +101,13 @@ import com.dustvalve.next.android.util.DeepLinkRouter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun LocalScreen(
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
-    navViewModel: com.dustvalve.next.android.ui.navigation.NavigationViewModel? = null,
+    // Self-injected (like the other screens): hiltViewModel() resolves to the
+    // activity-scoped instance MainActivity owns, so navigation state is never
+    // forwarded down. Stays nullable so the screen can render in isolation.
+    navViewModel: com.dustvalve.next.android.ui.navigation.NavigationViewModel? = hiltViewModel(),
     onExpandPlayer: () -> Unit = {},
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: LocalViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

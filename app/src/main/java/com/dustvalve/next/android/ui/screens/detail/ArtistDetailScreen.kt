@@ -104,8 +104,8 @@ fun ArtistDetailScreen(
     artistImageHint: String?,
     onAlbumClick: (String) -> Unit,
     onBack: () -> Unit,
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: ArtistDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

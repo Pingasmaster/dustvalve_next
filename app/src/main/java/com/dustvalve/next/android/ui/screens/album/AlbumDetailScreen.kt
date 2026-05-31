@@ -88,8 +88,8 @@ fun AlbumDetailScreen(
     albumUrl: String,
     onArtistClick: (String) -> Unit,
     onBack: () -> Unit,
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: AlbumDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

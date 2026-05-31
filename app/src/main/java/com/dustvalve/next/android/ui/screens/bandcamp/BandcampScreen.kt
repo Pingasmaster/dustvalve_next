@@ -158,9 +158,9 @@ fun BandcampScreen(
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
     onOpenLink: (String) -> Unit,
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
     onExpandPlayer: () -> Unit = {},
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: BandcampViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
 ) {

@@ -3,6 +3,9 @@ package com.dustvalve.next.android.ui.screens.player
 import android.graphics.Matrix
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
@@ -18,6 +21,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -95,6 +100,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
@@ -105,6 +111,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -151,7 +158,12 @@ private const val VOLUME_TICK_SEGMENTS = 15
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun FullPlayer(
+    sharedScope: SharedTransitionScope,
+    visScope: AnimatedVisibilityScope,
+    expandDistancePx: Float,
     onCollapse: () -> Unit,
+    onCollapseSeek: (Float) -> Unit,
+    onCollapseSettle: (Float) -> Unit,
     modifier: Modifier = Modifier,
     onArtistClick: (Track) -> Unit = {},
     onAlbumClick: (Track) -> Unit = {},
@@ -201,6 +213,32 @@ fun FullPlayer(
     var upNextContextTrack by remember { mutableStateOf<Pair<Track, Int>?>(null) }
     var showUpNextPlaylistSheet by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
+
+    // Shared-element morph back to the mini player (the `true` state of the host
+    // container transform). The surface grows from / shrinks to the mini bar's
+    // bounds; the album art stays continuous across the morph.
+    val boundsSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Rect>()
+    val surfaceShared = with(sharedScope) {
+        Modifier.sharedBounds(
+            sharedContentState = rememberSharedContentState(PLAYER_SURFACE_KEY),
+            animatedVisibilityScope = visScope,
+            boundsTransform = BoundsTransform { _, _ -> boundsSpec },
+            resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
+            clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(0.dp)),
+        )
+    }
+    val artShared = with(sharedScope) {
+        Modifier.sharedElement(
+            sharedContentState = rememberSharedContentState(PLAYER_ART_KEY),
+            animatedVisibilityScope = visScope,
+            boundsTransform = BoundsTransform { _, _ -> boundsSpec },
+        )
+    }
+
+    // Swipe-down-to-collapse: a downward drag on the top control row drives the
+    // host seek fraction (1 = full, 0 = mini) and commits via velocity on release.
+    var collapseDy by remember { mutableFloatStateOf(0f) }
+    val collapseVelocityTracker = remember { VelocityTracker() }
 
     // Full-screen volume control sheet
     if (showVolumeSheet) {
@@ -362,10 +400,15 @@ fun FullPlayer(
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .then(surfaceShared),
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            // Edge-to-edge: the full player owns the whole window, so reserve the
+            // system bars explicitly (status bar top, gesture-nav bottom).
+            contentWindowInsets = WindowInsets.systemBars,
             snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
                 val upNextCount = if (state.currentQueueIndex >= 0) {
@@ -558,6 +601,7 @@ fun FullPlayer(
                                         val swipeSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
                                         val albumArtGestureModifier = Modifier
                                             .fillMaxSize()
+                                            .then(artShared)
                                             .zIndex(1f)
                                             .graphicsLayer {
                                                 translationX = albumSwipeOffsetX.value
@@ -1128,11 +1172,36 @@ fun FullPlayer(
                     Spacer(modifier = Modifier.height(80.dp))
                 }
 
-                // Transparent overlay — collapse + volume icons
+                // Transparent overlay — collapse + volume icons. Doubles as the
+                // swipe-down-to-collapse drag handle (inverse of the mini bar's
+                // swipe-up-to-expand): a downward drag scrubs the host morph back
+                // to the mini player, committed by velocity on release.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = 4.dp)
+                        .pointerInput(expandDistancePx) {
+                            detectVerticalDragGestures(
+                                onDragStart = {
+                                    collapseDy = 0f
+                                    collapseVelocityTracker.resetTracking()
+                                },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    collapseDy = (collapseDy + dragAmount).coerceAtLeast(0f)
+                                    collapseVelocityTracker.addPosition(change.uptimeMillis, change.position)
+                                    onCollapseSeek((1f - collapseDy / expandDistancePx).coerceIn(0f, 1f))
+                                },
+                                onDragCancel = {
+                                    onCollapseSeek(1f)
+                                    collapseDy = 0f
+                                },
+                                onDragEnd = {
+                                    onCollapseSettle(collapseVelocityTracker.calculateVelocity().y)
+                                    collapseDy = 0f
+                                },
+                            )
+                        },
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
