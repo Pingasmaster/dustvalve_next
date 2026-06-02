@@ -197,6 +197,58 @@ class RangeResumeDownloaderTest {
     }
 
     @Test
+    fun `resumes from startOffset using Range and seeds total from Content-Range`() = runBlocking {
+        // A paused download resuming: 10000-byte file, 4000 already on disk.
+        val total = 10000
+        val remainder = ByteArray(total - 4000) { (it and 0xFF).toByte() }
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("Content-Range", "bytes 4000-${total - 1}/$total")
+                .setBody(Buffer().write(remainder)),
+        )
+        val out = ByteArrayOutputStream()
+        val written = RangeResumeDownloader.stream(
+            client = client,
+            url = server.url("/x").toString(),
+            sink = out,
+            trackId = "resume_offset",
+            startOffset = 4000L,
+        )
+        // Returns the running total (offset + received); the append-mode sink
+        // only receives the remainder bytes.
+        assertThat(written.toInt()).isEqualTo(total)
+        assertThat(out.toByteArray().size).isEqualTo(total - 4000)
+        val request = server.takeRequest()
+        assertThat(request.getHeader("Range")).isEqualTo("bytes=4000-")
+    }
+
+    @Test
+    fun `resume fails cleanly when server ignores Range (HTTP 200) on first request`() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Length", "5000")
+                .setBody(Buffer().write(ByteArray(5000))),
+        )
+        val out = ByteArrayOutputStream()
+        val ex = runCatching {
+            RangeResumeDownloader.stream(
+                client = client,
+                url = server.url("/x").toString(),
+                sink = out,
+                trackId = "resume_no_range",
+                startOffset = 2000L,
+                maxRetries = 0,
+            )
+        }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IOException::class.java)
+        assertThat(ex!!.message).contains("ignored Range on resume")
+        // Nothing appended on top of the existing partial.
+        assertThat(out.toByteArray().size).isEqualTo(0)
+    }
+
+    @Test
     fun `rejects non-2xx (and non-206) HTTP response`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(403))
         val out = ByteArrayOutputStream()

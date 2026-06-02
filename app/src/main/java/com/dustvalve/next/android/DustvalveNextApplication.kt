@@ -15,6 +15,7 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.update.AppUpdateController
 import dagger.hilt.EntryPoint
@@ -46,9 +47,15 @@ class DustvalveNextApplication :
     @Inject
     lateinit var downloadNotificationCenter: DownloadNotificationCenter
 
+    @Inject
+    lateinit var downloadController: DownloadController
+
     override fun onCreate() {
         super.onCreate()
         downloadNotificationCenter.ensureChannel()
+        // Drop partial .tmp files orphaned by a previous process death; the
+        // in-memory download queue that could have resumed them is gone.
+        downloadController.purgeStalePartialsOnColdStart()
         // Idempotent — observes the "Auto-download favorites" toggle and
         // enqueues downloads for any favorited tracks not already on disk.
         autoDownloadFavoritesCoordinator.start()

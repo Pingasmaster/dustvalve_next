@@ -17,6 +17,7 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,6 +68,7 @@ class ArtistDetailViewModel @Inject constructor(
     private val trackDao: TrackDao,
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArtistDetailUiState())
@@ -251,14 +253,14 @@ class ArtistDetailViewModel @Inject constructor(
                     for (album in albums) {
                         for (track in album.tracks) {
                             if (track.id !in state.downloadedTrackIds) {
-                                downloadAlbumUseCase.downloadTrack(track)
+                                downloadController.downloadTrackBlocking(track)
                             }
                         }
                     }
                 } else {
                     for (track in state.tracks) {
                         if (track.id !in state.downloadedTrackIds) {
-                            downloadAlbumUseCase.downloadTrack(track)
+                            downloadController.downloadTrackBlocking(track)
                         }
                     }
                 }

@@ -13,6 +13,7 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.ToggleFavoriteUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -53,6 +54,7 @@ class AlbumDetailViewModel @Inject constructor(
     private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
     private val favoriteDao: FavoriteDao,
@@ -254,7 +256,7 @@ class AlbumDetailViewModel @Inject constructor(
         _uiState.update { it.copy(downloadingTrackIds = it.downloadingTrackIds + track.id) }
         viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadTrack(track)
+                downloadController.downloadTrackBlocking(track)
                 _uiState.update {
                     it.copy(
                         snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)),
@@ -286,7 +288,7 @@ class AlbumDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             try {
-                downloadAlbumUseCase(album)
+                downloadController.downloadAlbumBlocking(album)
                 if (settingsDataStore.getAutoDownloadFutureContentSync()) {
                     albumRepository.setAutoDownload(album.id, true)
                 }

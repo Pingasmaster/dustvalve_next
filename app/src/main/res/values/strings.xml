@@ -10,6 +10,13 @@
     <string name="notification_downloading_batch_playlist">Downloading playlist · %1$s</string>
     <string name="notification_downloading_batch_progress">Track %1$d of %2$d — %3$s</string>
     <string name="notification_downloading_batch_progress_idle">Track %1$d of %2$d</string>
+    <string name="notification_download_preparing">Preparing downloads…</string>
+    <string name="notification_download_preparing_chip">…</string>
+    <string name="notification_download_paused">Downloads paused</string>
+    <string name="notification_download_paused_chip">Paused</string>
+    <string name="notification_download_pause">Pause</string>
+    <string name="notification_download_resume">Resume</string>
+    <string name="notification_download_cancel">Cancel</string>
 
     <!-- Common actions (used across 3+ screens) -->
     <string name="common_action_cancel">Cancel</string>
@@ -248,6 +255,9 @@
     <string name="settings_auto_download_favorites_desc">Also download every favorited track in the background</string>
     <string name="settings_download_notifications">Download notifications</string>
     <string name="settings_download_notifications_desc">Show a live notification with progress while songs are downloading</string>
+    <string name="settings_live_updates_title">Live Updates are off</string>
+    <string name="settings_live_updates_desc">Allow Live Updates in notification settings to see download progress as a status-bar chip</string>
+    <string name="settings_live_updates_action">Open settings</string>
     <string name="player_cd_open_artist">Open artist page</string>
     <string name="player_cd_open_album">Open album page</string>
     <string name="snackbar_no_album_for_track">No album for this track</string>
