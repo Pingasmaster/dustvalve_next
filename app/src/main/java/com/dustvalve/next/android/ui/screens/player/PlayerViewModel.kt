@@ -20,6 +20,7 @@ import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.NetworkUtils
@@ -74,6 +75,7 @@ class PlayerViewModel @Inject constructor(
     private val queueManager: QueueManager,
     private val libraryRepository: LibraryRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val playlistRepository: PlaylistRepository,
     private val favoriteDao: com.dustvalve.next.android.data.local.db.dao.FavoriteDao,
@@ -638,7 +640,7 @@ class PlayerViewModel @Inject constructor(
         _extraState.update { it.copy(downloadingTrackId = track.id) }
         downloadJob = viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadTrack(track)
+                downloadController.downloadTrackBlocking(track)
                 _extraState.update {
                     it.copy(
                         downloadingTrackId = null,

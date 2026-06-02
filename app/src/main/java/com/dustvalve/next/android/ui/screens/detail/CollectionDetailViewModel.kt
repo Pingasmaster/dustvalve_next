@@ -16,6 +16,7 @@ import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -62,6 +63,7 @@ class CollectionDetailViewModel @Inject constructor(
     private val database: DustvalveNextDatabase,
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CollectionDetailUiState())
@@ -226,7 +228,7 @@ class CollectionDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadPlaylist(
+                downloadController.downloadPlaylistBlocking(
                     label = _uiState.value.name.ifEmpty { "playlist" },
                     tracks = pending,
                 )

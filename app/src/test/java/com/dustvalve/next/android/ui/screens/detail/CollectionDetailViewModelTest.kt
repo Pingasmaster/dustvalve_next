@@ -15,6 +15,7 @@ import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.repository.UnsupportedSourceOperation
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.every
@@ -47,6 +48,7 @@ class CollectionDetailViewModelTest {
     private val database = mockk<DustvalveNextDatabase>(relaxed = true)
     private val downloadRepository = mockk<DownloadRepository>()
     private val downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true)
+    private val downloadController = mockk<DownloadController>(relaxed = true)
 
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
@@ -166,6 +168,7 @@ class CollectionDetailViewModelTest {
         database = database,
         downloadRepository = downloadRepository,
         downloadAlbumUseCase = downloadAlbumUseCase,
+        downloadController = downloadController,
     )
 
     private fun sourceWith(id: String, capabilities: Set<SourceConcept>): MusicSource {

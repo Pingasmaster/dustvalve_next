@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.download
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,8 +9,11 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.drawable.Icon
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
+import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
@@ -61,10 +65,32 @@ class DownloadNotificationCenter @Inject constructor(
         val batchStack: List<Batch> = emptyList(),
         val completedInBatch: Int = 0,
         val activeTracks: Map<String, TrackProgress> = emptyMap(),
+        val paused: Boolean = false,
     )
 
     private val mutex = Mutex()
     private val state = MutableStateFlow(State())
+
+    /** Platform manager for the API 36.1 promotion-diagnostics calls. */
+    private val platformNotificationManager =
+        context.getSystemService(NotificationManager::class.java)
+
+    /**
+     * True while [DownloadService] holds [NOTIFICATION_ID] as its foreground
+     * notification. While owned, this center must NOT `cancel()` the id on an
+     * empty/disabled state — the service tears it down via `stopForeground`.
+     */
+    @Volatile
+    private var foregroundOwned = false
+
+    fun setForegroundOwned(owned: Boolean) {
+        foregroundOwned = owned
+    }
+
+    /** Reflects [DownloadController]'s global pause state into the notification. */
+    fun setPaused(paused: Boolean) {
+        state.update { it.copy(paused = paused) }
+    }
 
     /** Test-only window into the internal state. */
     @androidx.annotation.VisibleForTesting
@@ -151,19 +177,22 @@ class DownloadNotificationCenter @Inject constructor(
     @Suppress("TooGenericExceptionCaught")
     private fun refresh(snapshot: State, enabled: Boolean) {
         try {
-            if (!enabled || !hasPostPermission()) {
-                notificationManager.cancel(NOTIFICATION_ID)
-                return
-            }
-            if (snapshot.activeTracks.isEmpty() && snapshot.batchStack.isEmpty()) {
-                notificationManager.cancel(NOTIFICATION_ID)
+            val hasWork = snapshot.activeTracks.isNotEmpty() ||
+                snapshot.batchStack.isNotEmpty() ||
+                snapshot.paused
+            if (!enabled || !hasPostPermission() || !hasWork) {
+                // When the service owns the foreground notification it drives
+                // teardown via stopForeground — cancelling here would fight it
+                // (and an FGS notification can't be cancelled while foregrounded).
+                if (!foregroundOwned) notificationManager.cancel(NOTIFICATION_ID)
                 return
             }
             val notification = buildNotification(snapshot) ?: run {
-                notificationManager.cancel(NOTIFICATION_ID)
+                if (!foregroundOwned) notificationManager.cancel(NOTIFICATION_ID)
                 return
             }
             notificationManager.notify(NOTIFICATION_ID, notification)
+            logPromotionDiagnostics(notification)
         } catch (_: SecurityException) {
             // POST_NOTIFICATIONS revoked between check and post.
         } catch (_: NullPointerException) {
@@ -186,6 +215,11 @@ class DownloadNotificationCenter @Inject constructor(
     // first ~3 months of the OS release.
     @android.annotation.SuppressLint("NewApi")
     private fun buildNotification(snapshot: State): Notification? {
+        // While paused the batch has unwound (its coroutine was cancelled), so
+        // activeTracks/batchStack are empty — show a static "paused" card with a
+        // Resume action instead of falling through to the empty case.
+        if (snapshot.paused) return buildPausedNotification()
+
         val outer = snapshot.batchStack.firstOrNull()
         val currentTrack = snapshot.activeTracks.values.firstOrNull()
 
@@ -245,15 +279,6 @@ class DownloadNotificationCenter @Inject constructor(
             }
         }
 
-        val contentIntent = PendingIntent.getActivity(
-            context,
-            0,
-            Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-        )
-
         val style = Notification.ProgressStyle()
             .setProgress(progressCurrent)
             .setProgressSegments(listOf(Notification.ProgressStyle.Segment(progressMax)))
@@ -265,9 +290,119 @@ class DownloadNotificationCenter @Inject constructor(
             .setStyle(style)
             .setShortCriticalText(chipText)
             .setRequestPromotedOngoing(true)
-            .setContentIntent(contentIntent)
+            .setContentIntent(contentIntent())
         if (text.isNotEmpty()) builder.setContentText(text)
+        builder.addAction(pauseResumeAction(isPaused = false))
+        builder.addAction(cancelAction())
         return builder.build()
+    }
+
+    /** Static "downloads paused" card with Resume + Cancel actions. */
+    @android.annotation.SuppressLint("NewApi")
+    private fun buildPausedNotification(): Notification {
+        val style = Notification.ProgressStyle()
+            .setProgress(0)
+            .setProgressSegments(listOf(Notification.ProgressStyle.Segment(UNIT_PER_TRACK)))
+        return Notification.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_download)
+            .setContentTitle(context.getString(R.string.notification_download_paused))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setStyle(style)
+            .setShortCriticalText(context.getString(R.string.notification_download_paused_chip))
+            .setRequestPromotedOngoing(true)
+            .setContentIntent(contentIntent())
+            .addAction(pauseResumeAction(isPaused = true))
+            .addAction(cancelAction())
+            .build()
+    }
+
+    /**
+     * Notification handed to [DownloadService.startForeground]. The service may
+     * call this before any track has started (state still empty), so fall back
+     * to a "preparing" placeholder rather than returning null.
+     */
+    @android.annotation.SuppressLint("NewApi")
+    fun currentForegroundNotification(): Notification = buildNotification(state.value) ?: buildPlaceholderNotification()
+
+    @android.annotation.SuppressLint("NewApi")
+    private fun buildPlaceholderNotification(): Notification {
+        val style = Notification.ProgressStyle()
+            .setProgress(0)
+            .setProgressSegments(listOf(Notification.ProgressStyle.Segment(UNIT_PER_TRACK)))
+        return Notification.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_download)
+            .setContentTitle(context.getString(R.string.notification_download_preparing))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setStyle(style)
+            .setShortCriticalText(context.getString(R.string.notification_download_preparing_chip))
+            .setRequestPromotedOngoing(true)
+            .setContentIntent(contentIntent())
+            .addAction(cancelAction())
+            .build()
+    }
+
+    private fun contentIntent(): PendingIntent = PendingIntent.getActivity(
+        context,
+        0,
+        Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+        },
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
+    @SuppressLint("NewApi")
+    private fun pauseResumeAction(isPaused: Boolean): Notification.Action {
+        val intent = PendingIntent.getBroadcast(
+            context,
+            DownloadActionReceiver.RC_PAUSE_RESUME,
+            Intent(context, DownloadActionReceiver::class.java)
+                .setAction(DownloadActionReceiver.ACTION_PAUSE_RESUME),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val iconRes = if (isPaused) R.drawable.ic_play_arrow else R.drawable.ic_pause
+        val label = context.getString(
+            if (isPaused) R.string.notification_download_resume else R.string.notification_download_pause,
+        )
+        return Notification.Action.Builder(Icon.createWithResource(context, iconRes), label, intent).build()
+    }
+
+    @SuppressLint("NewApi")
+    private fun cancelAction(): Notification.Action {
+        val intent = PendingIntent.getBroadcast(
+            context,
+            DownloadActionReceiver.RC_CANCEL,
+            Intent(context, DownloadActionReceiver::class.java)
+                .setAction(DownloadActionReceiver.ACTION_CANCEL),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return Notification.Action.Builder(
+            Icon.createWithResource(context, R.drawable.ic_close),
+            context.getString(R.string.notification_download_cancel),
+            intent,
+        ).build()
+    }
+
+    @SuppressLint("NewApi")
+    @Suppress("TooGenericExceptionCaught")
+    private fun logPromotionDiagnostics(built: Notification) {
+        if (!BuildConfig.DEBUG) return
+        try {
+            val promotable = built.hasPromotableCharacteristics()
+            val canPost = platformNotificationManager.canPostPromotedNotifications()
+            val postedFlag = platformNotificationManager.activeNotifications
+                .firstOrNull { it.id == NOTIFICATION_ID }
+                ?.notification
+                ?.let { (it.flags and Notification.FLAG_PROMOTED_ONGOING) != 0 }
+            Log.d(
+                TAG,
+                "Live Update chip: hasPromotableCharacteristics=$promotable, " +
+                    "canPostPromotedNotifications=$canPost, postedFlagPromotedOngoing=$postedFlag",
+            )
+        } catch (e: Throwable) {
+            Log.d(TAG, "promotion diagnostics unavailable", e)
+        }
     }
 
     fun ensureChannel() {
@@ -285,6 +420,7 @@ class DownloadNotificationCenter @Inject constructor(
     }
 
     companion object {
+        private const val TAG = "DownloadNotif"
         const val CHANNEL_ID = "downloads"
         const val NOTIFICATION_ID = 4242
 

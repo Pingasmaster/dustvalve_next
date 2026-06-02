@@ -45,7 +45,7 @@ detekt = "2.0.0-alpha.3"
 compose-rules = "0.5.9"
 slack-lint-checks = "0.11.1"
 slack-compose-lints = "1.5.1"
-dependency-analysis = "3.14.0"
+dependency-analysis = "3.14.1"
 
 [libraries]
 # Compose

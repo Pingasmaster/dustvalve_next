@@ -8,7 +8,7 @@ import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -38,7 +38,7 @@ data class PlaylistDetailUiState(
 @HiltViewModel
 class PlaylistDetailViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
-    private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
@@ -113,7 +113,7 @@ class PlaylistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         downloadJob = viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadPlaylist(
+                downloadController.downloadPlaylistBlocking(
                     label = playlist?.name ?: "playlist",
                     tracks = tracks,
                 )

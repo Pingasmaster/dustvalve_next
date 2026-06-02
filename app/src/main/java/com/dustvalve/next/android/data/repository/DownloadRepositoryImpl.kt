@@ -27,6 +27,7 @@ import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.download.DownloadNotificationCenter
+import com.dustvalve.next.android.download.isPauseCancellation
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
@@ -223,16 +225,23 @@ class DownloadRepositoryImpl @Inject constructor(
         val targetFile = File(downloadDir, fileName)
         val tempFile = File(downloadDir, "$fileName.tmp")
 
+        // A leftover .tmp means a prior transfer was paused — resume from its
+        // current length via an HTTP Range request (append mode) instead of
+        // restarting from 0.
+        val resumeFrom = if (tempFile.exists()) tempFile.length() else 0L
         try {
-            tempFile.outputStream().use { out ->
+            FileOutputStream(tempFile, resumeFrom > 0L).use { out ->
                 streamWithResume(
                     url = downloadUrl,
                     trackId = trackId,
                     sink = out,
+                    startOffset = resumeFrom,
                 )
             }
         } catch (e: Exception) {
-            tempFile.delete()
+            // Keep the partial on pause so resume can continue; delete on any
+            // real failure or cancel.
+            if (!e.isPauseCancellation()) tempFile.delete()
             throw e
         }
 
@@ -384,13 +393,15 @@ class DownloadRepositoryImpl @Inject constructor(
     }
 
     /** Thin wrapper: preserves the call-site shape and forwards byte progress to the download notification chip. */
-    private suspend fun streamWithResume(url: String, trackId: String, sink: OutputStream): Long = RangeResumeDownloader.stream(
-        client = downloadClient,
-        url = url,
-        sink = sink,
-        trackId = trackId,
-        onProgress = { written, total -> notificationCenter.trackProgress(trackId, written, total) },
-    )
+    private suspend fun streamWithResume(url: String, trackId: String, sink: OutputStream, startOffset: Long = 0L): Long =
+        RangeResumeDownloader.stream(
+            client = downloadClient,
+            url = url,
+            sink = sink,
+            trackId = trackId,
+            startOffset = startOffset,
+            onProgress = { written, total -> notificationCenter.trackProgress(trackId, written, total) },
+        )
 
     override fun getDownloadedAlbums(): Flow<List<Album>> {
         return downloadDao.getAll().map { downloads ->

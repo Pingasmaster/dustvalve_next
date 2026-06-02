@@ -12,6 +12,7 @@ import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.GetArtistDetailUseCase
 import com.dustvalve.next.android.domain.usecase.ToggleFavoriteUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -44,6 +45,7 @@ class ArtistDetailViewModel @Inject constructor(
     private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val artistRepository: ArtistRepository,
     private val downloadRepository: DownloadRepository,
     private val settingsDataStore: SettingsDataStore,
@@ -129,7 +131,7 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         downloadJob = viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadArtist(artist)
+                downloadController.downloadArtistBlocking(artist)
                 if (settingsDataStore.getAutoDownloadFutureContentSync()) {
                     artistRepository.setAutoDownload(artist.id, true)
                 }
