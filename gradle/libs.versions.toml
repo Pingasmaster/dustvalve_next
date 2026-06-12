@@ -1,5 +1,5 @@
 [versions]
-agp = "9.3.0-alpha11"
+agp = "9.3.0-alpha12"
 kotlin = "2.3.21"
 ksp = "2.3.9"
 hilt = "2.59.2"
@@ -45,7 +45,7 @@ detekt = "2.0.0-alpha.3"
 compose-rules = "0.6.0"
 slack-lint-checks = "0.11.1"
 slack-compose-lints = "1.5.2"
-dependency-analysis = "3.14.1"
+dependency-analysis = "3.15.0"
 
 [libraries]
 # Compose

@@ -485,8 +485,6 @@
     <string name="snackbar_downloaded">Downloaded \'%1$s\'</string>
     <string name="snackbar_deleted">Deleted \'%1$s\'</string>
     <string name="snackbar_deleted_downloads_for">Deleted downloads for \'%1$s\'</string>
-    <string name="snackbar_downloaded_all_by">Downloaded all albums by %1$s</string>
-    <string name="snackbar_deleted_all_by">Deleted all downloads by %1$s</string>
     <string name="snackbar_downloaded_all_in">Downloaded all tracks in %1$s</string>
     <string name="snackbar_download_failed">Download failed</string>
     <string name="snackbar_delete_failed">Delete failed</string>

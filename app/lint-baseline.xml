@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 9.3.0-alpha07" type="baseline" client="gradle" dependencies="true" name="AGP (9.3.0-alpha07)" variant="all" version="9.3.0-alpha07">
+<issues format="6" by="lint 9.3.0-alpha12" type="baseline" client="gradle" dependencies="true" name="AGP (9.3.0-alpha12)" variant="all" version="9.3.0-alpha12">
 
     <issue
         id="RawDispatchersUse"
@@ -8,19 +8,8 @@
         errorLine2="             ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/repository/AlbumRepositoryImpl.kt"
-            line="100"
+            line="98"
             column="14"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="        }.flowOn(Dispatchers.IO)"
-        errorLine2="                 ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/repository/AlbumRepositoryImpl.kt"
-            line="219"
-            column="18"/>
     </issue>
 
     <issue
@@ -63,7 +52,7 @@
         errorLine2="             ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/update/AppUpdateService.kt"
-            line="160"
+            line="163"
             column="14"/>
     </issue>
 
@@ -74,19 +63,19 @@
         errorLine2="             ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/repository/ArtistRepositoryImpl.kt"
-            line="101"
+            line="100"
             column="14"/>
     </issue>
 
     <issue
         id="RawDispatchersUse"
         message="Use SlackDispatchers."
-        errorLine1="    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)"
-        errorLine2="                                                         ~~~~~~~~~~~~~~">
+        errorLine1="        SupervisorJob() + Dispatchers.IO +"
+        errorLine2="                          ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/download/AutoDownloadFavoritesCoordinator.kt"
-            line="50"
-            column="58"/>
+            line="53"
+            column="27"/>
     </issue>
 
     <issue
@@ -129,30 +118,8 @@
         errorLine2="                                                                                                 ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/repository/DownloadRepositoryImpl.kt"
-            line="104"
+            line="109"
             column="98"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="        }.flowOn(Dispatchers.IO)"
-        errorLine2="                 ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/repository/DownloadRepositoryImpl.kt"
-            line="415"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="        }.flowOn(Dispatchers.IO)"
-        errorLine2="                 ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/repository/DownloadRepositoryImpl.kt"
-            line="434"
-            column="18"/>
     </issue>
 
     <issue
@@ -162,7 +129,7 @@
         errorLine2="                                                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/repository/DownloadRepositoryImpl.kt"
-            line="474"
+            line="430"
             column="51"/>
     </issue>
 
@@ -272,7 +239,7 @@
         errorLine2="                                                                                                                         ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/storage/folder/FolderIo.kt"
-            line="19"
+            line="18"
             column="122"/>
     </issue>
 
@@ -283,30 +250,8 @@
         errorLine2="                    ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/storage/folder/FolderIo.kt"
-            line="30"
+            line="29"
             column="21"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="    suspend fun deleteJson(context: Context, treeUri: Uri, name: String) = withContext(Dispatchers.IO) {"
-        errorLine2="                                                                                       ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/storage/folder/FolderIo.kt"
-            line="69"
-            column="88"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="    suspend fun deleteIfExists(file: DocumentFile?) = withContext(Dispatchers.IO) {"
-        errorLine2="                                                                  ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/storage/folder/FolderIo.kt"
-            line="74"
-            column="67"/>
     </issue>
 
     <issue
@@ -345,28 +290,6 @@
     <issue
         id="RawDispatchersUse"
         message="Use SlackDispatchers."
-        errorLine1="    }.flowOn(Dispatchers.IO)"
-        errorLine2="             ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/repository/LibraryRepositoryImpl.kt"
-            line="36"
-            column="14"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="        }.flowOn(Dispatchers.IO)"
-        errorLine2="                 ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/repository/LibraryRepositoryImpl.kt"
-            line="56"
-            column="18"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
         errorLine1="    suspend fun scan(folderUri: Uri): ScanResult = withContext(Dispatchers.IO) {"
         errorLine2="                                                               ~~~~~~~~~~~~~~">
         <location
@@ -393,7 +316,7 @@
         errorLine2="                                                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/MainActivity.kt"
-            line="160"
+            line="174"
             column="51"/>
     </issue>
 
@@ -404,7 +327,7 @@
         errorLine2="                                                  ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/MainActivity.kt"
-            line="176"
+            line="190"
             column="51"/>
     </issue>
 
@@ -415,7 +338,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/MainActivity.kt"
-            line="204"
+            line="218"
             column="31"/>
     </issue>
 
@@ -426,7 +349,7 @@
         errorLine2="                              ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/MainActivity.kt"
-            line="221"
+            line="235"
             column="31"/>
     </issue>
 
@@ -521,22 +444,11 @@
     <issue
         id="RawDispatchersUse"
         message="Use SlackDispatchers."
-        errorLine1="            .flowOn(Dispatchers.IO)"
-        errorLine2="                    ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/data/repository/PlaylistRepositoryImpl.kt"
-            line="145"
-            column="21"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
         errorLine1="        }.flowOn(Dispatchers.IO)"
         errorLine2="                 ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/repository/PlaylistRepositoryImpl.kt"
-            line="198"
+            line="192"
             column="18"/>
     </issue>
 
@@ -547,7 +459,7 @@
         errorLine2="                ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/data/repository/PlaylistRepositoryImpl.kt"
-            line="328"
+            line="322"
             column="17"/>
     </issue>
 
@@ -668,19 +580,8 @@
         errorLine2="             ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/cache/StorageTracker.kt"
-            line="62"
+            line="60"
             column="14"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="    suspend fun isOverLimit(): Boolean = withContext(Dispatchers.IO) {"
-        errorLine2="                                                     ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/cache/StorageTracker.kt"
-            line="64"
-            column="54"/>
     </issue>
 
     <issue
@@ -690,19 +591,8 @@
         errorLine2="                                                      ~~~~~~~~~~~~~~">
         <location
             file="src/main/java/com/dustvalve/next/android/cache/StorageTracker.kt"
-            line="71"
+            line="63"
             column="55"/>
-    </issue>
-
-    <issue
-        id="RawDispatchersUse"
-        message="Use SlackDispatchers."
-        errorLine1="    suspend fun getWarningLevel(): WarningLevel = withContext(Dispatchers.IO) {"
-        errorLine2="                                                              ~~~~~~~~~~~~~~">
-        <location
-            file="src/main/java/com/dustvalve/next/android/cache/StorageTracker.kt"
-            line="84"
-            column="63"/>
     </issue>
 
     <issue
@@ -769,6 +659,61 @@
             file="src/main/java/com/dustvalve/next/android/data/remote/youtube/innertube/YouTubeVisitorDataFetcher.kt"
             line="57"
             column="62"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.compose than 2.3.21 is available: 2.4.0"
+        errorLine1="kotlin = &quot;2.3.21&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="3"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.jetbrains.kotlin.plugin.serialization than 2.3.21 is available: 2.4.0"
+        errorLine1="kotlin = &quot;2.3.21&quot;"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="3"
+            column="10"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.coil-kt.coil3:coil-compose than 3.5.0-beta01 is available: 3.5.0"
+        errorLine1="coil = &quot;3.5.0-beta01&quot;"
+        errorLine2="       ~~~~~~~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="25"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.coil-kt.coil3:coil-network-cache-control than 3.5.0-beta01 is available: 3.5.0"
+        errorLine1="coil = &quot;3.5.0-beta01&quot;"
+        errorLine2="       ~~~~~~~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="25"
+            column="8"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of io.coil-kt.coil3:coil-network-okhttp than 3.5.0-beta01 is available: 3.5.0"
+        errorLine1="coil = &quot;3.5.0-beta01&quot;"
+        errorLine2="       ~~~~~~~~~~~~~~">
+        <location
+            file="../gradle/libs.versions.toml"
+            line="25"
+            column="8"/>
     </issue>
 
 </issues>
