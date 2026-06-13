@@ -200,8 +200,8 @@ kotlin-*, kotlin compiler plugins, AGP-injected, Coil, Compose,
 Room-compiler, Hilt-compiler, media3, ksp-generated code, any JAR
 compiled against Kotlin 2.4+) such that the new artifact pulls in
 metadata version 2.4.0 or higher, do NOT bump it. Hilt's annotation
-processor will fail with: "[Hilt] Provided Metadata instance has
-version 2.4.0, while maximum supported version is 2.3.0." A
+processor will fail with: '[Hilt] Provided Metadata instance has
+version 2.4.0, while maximum supported version is 2.3.0.' A
 separate kotlin-metadata-jvm upgrade in Hilt is the right fix, and
 that's outside the scope of this run. Treat the dep as already-at-
 latest and add "kotlin-metadata-incompat" to breaking= so the
@@ -455,14 +455,14 @@ Template (adapt to this project):
                   output. If a dep bump caused a binary-incompatible
                   change, that is the offending_dep. KNOWN PATTERNS
                   TO RECOGNIZE (in priority order):
-                    a) "[Hilt] Provided Metadata instance has version
-                       2.4.0, while maximum supported version is 2.3.0"
+                    a) '[Hilt] Provided Metadata instance has version
+                       2.4.0, while maximum supported version is 2.3.0'
                        — the offending_dep is whichever Phase 1 bump
                        introduced a JAR compiled against Kotlin 2.4+
                        (typical: coil 3.5.0, kotlinx-* 1.12+, ksp-
                        generated, media3 1.11+). Revert ONLY that
                        key; do not revert unrelated Phase 1 bumps.
-                    b) "Could not find <group>:<artifact>:<version>"
+                    b) 'Could not find <group>:<artifact>:<version>'
                        from processReleaseNavigationResources or any
                        other task — the offending_dep is the key
                        whose version is not actually published on
@@ -470,7 +470,7 @@ Template (adapt to this project):
                        Phase 1 research agent failed to verify the
                        version in maven-metadata.xml; revert ONLY
                        that key.
-                    c) Plain "Compilation failed" pointing at
+                    c) Plain 'Compilation failed' pointing at
                        a generated *_HiltModules.kt / *_Factory.java
                        with a kotlin-metadata version warning — same
                        fix as (a): identify the bumping dep from
@@ -499,7 +499,7 @@ Template (adapt to this project):
   //     revert ONLY the offending dep (do NOT revert all Phase 1
   //     bumps; do NOT modify kotlin-metadata-jvm; the matching
   //     Hilt bump is a separate decision).
-  //   - "Could not find <group>:<artifact>:<version>" → revert ONLY
+  //   - 'Could not find <group>:<artifact>:<version>' → revert ONLY
   //     the offending [versions] key whose value isn't published.
   //
   // SCOPE DISCIPLINE: when reverting, restore ONLY the keys named
