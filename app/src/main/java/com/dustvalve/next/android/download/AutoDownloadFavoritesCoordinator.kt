@@ -6,6 +6,7 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.getByIds
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,7 +49,12 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val downloadController: DownloadController,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO +
+            CoroutineExceptionHandler { _, throwable ->
+                android.util.Log.e("AutoDownloadFavorites", "Auto-download coordinator failed", throwable)
+            },
+    )
     private var job: Job? = null
 
     /** Idempotent. Safe to call from Application.onCreate(). */

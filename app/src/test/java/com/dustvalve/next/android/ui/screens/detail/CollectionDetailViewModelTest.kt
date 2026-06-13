@@ -174,7 +174,6 @@ class CollectionDetailViewModelTest {
     private fun sourceWith(id: String, capabilities: Set<SourceConcept>): MusicSource {
         val s = mockk<MusicSource>(relaxed = true)
         every { s.id } returns id
-        every { s.provider } returns MusicProvider.YOUTUBE
         every { s.capabilities } returns capabilities
         return s
     }

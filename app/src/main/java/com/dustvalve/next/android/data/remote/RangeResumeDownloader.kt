@@ -78,7 +78,9 @@ object RangeResumeDownloader {
                 .header("Range", rangeHeader)
                 .build()
             val call = client.newCall(request)
-            coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
+            // Disposed after the attempt so handlers (and their captured calls)
+            // don't accumulate on the job across retries.
+            val cancelHook = coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
                 if (cause != null) call.cancel()
             }
             try {
@@ -142,6 +144,8 @@ object RangeResumeDownloader {
                     )
                 }
                 delay(backoffMillis(attempt))
+            } finally {
+                cancelHook?.dispose()
             }
         }
 

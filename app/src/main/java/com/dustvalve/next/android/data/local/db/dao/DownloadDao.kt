@@ -47,9 +47,6 @@ interface DownloadDao {
     @Query("SELECT * FROM downloads WHERE pinned = 0 ORDER BY lastAccessed ASC")
     suspend fun getEvictionCandidates(): List<DownloadEntity>
 
-    @Query("UPDATE downloads SET lastAccessed = :timestamp WHERE trackId = :trackId")
-    suspend fun updateLastAccessed(trackId: String, timestamp: Long = System.currentTimeMillis())
-
     @Query("DELETE FROM downloads")
     suspend fun deleteAll()
 }

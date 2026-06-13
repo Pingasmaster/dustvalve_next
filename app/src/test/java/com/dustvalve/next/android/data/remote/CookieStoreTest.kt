@@ -91,13 +91,6 @@ class CookieStoreTest {
         assertThat(results.map { it.name }).contains("foo")
     }
 
-    @Test fun `clearCookies removes all`() = runBlocking {
-        store.importCookies(mapOf("k" to "v"))
-        store.clearCookies()
-        val results = store.loadCookiesForDomain("bandcamp.com")
-        assertThat(results).isEmpty()
-    }
-
     @Test fun `clearCookiesForDomain removes matching only`() = runBlocking {
         store.importCookies(mapOf("k" to "v"), domain = "bandcamp.com")
         store.importCookies(mapOf("yk" to "yv"), domain = "youtube.com")

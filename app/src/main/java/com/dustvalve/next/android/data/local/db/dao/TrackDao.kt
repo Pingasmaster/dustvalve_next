@@ -61,9 +61,6 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE source = 'local' ORDER BY title ASC")
     fun getLocalTracks(): Flow<List<TrackEntity>>
 
-    @Query("SELECT id FROM tracks WHERE source = 'local'")
-    suspend fun getLocalTrackIdsSync(): List<String>
-
     @Query("DELETE FROM tracks WHERE source = 'local'")
     suspend fun deleteAllLocalTracks()
 

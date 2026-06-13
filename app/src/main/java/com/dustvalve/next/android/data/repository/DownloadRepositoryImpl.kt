@@ -8,10 +8,7 @@ import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.dao.getByIds
-import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
@@ -32,8 +29,6 @@ import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -51,7 +46,6 @@ class DownloadRepositoryImpl @Inject constructor(
     private val database: DustvalveNextDatabase,
     private val downloadDao: DownloadDao,
     private val trackDao: TrackDao,
-    private val favoriteDao: FavoriteDao,
     private val albumDao: AlbumDao,
     private val client: OkHttpClient,
     private val storageTracker: StorageTracker,
@@ -402,80 +396,6 @@ class DownloadRepositoryImpl @Inject constructor(
             startOffset = startOffset,
             onProgress = { written, total -> notificationCenter.trackProgress(trackId, written, total) },
         )
-
-    override fun getDownloadedAlbums(): Flow<List<Album>> {
-        return downloadDao.getAll().map { downloads ->
-            if (downloads.isEmpty()) return@map emptyList()
-
-            // Batch-fetch all favorite IDs and track entities to avoid N+1
-            val allTrackIds = downloads.map { it.trackId }
-            val favoriteIds = favoriteDao.getFavoriteIds(allTrackIds).toSet()
-            val trackEntitiesById = trackDao.getByIds(allTrackIds)
-                .associateBy { it.id }
-
-            val grouped = downloads.groupBy { it.albumId }
-
-            // Batch-fetch album entities and favorite status to avoid N+1 queries
-            val albumIds = grouped.keys.toList()
-            val albumEntitiesById = albumDao.getByIds(albumIds).associateBy { it.id }
-            val favoriteAlbumIds = favoriteDao.getFavoriteIds(albumIds).toSet()
-
-            grouped.mapNotNull { (albumId, albumDownloads) ->
-                val tracks = albumDownloads.mapNotNull { download ->
-                    // Skip downloads whose files no longer exist on disk
-                    if (!downloadPathExists(download.filePath)) return@mapNotNull null
-                    val entity = trackEntitiesById[download.trackId] ?: return@mapNotNull null
-                    entity.toDomain(isFavorite = download.trackId in favoriteIds).copy(
-                        streamUrl = playableStreamUrl(download.filePath),
-                    )
-                }
-                if (tracks.isEmpty()) return@mapNotNull null
-
-                val albumEntity = albumEntitiesById[albumId]
-                val firstTrack = tracks.first()
-
-                Album(
-                    id = albumId,
-                    url = albumEntity?.url ?: "",
-                    title = albumEntity?.title ?: firstTrack.albumTitle,
-                    artist = albumEntity?.artist ?: firstTrack.artist,
-                    artistUrl = albumEntity?.artistUrl ?: "",
-                    artUrl = albumEntity?.artUrl ?: firstTrack.artUrl,
-                    releaseDate = albumEntity?.releaseDate,
-                    about = albumEntity?.about,
-                    tracks = tracks.sortedBy { it.trackNumber },
-                    tags = emptyList(),
-                    isFavorite = albumId in favoriteAlbumIds,
-                )
-            }
-        }.flowOn(Dispatchers.IO)
-    }
-
-    override fun getDownloadedTracks(): Flow<List<Track>> {
-        return downloadDao.getAll().map { downloads ->
-            if (downloads.isEmpty()) return@map emptyList()
-
-            // Batch-fetch favorite IDs and track entities to avoid N+1
-            val allTrackIds = downloads.map { it.trackId }
-            val favoriteIds = favoriteDao.getFavoriteIds(allTrackIds).toSet()
-            val trackEntitiesById = trackDao.getByIds(allTrackIds).associateBy { it.id }
-
-            downloads.mapNotNull { download ->
-                // Skip downloads whose files no longer exist on disk
-                if (!downloadPathExists(download.filePath)) return@mapNotNull null
-                trackEntitiesById[download.trackId]?.toDomain(
-                    isFavorite = download.trackId in favoriteIds,
-                )?.copy(streamUrl = playableStreamUrl(download.filePath))
-            }
-        }.flowOn(Dispatchers.IO)
-    }
-
-    /** Produces a streamable URI for ExoPlayer from either a local path or a tree URI. */
-    private fun playableStreamUrl(filePath: String): String = if (filePath.startsWith("content://")) {
-        filePath
-    } else {
-        android.net.Uri.fromFile(File(filePath)).toString()
-    }
 
     override suspend fun isTrackDownloaded(trackId: String): Boolean = downloadDao.getByTrackId(trackId) != null
 

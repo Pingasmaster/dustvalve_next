@@ -8,7 +8,6 @@ interface AccountRepository {
     fun getAccountState(): Flow<AccountState>
     suspend fun saveCookies(cookies: Map<String, String>)
     suspend fun clearAccount()
-    suspend fun getCookies(): Map<String, String>
 
     // YouTube Music
     fun getYouTubeMusicAccountState(): Flow<YouTubeMusicAccountState>

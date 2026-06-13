@@ -5,7 +5,6 @@ import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.dao.getByAlbumIds
 import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
@@ -20,7 +19,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -187,36 +185,6 @@ class AlbumRepositoryImpl @Inject constructor(
         }
 
         return result
-    }
-
-    override suspend fun getAlbumById(id: String): Album? {
-        val albumEntity = albumDao.getById(id) ?: return null
-        val trackEntities = trackDao.getByAlbumId(id)
-        val allIds = listOf(id) + trackEntities.map { it.id }
-        val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
-        val tracks = trackEntities.map { it.toDomain(it.id in favoriteIds) }
-        return albumEntity.toDomain(tracks, id in favoriteIds)
-    }
-
-    override fun getFavoriteAlbums(): Flow<List<Album>> {
-        return albumDao.getFavorites().map { albumEntities ->
-            if (albumEntities.isEmpty()) return@map emptyList()
-
-            // Batch-load all tracks for all favorite albums at once
-            val albumIds = albumEntities.map { it.id }
-            val allTracks = trackDao.getByAlbumIds(albumIds)
-            val tracksByAlbum = allTracks.groupBy { it.albumId }
-
-            // Batch-check favorite status for all track IDs
-            val allTrackIds = allTracks.map { it.id }
-            val favoriteTrackIds = favoriteDao.getFavoriteIds(allTrackIds).toSet()
-
-            albumEntities.map { albumEntity ->
-                val trackEntities = tracksByAlbum[albumEntity.id].orEmpty()
-                val tracks = trackEntities.map { it.toDomain(it.id in favoriteTrackIds) }
-                albumEntity.toDomain(tracks, isFavorite = true)
-            }
-        }.flowOn(Dispatchers.IO)
     }
 
     override suspend fun setAutoDownload(albumId: String, autoDownload: Boolean) {

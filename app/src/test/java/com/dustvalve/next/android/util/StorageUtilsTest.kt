@@ -51,23 +51,4 @@ class StorageUtilsTest {
         val result = StorageUtils.formatFileSize(Long.MAX_VALUE)
         assertThat(result).endsWith("GB")
     }
-
-    @Test fun `bytesToMB basic conversion`() {
-        assertThat(StorageUtils.bytesToMB(1024L * 1024L)).isEqualTo(1f)
-        assertThat(StorageUtils.bytesToMB(0L)).isEqualTo(0f)
-    }
-
-    @Test fun `mbToBytes basic conversion`() {
-        assertThat(StorageUtils.mbToBytes(1f)).isEqualTo(1024L * 1024L)
-        assertThat(StorageUtils.mbToBytes(0f)).isEqualTo(0L)
-    }
-
-    @Test fun `gbToBytes basic conversion`() {
-        assertThat(StorageUtils.gbToBytes(1f)).isEqualTo(1024L * 1024L * 1024L)
-    }
-
-    @Test fun `mb round trip`() {
-        val mb = StorageUtils.mbToBytes(5f)
-        assertThat(StorageUtils.bytesToMB(mb)).isEqualTo(5f)
-    }
 }

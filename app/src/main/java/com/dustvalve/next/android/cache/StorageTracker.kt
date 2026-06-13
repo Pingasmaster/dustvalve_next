@@ -29,8 +29,6 @@ class StorageTracker @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) {
 
-    enum class WarningLevel { NONE, WARNING, CRITICAL }
-
     private val _sizeUpdateTrigger = MutableStateFlow(0L)
 
     fun notifyChanged() {
@@ -61,12 +59,6 @@ class StorageTracker @Inject constructor(
         )
     }.flowOn(Dispatchers.IO)
 
-    suspend fun isOverLimit(): Boolean = withContext(Dispatchers.IO) {
-        val limit = settingsDataStore.getStorageLimitSync()
-        if (limit == Long.MAX_VALUE) return@withContext false
-        getEffectiveTotalSize() > limit
-    }
-
     /** How many bytes the pool exceeds the configured limit by, or 0 if within limit. */
     suspend fun getOverageBytes(): Long = withContext(Dispatchers.IO) {
         val limit = settingsDataStore.getStorageLimitSync()
@@ -79,16 +71,5 @@ class StorageTracker @Inject constructor(
         val images = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
         val media = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
         return downloads + images + media
-    }
-
-    suspend fun getWarningLevel(): WarningLevel = withContext(Dispatchers.IO) {
-        val limit = settingsDataStore.getStorageLimitSync()
-        if (limit <= 0L || limit == Long.MAX_VALUE) return@withContext WarningLevel.NONE
-        val usage = getEffectiveTotalSize().toFloat() / limit.toFloat()
-        when {
-            usage >= 1.0f -> WarningLevel.CRITICAL
-            usage >= 0.85f -> WarningLevel.WARNING
-            else -> WarningLevel.NONE
-        }
     }
 }

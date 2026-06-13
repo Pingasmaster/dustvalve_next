@@ -245,7 +245,9 @@ fun FullPlayer(
         val sheetVolumeState = androidx.compose.material3.rememberSliderState(
             value = state.volumeLevel,
         )
-        LaunchedEffect(state.volumeLevel) { sheetVolumeState.value = state.volumeLevel }
+        LaunchedEffect(state.volumeLevel) {
+            if (!sheetVolumeState.isDragging) sheetVolumeState.value = state.volumeLevel
+        }
         LaunchedEffect(Unit) {
             snapshotFlow { sheetVolumeState.value }
                 .collect { playerViewModel.setVolume(it) }
@@ -722,7 +724,9 @@ fun FullPlayer(
                             val inlineVolumeState = androidx.compose.material3.rememberSliderState(
                                 value = state.volumeLevel,
                             )
-                            LaunchedEffect(state.volumeLevel) { inlineVolumeState.value = state.volumeLevel }
+                            LaunchedEffect(state.volumeLevel) {
+                                if (!inlineVolumeState.isDragging) inlineVolumeState.value = state.volumeLevel
+                            }
                             LaunchedEffect(Unit) {
                                 snapshotFlow { inlineVolumeState.value }
                                     .collect { playerViewModel.setVolume(it) }

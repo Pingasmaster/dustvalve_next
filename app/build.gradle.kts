@@ -21,8 +21,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 36
         targetSdk = 37
-        versionCode = 255
-        versionName = "0.4.49"
+        versionCode = 257
+        versionName = "0.4.51"
     }
 
     signingConfigs {
@@ -102,9 +102,6 @@ android {
         checkReleaseBuilds = true
         explainIssues = true
         showAll = true
-        htmlReport = true
-        xmlReport = true
-        sarifReport = true
         baseline = file("lint-baseline.xml")
         lintConfig = rootProject.file("config/lint/lint.xml")
     }

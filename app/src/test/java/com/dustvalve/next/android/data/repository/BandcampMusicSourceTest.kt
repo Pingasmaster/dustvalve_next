@@ -24,8 +24,7 @@ class BandcampMusicSourceTest {
     private val albumRepo = mockk<AlbumRepository>()
     private val source = BandcampMusicSource(searchRepo, artistRepo, albumRepo)
 
-    @Test fun `provider is BANDCAMP with id 'bandcamp'`() {
-        assertThat(source.provider).isEqualTo(MusicProvider.BANDCAMP)
+    @Test fun `id is 'bandcamp'`() {
         assertThat(source.id).isEqualTo("bandcamp")
     }
 

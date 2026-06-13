@@ -19,14 +19,12 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 data class BandcampUiState(
     /** Preview thumbnails per genre tag (loaded on init) */
     val categoryPreviews: Map<String, List<Album>> = emptyMap(),
-    val previewsError: Boolean = false,
 
     /** Bottom sheet state */
     val showCategorySheet: Boolean = false,
@@ -125,19 +123,15 @@ class BandcampViewModel @Inject constructor(
             // firing all ~27 requests at Bandcamp at once; tiles fill in as they
             // arrive.
             val semaphore = Semaphore(PREVIEW_CONCURRENCY)
-            val successes = AtomicInteger(0)
-            val attempts = AtomicInteger(0)
             try {
                 coroutineScope {
                     GENRE_TAGS.forEach { tag ->
                         launch {
                             semaphore.withPermit {
-                                attempts.incrementAndGet()
                                 try {
                                     val genreParam = tag.takeIf { it.isNotEmpty() }
                                     val result = discoverDustvalveUseCase(genre = genreParam)
                                     val preview = result.albums.take(PREVIEW_COUNT)
-                                    successes.incrementAndGet()
                                     _uiState.update {
                                         it.copy(categoryPreviews = it.categoryPreviews + (tag to preview))
                                     }
@@ -150,23 +144,12 @@ class BandcampViewModel @Inject constructor(
                         }
                     }
                 }
-                // Only surface the retry banner if nothing loaded at all (e.g. the
-                // network is down); partial failures just leave those tiles bare.
-                if (successes.get() == 0 && attempts.get() > 0) {
-                    _uiState.update { it.copy(previewsError = true) }
-                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "loadPreviews failed", e)
-                _uiState.update { it.copy(previewsError = true) }
             }
         }
-    }
-
-    fun retryPreviews() {
-        _uiState.update { it.copy(previewsError = false) }
-        loadPreviews()
     }
 
     fun selectCategory(tag: String, name: String) {

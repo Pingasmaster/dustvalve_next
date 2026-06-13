@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.roundToInt
 
 data class PlayerUiState(
     val currentTrack: Track? = null,
@@ -448,7 +449,7 @@ class PlayerViewModel @Inject constructor(
 
     fun setVolume(level: Float) {
         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        val newVol = (level * maxVol).toInt().coerceIn(0, maxVol)
+        val newVol = (level * maxVol).roundToInt().coerceIn(0, maxVol)
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
     }
 

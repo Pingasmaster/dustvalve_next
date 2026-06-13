@@ -201,13 +201,6 @@ class CookieStore @Inject constructor(private val settingsDataStore: SettingsDat
         }
     }
 
-    suspend fun clearCookies() {
-        persistMutex.withLock {
-            synchronized(lock) { cachedCookies = emptyList() }
-            settingsDataStore.setAuthCookies(null)
-        }
-    }
-
     suspend fun clearCookiesForDomain(domain: String) {
         persistMutex.withLock {
             synchronized(lock) {

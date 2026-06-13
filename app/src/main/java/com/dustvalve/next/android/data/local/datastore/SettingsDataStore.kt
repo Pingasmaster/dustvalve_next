@@ -107,9 +107,8 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
             try {
                 CookieEncryption.decrypt(encrypted)
             } catch (_: Exception) {
-                // Stored value may be unencrypted (pre-migration) — return as-is and
-                // it will be re-encrypted on the next write
-                encrypted
+                // Undecryptable (corrupt) value: treat as absent
+                null
             }
         }
     }
@@ -188,36 +187,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     suspend fun setStorageLimit(bytes: Long) {
         context.dataStore.edit { prefs ->
             prefs[Keys.STORAGE_LIMIT] = bytes.coerceAtLeast(0L)
-        }
-    }
-
-    suspend fun setAccountUsername(username: String?) {
-        context.dataStore.edit { prefs ->
-            if (username != null) {
-                prefs[Keys.ACCOUNT_USERNAME] = username
-            } else {
-                prefs.remove(Keys.ACCOUNT_USERNAME)
-            }
-        }
-    }
-
-    suspend fun setAccountAvatar(avatarUrl: String?) {
-        context.dataStore.edit { prefs ->
-            if (avatarUrl != null) {
-                prefs[Keys.ACCOUNT_AVATAR] = avatarUrl
-            } else {
-                prefs.remove(Keys.ACCOUNT_AVATAR)
-            }
-        }
-    }
-
-    suspend fun setAccountFanId(fanId: Long?) {
-        context.dataStore.edit { prefs ->
-            if (fanId != null) {
-                prefs[Keys.ACCOUNT_FAN_ID] = fanId
-            } else {
-                prefs.remove(Keys.ACCOUNT_FAN_ID)
-            }
         }
     }
 
@@ -302,9 +271,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
             prefs[Keys.DOWNLOAD_NOTIFICATIONS_ENABLED] = enabled
         }
     }
-
-    suspend fun getDownloadNotificationsEnabledSync(): Boolean =
-        context.dataStore.data.firstOrNull()?.get(Keys.DOWNLOAD_NOTIFICATIONS_ENABLED) ?: true
 
     suspend fun setOledBlack(enabled: Boolean) {
         context.dataStore.edit { prefs ->
@@ -648,9 +614,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     suspend fun getDedicatedFolderEnabledSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_ENABLED) ?: false
 
     suspend fun getDedicatedFolderTreeUriSync(): String? = context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_TREE_URI)
-
-    suspend fun getDedicatedFolderIncludeImageCacheSync(): Boolean =
-        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE) ?: false
 
     suspend fun getDedicatedFolderIncludeMetadataCacheSync(): Boolean =
         context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE) ?: false

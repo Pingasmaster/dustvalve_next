@@ -18,7 +18,6 @@ interface PlaylistRepository {
 
     // System playlists (Downloads, Recent, Collection, Favorites)
     suspend fun ensureSystemPlaylistsExist()
-    fun getSystemPlaylist(type: Playlist.SystemPlaylistType): Flow<Playlist?>
     suspend fun getSystemPlaylistSync(type: Playlist.SystemPlaylistType): Playlist?
 
     // Track management

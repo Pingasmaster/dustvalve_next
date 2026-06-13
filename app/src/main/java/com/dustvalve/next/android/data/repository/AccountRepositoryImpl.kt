@@ -70,12 +70,6 @@ class AccountRepositoryImpl @Inject constructor(private val settingsDataStore: S
         settingsDataStore.clearAccount()
     }
 
-    override suspend fun getCookies(): Map<String, String> {
-        // Read from CookieStore's in-memory cache to avoid format mismatch
-        return cookieStore.loadCookiesForDomain("bandcamp.com")
-            .associate { it.name to it.value }
-    }
-
     // YouTube Music
 
     override fun getYouTubeMusicAccountState(): Flow<YouTubeMusicAccountState> = settingsDataStore.ytmConnected.map { connected ->

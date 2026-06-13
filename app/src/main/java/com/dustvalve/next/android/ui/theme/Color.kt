@@ -5,11 +5,8 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.expressiveLightColorScheme
 import androidx.compose.ui.graphics.Color
 
-// Seed color from Dustvalve branding
-val DustvalveTeal = Color(0xFF629AA9)
-
 // ----- Light scheme teal-seeded palette -----
-// Primary: teal tones derived from seed
+// Primary: teal tones derived from the Dustvalve branding seed (#629AA9)
 val md_theme_light_primary = Color(0xFF006879)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
 val md_theme_light_primaryContainer = Color(0xFFA8EDFB)

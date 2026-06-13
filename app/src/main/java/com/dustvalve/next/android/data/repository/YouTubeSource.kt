@@ -3,7 +3,6 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
-import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.repository.MusicSource
 import com.dustvalve.next.android.domain.repository.SourceConcept
@@ -25,7 +24,6 @@ import javax.inject.Singleton
 @Singleton
 class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRepository) : MusicSource {
 
-    override val provider: MusicProvider = MusicProvider.YOUTUBE
     override val id: String = "youtube"
     override val capabilities: Set<SourceConcept> = setOf(
         SourceConcept.SEARCH,
