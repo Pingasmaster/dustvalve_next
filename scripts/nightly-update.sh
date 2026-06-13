@@ -178,6 +178,48 @@ POLICY (per project memory — this is the opposite of conservative):
 - Detekt 2.0.0-alpha.3 and ktlint 14.2.0 are pinned only because
   alpha N+1 isn't published; if a newer version is published, bump it.
 
+VERSION-EXISTENCE VERIFICATION (mandatory — non-negotiable):
+Before recommending a version, fetch
+  https://repo1.maven.org/maven2/<group>/<artifact>/maven-metadata.xml
+(or https://dl.google.com/android/maven2/<group>/<artifact>/maven-metadata.xml
+for Google Maven). Parse the XML and confirm the proposed version literally
+appears inside <versioning><versions>...</versions></versioning> (or is
+the value of <latest> for prerelease-only artifacts). The Maven Central
+JSON redirect at search.maven.org is NOT acceptable — only the raw
+maven-metadata.xml response. If the version is not in the metadata, set
+latest=current and add "version-not-published" to breaking=. NEVER
+recommend a version you have not seen in the metadata XML body.
+This is what caused the 2026-06-13 run to bump compose-bom to
+2026.05.02, which does not exist; do not repeat that.
+
+KOTLIN-METADATA VERSION GUARD (mandatory — non-negotiable):
+Project max supported Kotlin metadata version is 2.3.0 (Kotlin 2.3.x).
+Hilt's bundled kotlin-metadata-jvm caps at 2.3.0. If you bump a dep
+whose published JAR carries embedded Kotlin metadata (kotlinx-*,
+kotlin-*, kotlin compiler plugins, AGP-injected, Coil, Compose,
+Room-compiler, Hilt-compiler, media3, ksp-generated code, any JAR
+compiled against Kotlin 2.4+) such that the new artifact pulls in
+metadata version 2.4.0 or higher, do NOT bump it. Hilt's annotation
+processor will fail with: "[Hilt] Provided Metadata instance has
+version 2.4.0, while maximum supported version is 2.3.0." A
+separate kotlin-metadata-jvm upgrade in Hilt is the right fix, and
+that's outside the scope of this run. Treat the dep as already-at-
+latest and add "kotlin-metadata-incompat" to breaking= so the
+recovery agent doesn't keep trying.
+
+APPLY-EVERYTHING-THAT-IS-SAFE (mandatory — non-negotiable):
+Your job is to MAXIMIZE the number of bumps APPLIED in Phase 1.
+The Phase 3 recovery loop is the safety net that reverts the bad
+ones — do NOT pre-emptively skip a bump "to be safe". If the
+metadata verification above passed and the Kotlin-metadata guard
+above didn't fire, apply the bump. A nightly run that touches
+zero deps is a failure even though the build is green.
+
+ALSO: research the WHOLE catalog, not just the few obvious entries.
+gradle/libs.versions.toml currently tracks ~40 [versions] keys.
+Every one of them is in scope. If a key is already at the latest
+published version, set latest=current and that is fine.
+
 MANDATORY: You MUST launch a Workflow via the Workflow tool. The
 user has explicitly asked for a workflow-driven audit. Do not do the
 research serially. The Workflow tool takes a JS script inline; the
@@ -202,45 +244,117 @@ Template (adapt to this project):
     () => agent(
       'Read gradle/libs.versions.toml. Also grep app/build.gradle.kts
        for any direct coordinates (e.g. com.github.* jitpack deps).
-       For each entry from Maven Central (Kotlin, JetBrains, kotlinx,
-       coroutines, Hilt, etc.), look up the latest published version
-       (alpha/beta/rc/stable all count) on Maven Central via WebFetch
-       (try https://repo1.maven.org/maven2/<path>/maven-metadata.xml).
+       For EACH entry published on Maven Central (Kotlin, JetBrains,
+       kotlinx-*, coroutines, Hilt, OkHttp, jsoup, Coil, MockK, Truth,
+       Robolectric, Turbine, etc. — every key in [versions] that is
+       NOT a Google Maven artifact, see the second subagent for that
+       split), look up the latest published version (alpha/beta/rc/
+       stable all count) on Maven Central via WebFetch.
+       MANDATORY VERIFICATION STEP: for every candidate, fetch
+         https://repo1.maven.org/maven2/<group-as-path>/<artifact>/maven-metadata.xml
+       and confirm the proposed version literally appears inside
+       <versioning><versions>...</versions></versioning> (or is the
+       value of <latest> for prerelease-only artifacts). If the
+       version is NOT in the metadata body, do NOT recommend it —
+       set latest=current and add "version-not-published" to
+       breaking=. A previous run shipped compose-bom 2026.05.02
+       that way; never again.
+       KOTLIN-METADATA GUARD: if the proposed version would embed
+       Kotlin metadata > 2.3.0 in its published JAR (typical of any
+       dep built against Kotlin 2.4+ — kotlinx, ksp-generated, Coil,
+       Compose, Room-compiler, Hilt-compiler, media3), do NOT bump
+       it; the projects Hilt processor caps at 2.3.0. Set
+       latest=current and add "kotlin-metadata-incompat" to
+       breaking=.
        Return a plain-text list, ONE FINDING PER LINE in the exact
        format: lib=<name> current=<v> latest=<v> breaking=<notes or
-       none>. Lines starting with # are comments. Do not return JSON.',
+       none>. Lines starting with # are comments. Do not return JSON.
+       Cover EVERY key in [versions] that this subagent owns — the
+       catalog has ~40 keys; even if latest==current for most, list
+       them so the orchestrator can prove the audit was complete.',
       {phase: 'Research'}
     ),
     () => agent(
-      'Read gradle/libs.versions.toml. For each entry from Google
-       Maven (androidx, material3, room, datastore, activity-compose,
-       lifecycle, work, palette, coil, media3, etc.), look up the
-       latest published version on Google Maven via WebFetch (try
-       https://dl.google.com/android/maven2/<path>/maven-metadata.xml).
-       Return plain text, one finding per line: lib=<name> current=<v>
-       latest=<v> breaking=<notes or none>.',
+      'Read gradle/libs.versions.toml. For EACH entry published on
+       Google Maven (every androidx.* key — compose-bom, compose,
+       material3, activity-compose, lifecycle, core-ktx, work, room,
+       datastore, documentfile, palette, media3, hilt-androidx, AND
+       any other androidx.* group), look up the latest published
+       version (alpha/beta/rc/stable all count) on Google Maven via
+       WebFetch.
+       MANDATORY VERIFICATION STEP: for every candidate, fetch
+         https://dl.google.com/android/maven2/<group-as-path>/<artifact>/maven-metadata.xml
+       and confirm the proposed version literally appears inside
+       <versioning><versions>...</versions></versioning> (or is the
+       value of <latest> for prerelease-only artifacts). If the
+       version is NOT in the metadata body, do NOT recommend it —
+       set latest=current and add "version-not-published" to
+       breaking=. A previous run shipped compose-bom 2026.05.02
+       that way; never again.
+       KOTLIN-METADATA GUARD: same as the Maven Central subagent —
+       if the proposed version embeds Kotlin metadata > 2.3.0 in
+       its published JAR, do not bump it; set latest=current and
+       add "kotlin-metadata-incompat" to breaking=.
+       Return plain text, one finding per line: lib=<name>
+       current=<v> latest=<v> breaking=<notes or none>.
+       Cover EVERY androidx.* key in [versions], not just the ones
+       the previous run touched (compose-bom, coil, room, etc.).',
       {phase: 'Research'}
     ),
     () => agent(
-      'Read gradle/libs.versions.toml. For each entry from GitHub
-       Releases (ktlint, detekt, compose-rules, slack-lint-checks,
-       slack-compose-lints, dependency-analysis, AGP, KSP, kotlin-
-       compose, kotlin serialization). Also grep app/build.gradle.kts
-       for com.github.* jitpack deps and look up their latest GitHub
-       release tag (e.g. NewPipeExtractor v0.26.x). Return plain text,
-       one finding per line: lib=<name> current=<v> latest=<v>
-       breaking=<notes or none>.',
+      'Read gradle/libs.versions.toml. For EACH entry whose version
+       is published via GitHub Releases or a non-standard Maven
+       coordinate — this includes: ktllint-gradle, ktlint-engine,
+       detekt, compose-rules, slack-lint-checks, slack-compose-lints,
+       dependency-analysis, AGP (agp), KSP (ksp), kotlin-compose
+       plugin, kotlin-serialization plugin, and any com.github.*
+       jitpack deps found by grepping app/build.gradle.kts (e.g.
+       NewPipeExtractor) — look up the latest GitHub release tag
+       via WebFetch to https://github.com/<owner>/<repo>/releases
+       and also to https://github.com/<owner>/<repo>/releases.atom
+       (atom feed is the canonical "is this version out" source).
+       MANDATORY VERIFICATION STEP: for GitHub Releases, confirm
+       the proposed tag appears in the releases list / atom feed.
+       For KSP and AGP, cross-check against
+         https://repo1.maven.org/maven2/com/android/tools/build/gradle/maven-metadata.xml
+       and
+         https://repo1.maven.org/maven2/com/google/devtools/ksp/symbol-processing-api/maven-metadata.xml
+       and verify the proposed version appears inside
+       <versioning><versions>. NEVER recommend a version that is
+       not actually published.
+       KOTLIN/KSP GATING: KSP version is hard-coupled to Kotlin
+       version. The project currently pins kotlin=2.3.21, ksp=2.3.9
+       (per the KSP release matrix at
+       https://github.com/google/ksp/releases). If KSP has not
+       published a build for the latest Kotlin, do not bump KSP
+       past what is published. The same applies to kotlin-compose
+       and kotlin-serialization plugins. If a Kotlin-version bump
+       would require a not-yet-published KSP/plugin, do NOT bump
+       Kotlin; that is the explicit project memory.
+       Return plain text, one finding per line: lib=<name>
+       current=<v> latest=<v> breaking=<notes or none>.',
       {phase: 'Research'}
     ),
   ]);
 
   phase('Apply');
   // Parse the text findings. Apply aggressive-bump policy: for EVERY
-  // entry where latest is NEWER than current (regardless of
-  // pre-release vs stable), Edit gradle/libs.versions.toml (one Edit
-  // per version string). For any direct dep in app/build.gradle.kts,
-  // Edit the version literal there. Honor the Compose set rule. Return
-  // { bumped, skipped }.
+  // entry where latest is NEWER than current AND breaking is NOT
+  // "version-not-published" AND breaking is NOT "kotlin-metadata-
+  // incompat", Edit gradle/libs.versions.toml (one Edit per version
+  // string). For any direct dep in app/build.gradle.kts, Edit the
+  // version literal there. Honor the Compose set rule (bom + compose
+  // + material3 + graphics-shapes move as a unit; if any one of
+  // them is blocked by a guard, do not bump any of them). Return
+  // { bumped, skipped, guarded }.
+  //
+  // PHILOSOPHY: maximize the number of bumps APPLIED. The Phase 3
+  // recovery loop is the safety net that reverts the bad ones — do
+  // NOT pre-emptively skip a bump "to be safe". A nightly run that
+  // touches zero deps is a failure even though the build is green.
+  // The only legitimate reasons to skip a bump here are the two
+  // guards above (version-not-published, kotlin-metadata-incompat)
+  // and a clean "latest == current" finding.
 
 After the workflow returns, exit 0 if anything was bumped, exit 1 if
 nothing was safe to bump.
@@ -292,6 +406,15 @@ POLICY (per project memory):
   touch, and the right answer is to fix the code, NOT to revert the dep.
 - Only revert a dep bump if the build genuinely cannot be made green
   with a code/config fix.
+- PRINCIPLE: KEEP EVERY BUMP THAT ISN'T THE CAUSE. The orchestrator
+  applied a wide set of bumps in Phase 1 on purpose — your job is to
+  identify the one or two that broke the build and revert ONLY those.
+  The next build attempt will re-verify that the surviving bumps are
+  still present in libs.versions.toml. If you over-revert and lose a
+  safe bump, you have made the run strictly worse. A previous run
+  (2026-06-13) lost all surviving bumps because the recovery agent
+  treated the second failure as a signal to revert more than was
+  warranted; do not repeat that.
 
 MANDATORY: You MUST launch a Workflow via the Workflow tool to
 diagnose the failure. Do not read the log and decide on your own.
@@ -330,8 +453,30 @@ Template (adapt to this project):
     () => agent('Read the most recent log under $LOG_DIR. Focus on
                   assembleDebug+assembleRelease and testDebugUnitTest
                   output. If a dep bump caused a binary-incompatible
-                  change, that is the offending_dep. Return a
-                  plain-text one-line in the same format as agent #1.',
+                  change, that is the offending_dep. KNOWN PATTERNS
+                  TO RECOGNIZE (in priority order):
+                    a) "[Hilt] Provided Metadata instance has version
+                       2.4.0, while maximum supported version is 2.3.0"
+                       — the offending_dep is whichever Phase 1 bump
+                       introduced a JAR compiled against Kotlin 2.4+
+                       (typical: coil 3.5.0, kotlinx-* 1.12+, ksp-
+                       generated, media3 1.11+). Revert ONLY that
+                       key; do not revert unrelated Phase 1 bumps.
+                    b) "Could not find <group>:<artifact>:<version>"
+                       from processReleaseNavigationResources or any
+                       other task — the offending_dep is the key
+                       whose version is not actually published on
+                       the repository the build is searching. The
+                       Phase 1 research agent failed to verify the
+                       version in maven-metadata.xml; revert ONLY
+                       that key.
+                    c) Plain "Compilation failed" pointing at
+                       a generated *_HiltModules.kt / *_Factory.java
+                       with a kotlin-metadata version warning — same
+                       fix as (a): identify the bumping dep from
+                       the offending_dep field, revert ONLY it.
+                  Return a plain-text one-line in the same format
+                  as agent #1.',
                  {phase: 'Diagnose'}),
   ]);
 
@@ -350,24 +495,42 @@ Template (adapt to this project):
   //   - RawDispatchersUse → inject @Dispatcher; runCatching → catch
   //     Throwable with structured logging.
   //   - ktlint import-order → run './gradlew ktlintFormat'.
-  // Only if the cause is unambiguously a dep bump that breaks the
-  // build in a way code can't fix, restore ONLY that one [versions]
-  // key in gradle/libs.versions.toml to its value from
-  // $SNAP_DIR/libs.versions.toml.snapshot. If multiple keys are
-  // causally linked, restore them as a set.
+  //   - Kotlin-metadata 2.4.0 vs Hilt 2.3.0 incompatibility →
+  //     revert ONLY the offending dep (do NOT revert all Phase 1
+  //     bumps; do NOT modify kotlin-metadata-jvm; the matching
+  //     Hilt bump is a separate decision).
+  //   - "Could not find <group>:<artifact>:<version>" → revert ONLY
+  //     the offending [versions] key whose value isn't published.
+  //
+  // SCOPE DISCIPLINE: when reverting, restore ONLY the keys named
+  // in the diagnosis's offending_dep field. Do not touch any other
+  // [versions] key, even if it looks related. The Phase 1 orchestrator
+  // applied a wide set of bumps on purpose; your job is to surgically
+  // remove the bad ones and leave the rest intact. The next build
+  // attempt re-verifies the survivors.
+  //
+  // If multiple keys ARE causally linked (e.g. compose-bom + compose
+  // + material3 + graphics-shapes move as a set; if compose-bom
+  // itself is bad, all four are bad), revert them as a set — and
+  // ONLY them.
 
 Steps (semantic — adapt as needed):
 3. PREFER FIXING THE CODE. Most failures will be one of the patterns
    above.
-4. If the cause is unambiguously a dep bump, restore ONLY that one
-   [versions] key in gradle/libs.versions.toml to its value from
-   $SNAP_DIR/libs.versions.toml.snapshot. To do this, read both files
-   with Read, find the offending key, and Edit the working file to set
-   it back to the snapshotted value. Do not touch other keys.
-5. If multiple bumps are implicated, revert only the ones that are
-   causally linked (e.g. compose set).
-6. Exit 0 once you have made any change (fix or revert). Exit 1 only if
-   you cannot identify the cause at all.
+4. If the cause is unambiguously a dep bump, restore ONLY the
+   offending key(s) in gradle/libs.versions.toml to the snapshotted
+   value. To do this, read both files with Read, find the offending
+   key, and Edit the working file to set it back to the snapshotted
+   value. Do not touch other keys — even if they look related, even
+   if they were bumped in the same Phase 1 run, even if reverting
+   them would "obviously be safer". The orchestrator's apply phase
+   already applied as many safe bumps as it could find; your job is
+   to surgically remove the bad ones, not to be conservative.
+5. If multiple bumps ARE causally linked (compose set; or a Kotlin
+   bump that pulls in a transitive KSP bump that breaks the build),
+   revert them as a set — and ONLY that set.
+6. Exit 0 once you have made any change (fix or revert). Exit 1 only
+   if you cannot identify the cause at all.
 
 Do NOT commit or push. Do NOT bump any other dep. Do NOT add new
 dependencies.
