@@ -18,8 +18,7 @@ class YouTubeMusicSourceTest {
     private val ytMusicRepo = mockk<YouTubeMusicRepository>()
     private val source = YouTubeMusicSource(ytMusicRepo)
 
-    @Test fun `provider YOUTUBE id 'youtube_music' — distinct from plain youtube`() {
-        assertThat(source.provider).isEqualTo(MusicProvider.YOUTUBE)
+    @Test fun `id 'youtube_music' — distinct from plain youtube`() {
         assertThat(source.id).isEqualTo("youtube_music")
     }
 

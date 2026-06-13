@@ -10,6 +10,5 @@ interface ArtistRepository {
     suspend fun toggleFavorite(artistId: String)
     suspend fun isFavorite(artistId: String): Boolean
     suspend fun getArtistMixTracks(albumIds: List<String>): List<Track>
-    fun getFavoriteArtists(): Flow<List<Artist>>
     suspend fun setAutoDownload(artistId: String, autoDownload: Boolean)
 }

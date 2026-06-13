@@ -21,7 +21,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -216,10 +215,6 @@ class ArtistRepositoryImpl @Inject constructor(
     }
 
     override suspend fun isFavorite(artistId: String): Boolean = favoriteDao.isFavorite(artistId)
-
-    override fun getFavoriteArtists(): Flow<List<Artist>> = artistDao.getFavoriteArtists().map { entities ->
-        entities.map { it.toDomain(emptyList(), isFavorite = true) }
-    }
 
     override suspend fun getArtistMixTracks(albumIds: List<String>): List<Track> {
         if (albumIds.isEmpty()) return emptyList()

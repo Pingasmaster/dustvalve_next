@@ -22,10 +22,8 @@ object MusicSourceModule {
         youtube: YouTubeSource,
         youtubeMusic: YouTubeMusicSource,
     ): MusicSourceRegistry {
-        val sources = listOf(bandcamp, youtube, youtubeMusic)
-        val byId = sources.associateBy { it.id }
+        val byId = listOf(bandcamp, youtube, youtubeMusic).associateBy { it.id }
         return object : MusicSourceRegistry {
-            override fun all(): List<MusicSource> = sources
             override fun get(id: String): MusicSource? = byId[id]
         }
     }

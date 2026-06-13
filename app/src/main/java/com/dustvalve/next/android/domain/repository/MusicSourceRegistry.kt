@@ -7,9 +7,6 @@ package com.dustvalve.next.android.domain.repository
  * that also binds each concrete [MusicSource].
  */
 interface MusicSourceRegistry {
-    /** All registered sources. */
-    fun all(): List<MusicSource>
-
     /** Looked up by [MusicSource.id]; null if no such source is registered. */
     operator fun get(id: String): MusicSource?
 }

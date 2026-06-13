@@ -2,7 +2,6 @@ package com.dustvalve.next.android.data.storage.folder
 
 import android.content.Context
 import android.net.Uri
-import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -65,17 +64,4 @@ object FolderIo {
                 } catch (_: Exception) {}
             }
         }
-
-    suspend fun deleteJson(context: Context, treeUri: Uri, name: String) = withContext(Dispatchers.IO) {
-        DedicatedFolderPaths.find(context, treeUri, name)?.delete()
-        Unit
-    }
-
-    suspend fun deleteIfExists(file: DocumentFile?) = withContext(Dispatchers.IO) {
-        if (file != null && file.exists()) {
-            try {
-                file.delete()
-            } catch (_: Exception) {}
-        }
-    }
 }

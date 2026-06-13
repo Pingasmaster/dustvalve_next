@@ -129,22 +129,6 @@ class HtmlUtilsTest {
         assertThat(out).isEqualTo("&#abc;")
     }
 
-    @Test fun `cleanHtml strips tags`() {
-        assertThat(HtmlUtils.cleanHtml("<b>hello</b> <i>world</i>")).isEqualTo("hello world")
-    }
-
-    @Test fun `cleanHtml collapses whitespace`() {
-        assertThat(HtmlUtils.cleanHtml("a    b\n\tc")).isEqualTo("a b c")
-    }
-
-    @Test fun `cleanHtml decodes entities`() {
-        assertThat(HtmlUtils.cleanHtml("a &amp; b")).isEqualTo("a & b")
-    }
-
-    @Test fun `cleanHtml handles multi-line tags`() {
-        assertThat(HtmlUtils.cleanHtml("<span\nclass=\"x\">hi</span>")).isEqualTo("hi")
-    }
-
     @Test fun `extractMetaContent og property`() {
         val html = """<meta property="og:title" content="My Title">"""
         assertThat(HtmlUtils.extractMetaContent(html, "og:title")).isEqualTo("My Title")

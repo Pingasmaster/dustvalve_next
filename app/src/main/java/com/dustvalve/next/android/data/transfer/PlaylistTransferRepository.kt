@@ -245,6 +245,7 @@ private fun Track.toSnapshot() = TrackSnapshot(
     dateAdded = dateAdded,
     year = year,
     albumUrl = albumUrl,
+    bandcampTrackUrl = bandcampTrackUrl,
 )
 
 private fun Playlist.toSnapshot() = PlaylistSnapshot(

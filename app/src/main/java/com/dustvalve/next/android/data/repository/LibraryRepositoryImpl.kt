@@ -5,17 +5,11 @@ import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.RecentTrackDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.local.db.entity.RecentTrackEntity
-import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LibraryRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,10 +25,6 @@ class LibraryRepositoryImpl @Inject constructor(
         private const val MAX_RECENT_TRACKS = 100
     }
 
-    override fun getFavoriteTracks(): Flow<List<Track>> = trackDao.getFavorites().map { trackEntities ->
-        trackEntities.map { it.toDomain(isFavorite = true) }
-    }.flowOn(Dispatchers.IO)
-
     override suspend fun toggleTrackFavorite(trackId: String): Boolean = database.withTransaction {
         val isFavorite = favoriteDao.isFavorite(trackId)
         if (isFavorite) {
@@ -43,17 +33,6 @@ class LibraryRepositoryImpl @Inject constructor(
             favoriteDao.insert(FavoriteEntity(id = trackId, type = "track"))
         }
         !isFavorite
-    }
-
-    override fun getRecentTracks(): Flow<List<Track>> {
-        return trackDao.getRecent().map { trackEntities ->
-            if (trackEntities.isEmpty()) return@map emptyList()
-            val allIds = trackEntities.map { it.id }
-            val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
-            trackEntities.map { trackEntity ->
-                trackEntity.toDomain(trackEntity.id in favoriteIds)
-            }
-        }.flowOn(Dispatchers.IO)
     }
 
     override suspend fun addToRecent(track: Track) {

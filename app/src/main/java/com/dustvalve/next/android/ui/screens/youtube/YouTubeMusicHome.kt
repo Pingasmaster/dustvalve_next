@@ -856,15 +856,6 @@ private fun ArtistSpotlightCard(artist: ArtistItem, onOpen: (ArtistItem) -> Unit
         ),
         label = "morph",
     )
-    val ringShape = remember {
-        object : Shape {
-            private val morph = Morph(MaterialShapes.Clover8Leaf, MaterialShapes.Cookie12Sided)
-
-            override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
-                buildOutlineFromMorph(morph, 0f, size)
-        }
-    }
-
     Surface(
         onClick = { onOpen(artist) },
         color = MaterialTheme.colorScheme.surfaceContainerHigh,

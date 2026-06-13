@@ -159,49 +159,6 @@ object HtmlUtils {
     }
 
     /**
-     * Strips HTML tags and decodes common HTML entities.
-     */
-    fun cleanHtml(html: String): String {
-        // Remove HTML tags
-        var cleaned = html.replace(Regex("<[^>]*>"), "")
-
-        // Decode numeric HTML entities first (before named entities to prevent double-decoding)
-        // Decimal entities
-        cleaned = Regex("&#(\\d+);").replace(cleaned) { matchResult ->
-            val code = matchResult.groupValues[1].toIntOrNull()
-            if (code != null && Character.isValidCodePoint(code)) {
-                String(Character.toChars(code))
-            } else {
-                matchResult.value
-            }
-        }
-
-        // Hexadecimal entities
-        cleaned = Regex("&#x([0-9a-fA-F]+);").replace(cleaned) { matchResult ->
-            val code = matchResult.groupValues[1].toIntOrNull(16)
-            if (code != null && Character.isValidCodePoint(code)) {
-                String(Character.toChars(code))
-            } else {
-                matchResult.value
-            }
-        }
-
-        // Decode common named HTML entities — &amp; must be LAST to prevent double-decoding
-        cleaned = cleaned
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-
-        // Collapse whitespace
-        cleaned = cleaned.replace(Regex("\\s+"), " ").trim()
-
-        return cleaned
-    }
-
-    /**
      * Extracts the content attribute from a meta tag with the given property or name.
      *
      * Matches patterns like:

@@ -425,7 +425,7 @@ fun SettingsScreen(
                                                         )
                                                     }
                                                 },
-                                                modifier = Modifier.padding(start = 20.dp),
+                                                modifier = Modifier.padding(start = SUB_TOGGLE_INDENT),
                                                 colors = ListItemDefaults.colors(
                                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                                                 ),

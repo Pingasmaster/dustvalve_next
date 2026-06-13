@@ -106,6 +106,7 @@ data class TrackSnapshot(
     val dateAdded: Long = 0L,
     val year: Int = 0,
     val albumUrl: String = "",
+    val bandcampTrackUrl: String? = null,
 )
 
 @Serializable
@@ -114,10 +115,12 @@ data class TracksFile(val tracks: List<TrackSnapshot> = emptyList())
 fun TrackEntity.toSnapshot() = TrackSnapshot(
     id, albumId, title, artist, artistUrl, trackNumber, duration, streamUrl,
     artUrl, albumTitle, source, folderUri, dateAdded, year, albumUrl,
+    bandcampTrackUrl,
 )
 fun TrackSnapshot.toEntity() = TrackEntity(
     id, albumId, title, artist, artistUrl, trackNumber, duration, streamUrl,
     artUrl, albumTitle, source, folderUri, dateAdded, year, albumUrl,
+    bandcampTrackUrl,
 )
 
 // ─── Albums ───────────────────────────────────────────────────────────────

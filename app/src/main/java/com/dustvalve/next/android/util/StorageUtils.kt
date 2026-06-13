@@ -29,19 +29,4 @@ object StorageUtils {
             }
         }
     }
-
-    /**
-     * Converts bytes to megabytes.
-     */
-    fun bytesToMB(bytes: Long): Float = bytes / (1024f * 1024f)
-
-    /**
-     * Converts megabytes to bytes.
-     */
-    fun mbToBytes(mb: Float): Long = (mb * 1024f * 1024f).toLong()
-
-    /**
-     * Converts gigabytes to bytes.
-     */
-    fun gbToBytes(gb: Float): Long = (gb * 1024f * 1024f * 1024f).toLong()
 }

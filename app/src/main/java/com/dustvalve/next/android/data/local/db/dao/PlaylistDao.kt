@@ -5,7 +5,6 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
-import androidx.room.Update
 import com.dustvalve.next.android.data.local.db.entity.PlaylistEntity
 import com.dustvalve.next.android.data.local.db.entity.PlaylistTrackEntity
 import kotlinx.coroutines.flow.Flow
@@ -25,9 +24,6 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists WHERE isSystem = 1 AND systemType = :systemType")
     suspend fun getSystemPlaylistByType(systemType: String): PlaylistEntity?
 
-    @Query("SELECT * FROM playlists WHERE isSystem = 1 AND systemType = :systemType")
-    fun getSystemPlaylistByTypeFlow(systemType: String): Flow<PlaylistEntity?>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylist(playlist: PlaylistEntity)
 
@@ -36,9 +32,6 @@ interface PlaylistDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylists(playlists: List<PlaylistEntity>)
-
-    @Update
-    suspend fun updatePlaylist(playlist: PlaylistEntity)
 
     @Query("UPDATE playlists SET name = :name, updatedAt = :updatedAt WHERE id = :playlistId AND isSystem = 0")
     suspend fun renamePlaylist(playlistId: String, name: String, updatedAt: Long = System.currentTimeMillis()): Int
@@ -60,17 +53,11 @@ interface PlaylistDao {
     @Query("UPDATE playlists SET autoDownload = :autoDownload WHERE id = :playlistId")
     suspend fun setAutoDownload(playlistId: String, autoDownload: Boolean)
 
-    @Query("UPDATE playlists SET sortOrder = :sortOrder WHERE id = :playlistId")
-    suspend fun setPlaylistSortOrder(playlistId: String, sortOrder: Int)
-
     @Query("DELETE FROM playlists WHERE id = :playlistId AND isSystem = 0")
     suspend fun deletePlaylist(playlistId: String): Int
 
     @Query("SELECT * FROM playlists WHERE name = :name AND isSystem = 0 ORDER BY createdAt DESC LIMIT 1")
     suspend fun getPlaylistByName(name: String): PlaylistEntity?
-
-    @Query("SELECT COUNT(*) FROM playlists")
-    suspend fun getPlaylistCount(): Int
 
     // Playlist tracks operations
 

@@ -11,16 +11,6 @@ object NetworkUtils {
         RegexOption.IGNORE_CASE,
     )
 
-    private val NON_ARTIST_PATHS = setOf(
-        "search",
-        "discover",
-        "api",
-        "login",
-        "signup",
-        "tag",
-        "help",
-    )
-
     /**
      * Returns true if the URL is a valid HTTPS URL with a non-empty hostname.
      * This validates URL structure only — it does NOT verify the URL belongs to Dustvalve.
@@ -49,42 +39,6 @@ object NetworkUtils {
             DUSTVALVE_HOST_REGEX.matches(host)
         } catch (e: Exception) {
             false
-        }
-    }
-
-    /**
-     * Extracts the artist slug from a Dustvalve URL.
-     * For URLs like "https://artistname.bandcamp.com/...", returns "artistname".
-     * For URLs like "https://bandcamp.com/artistname", returns "artistname".
-     * Returns null if extraction fails or the path is a known non-artist path.
-     */
-    fun extractArtistSlug(url: String): String? {
-        return try {
-            val uri = URI(url)
-            val host = uri.host ?: return null
-
-            // Check subdomain pattern: artistname.bandcamp.com
-            if (host.endsWith(".bandcamp.com") && host != "bandcamp.com") {
-                val subdomain = host.removeSuffix(".bandcamp.com")
-                if (subdomain.isNotEmpty() && !subdomain.contains('.')) {
-                    return subdomain
-                }
-            }
-
-            // Check path pattern: bandcamp.com/artistname
-            if (host.equals("bandcamp.com", ignoreCase = true)) {
-                val path = uri.path ?: return null
-                val segments = path.trim('/').split('/')
-                if (segments.isNotEmpty() && segments[0].isNotEmpty()) {
-                    val slug = segments[0]
-                    if (slug.lowercase() in NON_ARTIST_PATHS) return null
-                    return slug
-                }
-            }
-
-            null
-        } catch (e: Exception) {
-            null
         }
     }
 

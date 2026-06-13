@@ -3,7 +3,6 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
-import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.repository.AlbumRepository
@@ -26,7 +25,6 @@ class BandcampMusicSource @Inject constructor(
     private val albumRepository: AlbumRepository,
 ) : MusicSource {
 
-    override val provider: MusicProvider = MusicProvider.BANDCAMP
     override val id: String = "bandcamp"
     override val capabilities: Set<SourceConcept> = setOf(
         SourceConcept.SEARCH,

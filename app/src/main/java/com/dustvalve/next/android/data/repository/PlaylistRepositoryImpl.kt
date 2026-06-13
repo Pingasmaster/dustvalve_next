@@ -138,12 +138,6 @@ class PlaylistRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getSystemPlaylist(type: Playlist.SystemPlaylistType): Flow<Playlist?> =
-        playlistDao.getSystemPlaylistByTypeFlow(type.name).map {
-            it?.toDomain()
-        }
-            .flowOn(Dispatchers.IO)
-
     override suspend fun getSystemPlaylistSync(type: Playlist.SystemPlaylistType): Playlist? =
         playlistDao.getSystemPlaylistByType(type.name)?.toDomain()
 

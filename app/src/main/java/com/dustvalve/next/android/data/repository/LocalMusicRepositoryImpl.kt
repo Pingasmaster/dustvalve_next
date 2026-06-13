@@ -15,8 +15,6 @@ import com.dustvalve.next.android.data.local.scanner.MediaStoreScanner
 import com.dustvalve.next.android.data.local.scanner.ScanResult
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -142,6 +140,4 @@ class LocalMusicRepositoryImpl @Inject constructor(
     override suspend fun cancelSyncWork() {
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
     }
-
-    override fun getLocalTrackCount(): Flow<Int> = trackDao.getLocalTracks().map { it.size }
 }

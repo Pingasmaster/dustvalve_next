@@ -3,7 +3,6 @@ package com.dustvalve.next.android.domain.repository
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
-import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.SearchResult
 
 /**
@@ -23,13 +22,10 @@ import com.dustvalve.next.android.domain.model.SearchResult
  */
 interface MusicSource {
 
-    /** Which provider this source represents. */
-    val provider: MusicProvider
-
     /**
-     * Stable per-source identifier. Two sources can share [provider] but
+     * Stable per-source identifier. Two sources can share a provider but
      * have distinct ids — e.g. the standard YouTube source and the YT Music
-     * source both return [MusicProvider.YOUTUBE] but `id` is "youtube" vs
+     * source are both YouTube-backed but `id` is "youtube" vs
      * "youtube_music". Use for navigation routing and registry lookup.
      */
     val id: String
