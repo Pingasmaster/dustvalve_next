@@ -41,7 +41,7 @@ turbine = "1.2.1"
 # Static analysis toolchain.
 ktlint-gradle = "14.2.0"
 ktlint-engine = "1.8.0"
-detekt = "2.0.0-alpha.3"
+detekt = "2.0.0-alpha.4"
 compose-rules = "0.6.0"
 slack-lint-checks = "0.11.1"
 slack-compose-lints = "1.5.2"
