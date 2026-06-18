@@ -1,17 +1,17 @@
 [versions]
-agp = "9.3.0-alpha12"
+agp = "9.3.0-rc01"
 kotlin = "2.3.21"
 ksp = "2.3.9"
 hilt = "2.59.2"
 hilt-androidx = "1.4.0-rc01"
 
-compose-bom = "2026.05.01"
-compose = "1.12.0-alpha03"
-material3 = "1.5.0-alpha21"
+compose-bom = "2026.06.00"
+compose = "1.12.0-beta01"
+material3 = "1.5.0-alpha22"
 graphics-shapes = "1.1.0"
 
 activity-compose = "1.13.0"
-lifecycle = "2.11.0-rc01"
+lifecycle = "2.11.0"
 core-ktx = "1.19.0"
 
 work = "2.11.2"
@@ -41,7 +41,7 @@ turbine = "1.2.1"
 # Static analysis toolchain.
 ktlint-gradle = "14.2.0"
 ktlint-engine = "1.8.0"
-detekt = "2.0.0-alpha.4"
+detekt = "2.0.0-alpha.5"
 compose-rules = "0.6.1"
 slack-lint-checks = "0.11.1"
 slack-compose-lints = "1.5.2"
