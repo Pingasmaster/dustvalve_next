@@ -11,7 +11,12 @@
 #
 # Guardrails:
 #   - single-instance (flock on agent.lock)
-#   - refuses to start if the repo working tree is dirty
+#   - if the working tree is dirty, auto-commit it as a `wip:` snapshot
+#     before spawning the agent (the agent's own commit will land on top,
+#     and the push will carry both) — so the agent always runs against a
+#     clean tree, but the user's uncommitted work is never lost
+#   - refuses to start if the repo is in a merge state with unresolved
+#     conflicts (can't auto-commit those safely)
 #   - 90-minute hard cap per run
 #   - DRY_RUN=1 mode writes the would-be prompt to a session file and
 #     spawns nothing
@@ -65,10 +70,30 @@ fi
 
 [ -f "$PROMPT_FILE" ] || { log "missing prompt: $PROMPT_FILE"; exit 2; }
 
-if ! git -C "$REPO" diff --quiet HEAD 2>/dev/null \
-   || [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
-  log "repo $REPO is dirty — skipping this run (someone else is editing)"
-  exit 0
+if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
+  log "repo $REPO has uncommitted changes — auto-committing as 'wip:' snapshot before agent run"
+  if [ -n "$(git -C "$REPO" ls-files --unmerged 2>/dev/null)" ]; then
+    log "repo $REPO is in a merge state with unmerged paths; refusing to run (resolve conflicts first)"
+    exit 1
+  fi
+  if ! git -C "$REPO" add -A 2>>"$STATE_DIR/agent.log"; then
+    log "git add -A failed; refusing to run agent"
+    exit 1
+  fi
+  ts_snap=$(date '+%Y-%m-%dT%H:%M:%S')
+  if ! git -C "$REPO" commit -m "wip: pre-nightly-deps-agent state $ts_snap
+
+Auto-committed by nightly-deps-agent.sh because the working tree
+was dirty when the agent started. The agent will make its own
+commit on top of this one for dep bumps and fixes; both commits
+land in the same push.
+
+If this commit contains unintended content (e.g. accidental
+saves), amend or drop it before the agent pushes." 2>>"$STATE_DIR/agent.log"; then
+    log "wip commit FAILED; refusing to run agent"
+    exit 1
+  fi
+  log "wip commit landed: $(git -C "$REPO" rev-parse --short HEAD); proceeding with agent run"
 fi
 
 validate_model "$MODEL" || exit 2
