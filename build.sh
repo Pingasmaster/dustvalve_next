@@ -45,7 +45,7 @@ acquire_lock() {
 # --clean: just run gradle clean and exit, do nothing else
 if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     acquire_lock
-    JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew clean
+    ./gradlew clean
     rm -f "$ROOT_APK"
     echo "Clean complete."
     exit 0
@@ -54,7 +54,7 @@ fi
 # --format: ktlintFormat only, no build, no version bump
 if [[ "$DO_FORMAT" -eq 1 ]]; then
     acquire_lock
-    JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew ktlintFormat
+    ./gradlew ktlintFormat
     echo "ktlintFormat complete. Re-run ./build.sh without --format to verify."
     exit 0
 fi
@@ -73,11 +73,11 @@ if [[ -d "app/src/test" ]]; then
     GRADLE_TASKS+=(testDebugUnitTest)
 fi
 
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew "${GRADLE_TASKS[@]}"
+./gradlew "${GRADLE_TASKS[@]}"
 
 # Optional: dependency-analysis report (informational; not a build gate).
 if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
-    JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew buildHealth || true
+    ./gradlew buildHealth || true
     REPORT="build/reports/dependency-analysis/build-health-report.txt"
     [[ -f "$REPORT" ]] && echo "Dependency-analysis report: $REPORT"
 fi
