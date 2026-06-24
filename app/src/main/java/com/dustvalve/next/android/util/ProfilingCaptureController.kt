@@ -26,9 +26,7 @@ import javax.inject.Singleton
  * minSdk=36 on this app so the API surface is always present.
  */
 @Singleton
-class ProfilingCaptureController @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-) {
+class ProfilingCaptureController @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
 

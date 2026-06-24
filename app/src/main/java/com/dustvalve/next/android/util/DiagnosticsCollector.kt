@@ -27,9 +27,7 @@ import javax.inject.Singleton
  * trace without rebuilding from scratch.
  */
 @Singleton
-class DiagnosticsCollector @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-) {
+class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     /**
      * Best-effort: read the last few process exit reasons and dump them.

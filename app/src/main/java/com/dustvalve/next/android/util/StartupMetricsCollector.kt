@@ -26,9 +26,7 @@ import javax.inject.Singleton
  * onCreate→first-frame, fork→fully-drawn.
  */
 @Singleton
-class StartupMetricsCollector @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-) {
+class StartupMetricsCollector @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     fun collectOnColdStart() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
@@ -56,18 +54,24 @@ class StartupMetricsCollector @Inject constructor(
         return buildString {
             append("reason=").append(reason).append('(').append(reasonName(reason)).append(')')
             append(" startType=").append(startType)
-            append(" bind→onCreate=").append(delta(
-                ApplicationStartInfo.START_TIMESTAMP_BIND_APPLICATION,
-                ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
-            ) ?: "?")
-            append("ms onCreate→firstFrame=").append(delta(
-                ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
-                ApplicationStartInfo.START_TIMESTAMP_FIRST_FRAME,
-            ) ?: "?")
-            append("ms fork→fullyDrawn=").append(delta(
-                ApplicationStartInfo.START_TIMESTAMP_FORK,
-                ApplicationStartInfo.START_TIMESTAMP_FULLY_DRAWN,
-            ) ?: "?")
+            append(" bind→onCreate=").append(
+                delta(
+                    ApplicationStartInfo.START_TIMESTAMP_BIND_APPLICATION,
+                    ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
+                ) ?: "?",
+            )
+            append("ms onCreate→firstFrame=").append(
+                delta(
+                    ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
+                    ApplicationStartInfo.START_TIMESTAMP_FIRST_FRAME,
+                ) ?: "?",
+            )
+            append("ms fork→fullyDrawn=").append(
+                delta(
+                    ApplicationStartInfo.START_TIMESTAMP_FORK,
+                    ApplicationStartInfo.START_TIMESTAMP_FULLY_DRAWN,
+                ) ?: "?",
+            )
             append("ms")
         }
     }
@@ -93,18 +97,24 @@ class StartupMetricsCollector @Inject constructor(
                     w.appendLine("ts,reason,startType,bindToOnCreate,onCreateToFirstFrame,forkToFullyDrawn")
                 }
                 val ts = info.startupTimestamps
-                val bindToOnCreate = (ts[ApplicationStartInfo.START_TIMESTAMP_BIND_APPLICATION]
-                    ?.let { b ->
-                        ts[ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE]?.minus(b)
-                    })?.toString().orEmpty()
-                val onCreateToFirst = (ts[ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE]
-                    ?.let { c ->
-                        ts[ApplicationStartInfo.START_TIMESTAMP_FIRST_FRAME]?.minus(c)
-                    })?.toString().orEmpty()
-                val forkToFully = (ts[ApplicationStartInfo.START_TIMESTAMP_FORK]
-                    ?.let { f ->
-                        ts[ApplicationStartInfo.START_TIMESTAMP_FULLY_DRAWN]?.minus(f)
-                    })?.toString().orEmpty()
+                val bindToOnCreate = (
+                    ts[ApplicationStartInfo.START_TIMESTAMP_BIND_APPLICATION]
+                        ?.let { b ->
+                            ts[ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE]?.minus(b)
+                        }
+                    )?.toString().orEmpty()
+                val onCreateToFirst = (
+                    ts[ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE]
+                        ?.let { c ->
+                            ts[ApplicationStartInfo.START_TIMESTAMP_FIRST_FRAME]?.minus(c)
+                        }
+                    )?.toString().orEmpty()
+                val forkToFully = (
+                    ts[ApplicationStartInfo.START_TIMESTAMP_FORK]
+                        ?.let { f ->
+                            ts[ApplicationStartInfo.START_TIMESTAMP_FULLY_DRAWN]?.minus(f)
+                        }
+                    )?.toString().orEmpty()
                 w.append(System.currentTimeMillis().toString()).append(',')
                 w.append(info.reason.toString()).append(',')
                 w.append(info.startType.toString()).append(',')
