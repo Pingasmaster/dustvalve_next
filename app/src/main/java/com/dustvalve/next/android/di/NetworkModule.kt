@@ -15,6 +15,7 @@ import okhttp3.Response
 import okhttp3.brotli.BrotliInterceptor
 import java.io.File
 import java.io.IOException
+import java.time.Duration
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
@@ -60,8 +61,13 @@ object NetworkModule {
             // (innertube, googlevideo, bandcamp). 5 min keepalive avoids the
             // TaskRunner CPU drain seen with short values.
             .connectionPool(ConnectionPool(8, 5, TimeUnit.MINUTES))
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            // OkHttp 5 Duration API. callTimeout caps the whole call (incl.
+            // retries) so a flapping host can't hang a Worker past
+            // STOP_REASON_TIMEOUT. connectTimeout is short for fast-fail on
+            // unreachable hosts; readTimeout accommodates large audio chunks.
+            .callTimeout(Duration.ofSeconds(30))
+            .connectTimeout(Duration.ofSeconds(10))
+            .readTimeout(Duration.ofSeconds(20))
             .build()
     }
 
