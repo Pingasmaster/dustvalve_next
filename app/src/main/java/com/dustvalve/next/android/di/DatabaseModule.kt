@@ -2,6 +2,7 @@ package com.dustvalve.next.android.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
@@ -33,6 +34,19 @@ object DatabaseModule {
         "dustvalve_database",
     )
         .fallbackToDestructiveMigration(dropAllTables = true)
+        // Write-Ahead Logging: readers and writers don't block each other,
+        // which matters because DownloadService / DownloadController mutate
+        // rows from a different dispatcher than UI queries. Default is
+        // TRUNCATE on Room 2.7+ which serialises everything.
+        //
+        // We deliberately do NOT call enableMultiInstanceInvalidation() — it
+        // binds a ServiceConnection that Robolectric can't satisfy, breaking
+        // the Compose-test harness (TracksHeaderLabelTest et al.), and the
+        // app is single-process anyway (one Application, no :remote Process
+        // IPC). The trade-off is that writes from a hypothetical future
+        // process boundary wouldn't invalidate this Room instance, but
+        // that's not a path we use today.
+        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
         .build()
 
     @Provides

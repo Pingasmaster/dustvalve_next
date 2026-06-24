@@ -76,6 +76,12 @@ android {
         stabilityConfigurationFiles.add(
             rootProject.layout.projectDirectory.file("compose_stability_config.conf"),
         )
+
+        // Treat unannotated classes whose public API is all val/String/etc.
+        // properties as skippable. Eliminates redundant recompositions caused
+        // by the conservative "unstable" fallback inference. Audit reports
+        // produced via `-Pcompose.reports=true` to confirm.
+        enableStrongSkippingMode = true
     }
 
     testOptions {

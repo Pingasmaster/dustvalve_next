@@ -2,6 +2,7 @@ package com.dustvalve.next.android
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -53,6 +54,16 @@ class DustvalveNextApplication :
 
     override fun onCreate() {
         super.onCreate()
+        // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
+        // cursors, and unclosed Closeables via logcat + a small ANR dialog
+        // for severe ThreadPolicy violations. Suppressed in release via the
+        // BuildConfig.DEBUG gate — release APKs must not stall on a stray
+        // `runOnUiThread { db.query() }`.
+        if (BuildConfig.DEBUG) installStrictMode()
+        // DiagnosticsInitializer (registered via androidx.startup in the
+        // manifest) has already run StartupMetricsCollector,
+        // DiagnosticsCollector, and ProfilingCaptureController before
+        // Application.onCreate, so the cold-start critical path stays short.
         downloadNotificationCenter.ensureChannel()
         // Drop partial .tmp files orphaned by a previous process death; the
         // in-memory download queue that could have resumed them is gone.
@@ -91,6 +102,32 @@ class DustvalveNextApplication :
                 appUpdateController.releaseOnTrim()
             }
         }
+    }
+
+    /**
+     * Debug-only policy: log every Main-thread disk read/write, network call,
+     * and SQLite leak. `penaltyLog` keeps the app running so the dev can
+     * see the stack trace without losing UI state; `penaltyDeathOnNetwork`
+     * on ThreadPolicy would crash the app and is intentionally NOT set.
+     */
+    private fun installStrictMode() {
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()
+                .detectCustomSlowCalls()
+                .penaltyLog()
+                .build(),
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectLeakedClosableObjects()
+                .detectLeakedRegistrationObjects()
+                .detectActivityLeaks()
+                .penaltyLog()
+                .build(),
+        )
     }
 
     override val workManagerConfiguration: Configuration

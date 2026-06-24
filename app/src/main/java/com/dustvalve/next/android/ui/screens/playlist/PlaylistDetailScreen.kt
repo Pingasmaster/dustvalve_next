@@ -307,6 +307,7 @@ private fun PlaylistContent(
             items(
                 count = tracks.size,
                 key = { tracks[it].id },
+                contentType = { "playlist_track" },
             ) { index ->
                 val track = tracks[index]
                 val isCurrentTrack = currentTrackId == track.id

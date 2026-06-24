@@ -377,6 +377,7 @@ private fun LibraryList(
         items(
             count = items.size,
             key = { items[it].id },
+            contentType = { "library_item" },
         ) { index ->
             val item = items[index]
             SegmentedListItem(

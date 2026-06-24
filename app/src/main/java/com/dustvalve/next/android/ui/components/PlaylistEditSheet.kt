@@ -219,7 +219,7 @@ fun PlaylistEditSheet(
                             )
                         }
                     }
-                    items(artOptions, key = { it }) { artUrl ->
+                    items(artOptions, key = { it }, contentType = { "playlist_art" }) { artUrl ->
                         val isSelected = selectedIconUrl == artUrl
                         AsyncImage(
                             model = artUrl,

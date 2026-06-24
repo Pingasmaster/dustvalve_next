@@ -583,6 +583,7 @@ private fun QuickPicksGrid(items: List<SongItem>, onPlay: (SongItem) -> Unit) {
         items(
             items = chunked,
             key = { pair -> pair.first().videoId },
+            contentType = { "quick_picks_row" },
         ) { pair ->
             Column(
                 modifier = Modifier.width(320.dp),
@@ -782,7 +783,7 @@ private fun TilesCarousel(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = items, key = { it.id }) { tile ->
+        items(items = items, key = { it.id }, contentType = { "quick_pick_tile" }) { tile ->
             Column(modifier = Modifier.width(140.dp).clickable { onOpen(tile) }) {
                 if (tile.thumbnailUrl != null) {
                     AsyncImage(
@@ -817,6 +818,7 @@ private fun TilesFromHeroesCarousel(items: List<HeroItem>, onOpen: (HeroItem) ->
         items(
             items = items,
             key = { hero -> hero.videoId ?: hero.playlistId ?: hero.title },
+            contentType = { "hero" },
         ) { hero ->
             Column(modifier = Modifier.width(160.dp).clickable { onOpen(hero) }) {
                 if (hero.thumbnailUrl != null) {
@@ -933,7 +935,7 @@ private fun ArtistRow(artists: List<ArtistItem>, onOpen: (ArtistItem) -> Unit) {
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = artists, key = { it.browseId }) { artist ->
+        items(items = artists, key = { it.browseId }, contentType = { "artist_tile" }) { artist ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(84.dp).clickable { onOpen(artist) },
