@@ -31,6 +31,13 @@
                 android:name="androidx.work.WorkManagerInitializer"
                 android:value="androidx.startup"
                 tools:node="remove" />
+            <!-- androidx.startup Initializer chain: runs DiagnosticsInitializer
+                 (cold-start ApplicationStartInfo + ApplicationExitInfo +
+                 ProfilingManager ANOMALY trigger) before MainActivity so the
+                 OS cold-start critical path stays short. -->
+            <meta-data
+                android:name="com.dustvalve.next.android.util.DiagnosticsInitializer"
+                android:value="androidx.startup" />
         </provider>
 
         <provider

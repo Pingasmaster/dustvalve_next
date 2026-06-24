@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.util
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.ProfilingManager
@@ -31,6 +32,8 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
     private val executor = Executors.newSingleThreadExecutor()
 
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
+    @SuppressLint("InlinedApi") // TRIGGER_TYPE_ANOMALY is API 37; gated by VANILLA_ICE_CREAM (35) check.
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun start() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
         try {

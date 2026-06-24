@@ -20,9 +20,6 @@ import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.update.AppUpdateController
-import com.dustvalve.next.android.util.DiagnosticsCollector
-import com.dustvalve.next.android.util.ProfilingCaptureController
-import com.dustvalve.next.android.util.StartupMetricsCollector
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -55,15 +52,6 @@ class DustvalveNextApplication :
     @Inject
     lateinit var downloadController: DownloadController
 
-    @Inject
-    lateinit var diagnosticsCollector: DiagnosticsCollector
-
-    @Inject
-    lateinit var startupMetricsCollector: StartupMetricsCollector
-
-    @Inject
-    lateinit var profilingCaptureController: ProfilingCaptureController
-
     override fun onCreate() {
         super.onCreate()
         // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
@@ -72,17 +60,11 @@ class DustvalveNextApplication :
         // BuildConfig.DEBUG gate — release APKs must not stall on a stray
         // `runOnUiThread { db.query() }`.
         if (BuildConfig.DEBUG) installStrictMode()
-        // Capture ApplicationStartInfo from this process start so we can
-        // compare to Macrobenchmark StartupTimingMetric in CI.
-        startupMetricsCollector.collectOnColdStart()
-        // Register API 35+ ProfilingManager ANOMALY trigger so the OS
-        // captures a Perfetto trace before LMK kills us next time.
-        profilingCaptureController.start()
+        // DiagnosticsInitializer (registered via androidx.startup in the
+        // manifest) has already run StartupMetricsCollector,
+        // DiagnosticsCollector, and ProfilingCaptureController before
+        // Application.onCreate, so the cold-start critical path stays short.
         downloadNotificationCenter.ensureChannel()
-        // Surface prior-process exit reasons (REASON_ANR / REASON_CRASH /
-        // REASON_LOW_MEMORY) to logcat + filesDir/diagnostics/ so we don't
-        // lose field-debug signal when a user reports 'app died.'
-        diagnosticsCollector.collectOnColdStart()
         // Drop partial .tmp files orphaned by a previous process death; the
         // in-memory download queue that could have resumed them is gone.
         downloadController.purgeStalePartialsOnColdStart()
