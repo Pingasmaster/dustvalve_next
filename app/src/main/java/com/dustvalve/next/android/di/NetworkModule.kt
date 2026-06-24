@@ -44,6 +44,14 @@ object NetworkModule {
 
     private const val HTTP_CACHE_BYTES = 10L * 1024 * 1024 // 10 MB
 
+    // OkHttp 5 Duration timeouts. callTimeout caps the whole call (incl.
+    // retries) so a flapping host can't hang a Worker past
+    // STOP_REASON_TIMEOUT; connectTimeout is short for fast-fail on
+    // unreachable hosts; readTimeout accommodates large audio chunks.
+    private val CALL_TIMEOUT = Duration.ofSeconds(30)
+    private val CONNECT_TIMEOUT = Duration.ofSeconds(10)
+    private val READ_TIMEOUT = Duration.ofSeconds(20)
+
     @Provides
     @Singleton
     fun provideOkHttpClient(@ApplicationContext context: Context, cookieStore: CookieStore): OkHttpClient {
@@ -65,9 +73,9 @@ object NetworkModule {
             // retries) so a flapping host can't hang a Worker past
             // STOP_REASON_TIMEOUT. connectTimeout is short for fast-fail on
             // unreachable hosts; readTimeout accommodates large audio chunks.
-            .callTimeout(Duration.ofSeconds(30))
-            .connectTimeout(Duration.ofSeconds(10))
-            .readTimeout(Duration.ofSeconds(20))
+            .callTimeout(CALL_TIMEOUT)
+            .connectTimeout(CONNECT_TIMEOUT)
+            .readTimeout(READ_TIMEOUT)
             .build()
     }
 

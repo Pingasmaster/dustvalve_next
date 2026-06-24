@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,20 +45,24 @@ class DiagnosticsCollector @Inject constructor(
             if (interesting.isEmpty()) return
             interesting.forEach { Log.w(TAG, it.compactLine()) }
             writeDiagnosticsFile(interesting)
-        } catch (t: Throwable) {
-            Log.w(TAG, "collectOnColdStart failed", t)
+        } catch (se: SecurityException) {
+            Log.w(TAG, "collectOnColdStart: missing GET_TASKS permission", se)
+        } catch (iae: IllegalArgumentException) {
+            Log.w(TAG, "collectOnColdStart: invalid package/pid", iae)
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
     private fun writeDiagnosticsFile(reasons: List<ApplicationExitInfo>) {
-        runCatching {
+        try {
             val dir = File(context.filesDir, "diagnostics").apply { mkdirs() }
             val file = File(dir, "exit-info-${System.currentTimeMillis()}.txt")
             file.bufferedWriter().use { w ->
                 reasons.forEach { w.appendLine(it.compactLine()) }
             }
-        }.onFailure { Log.w(TAG, "writeDiagnosticsFile failed", it) }
+        } catch (io: IOException) {
+            Log.w(TAG, "writeDiagnosticsFile failed", io)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.R)
