@@ -48,6 +48,13 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
             Log.w(TAG, "start: missing permission", se)
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "start: invalid trigger config", iae)
+        } catch (t: Throwable) {
+            // Robolectric and other headless environments throw NPE from
+            // ProfilingManager.registerForAllProfilingResults because the
+            // IProfilingService binder is absent. Real devices succeed;
+            // anything else is best-effort diagnostics we never want to
+            // crash the app over.
+            Log.w(TAG, "start: platform ProfilingManager unavailable", t)
         }
     }
 

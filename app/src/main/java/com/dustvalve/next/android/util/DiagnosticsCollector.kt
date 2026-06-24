@@ -47,6 +47,10 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
             Log.w(TAG, "collectOnColdStart: missing GET_TASKS permission", se)
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "collectOnColdStart: invalid package/pid", iae)
+        } catch (t: Throwable) {
+            // Robolectric throws NPE here too — never crash the app for
+            // best-effort diagnostics that the host JVM can't deliver.
+            Log.w(TAG, "collectOnColdStart: platform unavailable", t)
         }
     }
 

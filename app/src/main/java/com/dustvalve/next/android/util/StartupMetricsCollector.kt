@@ -40,6 +40,12 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
             Log.w(TAG, "collectOnColdStart: missing GET_TASKS", se)
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "collectOnColdStart: invalid package/pid", iae)
+        } catch (t: Throwable) {
+            // Robolectric shadows throw NPE on getHistoricalProcessStartReasons
+            // because there's no real ActivityManagerService. Real devices
+            // surface only the documented SecurityException / IAE; anything
+            // else is best-effort diagnostics we never want to crash over.
+            Log.w(TAG, "collectOnColdStart: platform unavailable", t)
         }
     }
 
