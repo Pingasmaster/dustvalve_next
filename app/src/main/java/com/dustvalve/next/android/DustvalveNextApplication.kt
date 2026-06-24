@@ -2,6 +2,7 @@ package com.dustvalve.next.android
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -57,6 +58,12 @@ class DustvalveNextApplication :
 
     override fun onCreate() {
         super.onCreate()
+        // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
+        // cursors, and unclosed Closeables via logcat + a small ANR dialog
+        // for severe ThreadPolicy violations. Suppressed in release via the
+        // BuildConfig.DEBUG gate — release APKs must not stall on a stray
+        // `runOnUiThread { db.query() }`.
+        if (BuildConfig.DEBUG) installStrictMode()
         downloadNotificationCenter.ensureChannel()
         // Surface prior-process exit reasons (REASON_ANR / REASON_CRASH /
         // REASON_LOW_MEMORY) to logcat + filesDir/diagnostics/ so we don't
@@ -99,6 +106,32 @@ class DustvalveNextApplication :
                 appUpdateController.releaseOnTrim()
             }
         }
+    }
+
+    /**
+     * Debug-only policy: log every Main-thread disk read/write, network call,
+     * and SQLite leak. `penaltyLog` keeps the app running so the dev can
+     * see the stack trace without losing UI state; `penaltyDeathOnNetwork`
+     * on ThreadPolicy would crash the app and is intentionally NOT set.
+     */
+    private fun installStrictMode() {
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()
+                .detectCustomSlowCalls()
+                .penaltyLog()
+                .build(),
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectLeakedClosableObjects()
+                .detectLeakedRegistrationObjects()
+                .detectActivityLeaks()
+                .penaltyLog()
+                .build(),
+        )
     }
 
     override val workManagerConfiguration: Configuration
