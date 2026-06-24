@@ -1,6 +1,7 @@
 package com.dustvalve.next.android
 
 import android.app.Application
+import android.content.ComponentCallbacks2
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -66,6 +67,30 @@ class DustvalveNextApplication :
         // controller swallows errors + mutates shared state that
         // MainActivity's dialog host observes. See AppUpdateController.
         appUpdateController.checkSilently()
+    }
+
+    /**
+     * Voluntarily release caches the OS can regenerate cheaply. Per the
+     * Android 17 memory-efficiency guidance, focus on the two levels the OS
+     * raises when the UI is no longer visible: TRIM_MEMORY_UI_HIDDEN and
+     * TRIM_MEMORY_BACKGROUND. We drop Coil's in-memory bitmap cache (the
+     * biggest ephemeral allocation, bounded to 25 % of available memory in
+     * [newImageLoader]) and the in-memory "update available" snapshot held
+     * by [appUpdateController]. The Coil disk cache, the OkHttp HTTP cache,
+     * and the download controller's queue are intentionally untouched —
+     * they're either persistent (disk cache) or resumable across the next
+     * foreground (downloads, which run under a foreground service).
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        when (level) {
+            ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN,
+            ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+            -> {
+                SingletonImageLoader.get(this).memoryCache?.clear()
+                appUpdateController.releaseOnTrim()
+            }
+        }
     }
 
     override val workManagerConfiguration: Configuration

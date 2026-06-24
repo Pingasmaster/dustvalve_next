@@ -166,4 +166,17 @@ class AppUpdateController @Inject constructor(private val service: AppUpdateServ
         if (_state.value is UpdateUiState.Downloading) return
         _state.value = UpdateUiState.Idle
     }
+
+    /**
+     * Called by [com.dustvalve.next.android.DustvalveNextApplication.onTrimMemory]
+     * when the OS signals the UI is no longer visible. The Available
+     * snapshot (release notes, apk URL) is cheap to rebuild on the next
+     * foreground; an in-flight download is preserved so the notification
+     * survives backgrounding. Mirrors the same contract as [dismiss].
+     */
+    fun releaseOnTrim() {
+        if (_state.value is UpdateUiState.Available) {
+            _state.value = UpdateUiState.Idle
+        }
+    }
 }
