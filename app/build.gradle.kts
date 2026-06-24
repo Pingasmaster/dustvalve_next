@@ -77,11 +77,10 @@ android {
             rootProject.layout.projectDirectory.file("compose_stability_config.conf"),
         )
 
-        // Treat unannotated classes whose public API is all val/String/etc.
-        // properties as skippable. Eliminates redundant recompositions caused
-        // by the conservative "unstable" fallback inference. Audit reports
-        // produced via `-Pcompose.reports=true` to confirm.
-        enableStrongSkippingMode = true
+        // Strong Skipping Mode is on by default in Kotlin Compose Compiler 2.3.21+
+        // (the featureFlags.add(StrongSkipping) form was deprecated in 2.3.21 and
+        // removed in subsequent versions). Audit reports produced via
+        // `-Pcompose.reports=true` to confirm.
     }
 
     testOptions {
