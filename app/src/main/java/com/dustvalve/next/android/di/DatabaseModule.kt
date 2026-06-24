@@ -2,6 +2,7 @@ package com.dustvalve.next.android.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
@@ -33,6 +34,16 @@ object DatabaseModule {
         "dustvalve_database",
     )
         .fallbackToDestructiveMigration(dropAllTables = true)
+        // Write-Ahead Logging: readers and writers don't block each other,
+        // which matters because DownloadService / DownloadController mutate
+        // rows from a different dispatcher than UI queries. Default is
+        // TRUNCATE on Room 2.7+ which serialises everything.
+        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+        // DownloadService and DownloadController run on Dispatchers.IO while
+        // the UI reads via Flow on Main; without multi-instance
+        // invalidation a write in the service is invisible to the UI until
+        // the next manual refresh.
+        .enableMultiInstanceInvalidation()
         .build()
 
     @Provides
