@@ -21,8 +21,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 36
         targetSdk = 37
-        versionCode = 270
-        versionName = "0.4.64"
+        versionCode = 271
+        versionName = "0.4.65"
     }
 
     signingConfigs {
@@ -217,6 +217,13 @@ dependencies {
 
     // Core KTX
     implementation(libs.core.ktx)
+
+    // Profile installer — consumed by androidx.baselineprofile to install
+    // baseline-prof.txt + startup-prof.txt shipped in the release APK.
+    // (Profile files are produced by the :baselineprofile module's
+    // `pixel6Api33` managed-device run and copied to
+    // app/src/release/baseline-prof.txt + startup-prof.txt.)
+    implementation(libs.androidx.profileinstaller)
 
     // --- Unit test dependencies ---
     testImplementation(libs.junit)

@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DustvalveNext"
 include(":app")
+include(":baselineprofile")
+include(":macrobenchmark")
