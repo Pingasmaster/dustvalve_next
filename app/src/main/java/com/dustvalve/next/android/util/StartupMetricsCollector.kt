@@ -19,6 +19,11 @@ import javax.inject.Singleton
  * One row per process start, appended on each onCreate. No UI; pull with
  * `adb pull /sdcard/Android/data/com.dustvalve.next.android/files/metrics/`
  * for offline comparison against Macrobenchmark StartupTimingMetric.
+ *
+ * The platform returns timestamps keyed by START_TIMESTAMP_* constants
+ * (FORK, BIND_APPLICATION, APPLICATION_ONCREATE, LAUNCH, FIRST_FRAME,
+ * FULLY_DRAWN). We pick out the most useful deltas: bind→onCreate,
+ * onCreate→first-frame, fork→fully-drawn.
  */
 @Singleton
 class StartupMetricsCollector @Inject constructor(
@@ -29,7 +34,7 @@ class StartupMetricsCollector @Inject constructor(
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            val infos = am.getHistoricalProcessStartReasons(context.packageName, MAX_ENTRIES)
+            val infos = am.getHistoricalProcessStartReasons(MAX_ENTRIES)
             val info = infos.firstOrNull() ?: return
             writeRow(info)
             Log.i(TAG, info.compactLine())
@@ -41,32 +46,40 @@ class StartupMetricsCollector @Inject constructor(
     }
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-    private fun ApplicationStartInfo.compactLine(): String = buildString {
-        append("reason=").append(startupReason).append("(").append(reasonName(startupReason)).append(")")
-        append(" startUptime=").append(startUptimeMillis)
-        append(" app=").append(applicationDelayElapsedMillis)
-        append(" firstActivity=").append(firstActivityDelayElapsedMillis)
-        append(" total=").append(totalDelayElapsedMillis)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            // Pre/post-baseline-profile breakdown — meaningful only when a
-            // baseline-prof.txt is shipped.
-            try {
-                append(" preBaseline=").append(preBaselineProfileCompilationMillis)
-                append(" postBaseline=").append(postBaselineProfileCompilationMillis)
-            } catch (_: NoSuchMethodError) {
-                // Fallback if running on an OS that lacks the API surface.
-            }
+    private fun ApplicationStartInfo.compactLine(): String {
+        val ts = startupTimestamps
+        fun delta(from: Int, to: Int): Long? {
+            val f = ts[from] ?: return null
+            val t = ts[to] ?: return null
+            return t - f
+        }
+        return buildString {
+            append("reason=").append(reason).append('(').append(reasonName(reason)).append(')')
+            append(" startType=").append(startType)
+            append(" bind→onCreate=").append(delta(
+                ApplicationStartInfo.START_TIMESTAMP_BIND_APPLICATION,
+                ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
+            ) ?: "?")
+            append("ms onCreate→firstFrame=").append(delta(
+                ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
+                ApplicationStartInfo.START_TIMESTAMP_FIRST_FRAME,
+            ) ?: "?")
+            append("ms fork→fullyDrawn=").append(delta(
+                ApplicationStartInfo.START_TIMESTAMP_FORK,
+                ApplicationStartInfo.START_TIMESTAMP_FULLY_DRAWN,
+            ) ?: "?")
+            append("ms")
         }
     }
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun reasonName(reason: Int): String = when (reason) {
-        ApplicationStartInfo.STARTUP_REASON_ALARM -> "ALARM"
-        ApplicationStartInfo.STARTUP_REASON_BACKUP -> "BACKUP"
-        ApplicationStartInfo.STARTUP_REASON_BOOT_COMPLETE -> "BOOT"
-        ApplicationStartInfo.STARTUP_REASON_LAUNCHER -> "LAUNCHER"
-        ApplicationStartInfo.STARTUP_REASON_LAUNCHER_RECENTS -> "RECENTS"
-        ApplicationStartInfo.STARTUP_REASON_OTHER -> "OTHER"
+        ApplicationStartInfo.START_REASON_ALARM -> "ALARM"
+        ApplicationStartInfo.START_REASON_BACKUP -> "BACKUP"
+        ApplicationStartInfo.START_REASON_BOOT_COMPLETE -> "BOOT"
+        ApplicationStartInfo.START_REASON_LAUNCHER -> "LAUNCHER"
+        ApplicationStartInfo.START_REASON_LAUNCHER_RECENTS -> "RECENTS"
+        ApplicationStartInfo.START_REASON_OTHER -> "OTHER"
         else -> "UNKNOWN($reason)"
     }
 
@@ -76,13 +89,28 @@ class StartupMetricsCollector @Inject constructor(
             val file = File(dir, "startup.csv")
             val wasNew = !file.exists()
             file.bufferedWriter().use { w ->
-                if (wasNew) w.appendLine("ts,reason,startUptime,appDelay,firstActivityDelay,totalDelay")
-                w.append(System.currentTimeMillis()).append(',')
-                w.append(info.startupReason.toString()).append(',')
-                w.append(info.startUptimeMillis.toString()).append(',')
-                w.append(info.applicationDelayElapsedMillis.toString()).append(',')
-                w.append(info.firstActivityDelayElapsedMillis.toString()).append(',')
-                w.appendLine(info.totalDelayElapsedMillis.toString())
+                if (wasNew) {
+                    w.appendLine("ts,reason,startType,bindToOnCreate,onCreateToFirstFrame,forkToFullyDrawn")
+                }
+                val ts = info.startupTimestamps
+                val bindToOnCreate = (ts[ApplicationStartInfo.START_TIMESTAMP_BIND_APPLICATION]
+                    ?.let { b ->
+                        ts[ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE]?.minus(b)
+                    })?.toString().orEmpty()
+                val onCreateToFirst = (ts[ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE]
+                    ?.let { c ->
+                        ts[ApplicationStartInfo.START_TIMESTAMP_FIRST_FRAME]?.minus(c)
+                    })?.toString().orEmpty()
+                val forkToFully = (ts[ApplicationStartInfo.START_TIMESTAMP_FORK]
+                    ?.let { f ->
+                        ts[ApplicationStartInfo.START_TIMESTAMP_FULLY_DRAWN]?.minus(f)
+                    })?.toString().orEmpty()
+                w.append(System.currentTimeMillis().toString()).append(',')
+                w.append(info.reason.toString()).append(',')
+                w.append(info.startType.toString()).append(',')
+                w.append(bindToOnCreate).append(',')
+                w.append(onCreateToFirst).append(',')
+                w.appendLine(forkToFully)
             }
         } catch (io: java.io.IOException) {
             Log.w(TAG, "writeRow failed", io)

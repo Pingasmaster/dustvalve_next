@@ -21,6 +21,7 @@ import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.update.AppUpdateController
 import com.dustvalve.next.android.util.DiagnosticsCollector
+import com.dustvalve.next.android.util.ProfilingCaptureController
 import com.dustvalve.next.android.util.StartupMetricsCollector
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -60,6 +61,9 @@ class DustvalveNextApplication :
     @Inject
     lateinit var startupMetricsCollector: StartupMetricsCollector
 
+    @Inject
+    lateinit var profilingCaptureController: ProfilingCaptureController
+
     override fun onCreate() {
         super.onCreate()
         // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
@@ -71,6 +75,9 @@ class DustvalveNextApplication :
         // Capture ApplicationStartInfo from this process start so we can
         // compare to Macrobenchmark StartupTimingMetric in CI.
         startupMetricsCollector.collectOnColdStart()
+        // Register API 35+ ProfilingManager ANOMALY trigger so the OS
+        // captures a Perfetto trace before LMK kills us next time.
+        profilingCaptureController.start()
         downloadNotificationCenter.ensureChannel()
         // Surface prior-process exit reasons (REASON_ANR / REASON_CRASH /
         // REASON_LOW_MEMORY) to logcat + filesDir/diagnostics/ so we don't
