@@ -36,7 +36,7 @@ mockk = "1.14.11"
 robolectric = "4.16.1"
 androidx-test-core = "1.7.0"
 androidx-test-ext-junit = "1.3.0"
-androidx-test-uiautomator = "2.3.0"
+androidx-test-uiautomator = "2.4.0-rc01"
 turbine = "1.2.1"
 
 # Baseline Profile / Macrobenchmark
