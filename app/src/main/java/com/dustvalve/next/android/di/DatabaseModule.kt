@@ -38,12 +38,15 @@ object DatabaseModule {
         // which matters because DownloadService / DownloadController mutate
         // rows from a different dispatcher than UI queries. Default is
         // TRUNCATE on Room 2.7+ which serialises everything.
+        //
+        // We deliberately do NOT call enableMultiInstanceInvalidation() — it
+        // binds a ServiceConnection that Robolectric can't satisfy, breaking
+        // the Compose-test harness (TracksHeaderLabelTest et al.), and the
+        // app is single-process anyway (one Application, no :remote Process
+        // IPC). The trade-off is that writes from a hypothetical future
+        // process boundary wouldn't invalidate this Room instance, but
+        // that's not a path we use today.
         .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
-        // DownloadService and DownloadController run on Dispatchers.IO while
-        // the UI reads via Flow on Main; without multi-instance
-        // invalidation a write in the service is invisible to the UI until
-        // the next manual refresh.
-        .enableMultiInstanceInvalidation()
         .build()
 
     @Provides
