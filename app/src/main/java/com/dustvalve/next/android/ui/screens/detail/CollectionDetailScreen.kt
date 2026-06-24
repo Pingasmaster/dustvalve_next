@@ -291,6 +291,7 @@ fun CollectionDetailScreen(
                         items(
                             count = state.tracks.size,
                             key = { state.tracks[it].id },
+                            contentType = { "collection_track" },
                         ) { index ->
                             val track = state.tracks[index]
                             val isCurrent = playerState.currentTrack?.id == track.id

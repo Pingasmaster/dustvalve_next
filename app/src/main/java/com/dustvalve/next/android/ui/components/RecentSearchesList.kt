@@ -59,6 +59,7 @@ fun RecentSearchesList(
         items(
             items = recentSearches,
             key = { it },
+            contentType = { "recent_search" },
         ) { query ->
             ListItem(
                 headlineContent = {

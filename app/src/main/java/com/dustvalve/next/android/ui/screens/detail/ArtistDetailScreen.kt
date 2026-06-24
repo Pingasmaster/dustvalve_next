@@ -320,7 +320,7 @@ private fun AlbumGridLayout(
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
                 )
             }
-            items(items = artist.albums, key = { "album_${it.id}" }) { album ->
+            items(items = artist.albums, key = { "album_${it.id}" }, contentType = { "album" }) { album ->
                 Surface(
                     modifier = Modifier.padding(6.dp),
                     shape = MaterialTheme.shapes.medium,
@@ -409,6 +409,7 @@ private fun FlatTracksLayout(
             items(
                 count = state.tracks.size,
                 key = { i -> state.tracks[i].id },
+                contentType = { "artist_track" },
             ) { index ->
                 val track = state.tracks[index]
                 SegmentedListItem(

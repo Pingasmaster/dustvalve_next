@@ -353,6 +353,7 @@ fun AlbumDetailScreen(
                         items(
                             count = album.tracks.size,
                             key = { album.tracks[it].id },
+                            contentType = { "album_track" },
                         ) { index ->
                             val track = album.tracks[index]
                             val isCurrentTrack = playerState.currentTrack?.id == track.id
