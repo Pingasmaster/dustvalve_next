@@ -30,6 +30,7 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
 
     private val executor = Executors.newSingleThreadExecutor()
 
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
     fun start() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
         try {

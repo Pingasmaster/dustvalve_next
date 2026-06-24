@@ -34,6 +34,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
      * Bounded to 5 entries so we don't spam logcat after a long uptime.
      * No-op on pre-API 30.
      */
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
     fun collectOnColdStart() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         try {
