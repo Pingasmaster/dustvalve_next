@@ -16,7 +16,7 @@ plugins {
     // Auto-provision a matching JDK when the daemon/toolchain needs one.
     // 9.6.0 enforces a toolchain resolver; without this, fresh CI machines
     // and dev laptops fail to locate the right JDK.
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
 dependencyResolutionManagement {

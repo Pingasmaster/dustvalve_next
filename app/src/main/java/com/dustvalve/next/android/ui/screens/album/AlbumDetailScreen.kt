@@ -618,7 +618,7 @@ private val ActionBarSpacing = 8.dp
  * The DropdownMenu lives inside the trailing-button slot so the popup
  * anchors to the chevron, not the wrapping centred Box.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BuyOnBandcampSplitButton(
     albumPrice: com.dustvalve.next.android.domain.model.AlbumPrice?,

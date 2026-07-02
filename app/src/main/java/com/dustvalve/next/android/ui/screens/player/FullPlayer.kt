@@ -291,7 +291,7 @@ fun FullPlayer(
                 androidx.compose.material3.VerticalSlider(
                     state = sheetVolumeState,
                     modifier = Modifier.height(360.dp),
-                    reverseDirection = true,
+                    topToBottom = false,
                     thumb = { sliderState ->
                         androidx.compose.material3.SliderDefaults.Thumb(
                             interactionSource = remember { MutableInteractionSource() },
@@ -753,7 +753,7 @@ fun FullPlayer(
                                 androidx.compose.material3.VerticalSlider(
                                     state = inlineVolumeState,
                                     modifier = Modifier.weight(1f),
-                                    reverseDirection = true,
+                                    topToBottom = false,
                                     thumb = { sliderState ->
                                         androidx.compose.material3.SliderDefaults.Thumb(
                                             interactionSource = remember { MutableInteractionSource() },
