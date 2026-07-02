@@ -347,7 +347,6 @@ fun FullPlayer(
                             ),
                     ) {
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.player_automatic)) },
                             leadingContent = { RadioButton(selected = autoSelected, onClick = null) },
                             trailingContent = {
                                 Icon(
@@ -356,7 +355,9 @@ fun FullPlayer(
                                 )
                             },
                             colors = ListItemDefaults.colors(containerColor = autoColor),
-                        )
+                        ) {
+                            Text(stringResource(R.string.player_automatic))
+                        }
                     }
                     state.audioOutputDevices.forEachIndexed { index, device ->
                         val deviceIndex = index + 1
@@ -382,7 +383,6 @@ fun FullPlayer(
                                 ),
                         ) {
                             ListItem(
-                                headlineContent = { Text(audioDeviceDisplayName(device)) },
                                 leadingContent = { RadioButton(selected = isActive, onClick = null) },
                                 trailingContent = {
                                     Icon(
@@ -391,7 +391,9 @@ fun FullPlayer(
                                     )
                                 },
                                 colors = ListItemDefaults.colors(containerColor = bgColor),
-                            )
+                            ) {
+                                Text(audioDeviceDisplayName(device))
+                            }
                         }
                     }
                 }
@@ -1305,92 +1307,92 @@ fun FullPlayer(
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
-                        headlineContent = { Text(formatDisplay) },
                         supportingContent = { Text(stringResource(R.string.player_debug_audio_format)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_audio_file), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(formatDisplay)
+                    }
                 }
                 Surface(
                     shape = segmentedItemShape(1, 6),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
-                        headlineContent = { Text(sourceDisplay) },
                         supportingContent = { Text(stringResource(R.string.player_debug_source)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_cloud), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(sourceDisplay)
+                    }
                 }
                 Surface(
                     shape = segmentedItemShape(2, 6),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
-                        headlineContent = { Text(downloadStatus) },
                         supportingContent = { Text(stringResource(R.string.player_debug_download_status)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_download), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(downloadStatus)
+                    }
                 }
                 Surface(
                     shape = segmentedItemShape(3, 6),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = state.currentSourcePath?.let {
-                                    it.substringAfterLast("/downloads/")
-                                } ?: track.streamUrl?.take(60) ?: stringResource(R.string.player_debug_none),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
                         supportingContent = { Text(stringResource(R.string.player_debug_file_path)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_storage), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(
+                            text = state.currentSourcePath?.let {
+                                it.substringAfterLast("/downloads/")
+                            } ?: track.streamUrl?.take(60) ?: stringResource(R.string.player_debug_none),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 Surface(
                     shape = segmentedItemShape(4, 6),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = track.id,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
                         supportingContent = { Text(stringResource(R.string.player_debug_track_id)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(
+                            text = track.id,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 Surface(
                     shape = segmentedItemShape(5, 6),
                     color = MaterialTheme.colorScheme.surfaceContainerLow,
                 ) {
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = track.albumId,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
                         supportingContent = { Text(stringResource(R.string.player_debug_album_id)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(
+                            text = track.albumId,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(28.dp))
@@ -1427,13 +1429,6 @@ fun FullPlayer(
             )
 
             ListItem(
-                headlineContent = {
-                    Text(
-                        stringResource(
-                            if (contextTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites,
-                        ),
-                    )
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(
@@ -1451,10 +1446,15 @@ fun FullPlayer(
                     upNextContextTrack = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(
+                    stringResource(
+                        if (contextTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites,
+                    ),
+                )
+            }
 
             ListItem(
-                headlineContent = { Text(stringResource(R.string.common_add_to_playlist)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_playlist_add),
@@ -1465,15 +1465,11 @@ fun FullPlayer(
                     showUpNextPlaylistSheet = true
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(stringResource(R.string.common_add_to_playlist))
+            }
 
             ListItem(
-                headlineContent = {
-                    Text(
-                        text = stringResource(R.string.player_remove_from_queue),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_close),
@@ -1486,7 +1482,12 @@ fun FullPlayer(
                     upNextContextTrack = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(
+                    text = stringResource(R.string.player_remove_from_queue),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
         }

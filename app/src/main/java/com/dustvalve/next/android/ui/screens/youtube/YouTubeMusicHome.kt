@@ -601,13 +601,6 @@ private fun QuickPicksGrid(items: List<SongItem>, onPlay: (SongItem) -> Unit) {
 @Composable
 private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
     ListItem(
-        headlineContent = {
-            Text(
-                text = song.title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             Text(
                 text = listOfNotNull(song.artist, song.album).joinToString(" • "),
@@ -644,7 +637,13 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { onPlay() },
-    )
+    ) {
+        Text(
+            text = song.title,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 // ── Typographic break + section header ─────────────────────────────────

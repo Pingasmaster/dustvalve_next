@@ -229,7 +229,6 @@ fun SettingsScreen(
             AudioFormat.DOWNLOADABLE.forEach { format ->
                 val isSelected = format.key == state.downloadFormat
                 ListItem(
-                    headlineContent = { Text(stringResource(format.displayNameRes)) },
                     trailingContent = {
                         if (isSelected) {
                             Icon(
@@ -247,7 +246,9 @@ fun SettingsScreen(
                             viewModel.setDownloadFormat(format.key)
                             showFormatSheet = false
                         },
-                )
+                ) {
+                    Text(stringResource(format.displayNameRes))
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -398,12 +399,6 @@ fun SettingsScreen(
                                                 selectedFolderFallback
                                             }
                                             ListItem(
-                                                headlineContent = {
-                                                    Text(
-                                                        text = folderName,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                    )
-                                                },
                                                 leadingContent = {
                                                     Icon(
                                                         painter = painterResource(R.drawable.ic_folder_open),
@@ -429,7 +424,12 @@ fun SettingsScreen(
                                                 colors = ListItemDefaults.colors(
                                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                                                 ),
-                                            )
+                                            ) {
+                                                Text(
+                                                    text = folderName,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                )
+                                            }
                                         }
                                     }
 

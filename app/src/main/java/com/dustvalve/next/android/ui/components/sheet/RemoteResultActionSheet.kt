@@ -151,7 +151,6 @@ fun RemoteResultActionSheet(
 @Composable
 private fun ActionRow(labelRes: Int, iconRes: Int, onClick: () -> Unit) {
     ListItem(
-        headlineContent = { Text(stringResource(labelRes)) },
         leadingContent = {
             Icon(
                 painter = painterResource(iconRes),
@@ -160,5 +159,7 @@ private fun ActionRow(labelRes: Int, iconRes: Int, onClick: () -> Unit) {
         },
         modifier = Modifier.clickable(onClick = onClick),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
+    ) {
+        Text(stringResource(labelRes))
+    }
 }

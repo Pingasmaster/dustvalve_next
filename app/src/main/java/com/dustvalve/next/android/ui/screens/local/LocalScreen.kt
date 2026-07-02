@@ -640,7 +640,6 @@ fun LocalScreen(
             )
 
             ListItem(
-                headlineContent = { Text(stringResource(R.string.local_play_next)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_skip_next),
@@ -652,16 +651,11 @@ fun LocalScreen(
                     contextMenuTrack = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(stringResource(R.string.local_play_next))
+            }
 
             ListItem(
-                headlineContent = {
-                    Text(
-                        stringResource(
-                            if (menuTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites,
-                        ),
-                    )
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(
@@ -679,10 +673,15 @@ fun LocalScreen(
                     contextMenuTrack = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(
+                    stringResource(
+                        if (menuTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites,
+                    ),
+                )
+            }
 
             ListItem(
-                headlineContent = { Text(stringResource(R.string.common_add_to_playlist)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_playlist_add),
@@ -693,15 +692,11 @@ fun LocalScreen(
                     showLocalPlaylistSheet = true
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(stringResource(R.string.common_add_to_playlist))
+            }
 
             ListItem(
-                headlineContent = {
-                    Text(
-                        text = stringResource(R.string.common_action_delete),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_delete),
@@ -713,7 +708,12 @@ fun LocalScreen(
                     showDeleteTrackDialog = true
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(
+                    text = stringResource(R.string.common_action_delete),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
         }
@@ -814,10 +814,11 @@ fun LocalScreen(
                         ),
                     ) {
                         ListItem(
-                            headlineContent = { Text(stringResource(option.labelRes)) },
                             leadingContent = { RadioButton(selected = isSelected, onClick = null) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(stringResource(option.labelRes))
+                        }
                     }
                 }
             }
@@ -825,7 +826,6 @@ fun LocalScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             )
             ListItem(
-                headlineContent = { Text(stringResource(R.string.local_reverse_order)) },
                 trailingContent = {
                     androidx.compose.material3.Switch(
                         checked = filterState.reverseOrder,
@@ -836,7 +836,9 @@ fun LocalScreen(
                     .clickable { viewModel.toggleReverseOrder() }
                     .padding(horizontal = 16.dp),
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(stringResource(R.string.local_reverse_order))
+            }
             Spacer(modifier = Modifier.height(28.dp))
         }
     }
@@ -880,11 +882,12 @@ fun LocalScreen(
                             artist
                         }
                         ListItem(
-                            headlineContent = { Text(artistLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
                             modifier = Modifier.clickable { viewModel.toggleArtist(artist) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(artistLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
             }
@@ -931,11 +934,12 @@ fun LocalScreen(
                             album
                         }
                         ListItem(
-                            headlineContent = { Text(albumLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
                             modifier = Modifier.clickable { viewModel.toggleAlbum(album) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(albumLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
             }
@@ -982,11 +986,12 @@ fun LocalScreen(
                         modifier = Modifier.animateItem(),
                     ) {
                         ListItem(
-                            headlineContent = { Text(displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
                             modifier = Modifier.clickable { viewModel.toggleFolder(folder) },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(displayName, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                     }
                 }
             }
