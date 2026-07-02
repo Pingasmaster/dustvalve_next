@@ -683,37 +683,4 @@
             column="10"/>
     </issue>
 
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of io.coil-kt.coil3:coil-compose than 3.5.0-beta01 is available: 3.5.0"
-        errorLine1="coil = &quot;3.5.0-beta01&quot;"
-        errorLine2="       ~~~~~~~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="25"
-            column="8"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of io.coil-kt.coil3:coil-network-cache-control than 3.5.0-beta01 is available: 3.5.0"
-        errorLine1="coil = &quot;3.5.0-beta01&quot;"
-        errorLine2="       ~~~~~~~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="25"
-            column="8"/>
-    </issue>
-
-    <issue
-        id="NewerVersionAvailable"
-        message="A newer version of io.coil-kt.coil3:coil-network-okhttp than 3.5.0-beta01 is available: 3.5.0"
-        errorLine1="coil = &quot;3.5.0-beta01&quot;"
-        errorLine2="       ~~~~~~~~~~~~~~">
-        <location
-            file="../gradle/libs.versions.toml"
-            line="25"
-            column="8"/>
-    </issue>
-
-</issues>
+    </issues>

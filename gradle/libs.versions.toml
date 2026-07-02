@@ -22,7 +22,7 @@ palette = "1.0.0"
 
 okhttp = "5.4.0"
 jsoup = "1.22.2"
-coil = "3.5.0-beta01"
+coil = "3.5.0"
 material-kolor = "5.0.0-alpha07"
 media3 = "1.10.1"
 serialization = "1.11.0"
