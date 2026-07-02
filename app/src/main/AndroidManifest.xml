@@ -20,7 +20,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.DustvalveNext"
-        tools:targetApi="33"
+
         tools:ignore="UnusedAttribute">
 
         <!--
@@ -30,8 +30,6 @@
             attribute (which only exists in older AAPT schemas).
         -->
         <profileable android:shell="true" android:enabled="true" />
-
-
 
         <!-- Disable default WorkManager initializer so Hilt can provide HiltWorkerFactory -->
         <provider

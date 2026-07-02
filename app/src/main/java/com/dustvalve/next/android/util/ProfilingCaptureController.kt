@@ -1,12 +1,9 @@
 package com.dustvalve.next.android.util
 
-import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Build
 import android.os.ProfilingManager
 import android.os.ProfilingResult
 import android.util.Log
-import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.concurrent.Executors
@@ -24,7 +21,8 @@ import javax.inject.Singleton
  * also drains any results that arrived while the process was dead, which is the
  * common case for TRIGGER_TYPE_ANOMALY.
  *
- * minSdk=36 on this app so the API surface is always present.
+ * minSdk=37 on this app so the ProfilingManager + ProfilingTrigger + ANOMALY
+ * trigger API surface is always available.
  */
 @Singleton
 class ProfilingCaptureController @Inject constructor(@param:ApplicationContext private val context: Context) {
@@ -32,10 +30,7 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
     private val executor = Executors.newSingleThreadExecutor()
 
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
-    @SuppressLint("InlinedApi") // TRIGGER_TYPE_ANOMALY is API 37; gated by VANILLA_ICE_CREAM (35) check.
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun start() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
         try {
             val pm = context.getSystemService(ProfilingManager::class.java) ?: return
             // Drain anything captured while we were dead.
@@ -62,7 +57,6 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun onResult(result: ProfilingResult) {
         if (result.errorCode != ProfilingResult.ERROR_NONE) {
             Log.w(TAG, "capture failed errorCode=${result.errorCode} message=${result.errorMessage}")

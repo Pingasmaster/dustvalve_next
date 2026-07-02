@@ -3,9 +3,7 @@ package com.dustvalve.next.android.util
 import android.app.ActivityManager
 import android.app.ApplicationStartInfo
 import android.content.Context
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -13,7 +11,7 @@ import javax.inject.Singleton
 
 /**
  * Reads [ApplicationStartInfo] from the most recent cold/warm start on API 35+
- * and writes a single-line CSV under filesDir/metrics/. minSdk=36 on this app
+ * and writes a single-line CSV under filesDir/metrics/. minSdk=37 on this app
  * means the API is always available.
  *
  * One row per process start, appended on each onCreate. No UI; pull with
@@ -22,15 +20,14 @@ import javax.inject.Singleton
  *
  * The platform returns timestamps keyed by START_TIMESTAMP_* constants
  * (FORK, BIND_APPLICATION, APPLICATION_ONCREATE, LAUNCH, FIRST_FRAME,
- * FULLY_DRAWN). We pick out the most useful deltas: bind→onCreate,
- * onCreate→first-frame, fork→fully-drawn.
+ * FULLY_DRAWN). We pick out the most useful deltas: bind->onCreate,
+ * onCreate->first-frame, fork->fully-drawn.
  */
 @Singleton
 class StartupMetricsCollector @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
     fun collectOnColdStart() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val infos = am.getHistoricalProcessStartReasons(MAX_ENTRIES)
@@ -50,7 +47,6 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun ApplicationStartInfo.compactLine(): String {
         val ts = startupTimestamps
         fun delta(from: Int, to: Int): Long? {
@@ -61,19 +57,19 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         return buildString {
             append("reason=").append(reason).append('(').append(reasonName(reason)).append(')')
             append(" startType=").append(startType)
-            append(" bind→onCreate=").append(
+            append(" bind->onCreate=").append(
                 delta(
                     ApplicationStartInfo.START_TIMESTAMP_BIND_APPLICATION,
                     ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
                 ) ?: "?",
             )
-            append("ms onCreate→firstFrame=").append(
+            append("ms onCreate->firstFrame=").append(
                 delta(
                     ApplicationStartInfo.START_TIMESTAMP_APPLICATION_ONCREATE,
                     ApplicationStartInfo.START_TIMESTAMP_FIRST_FRAME,
                 ) ?: "?",
             )
-            append("ms fork→fullyDrawn=").append(
+            append("ms fork->fullyDrawn=").append(
                 delta(
                     ApplicationStartInfo.START_TIMESTAMP_FORK,
                     ApplicationStartInfo.START_TIMESTAMP_FULLY_DRAWN,
@@ -83,7 +79,6 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun reasonName(reason: Int): String = when (reason) {
         ApplicationStartInfo.START_REASON_ALARM -> "ALARM"
         ApplicationStartInfo.START_REASON_BACKUP -> "BACKUP"

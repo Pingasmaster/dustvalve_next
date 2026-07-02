@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
-        minSdk = 36
+        minSdk = 37
         targetSdk = 37
         versionCode = 274
         versionName = "0.4.68"
