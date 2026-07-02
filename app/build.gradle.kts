@@ -1,6 +1,7 @@
 @file:Suppress("UnstableApiUsage")
 
 import com.android.build.gradle.internal.lint.AndroidLintTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFile
 
 plugins {
@@ -52,6 +53,36 @@ android {
                         "falling back to AGP debug signing for the release variant.",
                 )
                 val debug = signingConfigs.getByName("debug")
+                val debugStoreFile = debug.storeFile
+                // AGP only auto-creates the debug keystore when assembleDebug
+                // actually runs (lazy materialization on first debug signing).
+                // CI flows that build release without ever touching the debug
+                // variant find nothing here and validateSigningRelease aborts
+                // with "Keystore file not found". Generate the debug keystore
+                // ourselves at the exact path AGP expects. Idempotent: only
+                // runs when the file is genuinely missing.
+                if (debugStoreFile != null && !debugStoreFile.exists()) {
+                    debugStoreFile.parentFile.mkdirs()
+                    val process = ProcessBuilder(
+                        System.getProperty("java.home") + "/bin/keytool",
+                        "-genkey", "-noprompt",
+                        "-keystore", debugStoreFile.absolutePath,
+                        "-alias", debug.keyAlias!!,
+                        "-keyalg", "RSA", "-keysize", "2048",
+                        "-validity", "10000",
+                        "-dname", "CN=Android Debug,O=Android,C=US",
+                        "-storepass", debug.storePassword!!,
+                        "-keypass", debug.keyPassword!!,
+                    ).redirectErrorStream(true).start()
+                    val output = process.inputStream.bufferedReader().readText()
+                    val exitCode = process.waitFor()
+                    if (exitCode != 0) {
+                        throw GradleException(
+                            "Failed to materialize debug keystore at " +
+                                "${debugStoreFile.absolutePath}: keytool exited $exitCode\n$output",
+                        )
+                    }
+                }
                 storeFile = debug.storeFile
                 storePassword = debug.storePassword
                 keyAlias = debug.keyAlias
