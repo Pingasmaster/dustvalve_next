@@ -295,7 +295,7 @@ fun FullPlayer(
                     thumb = { sliderState ->
                         androidx.compose.material3.SliderDefaults.Thumb(
                             interactionSource = remember { MutableInteractionSource() },
-                            sliderState = sliderState,
+                            isVertical = true,
                             thumbSize = androidx.compose.ui.unit.DpSize(108.dp, 4.dp),
                         )
                     },
@@ -757,7 +757,7 @@ fun FullPlayer(
                                     thumb = { sliderState ->
                                         androidx.compose.material3.SliderDefaults.Thumb(
                                             interactionSource = remember { MutableInteractionSource() },
-                                            sliderState = sliderState,
+                                            isVertical = true,
                                             thumbSize = androidx.compose.ui.unit.DpSize(44.dp, 4.dp),
                                         )
                                     },

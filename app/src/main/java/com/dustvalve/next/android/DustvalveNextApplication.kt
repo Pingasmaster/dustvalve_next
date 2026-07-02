@@ -94,6 +94,9 @@ class DustvalveNextApplication :
      */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        // UI_HIDDEN + BACKGROUND are the only levels we act on; the
+        // remaining TRIM_MEMORY_* constants are informational only and
+        // would just thrash caches.
         when (level) {
             ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN,
             ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
@@ -101,6 +104,8 @@ class DustvalveNextApplication :
                 SingletonImageLoader.get(this).memoryCache?.clear()
                 appUpdateController.releaseOnTrim()
             }
+
+            else -> Unit
         }
     }
 
