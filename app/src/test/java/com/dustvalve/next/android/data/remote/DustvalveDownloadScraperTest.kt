@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.remote
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
@@ -17,7 +18,7 @@ class DustvalveDownloadScraperTest {
 
     @Before fun setUp() {
         setup = TlsTestServer.start()
-        scraper = DustvalveDownloadScraper(setup.client)
+        scraper = DustvalveDownloadScraper(setup.client, UnconfinedTestDispatcher())
     }
 
     @After fun tearDown() {

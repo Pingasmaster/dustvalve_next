@@ -2,9 +2,11 @@ package com.dustvalve.next.android.update
 
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.util.UiText
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,9 +53,13 @@ sealed interface UpdateUiState {
  * listens to — we don't want startup toasts).
  */
 @Singleton
-class AppUpdateController @Inject constructor(private val service: AppUpdateService, private val settingsDataStore: SettingsDataStore) {
+class AppUpdateController @Inject constructor(
+    private val service: AppUpdateService,
+    private val settingsDataStore: SettingsDataStore,
+    @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+) {
     /** Overridable in tests so a TestDispatcher can drive the internal scope. Set once, before first call. */
-    internal var scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    internal var scope: CoroutineScope = CoroutineScope(SupervisorJob() + ioDispatcher)
 
     private val _state = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
     val state: StateFlow<UpdateUiState> = _state.asStateFlow()

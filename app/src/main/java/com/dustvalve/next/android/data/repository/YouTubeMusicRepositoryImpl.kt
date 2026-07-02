@@ -7,11 +7,13 @@ import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerPar
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicSearchParser
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -30,9 +32,10 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
     private val youtubeInnertubeClient: YouTubeInnertubeClient,
     private val youtubePlayerParser: YouTubePlayerParser,
     private val homeCache: YouTubeMusicHomeCacheDao,
+    @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) : YouTubeMusicRepository {
 
-    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val backgroundScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val json = Json { ignoreUnknownKeys = true }
 
     private companion object {

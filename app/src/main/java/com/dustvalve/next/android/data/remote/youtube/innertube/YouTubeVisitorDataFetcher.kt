@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
-import kotlinx.coroutines.Dispatchers
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -23,7 +25,10 @@ import javax.inject.Singleton
  * having the second attempt covers transient failures.
  */
 @Singleton
-open class YouTubeVisitorDataFetcher @Inject constructor(sharedOkHttpClient: OkHttpClient) {
+open class YouTubeVisitorDataFetcher @Inject constructor(
+    sharedOkHttpClient: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     private val okHttpClient: OkHttpClient = sharedOkHttpClient.newBuilder()
         .cookieJar(okhttp3.CookieJar.NO_COOKIES)
@@ -54,7 +59,7 @@ open class YouTubeVisitorDataFetcher @Inject constructor(sharedOkHttpClient: OkH
         cached = null
     }
 
-    private suspend fun fetch(): VisitorConfig = withContext(Dispatchers.IO) {
+    private suspend fun fetch(): VisitorConfig = withContext(ioDispatcher) {
         val primary = fetchLanding(landingUrl)
         primary.extract()?.let {
             return@withContext VisitorConfig(

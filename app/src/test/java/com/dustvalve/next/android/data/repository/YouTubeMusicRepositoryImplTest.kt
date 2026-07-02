@@ -19,6 +19,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -61,6 +62,7 @@ class YouTubeMusicRepositoryImplTest {
             ytInnertube,
             ytPlayerParser,
             homeCache = mockk(relaxed = true),
+            ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
 

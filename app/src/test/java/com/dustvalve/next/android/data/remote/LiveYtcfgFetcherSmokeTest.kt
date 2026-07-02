@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.remote
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeVisitorDataFetcher
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicVisitorDataFetcher
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -53,7 +54,7 @@ class LiveYtcfgFetcherSmokeTest {
     }
 
     @Test fun `live YT Music landing yields visitorData`() = runTest {
-        val fetcher = YouTubeMusicVisitorDataFetcher(okHttp)
+        val fetcher = YouTubeMusicVisitorDataFetcher(okHttp, UnconfinedTestDispatcher())
         val cfg = fetcher.get()
         println("[LIVE] YT Music visitorData=${cfg.visitorData.take(30)}... version=${cfg.clientVersion}")
         assertThat(cfg.visitorData.length).isAtLeast(30)
@@ -61,7 +62,7 @@ class LiveYtcfgFetcherSmokeTest {
     }
 
     @Test fun `live YT landing yields visitorData`() = runTest {
-        val fetcher = YouTubeVisitorDataFetcher(okHttp)
+        val fetcher = YouTubeVisitorDataFetcher(okHttp, UnconfinedTestDispatcher())
         val cfg = fetcher.get()
         println("[LIVE] YT visitorData=${cfg.visitorData.take(30)}... version=${cfg.clientVersion}")
         assertThat(cfg.visitorData.length).isAtLeast(30)

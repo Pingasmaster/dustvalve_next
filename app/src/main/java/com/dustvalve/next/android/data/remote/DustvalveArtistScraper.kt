@@ -1,10 +1,12 @@
 package com.dustvalve.next.android.data.remote
 
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.util.HtmlUtils
 import com.dustvalve.next.android.util.NetworkUtils
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -21,7 +23,10 @@ import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
 
 @Singleton
-class DustvalveArtistScraper @Inject constructor(sharedClient: OkHttpClient) {
+class DustvalveArtistScraper @Inject constructor(
+    sharedClient: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     /**
      * Bandcamp serves a heavily-stripped HTML when it sees a mobile User-Agent
@@ -62,7 +67,7 @@ class DustvalveArtistScraper @Inject constructor(sharedClient: OkHttpClient) {
         val id: Long = 0,
     )
 
-    suspend fun scrapeArtist(artistUrl: String): Artist = withContext(Dispatchers.IO) {
+    suspend fun scrapeArtist(artistUrl: String): Artist = withContext(ioDispatcher) {
         require(NetworkUtils.isValidHttpsUrl(artistUrl)) { "Invalid URL: $artistUrl" }
 
         val request = Request.Builder()

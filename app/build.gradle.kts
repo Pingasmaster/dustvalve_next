@@ -194,6 +194,12 @@ dependencies {
     // Palette (for extracting dominant colors from album art)
     implementation(libs.palette.ktx)
 
+    // Hilt 2.60's KSP processor emits @CanIgnoreReturnValue on generated
+    // component methods but does NOT declare errorprone-annotations as a
+    // transitive runtime dep — without this the hiltJavaCompile* step fails
+    // with "cannot find symbol class CanIgnoreReturnValue".
+    implementation(libs.errorprone.annotations)
+
     // MaterialKolor (generate M3 ColorScheme from seed color)
     implementation(libs.material.kolor)
 

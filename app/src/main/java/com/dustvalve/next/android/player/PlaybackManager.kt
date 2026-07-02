@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.player
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.media.AudioDeviceInfo
@@ -31,6 +32,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
+// tests substitute it globally via Dispatchers.setMain, so qualifying
+// it would only add ceremony.
+@SuppressLint("SlackDispatchersUse")
 @Singleton
 class PlaybackManager @Inject constructor(
     private val player: ExoPlayer,

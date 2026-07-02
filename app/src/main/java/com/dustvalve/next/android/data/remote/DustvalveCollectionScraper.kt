@@ -1,10 +1,12 @@
 package com.dustvalve.next.android.data.remote
 
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.CollectionResult
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.util.NetworkUtils
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -21,7 +23,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveCollectionScraper @Inject constructor(private val client: OkHttpClient) {
+class DustvalveCollectionScraper @Inject constructor(
+    private val client: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -54,7 +59,7 @@ class DustvalveCollectionScraper @Inject constructor(private val client: OkHttpC
         @SerialName("sale_item_type") val saleItemType: String? = null,
     )
 
-    suspend fun getCollection(fanId: Long, olderThanToken: String? = null): CollectionResult = withContext(Dispatchers.IO) {
+    suspend fun getCollection(fanId: Long, olderThanToken: String? = null): CollectionResult = withContext(ioDispatcher) {
         val token = olderThanToken ?: "9999999999::a::"
 
         val requestBody = json.encodeToString(

@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.data.remote.youtubemusic
 
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -25,6 +27,7 @@ class YouTubeMusicVisitorDataFetcherTest {
             client = OkHttpClient(),
             primaryUrl = primary.url("/").toString(),
             fallbackUrl = fallback.url("/").toString(),
+            dispatcher = UnconfinedTestDispatcher(),
         )
     }
 
@@ -184,6 +187,7 @@ class YouTubeMusicVisitorDataFetcherTest {
             client = clientWithJar,
             primaryUrl = primary.url("/").toString(),
             fallbackUrl = fallback.url("/").toString(),
+            dispatcher = UnconfinedTestDispatcher(),
         )
 
         primary.enqueue(
@@ -201,7 +205,12 @@ class YouTubeMusicVisitorDataFetcherTest {
         assertThat(cookie).doesNotContain("SID=")
     }
 
-    private class TestableFetcher(client: OkHttpClient, primaryUrl: String, fallbackUrl: String) : YouTubeMusicVisitorDataFetcher(client) {
+    private class TestableFetcher(
+        client: OkHttpClient,
+        primaryUrl: String,
+        fallbackUrl: String,
+        dispatcher: CoroutineDispatcher,
+    ) : YouTubeMusicVisitorDataFetcher(client, dispatcher) {
         override val landingUrl: String = primaryUrl
         override val fallbackLandingUrl: String = fallbackUrl
     }

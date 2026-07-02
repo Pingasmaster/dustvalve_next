@@ -18,6 +18,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import org.junit.Before
@@ -64,6 +65,7 @@ class YouTubeRepositoryCacheTest {
         repo = YouTubeRepositoryImpl(
             client, playerParser, searchParser, playlistParser, channelParser, nextParser,
             videoCache, playlistCache, ytmRepo,
+            ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
 

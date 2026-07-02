@@ -1,8 +1,10 @@
 package com.dustvalve.next.android.data.remote
 
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -20,7 +22,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class CookieStore @Inject constructor(private val settingsDataStore: SettingsDataStore) : CookieJar {
+class CookieStore @Inject constructor(
+    private val settingsDataStore: SettingsDataStore,
+    @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+) : CookieJar {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -29,7 +34,7 @@ class CookieStore @Inject constructor(private val settingsDataStore: SettingsDat
 
     // Scope intentionally lives for the entire app lifetime (@Singleton); no cancellation needed
     private val scope = CoroutineScope(
-        SupervisorJob() + Dispatchers.IO +
+        SupervisorJob() + ioDispatcher +
             kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
                 android.util.Log.e("CookieStore", "Cookie persistence error", throwable)
             },

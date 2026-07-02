@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.di
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -149,7 +150,11 @@ object PlayerModule {
         return player
     }
 
+    // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
+    // tests substitute it globally via Dispatchers.setMain, so qualifying
+    // it would only add ceremony.
     @OptIn(UnstableApi::class)
+    @SuppressLint("SlackDispatchersUse")
     @Provides
     @Singleton
     fun provideMediaSession(

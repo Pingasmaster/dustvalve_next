@@ -1,9 +1,11 @@
 package com.dustvalve.next.android.data.remote
 
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.DiscoverResult
 import com.dustvalve.next.android.util.NetworkUtils
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -20,7 +22,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveDiscoverScraper @Inject constructor(private val client: OkHttpClient) {
+class DustvalveDiscoverScraper @Inject constructor(
+    private val client: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -65,7 +70,7 @@ class DustvalveDiscoverScraper @Inject constructor(private val client: OkHttpCli
         @SerialName("band_genre_id") val bandGenreId: Int? = null,
     )
 
-    suspend fun discover(genre: String? = null, cursor: String? = null): DiscoverResult = withContext(Dispatchers.IO) {
+    suspend fun discover(genre: String? = null, cursor: String? = null): DiscoverResult = withContext(ioDispatcher) {
         val tagNames = if (genre != null) listOf(genre) else emptyList()
 
         val requestBody = json.encodeToString(

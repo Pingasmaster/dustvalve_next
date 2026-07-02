@@ -12,12 +12,14 @@ import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.remote.DustvalveArtistScraper
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -37,6 +39,7 @@ class ArtistRepositoryImpl @Inject constructor(
     private val artistScraper: DustvalveArtistScraper,
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ArtistRepository {
 
     companion object {
@@ -97,7 +100,7 @@ class ArtistRepositoryImpl @Inject constructor(
             if (cachedArtist == null) throw e
             // Stale cache already emitted — swallow network error for offline use
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(ioDispatcher)
 
     private suspend fun buildCachedArtist(
         cachedArtist: com.dustvalve.next.android.data.local.db.entity.ArtistEntity,

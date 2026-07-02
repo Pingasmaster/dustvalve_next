@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.player
 
+import android.annotation.SuppressLint
 import com.dustvalve.next.android.domain.model.Track
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,10 @@ class QueueManager @Inject constructor() {
      * synchronously from ExoPlayer event callbacks; with [SharingStarted.WhileSubscribed],
      * a cold flow would expose a stale value when no UI is observing.
      */
+    // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
+    // tests substitute it globally via Dispatchers.setMain, so qualifying
+    // it would only add ceremony.
+    @SuppressLint("SlackDispatchersUse")
     private val flowScope = CoroutineScope(
         SupervisorJob() + Dispatchers.Main.immediate +
             kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->

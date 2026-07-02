@@ -3,8 +3,10 @@ package com.dustvalve.next.android.data.storage.folder
 import android.content.Context
 import androidx.core.net.toUri
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,13 +20,14 @@ import javax.inject.Singleton
 class FolderHealthChecker @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val settingsDataStore: SettingsDataStore,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     /**
      * Returns true when the feature is on, a tree URI is stored, we still
      * hold persistable permission for it, and the tree's root is reachable.
      * Returns false otherwise; the caller decides whether to block the UI.
      */
-    suspend fun check(): Boolean = withContext(Dispatchers.IO) {
+    suspend fun check(): Boolean = withContext(ioDispatcher) {
         val enabled = settingsDataStore.getDedicatedFolderEnabledSync()
         if (!enabled) return@withContext true
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return@withContext false

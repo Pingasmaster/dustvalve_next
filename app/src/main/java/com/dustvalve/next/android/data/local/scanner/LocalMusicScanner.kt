@@ -8,8 +8,10 @@ import android.provider.DocumentsContract
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.deleteByIds
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -20,7 +22,11 @@ import javax.inject.Singleton
 data class ScanResult(val added: Int, val removed: Int, val total: Int)
 
 @Singleton
-class LocalMusicScanner @Inject constructor(@param:ApplicationContext private val context: Context, private val trackDao: TrackDao) {
+class LocalMusicScanner @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+    private val trackDao: TrackDao,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     companion object {
         private val AUDIO_EXTENSIONS = setOf(
@@ -28,7 +34,7 @@ class LocalMusicScanner @Inject constructor(@param:ApplicationContext private va
         )
     }
 
-    suspend fun scan(folderUri: Uri): ScanResult = withContext(Dispatchers.IO) {
+    suspend fun scan(folderUri: Uri): ScanResult = withContext(ioDispatcher) {
         val folderUriString = folderUri.toString()
         val audioFiles = mutableListOf<AudioFileInfo>()
         listAudioFilesRecursive(folderUri, folderUri, audioFiles)

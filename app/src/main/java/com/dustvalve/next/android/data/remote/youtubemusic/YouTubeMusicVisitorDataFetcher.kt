@@ -1,7 +1,9 @@
 package com.dustvalve.next.android.data.remote.youtubemusic
 
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeYtcfgExtractor
-import kotlinx.coroutines.Dispatchers
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -40,7 +42,10 @@ import javax.inject.Singleton
  *     reports the WEB (non-Music) clientVersion.
  */
 @Singleton
-open class YouTubeMusicVisitorDataFetcher @Inject constructor(sharedOkHttpClient: OkHttpClient) {
+open class YouTubeMusicVisitorDataFetcher @Inject constructor(
+    sharedOkHttpClient: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     /**
      * Landing fetches MUST NOT carry the shared CookieJar's cookies. A stale
@@ -81,7 +86,7 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(sharedOkHttpClient
         cached = null
     }
 
-    private suspend fun fetch(): VisitorConfig = withContext(Dispatchers.IO) {
+    private suspend fun fetch(): VisitorConfig = withContext(ioDispatcher) {
         val primary = fetchLanding(landingUrl)
         primary.extract()?.let {
             // Use the scraped clientVersion only if it is plausibly a

@@ -10,12 +10,14 @@ import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.remote.DustvalveAlbumScraper
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -30,6 +32,7 @@ class AlbumRepositoryImpl @Inject constructor(
     private val favoriteDao: FavoriteDao,
     private val albumScraper: DustvalveAlbumScraper,
     private val downloadRepository: DownloadRepository,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : AlbumRepository {
 
     companion object {
@@ -95,7 +98,7 @@ class AlbumRepositoryImpl @Inject constructor(
             if (cachedAlbum == null || trackDao.getByAlbumId(cachedAlbum.id).isEmpty()) throw e
             // Stale cache already emitted — swallow network error for offline use
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(ioDispatcher)
 
     private suspend fun findCachedAlbum(
         cleanUrl: String,

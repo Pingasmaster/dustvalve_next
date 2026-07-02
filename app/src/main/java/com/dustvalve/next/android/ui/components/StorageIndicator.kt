@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.components
 
+import android.annotation.SuppressLint
 import android.os.Environment
 import android.os.StatFs
 import androidx.compose.animation.animateColorAsState
@@ -42,6 +43,10 @@ fun StorageIndicator(cacheInfo: CacheInfo, modifier: Modifier = Modifier) {
         label = "storageColor",
     )
     var freeBytes by remember { mutableLongStateOf(0L) }
+    // Composables can't be Hilt-injected; the project's @Dispatcher indirection
+    // lives in Hilt-managed classes. Suppressing locally keeps the call out of
+    // the baseline filter without dragging DI plumbing into @Composable.
+    @SuppressLint("SlackDispatchersUse")
     LaunchedEffect(cacheInfo) {
         freeBytes = withContext(Dispatchers.IO) {
             val stat = StatFs(Environment.getDataDirectory().path)

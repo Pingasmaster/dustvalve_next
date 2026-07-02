@@ -16,8 +16,10 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,8 +51,9 @@ class FolderRehydrator @Inject constructor(
     private val ytVideoDao: YouTubeVideoCacheDao,
     private val ytPlaylistDao: YouTubePlaylistCacheDao,
     private val ytmHomeDao: YouTubeMusicHomeCacheDao,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
-    suspend fun rehydrateAll() = withContext(Dispatchers.IO) {
+    suspend fun rehydrateAll() = withContext(ioDispatcher) {
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return@withContext
         val uri = try {
             uriStr.toUri()
@@ -59,7 +62,7 @@ class FolderRehydrator @Inject constructor(
         }
 
         // Settings first so downstream reads pick up the user's prefs.
-        FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_SETTINGS, SettingsFile.serializer())?.let { file ->
+        FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_SETTINGS, SettingsFile.serializer(), ioDispatcher)?.let { file ->
             val map = file.entries.mapValues { (_, v) ->
                 when (v) {
                     is SettingValue.BoolV -> v.value
@@ -73,13 +76,13 @@ class FolderRehydrator @Inject constructor(
             settingsDataStore.restorePreferences(map)
         }
 
-        val playlists = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_PLAYLISTS, PlaylistsFile.serializer())
-        val favorites = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_FAVORITES, FavoritesFile.serializer())
-        val tracks = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_TRACKS, TracksFile.serializer())
-        val albums = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_ALBUMS, AlbumsFile.serializer())
-        val artists = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_ARTISTS, ArtistsFile.serializer())
-        val downloads = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_DOWNLOADS, DownloadsFile.serializer())
-        val history = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_HISTORY, HistoryFile.serializer())
+        val playlists = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_PLAYLISTS, PlaylistsFile.serializer(), ioDispatcher)
+        val favorites = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_FAVORITES, FavoritesFile.serializer(), ioDispatcher)
+        val tracks = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_TRACKS, TracksFile.serializer(), ioDispatcher)
+        val albums = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_ALBUMS, AlbumsFile.serializer(), ioDispatcher)
+        val artists = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_ARTISTS, ArtistsFile.serializer(), ioDispatcher)
+        val downloads = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_DOWNLOADS, DownloadsFile.serializer(), ioDispatcher)
+        val history = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_HISTORY, HistoryFile.serializer(), ioDispatcher)
 
         database.withTransaction {
             // Order of inserts matters due to FK constraints on
@@ -141,6 +144,7 @@ class FolderRehydrator @Inject constructor(
                 uri,
                 "${DedicatedFolderPaths.CACHE_DIR}/${DedicatedFolderPaths.FILE_METADATA_CACHE}",
                 MetadataCacheFile.serializer(),
+                ioDispatcher,
             ) ?: readMetadataCacheFromCacheDir(uri)
             if (metadata != null) {
                 database.withTransaction {
@@ -157,7 +161,7 @@ class FolderRehydrator @Inject constructor(
         }
     }
 
-    private suspend fun readMetadataCacheFromCacheDir(uri: android.net.Uri): MetadataCacheFile? = withContext(Dispatchers.IO) {
+    private suspend fun readMetadataCacheFromCacheDir(uri: android.net.Uri): MetadataCacheFile? = withContext(ioDispatcher) {
         val file = DedicatedFolderPaths.findInCache(
             context,
             uri,

@@ -1,9 +1,11 @@
 package com.dustvalve.next.android.data.remote
 
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.util.HtmlUtils
 import com.dustvalve.next.android.util.NetworkUtils
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -15,14 +17,17 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveStreamResolver @Inject constructor(private val client: OkHttpClient) {
+class DustvalveStreamResolver @Inject constructor(
+    private val client: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
     }
 
-    suspend fun resolveStreamUrl(track: Track, albumPageUrl: String? = null): String? = withContext(Dispatchers.IO) {
+    suspend fun resolveStreamUrl(track: Track, albumPageUrl: String? = null): String? = withContext(ioDispatcher) {
         // If the track already has a stream URL, return it directly
         if (!track.streamUrl.isNullOrBlank()) {
             return@withContext track.streamUrl

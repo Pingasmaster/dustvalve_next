@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
-import kotlinx.coroutines.Dispatchers
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -35,6 +37,7 @@ import javax.inject.Singleton
 open class YouTubeInnertubeClient @Inject constructor(
     sharedOkHttpClient: OkHttpClient,
     private val visitorDataFetcher: YouTubeVisitorDataFetcher,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     /** Overridable in tests to point at MockWebServer. */
@@ -212,7 +215,7 @@ open class YouTubeInnertubeClient @Inject constructor(
         visitor: YouTubeVisitorDataFetcher.VisitorConfig,
         queryParams: String,
         body: JsonObject,
-    ): JsonElement = withContext(Dispatchers.IO) {
+    ): JsonElement = withContext(ioDispatcher) {
         val base = if (client == YouTubeClient.MWEB_NO_AUTH) baseUrlM else baseUrlWww
         val url = "$base/$endpointPath?prettyPrint=false$queryParams"
         val clientVersion = client.resolveClientVersion(visitor.clientVersion)

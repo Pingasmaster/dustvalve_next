@@ -16,6 +16,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import okhttp3.OkHttpClient
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -44,6 +45,7 @@ class PlaylistTransferRepositoryTest {
             trackDao = mockk<TrackDao>(relaxed = true).also { coEvery { it.insertAll(any()) } just Runs },
             downloadDao = mockk<DownloadDao>(relaxed = true),
             client = mockk<OkHttpClient>(relaxed = true),
+            ioDispatcher = UnconfinedTestDispatcher(),
         )
 
         coEvery { playlistRepo.getPlaylistByIdSync("p1") } returns Playlist(id = "p1", name = "My Mix")

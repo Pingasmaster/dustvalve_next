@@ -11,8 +11,11 @@ import coil3.request.allowHardware
 import coil3.size.Size
 import coil3.toBitmap
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.player.QueueManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,6 +32,7 @@ class AlbumThemeManager @Inject constructor(
     private val queueManager: QueueManager,
     private val settingsDataStore: SettingsDataStore,
     @param:ApplicationContext private val context: Context,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -48,7 +52,7 @@ class AlbumThemeManager @Inject constructor(
     private suspend fun extractSeedColor(artUrl: String): Color? {
         seedCache.get(artUrl)?.let { return Color(it) }
 
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             try {
                 val imageLoader = SingletonImageLoader.get(context)
                 val request = ImageRequest.Builder(context)
