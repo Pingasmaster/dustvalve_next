@@ -27,16 +27,36 @@ android {
 
     signingConfigs {
         create("release") {
+            val keystoreFile = file("../release-keystore.jks")
             val passwordFile = rootProject.file(".password-signing-keys")
-            val signingPassword = if (passwordFile.exists()) {
-                passwordFile.readText().trim()
+
+            if (keystoreFile.exists() && passwordFile.exists()) {
+                // Production signing: real keystore + password from local secrets.
+                storeFile = keystoreFile
+                storePassword = passwordFile.readText().trim()
+                keyAlias = "dustvalve"
+                keyPassword = storePassword
             } else {
-                ""
+                // Fallback to AGP's debug signing when the real keystore / password
+                // is not present. This keeps :app:assembleRelease unblocked in two
+                // scenarios that need a release-variant build without secrets:
+                //   - the baseline-profile regeneration workflow on every push/PR
+                //     (the macrobenchmark only needs an installable APK; the
+                //     deliverable is baseline-prof.txt, not the APK itself)
+                //   - local devs who haven't generated a keystore yet
+                // The resulting APK is debug-signed and NOT shippable. Production
+                // release builds decode release-keystore.jks from KEYSTORE_BASE64
+                // via .github/workflows/release.yml.
+                rootProject.logger.warn(
+                    "release-keystore.jks or .password-signing-keys missing — " +
+                        "falling back to AGP debug signing for the release variant.",
+                )
+                val debug = signingConfigs.getByName("debug")
+                storeFile = debug.storeFile
+                storePassword = debug.storePassword
+                keyAlias = debug.keyAlias
+                keyPassword = debug.keyPassword
             }
-            storeFile = file("../release-keystore.jks")
-            storePassword = signingPassword
-            keyAlias = "dustvalve"
-            keyPassword = signingPassword
         }
     }
 
