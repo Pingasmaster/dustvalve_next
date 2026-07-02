@@ -1,8 +1,8 @@
 [versions]
-agp = "9.4.0-alpha01"
+agp = "9.4.0-alpha02"
 kotlin = "2.3.21"
 ksp = "2.3.9"
-hilt = "2.59.2"
+hilt = "2.60"
 hilt-androidx = "1.4.0"
 
 compose-bom = "2026.06.01"
