@@ -2,7 +2,7 @@
 
 ## Output formatting
 
-Never include em-dashes or any non-ASCII characters like fancy quotes; prefer ASCII , . ; : and ' " quotes.
+NO NON-ASCII CHARACTERS ALLOWED. Em-dashes, fancy quotes, and all other non-ASCII characters are forbidden. Use ASCII , . ; : and ' " quotes only.
 
 ## Git workflow
 
