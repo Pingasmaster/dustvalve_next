@@ -3,9 +3,7 @@ package com.dustvalve.next.android.util
 import android.app.ActivityManager
 import android.app.ApplicationStartInfo
 import android.content.Context
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -30,7 +28,6 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
 
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
     fun collectOnColdStart() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val infos = am.getHistoricalProcessStartReasons(MAX_ENTRIES)
@@ -50,7 +47,6 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun ApplicationStartInfo.compactLine(): String {
         val ts = startupTimestamps
         fun delta(from: Int, to: Int): Long? {
@@ -83,7 +79,6 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     private fun reasonName(reason: Int): String = when (reason) {
         ApplicationStartInfo.START_REASON_ALARM -> "ALARM"
         ApplicationStartInfo.START_REASON_BACKUP -> "BACKUP"

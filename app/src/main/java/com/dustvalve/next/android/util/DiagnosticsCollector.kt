@@ -3,9 +3,7 @@ package com.dustvalve.next.android.util
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -36,7 +34,6 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
      */
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
     fun collectOnColdStart() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val reasons = am.getHistoricalProcessExitReasons(context.packageName, PID_UNQUERIED, MAX_ENTRIES)
@@ -55,7 +52,6 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     private fun writeDiagnosticsFile(reasons: List<ApplicationExitInfo>) {
         try {
             val dir = File(context.filesDir, "diagnostics").apply { mkdirs() }
@@ -68,7 +64,6 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     private fun ApplicationExitInfo.compactLine(): String = buildString {
         append("reason=").append(reasonName(reason))
         append(" importance=").append(importance)
@@ -79,7 +74,6 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         append(" process=").append(processName)
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
     private fun reasonName(reason: Int): String = when (reason) {
         ApplicationExitInfo.REASON_EXIT_SELF -> "EXIT_SELF"
         ApplicationExitInfo.REASON_CRASH -> "CRASH"
