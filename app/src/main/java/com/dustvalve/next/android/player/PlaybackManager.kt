@@ -2,13 +2,14 @@ package com.dustvalve.next.android.player
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioDeviceInfo
 import androidx.annotation.OptIn
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
-import android.media.AudioDeviceInfo
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.dustvalve.next.android.domain.model.RepeatMode
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import androidx.core.net.toUri
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -42,7 +42,7 @@ class PlaybackManager @Inject constructor(
         SupervisorJob() + Dispatchers.Main.immediate +
             kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
                 android.util.Log.e("PlaybackManager", "Unhandled coroutine error", throwable)
-            }
+            },
     )
 
     private val _isPlaying = MutableStateFlow(false)
@@ -100,6 +100,7 @@ class PlaybackManager @Inject constructor(
                     _duration.value = player.duration.coerceAtLeast(0L)
                     seekInProgress = false
                 }
+
                 Player.STATE_ENDED -> {
                     // Defer to avoid re-entrant Player.Listener callbacks when
                     // handlePlaybackEnded calls playTrack -> setMediaItem/prepare/play.
@@ -114,6 +115,7 @@ class PlaybackManager @Inject constructor(
                         }
                     }
                 }
+
                 else -> {}
             }
         }
@@ -159,6 +161,7 @@ class PlaybackManager @Inject constructor(
                 player.seekTo(0)
                 player.play()
             }
+
             RepeatMode.ALL -> {
                 val nextTrack = queueManager.next()
                 if (nextTrack != null) {
@@ -172,6 +175,7 @@ class PlaybackManager @Inject constructor(
                     }
                 }
             }
+
             RepeatMode.OFF -> {
                 val nextTrack = queueManager.next()
                 if (nextTrack != null) {
@@ -262,6 +266,7 @@ class PlaybackManager @Inject constructor(
                     }
                     return
                 }
+
                 RepeatMode.ALL -> {
                     // Restart from the beginning of the queue
                     val queue = queueManager.queue.value
@@ -271,6 +276,7 @@ class PlaybackManager @Inject constructor(
                     }
                     return
                 }
+
                 RepeatMode.OFF -> {
                     // Replay the current track from the beginning
                     player.seekTo(0)
@@ -436,7 +442,7 @@ class PlaybackManager @Inject constructor(
             SupervisorJob() + Dispatchers.Main.immediate +
                 kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
                     android.util.Log.e("PlaybackManager", "Unhandled coroutine error", throwable)
-                }
+                },
         )
         released = false
         serviceStarted = false

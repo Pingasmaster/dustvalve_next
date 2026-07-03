@@ -54,14 +54,10 @@ class PlaylistRepositoryImpl @Inject constructor(
         }.flowOn(Dispatchers.IO)
     }
 
-    override fun getPlaylistById(playlistId: String): Flow<Playlist?> {
-        return playlistDao.getPlaylistByIdFlow(playlistId).map { it?.toDomain() }
-            .flowOn(Dispatchers.IO)
-    }
+    override fun getPlaylistById(playlistId: String): Flow<Playlist?> = playlistDao.getPlaylistByIdFlow(playlistId).map { it?.toDomain() }
+        .flowOn(Dispatchers.IO)
 
-    override suspend fun getPlaylistByIdSync(playlistId: String): Playlist? {
-        return playlistDao.getPlaylistById(playlistId)?.toDomain()
-    }
+    override suspend fun getPlaylistByIdSync(playlistId: String): Playlist? = playlistDao.getPlaylistById(playlistId)?.toDomain()
 
     override suspend fun createPlaylist(name: String, shapeKey: String?, iconUrl: String?): Playlist {
         val playlist = PlaylistEntity(
@@ -140,17 +136,10 @@ class PlaylistRepositoryImpl @Inject constructor(
             )
             playlistDao.insertPlaylistIfAbsent(entity)
         }
-
     }
 
-    override fun getSystemPlaylist(type: Playlist.SystemPlaylistType): Flow<Playlist?> {
-        return playlistDao.getSystemPlaylistByTypeFlow(type.name).map { it?.toDomain() }
-            .flowOn(Dispatchers.IO)
-    }
-
-    override suspend fun getSystemPlaylistSync(type: Playlist.SystemPlaylistType): Playlist? {
-        return playlistDao.getSystemPlaylistByType(type.name)?.toDomain()
-    }
+    override suspend fun getSystemPlaylistSync(type: Playlist.SystemPlaylistType): Playlist? =
+        playlistDao.getSystemPlaylistByType(type.name)?.toDomain()
 
     override fun getTracksInPlaylist(playlistId: String): Flow<List<Track>> {
         // System playlists (Favorites / Downloads) read live from source
@@ -170,6 +159,7 @@ class PlaylistRepositoryImpl @Inject constructor(
             ) { source, ordered ->
                 mergeSystemPlaylist(source, ordered).map { it.toDomain(isFavorite = true) }
             }
+
             Playlist.ID_DOWNLOADS -> combine(
                 trackDao.getDownloaded(),
                 playlistDao.getTracksInPlaylist(playlistId),
@@ -179,6 +169,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                 val favoriteIds = if (trackIds.isNotEmpty()) favoriteDao.getFavoriteIds(trackIds).toSet() else emptySet()
                 merged.map { it.toDomain(it.id in favoriteIds) }
             }
+
             Playlist.ID_RECENT -> trackDao.getRecent().map { tracks ->
                 val trackIds = tracks.map { it.id }
                 val favoriteIds = if (trackIds.isNotEmpty()) {
@@ -188,6 +179,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                 }
                 tracks.map { it.toDomain(it.id in favoriteIds) }
             }
+
             else -> playlistDao.getTracksInPlaylist(playlistId).map { trackEntities ->
                 val trackIds = trackEntities.map { it.id }
                 val favoriteIds = if (trackIds.isNotEmpty()) {
@@ -323,14 +315,11 @@ class PlaylistRepositoryImpl @Inject constructor(
         playlistDao.insertPlaylistTracks(rows)
     }
 
-    override suspend fun isTrackInPlaylist(playlistId: String, trackId: String): Boolean {
-        return playlistDao.isTrackInPlaylist(playlistId, trackId)
-    }
+    override suspend fun isTrackInPlaylist(playlistId: String, trackId: String): Boolean =
+        playlistDao.isTrackInPlaylist(playlistId, trackId)
 
-    override fun getTrackIdsInUserPlaylists(): Flow<Set<String>> {
-        return playlistDao.getTrackIdsInUserPlaylists().map { it.toSet() }
-            .flowOn(Dispatchers.IO)
-    }
+    override fun getTrackIdsInUserPlaylists(): Flow<Set<String>> = playlistDao.getTrackIdsInUserPlaylists().map { it.toSet() }
+        .flowOn(Dispatchers.IO)
 
     override suspend fun syncRecentPlaylist() {
         val playlist = getSystemPlaylistSync(Playlist.SystemPlaylistType.RECENT) ?: return
@@ -371,5 +360,4 @@ class PlaylistRepositoryImpl @Inject constructor(
             playlistDao.updateTrackCount(playlist.id, collectionTracks.size)
         }
     }
-
 }

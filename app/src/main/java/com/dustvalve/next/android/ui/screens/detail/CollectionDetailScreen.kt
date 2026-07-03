@@ -81,7 +81,8 @@ fun CollectionDetailScreen(
     collectionUrl: String,
     collectionName: String,
     onBack: () -> Unit,
-    playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -138,7 +139,9 @@ fun CollectionDetailScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                } else null,
+                } else {
+                    null
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                         Icon(
@@ -152,7 +155,7 @@ fun CollectionDetailScreen(
             )
         },
         contentWindowInsets = WindowInsets(0),
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
         when {
             state.isLoading -> {
@@ -161,6 +164,7 @@ fun CollectionDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) { ContainedLoadingIndicator() }
             }
+
             state.error != null && state.tracks.isEmpty() -> {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
@@ -180,6 +184,7 @@ fun CollectionDetailScreen(
                     }
                 }
             }
+
             else -> {
                 val heroUrl = state.coverUrl ?: state.tracks.firstOrNull()?.artUrl
                 val listState = rememberLazyListState()
@@ -251,8 +256,11 @@ fun CollectionDetailScreen(
                             },
                             onToggleFavorite = { viewModel.toggleFavorite() },
                             onDownload = {
-                                if (allDownloaded) showDeleteDialog = true
-                                else viewModel.downloadAll()
+                                if (allDownloaded) {
+                                    showDeleteDialog = true
+                                } else {
+                                    viewModel.downloadAll()
+                                }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -272,8 +280,10 @@ fun CollectionDetailScreen(
                                 style = MaterialTheme.typography.titleMediumEmphasized,
                                 modifier = Modifier
                                     .padding(
-                                        start = 20.dp, end = 20.dp,
-                                        top = 16.dp, bottom = 4.dp,
+                                        start = 20.dp,
+                                        end = 20.dp,
+                                        top = 16.dp,
+                                        bottom = 4.dp,
                                     )
                                     .animateItem(),
                             )
@@ -281,6 +291,7 @@ fun CollectionDetailScreen(
                         items(
                             count = state.tracks.size,
                             key = { state.tracks[it].id },
+                            contentType = { "collection_track" },
                         ) { index ->
                             val track = state.tracks[index]
                             val isCurrent = playerState.currentTrack?.id == track.id
@@ -382,7 +393,7 @@ private fun CollectionActionBar(
         ) {
             Icon(
                 painter = painterResource(
-                    if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border
+                    if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
                 ),
                 contentDescription = if (isFavorite) {
                     stringResource(R.string.detail_cd_remove_favorites)
@@ -406,8 +417,11 @@ private fun CollectionActionBar(
             } else {
                 Icon(
                     painter = painterResource(
-                        if (allTracksDownloaded) R.drawable.ic_download_done
-                        else R.drawable.ic_download
+                        if (allTracksDownloaded) {
+                            R.drawable.ic_download_done
+                        } else {
+                            R.drawable.ic_download
+                        },
                     ),
                     contentDescription = if (allTracksDownloaded) {
                         stringResource(R.string.detail_cd_delete_downloads)

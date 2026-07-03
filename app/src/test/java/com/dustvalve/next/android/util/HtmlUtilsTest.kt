@@ -62,7 +62,7 @@ class HtmlUtilsTest {
     }
 
     @Test fun `extractJsonFromScript returns null for truncated json`() {
-        val html = """var X = {"k":1"""  // unclosed
+        val html = """var X = {"k":1""" // unclosed
         assertThat(HtmlUtils.extractJsonFromScript(html, "X")).isNull()
     }
 
@@ -127,22 +127,6 @@ class HtmlUtilsTest {
     @Test fun `decodeHtmlEntities malformed numeric left alone`() {
         val out = HtmlUtils.decodeHtmlEntities("&#abc;")
         assertThat(out).isEqualTo("&#abc;")
-    }
-
-    @Test fun `cleanHtml strips tags`() {
-        assertThat(HtmlUtils.cleanHtml("<b>hello</b> <i>world</i>")).isEqualTo("hello world")
-    }
-
-    @Test fun `cleanHtml collapses whitespace`() {
-        assertThat(HtmlUtils.cleanHtml("a    b\n\tc")).isEqualTo("a b c")
-    }
-
-    @Test fun `cleanHtml decodes entities`() {
-        assertThat(HtmlUtils.cleanHtml("a &amp; b")).isEqualTo("a & b")
-    }
-
-    @Test fun `cleanHtml handles multi-line tags`() {
-        assertThat(HtmlUtils.cleanHtml("<span\nclass=\"x\">hi</span>")).isEqualTo("hi")
     }
 
     @Test fun `extractMetaContent og property`() {

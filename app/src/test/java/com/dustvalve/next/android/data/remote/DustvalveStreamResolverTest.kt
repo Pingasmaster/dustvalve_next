@@ -22,12 +22,7 @@ class DustvalveStreamResolverTest {
         setup.server.shutdown()
     }
 
-    private fun baseTrack(
-        id: String = "t1",
-        title: String = "Song",
-        trackNumber: Int = 1,
-        streamUrl: String? = null,
-    ) = Track(
+    private fun baseTrack(id: String = "t1", title: String = "Song", trackNumber: Int = 1, streamUrl: String? = null) = Track(
         id = id, albumId = "al", title = title, artist = "A",
         trackNumber = trackNumber, duration = 100f, streamUrl = streamUrl,
         artUrl = "", albumTitle = "Alb",

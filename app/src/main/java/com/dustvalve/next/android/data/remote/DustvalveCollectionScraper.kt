@@ -21,9 +21,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveCollectionScraper @Inject constructor(
-    private val client: OkHttpClient
-) {
+class DustvalveCollectionScraper @Inject constructor(private val client: OkHttpClient) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -56,10 +54,7 @@ class DustvalveCollectionScraper @Inject constructor(
         @SerialName("sale_item_type") val saleItemType: String? = null,
     )
 
-    suspend fun getCollection(
-        fanId: Long,
-        olderThanToken: String? = null,
-    ): CollectionResult = withContext(Dispatchers.IO) {
+    suspend fun getCollection(fanId: Long, olderThanToken: String? = null): CollectionResult = withContext(Dispatchers.IO) {
         val token = olderThanToken ?: "9999999999::a::"
 
         val requestBody = json.encodeToString(
@@ -67,7 +62,7 @@ class DustvalveCollectionScraper @Inject constructor(
             CollectionRequest(
                 fanId = fanId,
                 olderThanToken = token,
-            )
+            ),
         )
 
         val request = Request.Builder()
@@ -135,9 +130,7 @@ class DustvalveCollectionScraper @Inject constructor(
         )
     }
 
-    private fun normalizeUrl(url: String): String {
-        return url.trimEnd('/').substringBefore('?').substringBefore('#')
-    }
+    private fun normalizeUrl(url: String): String = url.trimEnd('/').substringBefore('?').substringBefore('#')
 
     private fun stableId(input: String): String {
         val normalized = normalizeUrl(input)

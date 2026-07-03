@@ -36,17 +36,19 @@ class LiveYtcfgFetcherSmokeTest {
         // Match the production shared client: Chrome-like UA interceptor so
         // the fetcher's newBuilder()-inherited interceptor mirrors reality.
         okHttp = OkHttpClient.Builder()
-            .addInterceptor(Interceptor { chain ->
-                chain.proceed(
-                    chain.request().newBuilder()
-                        .header(
-                            "User-Agent",
-                            "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 " +
-                                "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-                        )
-                        .build(),
-                )
-            })
+            .addInterceptor(
+                Interceptor { chain ->
+                    chain.proceed(
+                        chain.request().newBuilder()
+                            .header(
+                                "User-Agent",
+                                "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 " +
+                                    "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+                            )
+                            .build(),
+                    )
+                },
+            )
             .build()
     }
 

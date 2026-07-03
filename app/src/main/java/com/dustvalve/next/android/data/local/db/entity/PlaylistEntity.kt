@@ -10,7 +10,7 @@ import androidx.room.PrimaryKey
         Index("isSystem"),
         Index("isPinned"),
         Index("sortOrder"),
-    ]
+    ],
 )
 data class PlaylistEntity(
     @PrimaryKey val id: String,

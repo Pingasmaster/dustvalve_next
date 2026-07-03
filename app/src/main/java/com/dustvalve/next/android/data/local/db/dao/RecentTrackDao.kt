@@ -21,7 +21,7 @@ interface RecentTrackDao {
         DELETE FROM recent_tracks WHERE trackId NOT IN (
             SELECT trackId FROM recent_tracks ORDER BY playedAt DESC LIMIT :keepCount
         )
-        """
+        """,
     )
     suspend fun deleteOld(keepCount: Int)
 

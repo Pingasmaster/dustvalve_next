@@ -1,13 +1,14 @@
 package com.dustvalve.next.android.ui.screens.player
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import android.content.Context
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Playlist
@@ -16,16 +17,17 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
-import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.NetworkUtils
 import com.dustvalve.next.android.util.UiText
-import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,10 +35,10 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.roundToInt
 
 data class PlayerUiState(
     val currentTrack: Track? = null,
@@ -74,6 +76,7 @@ class PlayerViewModel @Inject constructor(
     private val queueManager: QueueManager,
     private val libraryRepository: LibraryRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val playlistRepository: PlaylistRepository,
     private val favoriteDao: com.dustvalve.next.android.data.local.db.dao.FavoriteDao,
@@ -118,15 +121,16 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    private fun getOutputDevices(): List<AudioDeviceInfo> =
-        audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
-            .filter { it.type !in setOf(
+    private fun getOutputDevices(): List<AudioDeviceInfo> = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        .filter {
+            it.type !in setOf(
                 AudioDeviceInfo.TYPE_TELEPHONY,
                 AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
                 AudioDeviceInfo.TYPE_BUILTIN_EARPIECE,
-            )}
-            .distinctBy { it.type to (it.productName?.toString() ?: "") }
-            .toList()
+            )
+        }
+        .distinctBy { it.type to (it.productName?.toString() ?: "") }
+        .toList()
 
     init {
         collectDownloadedTrackIds()
@@ -383,7 +387,7 @@ class PlayerViewModel @Inject constructor(
             playbackManager.shuffleEnabled,
             playbackManager.repeatMode,
             queueManager.currentIndex,
-        ) { shuffle, repeat, index -> Triple(shuffle, repeat, index) }
+        ) { shuffle, repeat, index -> Triple(shuffle, repeat, index) },
     ) { state, (shuffle, repeat, index) ->
         state.copy(
             shuffleEnabled = shuffle,
@@ -406,14 +410,14 @@ class PlayerViewModel @Inject constructor(
         combine(
             settingsDataStore.progressBarStyle,
             settingsDataStore.progressBarSizeDp,
-        ) { style, sizeDp -> style to sizeDp }
+        ) { style, sizeDp -> style to sizeDp },
     ) { state, (style, sizeDp) ->
         state.copy(progressBarStyle = style, progressBarSizeDp = sizeDp)
     }.combine(
         combine(
             settingsDataStore.showInlineVolumeSlider,
             settingsDataStore.showVolumeButton,
-        ) { inline, button -> inline to button }
+        ) { inline, button -> inline to button },
     ) { state, (inline, button) ->
         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val curVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -424,7 +428,7 @@ class PlayerViewModel @Inject constructor(
             volumeLevel = if (maxVol > 0) curVol.toFloat() / maxVol else 1f,
         )
     }.combine(
-        combine(_audioDevices, _activeAudioDevice) { devices, active -> devices to active }
+        combine(_audioDevices, _activeAudioDevice) { devices, active -> devices to active },
     ) { state, (devices, active) ->
         state.copy(
             audioOutputDevices = devices,
@@ -445,7 +449,7 @@ class PlayerViewModel @Inject constructor(
 
     fun setVolume(level: Float) {
         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
-        val newVol = (level * maxVol).toInt().coerceIn(0, maxVol)
+        val newVol = (level * maxVol).roundToInt().coerceIn(0, maxVol)
         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
     }
 
@@ -487,8 +491,8 @@ class PlayerViewModel @Inject constructor(
     fun playTrack(track: Track) {
         playJob?.cancel()
         playJob = viewModelScope.launch {
-            val isYouTubeStream = track.source == TrackSource.YOUTUBE
-                && downloadRepository.getDownloadInfo(track.id) == null
+            val isYouTubeStream = track.source == TrackSource.YOUTUBE &&
+                downloadRepository.getDownloadInfo(track.id) == null
 
             if (isYouTubeStream) {
                 playbackManager.pause()
@@ -523,8 +527,8 @@ class PlayerViewModel @Inject constructor(
         playJob?.cancel()
         playJob = viewModelScope.launch {
             val targetTrack = tracks[index]
-            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE
-                && downloadRepository.getDownloadInfo(targetTrack.id) == null
+            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
+                downloadRepository.getDownloadInfo(targetTrack.id) == null
 
             if (isYouTubeStream) {
                 playbackManager.pause()
@@ -557,8 +561,8 @@ class PlayerViewModel @Inject constructor(
         playJob?.cancel()
         playJob = viewModelScope.launch {
             val targetTrack = tracks[startIndex]
-            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE
-                && downloadRepository.getDownloadInfo(targetTrack.id) == null
+            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
+                downloadRepository.getDownloadInfo(targetTrack.id) == null
 
             if (isYouTubeStream) {
                 playbackManager.pause()
@@ -637,7 +641,7 @@ class PlayerViewModel @Inject constructor(
         _extraState.update { it.copy(downloadingTrackId = track.id) }
         downloadJob = viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadTrack(track)
+                downloadController.downloadTrackBlocking(track)
                 _extraState.update {
                     it.copy(
                         downloadingTrackId = null,
@@ -650,7 +654,8 @@ class PlayerViewModel @Inject constructor(
                 _extraState.update {
                     it.copy(
                         downloadingTrackId = null,
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -673,7 +678,8 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -697,7 +703,8 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -721,7 +728,8 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -795,7 +803,8 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -818,7 +827,8 @@ class PlayerViewModel @Inject constructor(
                 if (e is CancellationException) throw e
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
                         isSnackbarError = true,
                     )
                 }

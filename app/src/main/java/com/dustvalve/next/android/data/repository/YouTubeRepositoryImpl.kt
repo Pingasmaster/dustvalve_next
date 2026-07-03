@@ -72,11 +72,7 @@ class YouTubeRepositoryImpl @Inject constructor(
      * mixed results client-side. That matches what the legacy NewPipe
      * wrapper did and avoids rotating filter tokens we'd have to update.
      */
-    override suspend fun search(
-        query: String,
-        filter: String?,
-        page: Any?,
-    ): Pair<List<SearchResult>, Any?> {
+    override suspend fun search(query: String, filter: String?, page: Any?): Pair<List<SearchResult>, Any?> {
         // page is the continuation token from the previous call. We always
         // re-issue the same /search query; the search continuation API
         // requires a dedicated route we have not implemented yet. The
@@ -123,7 +119,9 @@ class YouTubeRepositoryImpl @Inject constructor(
             if (cached.albumLookupDone) return cachedToTrack(cached)
             val resolvedAlbumUrl = resolveAlbumOnce(videoId)
             val upgraded = cached.copy(albumUrl = resolvedAlbumUrl, albumLookupDone = true)
-            try { videoCache.insert(upgraded) } catch (_: Throwable) {}
+            try {
+                videoCache.insert(upgraded)
+            } catch (_: Throwable) {}
             return cachedToTrack(upgraded)
         }
         val response = client.player(videoId)
@@ -157,24 +155,23 @@ class YouTubeRepositoryImpl @Inject constructor(
         artistUrl = cached.artistUrl,
         trackNumber = 0,
         duration = cached.durationSec,
-        streamUrl = null,  // Re-resolved live by the player.
+        streamUrl = null, // Re-resolved live by the player.
         artUrl = cached.artUrl,
         albumTitle = "",
         albumUrl = cached.albumUrl,
         source = TrackSource.YOUTUBE,
     )
 
-    private fun Track.toCacheEntity(videoId: String, albumLookupDone: Boolean = false): YouTubeVideoCacheEntity =
-        YouTubeVideoCacheEntity(
-            videoId = videoId,
-            title = title,
-            artist = artist,
-            artistUrl = artistUrl,
-            durationSec = duration,
-            artUrl = artUrl,
-            albumUrl = albumUrl,
-            albumLookupDone = albumLookupDone,
-        )
+    private fun Track.toCacheEntity(videoId: String, albumLookupDone: Boolean = false): YouTubeVideoCacheEntity = YouTubeVideoCacheEntity(
+        videoId = videoId,
+        title = title,
+        artist = artist,
+        artistUrl = artistUrl,
+        durationSec = duration,
+        artUrl = artUrl,
+        albumUrl = albumUrl,
+        albumLookupDone = albumLookupDone,
+    )
 
     override suspend fun getRecommendations(videoUrl: String): List<SearchResult> {
         val videoId = extractVideoId(videoUrl)
@@ -194,7 +191,9 @@ class YouTubeRepositoryImpl @Inject constructor(
         if (cached != null) {
             val ids = try {
                 json.decodeFromString(stringListSerializer, cached.videoIdsJson)
-            } catch (_: Throwable) { emptyList() }
+            } catch (_: Throwable) {
+                emptyList()
+            }
             if (ids.isNotEmpty()) {
                 val cachedVideos = videoCache.getByIds(ids).associateBy { it.videoId }
                 val tracks = ids.mapNotNull { id -> cachedVideos[id]?.let { cachedToTrack(it) } }
@@ -202,7 +201,9 @@ class YouTubeRepositoryImpl @Inject constructor(
                     val age = System.currentTimeMillis() - cached.cachedAt
                     if (age >= PLAYLIST_REVALIDATE_MS) {
                         backgroundScope.launch {
-                            try { fetchAndCachePlaylist(playlistId) } catch (_: Throwable) {}
+                            try {
+                                fetchAndCachePlaylist(playlistId)
+                            } catch (_: Throwable) {}
                         }
                     }
                     return tracks to cached.title
@@ -243,17 +244,13 @@ class YouTubeRepositoryImpl @Inject constructor(
                     playlistId = playlistId,
                     title = title,
                     videoIdsJson = json.encodeToString(stringListSerializer, ids),
-                )
+                ),
             )
         } catch (_: Throwable) {}
         return all to title
     }
 
-    override suspend fun getMixPage(
-        mixUrl: String,
-        cursor: Any?,
-        seenVideoIds: Set<String>,
-    ): Triple<List<Track>, String, Any?> {
+    override suspend fun getMixPage(mixUrl: String, cursor: Any?, seenVideoIds: Set<String>): Triple<List<Track>, String, Any?> {
         val mixId = extractPlaylistId(mixUrl)
             ?: throw IllegalArgumentException("Cannot extract mix playlistId from $mixUrl")
         val typed = cursor as? YouTubePlaylistParser.MixContinuation
@@ -285,10 +282,7 @@ class YouTubeRepositoryImpl @Inject constructor(
         return Triple(page.tracks, page.title.orEmpty(), nextCursor)
     }
 
-    override suspend fun getChannelVideos(
-        channelUrl: String,
-        page: Any?,
-    ): Triple<List<Track>, String?, Any?> {
+    override suspend fun getChannelVideos(channelUrl: String, page: Any?): Triple<List<Track>, String?, Any?> {
         val channelId = extractChannelId(channelUrl)
             ?: throw IllegalArgumentException("Cannot extract channelId from $channelUrl")
         val token = page as? ChannelPageToken
@@ -313,12 +307,7 @@ class YouTubeRepositoryImpl @Inject constructor(
     }
 
     /** Opaque page token for getChannelVideos pagination. */
-    private data class ChannelPageToken(
-        val channelId: String,
-        val channelName: String?,
-        val totalSoFar: Int,
-        val continuation: String,
-    )
+    private data class ChannelPageToken(val channelId: String, val channelName: String?, val totalSoFar: Int, val continuation: String)
 
     private fun extractVideoId(url: String): String? {
         val patterns = listOf(
@@ -344,5 +333,4 @@ class YouTubeRepositoryImpl @Inject constructor(
         if (url.matches(Regex("UC[A-Za-z0-9_-]{22}"))) return url
         return null
     }
-
 }

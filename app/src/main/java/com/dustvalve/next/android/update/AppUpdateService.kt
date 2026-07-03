@@ -35,10 +35,7 @@ import kotlin.coroutines.coroutineContext
  * "Automatic update checks" toggle (Settings → About); the manual button never.
  */
 @Singleton
-open class AppUpdateService @Inject constructor(
-    private val client: OkHttpClient,
-    @param:ApplicationContext private val context: Context,
-) {
+open class AppUpdateService @Inject constructor(private val client: OkHttpClient, @param:ApplicationContext private val context: Context) {
 
     /**
      * Overridable in tests so MockWebServer can answer the releases GET.
@@ -67,10 +64,7 @@ open class AppUpdateService @Inject constructor(
     )
 
     @Serializable
-    private data class GitHubAsset(
-        val name: String = "",
-        @SerialName("browser_download_url") val browserDownloadUrl: String = "",
-    )
+    private data class GitHubAsset(val name: String = "", @SerialName("browser_download_url") val browserDownloadUrl: String = "")
 
     data class AvailableUpdate(
         val versionName: String,
@@ -82,7 +76,9 @@ open class AppUpdateService @Inject constructor(
     data class DownloadProgress(val bytesDownloaded: Long, val totalBytes: Long) {
         val fraction: Float get() = if (totalBytes > 0L) {
             (bytesDownloaded.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
-        } else 0f
+        } else {
+            0f
+        }
     }
 
     /**
@@ -105,20 +101,19 @@ open class AppUpdateService @Inject constructor(
 
         // Pre-alpha: every CI build ships as a GitHub prerelease, so we
         // MUST include them here. Drafts (unpublished) are still skipped.
-        // LEGACY BRANCH PATCH: each release ships two apks side by side:
-        //   dustvalve_next.apk         -> this legacy build (Android 8-16)
-        //   dustvalve_next-future.apk  -> the master/Android 17 build
-        // Match ONLY the legacy asset so Android 8-16 installs never download
-        // the modern APK. Releases without the legacy asset are skipped:
-        // nothing to install.
+        // Each release ships TWO apks: dustvalve_next.apk (legacy-android8,
+        // Android 8-16) and dustvalve_next-future.apk (this modern build,
+        // Android 17). Match ONLY the future asset so Android 17 installs
+        // never download the legacy APK. Releases without the future asset
+        // are skipped: nothing to install.
         val latest = releases.firstOrNull { release ->
-            !release.draft && release.assets.any { it.name == LEGACY_APK_ASSET }
+            !release.draft && release.assets.any { it.name == FUTURE_APK_ASSET }
         } ?: return@withContext null
 
         val latestVersion = latest.tagName.removePrefix("v")
         if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
-        val apkAsset = latest.assets.first { it.name == LEGACY_APK_ASSET }
+        val apkAsset = latest.assets.first { it.name == FUTURE_APK_ASSET }
         AvailableUpdate(
             versionName = latestVersion,
             apkDownloadUrl = apkAsset.browserDownloadUrl,
@@ -189,8 +184,8 @@ open class AppUpdateService @Inject constructor(
     companion object {
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
 
-        /** LEGACY BRANCH PATCH: the only release asset this build will install. */
-        const val LEGACY_APK_ASSET = "dustvalve_next.apk"
+        /** GitHub-release asset name produced by the `build-modern` workflow job (master → Android 17 build). */
+        const val FUTURE_APK_ASSET = "dustvalve_next-future.apk"
 
         /** True when [remote] is a strictly higher dotted-int version than [local]. */
         fun isNewer(remote: String, local: String): Boolean {

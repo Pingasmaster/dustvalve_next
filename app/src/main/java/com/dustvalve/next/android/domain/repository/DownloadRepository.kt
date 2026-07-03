@@ -16,15 +16,16 @@ data class DownloadInfo(
 ) {
     /** ExoPlayer-ready URI string; wraps file paths with `file://`. */
     val streamUri: String
-        get() = if (filePath.startsWith("content://")) filePath
-            else android.net.Uri.fromFile(java.io.File(filePath)).toString()
+        get() = if (filePath.startsWith("content://")) {
+            filePath
+        } else {
+            android.net.Uri.fromFile(java.io.File(filePath)).toString()
+        }
 }
 
 interface DownloadRepository {
     suspend fun downloadAlbum(album: Album)
     suspend fun downloadTrack(track: Track, formatOverride: AudioFormat? = null)
-    fun getDownloadedAlbums(): Flow<List<Album>>
-    fun getDownloadedTracks(): Flow<List<Track>>
     suspend fun isTrackDownloaded(trackId: String): Boolean
     suspend fun getDownloadInfo(trackId: String): DownloadInfo?
     suspend fun deleteDownload(trackId: String)

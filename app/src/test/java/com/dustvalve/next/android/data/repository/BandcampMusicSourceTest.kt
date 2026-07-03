@@ -24,14 +24,15 @@ class BandcampMusicSourceTest {
     private val albumRepo = mockk<AlbumRepository>()
     private val source = BandcampMusicSource(searchRepo, artistRepo, albumRepo)
 
-    @Test fun `provider is BANDCAMP with id 'bandcamp'`() {
-        assertThat(source.provider).isEqualTo(MusicProvider.BANDCAMP)
+    @Test fun `id is 'bandcamp'`() {
         assertThat(source.id).isEqualTo("bandcamp")
     }
 
     @Test fun `capabilities cover search artist album but not tracks-feed or collection`() {
         assertThat(source.capabilities).containsExactly(
-            SourceConcept.SEARCH, SourceConcept.ARTIST, SourceConcept.ALBUM,
+            SourceConcept.SEARCH,
+            SourceConcept.ARTIST,
+            SourceConcept.ALBUM,
         )
     }
 
@@ -89,7 +90,13 @@ class BandcampMusicSourceTest {
     }
 
     private fun result(type: SearchResultType, name: String) = SearchResult(
-        type = type, name = name, url = "https://x",
-        imageUrl = null, artist = null, album = null, genre = null, releaseDate = null,
+        type = type,
+        name = name,
+        url = "https://x",
+        imageUrl = null,
+        artist = null,
+        album = null,
+        genre = null,
+        releaseDate = null,
     )
 }

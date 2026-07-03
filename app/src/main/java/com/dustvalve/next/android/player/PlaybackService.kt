@@ -102,9 +102,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession.player.addListener(pauseIdleListener)
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession {
-        return mediaSession
-    }
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession = mediaSession
 
     override fun onTaskRemoved(rootIntent: Intent?) {
         val player = mediaSession.player
@@ -129,6 +127,7 @@ class PlaybackService : MediaSessionService() {
 
     companion object {
         private const val IDLE_STOP_MINUTES = 5L
+
         // Target work-duration the OS uses to size CPU clocks.
         private const val PERF_HINT_TARGET_MS = 10L
         private const val PERF_HINT_ACTUAL_MS = 2L

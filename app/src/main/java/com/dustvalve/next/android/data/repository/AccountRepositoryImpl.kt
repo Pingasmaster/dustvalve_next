@@ -16,29 +16,25 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class AccountRepositoryImpl @Inject constructor(
-    private val settingsDataStore: SettingsDataStore,
-    private val cookieStore: CookieStore,
-) : AccountRepository {
+class AccountRepositoryImpl @Inject constructor(private val settingsDataStore: SettingsDataStore, private val cookieStore: CookieStore) :
+    AccountRepository {
 
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
     }
 
-    override fun getAccountState(): Flow<AccountState> {
-        return combine(
-            settingsDataStore.accountUsername,
-            settingsDataStore.accountAvatar,
-            settingsDataStore.accountFanId,
-        ) { username, avatar, fanId ->
-            AccountState(
-                isLoggedIn = username != null,
-                username = username,
-                avatarUrl = avatar,
-                fanId = fanId,
-            )
-        }
+    override fun getAccountState(): Flow<AccountState> = combine(
+        settingsDataStore.accountUsername,
+        settingsDataStore.accountAvatar,
+        settingsDataStore.accountFanId,
+    ) { username, avatar, fanId ->
+        AccountState(
+            isLoggedIn = username != null,
+            username = username,
+            avatarUrl = avatar,
+            fanId = fanId,
+        )
     }
 
     override suspend fun saveCookies(cookies: Map<String, String>) {
@@ -74,18 +70,10 @@ class AccountRepositoryImpl @Inject constructor(
         settingsDataStore.clearAccount()
     }
 
-    override suspend fun getCookies(): Map<String, String> {
-        // Read from CookieStore's in-memory cache to avoid format mismatch
-        return cookieStore.loadCookiesForDomain("bandcamp.com")
-            .associate { it.name to it.value }
-    }
-
     // YouTube Music
 
-    override fun getYouTubeMusicAccountState(): Flow<YouTubeMusicAccountState> {
-        return settingsDataStore.ytmConnected.map { connected ->
-            YouTubeMusicAccountState(isLoggedIn = connected)
-        }
+    override fun getYouTubeMusicAccountState(): Flow<YouTubeMusicAccountState> = settingsDataStore.ytmConnected.map { connected ->
+        YouTubeMusicAccountState(isLoggedIn = connected)
     }
 
     override suspend fun saveYouTubeMusicCookies(cookies: Map<String, String>) {
@@ -98,5 +86,4 @@ class AccountRepositoryImpl @Inject constructor(
         cookieStore.clearCookiesForDomain("google.com")
         settingsDataStore.clearYtmAccount()
     }
-
 }

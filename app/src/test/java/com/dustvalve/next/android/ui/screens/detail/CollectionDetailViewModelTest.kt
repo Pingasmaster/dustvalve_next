@@ -15,6 +15,7 @@ import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.repository.UnsupportedSourceOperation
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.every
@@ -47,6 +48,7 @@ class CollectionDetailViewModelTest {
     private val database = mockk<DustvalveNextDatabase>(relaxed = true)
     private val downloadRepository = mockk<DownloadRepository>()
     private val downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true)
+    private val downloadController = mockk<DownloadController>(relaxed = true)
 
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
@@ -61,10 +63,14 @@ class CollectionDetailViewModelTest {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
-            id = url, url = url, name = "Chill Mix", owner = "",
+            id = url,
+            url = url,
+            name = "Chill Mix",
+            owner = "",
             coverUrl = "cover.jpg",
             tracks = listOf(track("yt_1"), track("yt_2")),
-            continuation = null, hasMore = false,
+            continuation = null,
+            hasMore = false,
         )
         every { sources["youtube"] } returns source
         coEvery { favoriteDao.isFavorite(url) } returns false
@@ -126,8 +132,14 @@ class CollectionDetailViewModelTest {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
-            id = url, url = url, name = "My Mix", owner = "",
-            coverUrl = null, tracks = listOf(track("a")), continuation = null, hasMore = false,
+            id = url,
+            url = url,
+            name = "My Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("a")),
+            continuation = null,
+            hasMore = false,
         )
         every { sources["youtube"] } returns source
         coEvery { favoriteDao.isFavorite(url) } returns true
@@ -156,12 +168,12 @@ class CollectionDetailViewModelTest {
         database = database,
         downloadRepository = downloadRepository,
         downloadAlbumUseCase = downloadAlbumUseCase,
+        downloadController = downloadController,
     )
 
     private fun sourceWith(id: String, capabilities: Set<SourceConcept>): MusicSource {
         val s = mockk<MusicSource>(relaxed = true)
         every { s.id } returns id
-        every { s.provider } returns MusicProvider.YOUTUBE
         every { s.capabilities } returns capabilities
         return s
     }

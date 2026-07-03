@@ -43,11 +43,7 @@ import com.dustvalve.next.android.R
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun ExpandableText(
-    text: String,
-    collapsedMaxLines: Int,
-    modifier: Modifier = Modifier,
-) {
+fun ExpandableText(text: String, collapsedMaxLines: Int, modifier: Modifier = Modifier) {
     var expanded by rememberSaveable(text) { mutableStateOf(false) }
     var hasOverflow by remember(text) { mutableStateOf(false) }
     val rotation by animateFloatAsState(
@@ -85,8 +81,17 @@ fun ExpandableText(
                         onClickLabel = if (expanded) collapseLabel else expandLabel,
                     ) { expanded = !expanded }
                     .semantics(mergeDescendants = true) {
-                        if (expanded) collapse { expanded = false; true }
-                        else expand { expanded = true; true }
+                        if (expanded) {
+                            collapse {
+                                expanded = false
+                                true
+                            }
+                        } else {
+                            expand {
+                                expanded = true
+                                true
+                            }
+                        }
                     }
                     .padding(horizontal = 4.dp, vertical = 4.dp),
             ) {

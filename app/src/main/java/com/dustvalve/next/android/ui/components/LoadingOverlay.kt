@@ -29,11 +29,7 @@ import androidx.compose.ui.window.DialogProperties
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun LoadingOverlay(
-    title: String,
-    progress: Float,
-    message: String?,
-) {
+fun LoadingOverlay(title: String, progress: Float, message: String?, modifier: Modifier = Modifier) {
     Dialog(
         onDismissRequest = { /* Non-dismissable */ },
         properties = DialogProperties(
@@ -43,7 +39,7 @@ fun LoadingOverlay(
         ),
     ) {
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.6f)),
             contentAlignment = Alignment.Center,

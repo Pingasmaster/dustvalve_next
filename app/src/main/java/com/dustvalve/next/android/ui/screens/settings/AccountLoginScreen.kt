@@ -1,23 +1,67 @@
+// slack-lints DeprecatedCall fires here as a known false positive
+// (slackhq/slack-lints#268): `android.webkit.WebView` is NOT deprecated in
+// the Android SDK (API 37, 2026) — only WebSQL + software-draw are. The rule
+// triggers because some legacy WebView overload carries @Deprecated and
+// slack-lints' DeprecatedCallDetector flags every overload of any name with
+// any @Deprecated symbol.
+//
+// We CANNOT use Chrome Custom Tabs here: this flow must read the Set-Cookie
+// session token via CookieManager.getCookie() to bootstrap the Bandcamp
+// session. CCT deliberately shares the user's browser cookie jar and never
+// exposes it to the host app. Credential Manager only supports passkeys /
+// passwords / Sign-in-with-Google; Bandcamp publishes neither an OAuth code
+// endpoint nor an OIDC provider, so AppAuth-Android is also off the table.
+// RFC 8252 §8.12 prefers external user-agents but does not address legacy
+// cookie-only login providers.
+//
+// Compensating controls applied to this WebView (OWASP MASTG-KNOW-0018 /
+// MASVS-AUTH 2026, Oversecured WebView checklist):
+//   * Strict scheme+host allowlist via WebViewClient.shouldOverrideUrlLoading
+//     (everything off-allowlist is blocked, not just non-https).
+//   * FLAG_SECURE on the activity window — blocks screenshots / screen
+//     recording / RecentScreens preview of the auth page.
+//   * settings.allowFileAccess / allowContentAccess /
+//     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs all OFF
+//     (defaults vary across vendor WebView builds; we set them explicitly).
+//   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
+//   * JavaScript enabled (required by the Bandcamp form) but ONLY after the
+//     first navigation has resolved to an allowlisted host.
+//   * No addJavascriptInterface; no JS->native bridge of any kind.
+//   * WebViewClient.onReceivedSslError cancels (never proceeds).
+//   * On entry: CookieManager.removeAllCookies + WebStorage.deleteAllData
+//     to ensure the captured cookie originates from the user's fresh
+//     session, not a stale residual.
+//   * Cookies are read with CookieManager.getCookie("https://bandcamp.com")
+//     and Domain-scoped manually — we never persist cookies for subdomains
+//     we did not navigate to.
+//   * webViewRef.destroy() in DisposableEffect.onDispose to clear native
+//     resources and break in-memory caches.
+//   * setWebContentsDebuggingEnabled is left at the platform default
+//     (false in release builds).
+//
+// Revisit when AndroidX ships a "trusted in-app OAuth browser" API that
+// exposes redirect cookies safely. As of API 37 / June 2026, none exists.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.annotation.SuppressLint
 import android.view.WindowManager
-import androidx.activity.compose.LocalActivity
-import androidx.core.net.toUri
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -35,9 +79,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
+import com.dustvalve.next.android.R
 
 private const val LOGIN_URL = "https://bandcamp.com/login"
 
@@ -46,10 +91,7 @@ private val AUTH_COOKIE_NAMES = setOf("identity", "session", "client_id", "js_lo
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun AccountLoginScreen(
-    onLoginSuccess: (Map<String, String>) -> Unit,
-    onBack: () -> Unit,
-) {
+fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -75,6 +117,7 @@ fun AccountLoginScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_sign_in_bandcamp)) },
@@ -112,7 +155,7 @@ fun AccountLoginScreen(
                                     if (name != null) {
                                         cookieManager.setCookie(
                                             "https://bandcamp.com",
-                                            "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com"
+                                            "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com",
                                         )
                                     }
                                 }
@@ -120,10 +163,7 @@ fun AccountLoginScreen(
                         }
 
                         webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                            ): Boolean {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString() ?: return false
                                 // Block navigation to non-Dustvalve domains
                                 if (!isDustvalveHost(url)) return true

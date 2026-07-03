@@ -3,7 +3,6 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
-import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.repository.MusicSource
 import com.dustvalve.next.android.domain.repository.SourceConcept
@@ -23,11 +22,8 @@ import javax.inject.Singleton
  * verbatim.
  */
 @Singleton
-class YouTubeSource @Inject constructor(
-    private val youtubeRepository: YouTubeRepository,
-) : MusicSource {
+class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRepository) : MusicSource {
 
-    override val provider: MusicProvider = MusicProvider.YOUTUBE
     override val id: String = "youtube"
     override val capabilities: Set<SourceConcept> = setOf(
         SourceConcept.SEARCH,
@@ -61,10 +57,7 @@ class YouTubeSource @Inject constructor(
         )
     }
 
-    override suspend fun getArtistTracks(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection {
+    override suspend fun getArtistTracks(url: String, continuation: Any?): MusicCollection {
         val (tracks, channelName, nextPage) = youtubeRepository.getChannelVideos(
             channelUrl = url,
             page = continuation,
@@ -81,13 +74,9 @@ class YouTubeSource @Inject constructor(
         )
     }
 
-    override suspend fun getAlbum(url: String): Album =
-        throw UnsupportedSourceOperation(id, SourceConcept.ALBUM)
+    override suspend fun getAlbum(url: String): Album = throw UnsupportedSourceOperation(id, SourceConcept.ALBUM)
 
-    override suspend fun getCollection(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection {
+    override suspend fun getCollection(url: String, continuation: Any?): MusicCollection {
         // Mixes (auto-generated radio playlists, IDs starting with `RD`) are
         // effectively infinite and don't live under the static /browse
         // endpoint — they paginate via /next, one page at a time. Regular
@@ -127,7 +116,6 @@ class YouTubeSource @Inject constructor(
         )
     }
 
-    private fun extractPlaylistId(url: String): String? =
-        Regex("[?&]list=([A-Za-z0-9_-]+)").find(url)?.groupValues?.getOrNull(1)
-            ?: url.takeIf { it.matches(Regex("[A-Za-z0-9_-]+")) && it.length in 8..64 }
+    private fun extractPlaylistId(url: String): String? = Regex("[?&]list=([A-Za-z0-9_-]+)").find(url)?.groupValues?.getOrNull(1)
+        ?: url.takeIf { it.matches(Regex("[A-Za-z0-9_-]+")) && it.length in 8..64 }
 }

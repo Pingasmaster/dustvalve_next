@@ -43,69 +43,65 @@ class StorageMigrator @Inject constructor(
 ) {
     data class Progress(val fraction: Float, val label: String)
 
-    suspend fun migrateToFolder(
-        treeUriStr: String,
-        includeImages: Boolean,
-        includeMetadata: Boolean,
-        onProgress: (Progress) -> Unit,
-    ) = withContext(Dispatchers.IO) {
-        val treeUri = treeUriStr.toUri()
-        onProgress(Progress(0f, "Preparing folder"))
-        DedicatedFolderPaths.dustvalveRoot(context, treeUri)
-            ?: throw IOException("Dedicated folder not accessible")
+    suspend fun migrateToFolder(treeUriStr: String, includeImages: Boolean, includeMetadata: Boolean, onProgress: (Progress) -> Unit) =
+        withContext(Dispatchers.IO) {
+            val treeUri = treeUriStr.toUri()
+            onProgress(Progress(0f, "Preparing folder"))
+            DedicatedFolderPaths.dustvalveRoot(context, treeUri)
+                ?: throw IOException("Dedicated folder not accessible")
 
-        // 1) Flush DB tables to JSON snapshots.
-        onProgress(Progress(0.05f, "Saving playlists"))
-        writeSnapshotsToFolder(treeUri, includeMetadata)
+            // 1) Flush DB tables to JSON snapshots.
+            onProgress(Progress(0.05f, "Saving playlists"))
+            writeSnapshotsToFolder(treeUri, includeMetadata)
 
-        // 2) Copy audio files app-internal → tree and repoint DownloadEntity rows.
-        val downloads = downloadDao.getAllSync()
-        val total = downloads.size.coerceAtLeast(1)
-        for ((idx, d) in downloads.withIndex()) {
-            coroutineContext.ensureActive()
-            onProgress(
-                Progress(
-                    0.2f + 0.7f * (idx.toFloat() / total.toFloat()),
-                    "Copying ${idx + 1} / $total",
+            // 2) Copy audio files app-internal → tree and repoint DownloadEntity rows.
+            val downloads = downloadDao.getAllSync()
+            val total = downloads.size.coerceAtLeast(1)
+            for ((idx, d) in downloads.withIndex()) {
+                coroutineContext.ensureActive()
+                onProgress(
+                    Progress(
+                        0.2f + 0.7f * (idx.toFloat() / total.toFloat()),
+                        "Copying ${idx + 1} / $total",
+                    ),
                 )
-            )
-            val src = File(d.filePath)
-            if (!src.exists()) continue
-            val ext = src.extension.ifBlank { "bin" }
-            val albumDir = DedicatedFolderPaths.downloadsDir(context, treeUri)
-                ?.let { root -> root.findFile(d.albumId) ?: root.createDirectory(d.albumId) }
-                ?: continue
-            val fileName = "${d.trackId}.$ext"
-            albumDir.findFile(fileName)?.delete()
-            val newFile = albumDir.createFile(mimeFor(ext), fileName) ?: continue
-            context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
-                src.inputStream().use { it.copyTo(out, 8192) }
-            } ?: continue
-            downloadDao.insert(d.copy(filePath = newFile.uri.toString()))
-            try { src.delete() } catch (_: Exception) {}
+                val src = File(d.filePath)
+                if (!src.exists()) continue
+                val ext = src.extension.ifBlank { "bin" }
+                val albumDir = DedicatedFolderPaths.downloadsDir(context, treeUri)
+                    ?.let { root -> root.findFile(d.albumId) ?: root.createDirectory(d.albumId) }
+                    ?: continue
+                val fileName = "${d.trackId}.$ext"
+                albumDir.findFile(fileName)?.delete()
+                val newFile = albumDir.createFile(mimeFor(ext), fileName) ?: continue
+                context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
+                    src.inputStream().use { it.copyTo(out, 8192) }
+                } ?: continue
+                downloadDao.insert(d.copy(filePath = newFile.uri.toString()))
+                try {
+                    src.delete()
+                } catch (_: Exception) {}
+            }
+
+            // 3) Optional extras.
+            if (includeImages) {
+                onProgress(Progress(0.92f, "Copying image cache"))
+                copyDirectoryToFolder(StoragePaths.imagesDir(context), imageCacheRoot(treeUri))
+            }
+
+            // 4) Mark toggle on. Mirror will become active for future edits.
+            onProgress(Progress(0.97f, "Finalizing"))
+            settingsDataStore.setDedicatedFolder(enabled = true, treeUri = treeUriStr)
+            if (includeImages) settingsDataStore.setDedicatedFolderIncludeImageCache(true)
+            if (includeMetadata) settingsDataStore.setDedicatedFolderIncludeMetadataCache(true)
+
+            // Re-emit the snapshots AFTER flipping the flag so the mirror has
+            // the canonical files pointing at the new folder.
+            writeSnapshotsToFolder(treeUri, includeMetadata)
+            onProgress(Progress(1f, "Done"))
         }
 
-        // 3) Optional extras.
-        if (includeImages) {
-            onProgress(Progress(0.92f, "Copying image cache"))
-            copyDirectoryToFolder(StoragePaths.imagesDir(context), imageCacheRoot(treeUri))
-        }
-
-        // 4) Mark toggle on. Mirror will become active for future edits.
-        onProgress(Progress(0.97f, "Finalizing"))
-        settingsDataStore.setDedicatedFolder(enabled = true, treeUri = treeUriStr)
-        if (includeImages) settingsDataStore.setDedicatedFolderIncludeImageCache(true)
-        if (includeMetadata) settingsDataStore.setDedicatedFolderIncludeMetadataCache(true)
-
-        // Re-emit the snapshots AFTER flipping the flag so the mirror has
-        // the canonical files pointing at the new folder.
-        writeSnapshotsToFolder(treeUri, includeMetadata)
-        onProgress(Progress(1f, "Done"))
-    }
-
-    suspend fun migrateFromFolder(
-        onProgress: (Progress) -> Unit,
-    ) = withContext(Dispatchers.IO) {
+    suspend fun migrateFromFolder(onProgress: (Progress) -> Unit) = withContext(Dispatchers.IO) {
         onProgress(Progress(0f, "Preparing"))
         val treeUriStr = settingsDataStore.getDedicatedFolderTreeUriSync()
         val treeUri = treeUriStr?.toUri()
@@ -119,11 +115,15 @@ class StorageMigrator @Inject constructor(
                 Progress(
                     0.1f + 0.7f * (idx.toFloat() / total.toFloat()),
                     "Copying ${idx + 1} / $total",
-                )
+                ),
             )
             val srcPath = d.filePath
             if (!srcPath.startsWith("content://")) continue // already local
-            val srcUri = try { srcPath.toUri() } catch (_: Exception) { continue }
+            val srcUri = try {
+                srcPath.toUri()
+            } catch (_: Exception) {
+                continue
+            }
             val targetDir = File(StoragePaths.downloadsDir(context), d.albumId).also { it.mkdirs() }
             val fileName = srcUri.lastPathSegment?.substringAfterLast('/') ?: "${d.trackId}.bin"
             val targetFile = File(targetDir, fileName)
@@ -180,8 +180,7 @@ class StorageMigrator @Inject constructor(
         }
     }
 
-    private fun imageCacheRoot(treeUri: Uri): DocumentFile? =
-        DedicatedFolderPaths.imageCacheDir(context, treeUri)
+    private fun imageCacheRoot(treeUri: Uri): DocumentFile? = DedicatedFolderPaths.imageCacheDir(context, treeUri)
 
     private fun copyDirectoryToFolder(src: File, dst: DocumentFile?) {
         if (dst == null || !src.exists() || !src.isDirectory) return
@@ -200,8 +199,11 @@ class StorageMigrator @Inject constructor(
         // Directly compute + write snapshots bypassing the debounced mirror.
         val settingsFile = mirror.captureSettingsFile()
         FolderIo.writeJson(
-            context, treeUri, DedicatedFolderPaths.FILE_SETTINGS,
-            SettingsFile.serializer(), settingsFile,
+            context,
+            treeUri,
+            DedicatedFolderPaths.FILE_SETTINGS,
+            SettingsFile.serializer(),
+            settingsFile,
         )
         val snap = folderSnapshotFromDb()
         FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_PLAYLISTS, PlaylistsFile.serializer(), snap.playlists)
@@ -217,14 +219,17 @@ class StorageMigrator @Inject constructor(
             cache.findFile(tmpName)?.delete()
             val tmp = cache.createFile(DedicatedFolderPaths.JSON_MIME, tmpName) ?: return
             val text = FolderSnapshotSerializer.json.encodeToString(
-                MetadataCacheFile.serializer(), snap.metadata,
+                MetadataCacheFile.serializer(),
+                snap.metadata,
             )
             context.contentResolver.openOutputStream(tmp.uri, "wt")?.use {
                 it.write(text.toByteArray(Charsets.UTF_8))
             } ?: return
             val renamed = try {
                 tmp.renameTo(DedicatedFolderPaths.FILE_METADATA_CACHE)
-            } catch (_: Exception) { false }
+            } catch (_: Exception) {
+                false
+            }
             if (!renamed) {
                 val target = cache.findFile(DedicatedFolderPaths.FILE_METADATA_CACHE)
                     ?: cache.createFile(DedicatedFolderPaths.JSON_MIME, DedicatedFolderPaths.FILE_METADATA_CACHE)

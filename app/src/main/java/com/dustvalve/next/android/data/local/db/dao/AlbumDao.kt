@@ -27,16 +27,6 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE url = :url")
     suspend fun getByUrl(url: String): AlbumEntity?
 
-    @Query(
-        """
-        SELECT albums.* FROM albums
-        INNER JOIN favorites ON albums.id = favorites.id
-        WHERE favorites.type = 'album'
-        ORDER BY favorites.addedAt DESC
-        """
-    )
-    fun getFavorites(): Flow<List<AlbumEntity>>
-
     @Query("SELECT * FROM albums WHERE artistUrl = :artistUrl")
     suspend fun getByArtistUrl(artistUrl: String): List<AlbumEntity>
 

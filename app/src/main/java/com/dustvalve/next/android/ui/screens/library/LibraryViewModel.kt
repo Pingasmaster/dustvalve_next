@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
+import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.remote.DustvalveCollectionScraper
 import com.dustvalve.next.android.data.transfer.PlaylistTransferRepository
 import com.dustvalve.next.android.domain.model.Album
@@ -13,11 +14,10 @@ import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AccountRepository
-import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -59,7 +59,7 @@ class LibraryViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val collectionScraper: DustvalveCollectionScraper,
     private val settingsDataStore: SettingsDataStore,
-    private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val playlistDao: PlaylistDao,
     private val favoriteDao: FavoriteDao,
@@ -317,7 +317,7 @@ class LibraryViewModel @Inject constructor(
                 }
                 (playlistItems + albumItems + artistItems).sortedWith(
                     compareByDescending<LibraryItem> { it.isPinned }
-                        .thenByDescending { it.addedAt }
+                        .thenByDescending { it.addedAt },
                 )
             }
                 .catch { e ->
@@ -385,7 +385,7 @@ class LibraryViewModel @Inject constructor(
                 for (albumStub in albums) {
                     try {
                         val album = albumRepository.getAlbumDetail(albumStub.url)
-                        downloadAlbumUseCase(album)
+                        downloadController.downloadAlbumBlocking(album)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (_: Exception) {

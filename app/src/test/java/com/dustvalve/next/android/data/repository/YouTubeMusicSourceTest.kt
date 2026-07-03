@@ -18,8 +18,7 @@ class YouTubeMusicSourceTest {
     private val ytMusicRepo = mockk<YouTubeMusicRepository>()
     private val source = YouTubeMusicSource(ytMusicRepo)
 
-    @Test fun `provider YOUTUBE id 'youtube_music' — distinct from plain youtube`() {
-        assertThat(source.provider).isEqualTo(MusicProvider.YOUTUBE)
+    @Test fun `id 'youtube_music' — distinct from plain youtube`() {
         assertThat(source.id).isEqualTo("youtube_music")
     }
 
@@ -30,10 +29,14 @@ class YouTubeMusicSourceTest {
     @Test fun `search delegates verbatim to YouTubeMusicRepository`() = runTest {
         val expected = listOf(
             SearchResult(
-                type = SearchResultType.YOUTUBE_TRACK, name = "Song",
+                type = SearchResultType.YOUTUBE_TRACK,
+                name = "Song",
                 url = "https://music.youtube.com/watch?v=x",
-                imageUrl = null, artist = "A", album = null,
-                genre = null, releaseDate = null,
+                imageUrl = null,
+                artist = "A",
+                album = null,
+                genre = null,
+                releaseDate = null,
             ),
         )
         coEvery { ytMusicRepo.search(query = "q", filter = null) } returns expected

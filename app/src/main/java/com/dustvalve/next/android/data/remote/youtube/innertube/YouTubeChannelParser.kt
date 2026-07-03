@@ -14,11 +14,7 @@ import javax.inject.Singleton
 @Singleton
 class YouTubeChannelParser @Inject constructor() {
 
-    data class ChannelPage(
-        val tracks: List<Track>,
-        val channelName: String?,
-        val continuation: String?,
-    )
+    data class ChannelPage(val tracks: List<Track>, val channelName: String?, val continuation: String?)
 
     fun parse(root: JsonElement, channelId: String): ChannelPage {
         val channelName = extractChannelName(root)
@@ -45,12 +41,7 @@ class YouTubeChannelParser @Inject constructor() {
     }
 
     /** Continuation page parser - same shape as initial richGrid contents. */
-    fun parseContinuation(
-        root: JsonElement,
-        channelId: String,
-        channelName: String?,
-        startIndex: Int,
-    ): ChannelPage {
+    fun parseContinuation(root: JsonElement, channelId: String, channelName: String?, startIndex: Int): ChannelPage {
         val tracks = mutableListOf<Track>()
         var continuation: String? = null
 
@@ -104,12 +95,7 @@ class YouTubeChannelParser @Inject constructor() {
             ?.path("contents")?.arr()
     }
 
-    private fun parseVideo(
-        vr: JsonElement,
-        channelId: String,
-        channelName: String?,
-        trackNumber: Int,
-    ): Track? {
+    private fun parseVideo(vr: JsonElement, channelId: String, channelName: String?, trackNumber: Int): Track? {
         val videoId = vr.str("videoId") ?: return null
         val title = vr.runsText("title") ?: return null
         val artist = channelName ?: vr.runsText("ownerText") ?: ""

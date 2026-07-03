@@ -17,6 +17,7 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,6 +68,7 @@ class ArtistDetailViewModel @Inject constructor(
     private val trackDao: TrackDao,
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArtistDetailUiState())
@@ -103,12 +105,7 @@ class ArtistDetailViewModel @Inject constructor(
      * image, so the caller passes the thumbnail it already has from the
      * SearchResult.
      */
-    fun load(
-        sourceId: String,
-        url: String,
-        name: String? = null,
-        imageUrl: String? = null,
-    ) {
+    fun load(sourceId: String, url: String, name: String? = null, imageUrl: String? = null) {
         val key = "$sourceId|$url"
         if (loadedKey == key && _uiState.value.artist != null) return
         loadedKey = key
@@ -117,8 +114,12 @@ class ArtistDetailViewModel @Inject constructor(
         // Seed with the caller-provided hint so the top bar isn't blank.
         val seed = if (name != null || imageUrl != null) {
             Artist(
-                id = url, name = name.orEmpty(), url = url,
-                imageUrl = imageUrl, bio = null, location = null,
+                id = url,
+                name = name.orEmpty(),
+                url = url,
+                imageUrl = imageUrl,
+                bio = null,
+                location = null,
                 albums = emptyList(),
             )
         } else {
@@ -252,14 +253,14 @@ class ArtistDetailViewModel @Inject constructor(
                     for (album in albums) {
                         for (track in album.tracks) {
                             if (track.id !in state.downloadedTrackIds) {
-                                downloadAlbumUseCase.downloadTrack(track)
+                                downloadController.downloadTrackBlocking(track)
                             }
                         }
                     }
                 } else {
                     for (track in state.tracks) {
                         if (track.id !in state.downloadedTrackIds) {
-                            downloadAlbumUseCase.downloadTrack(track)
+                            downloadController.downloadTrackBlocking(track)
                         }
                     }
                 }

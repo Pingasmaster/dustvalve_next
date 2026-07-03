@@ -1,3 +1,8 @@
+// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
+// overload is @Deprecated). Our call uses the non-deprecated overload;
+// kotlinc emits no warning. Suppress at file level.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.album
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -7,13 +12,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
@@ -21,36 +26,32 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilledTonalIconToggleButton
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButtonColors
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -61,17 +62,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import androidx.compose.ui.draw.rotate
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
@@ -84,7 +88,8 @@ fun AlbumDetailScreen(
     albumUrl: String,
     onArtistClick: (String) -> Unit,
     onBack: () -> Unit,
-    playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: AlbumDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -197,8 +202,12 @@ fun AlbumDetailScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
+        // Pull the property into a local val so the `album != null` smart-cast
+        // works inside the matching branch — Kotlin can't smart-cast through a
+        // property access in a `when` clause.
+        val album = state.album
         when {
             state.isLoading -> {
                 Box(
@@ -210,6 +219,7 @@ fun AlbumDetailScreen(
                     ContainedLoadingIndicator()
                 }
             }
+
             state.error != null -> {
                 Box(
                     modifier = Modifier
@@ -230,9 +240,8 @@ fun AlbumDetailScreen(
                     }
                 }
             }
-            state.album != null -> {
-                val album = state.album!!
 
+            album != null -> {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -332,8 +341,10 @@ fun AlbumDetailScreen(
                                 style = MaterialTheme.typography.titleMediumEmphasized,
                                 modifier = Modifier
                                     .padding(
-                                        start = 20.dp, end = 20.dp,
-                                        top = 16.dp, bottom = 4.dp,
+                                        start = 20.dp,
+                                        end = 20.dp,
+                                        top = 16.dp,
+                                        bottom = 4.dp,
                                     )
                                     .animateItem(),
                             )
@@ -342,6 +353,7 @@ fun AlbumDetailScreen(
                         items(
                             count = album.tracks.size,
                             key = { album.tracks[it].id },
+                            contentType = { "album_track" },
                         ) { index ->
                             val track = album.tracks[index]
                             val isCurrentTrack = playerState.currentTrack?.id == track.id
@@ -444,7 +456,6 @@ fun AlbumDetailScreen(
                             }
                         }
                     }
-
                 }
             }
         }
@@ -537,7 +548,7 @@ private fun AlbumActionBar(
         ) {
             Icon(
                 painter = painterResource(
-                    if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border
+                    if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
                 ),
                 contentDescription = if (isFavorite) {
                     stringResource(R.string.detail_cd_remove_favorites)
@@ -565,8 +576,11 @@ private fun AlbumActionBar(
             } else {
                 Icon(
                     painter = painterResource(
-                        if (allTracksDownloaded) R.drawable.ic_download_done
-                        else R.drawable.ic_download
+                        if (allTracksDownloaded) {
+                            R.drawable.ic_download_done
+                        } else {
+                            R.drawable.ic_download
+                        },
                     ),
                     contentDescription = if (allTracksDownloaded) {
                         stringResource(R.string.detail_cd_delete_album_downloads)
@@ -587,7 +601,6 @@ private fun AlbumActionBar(
  */
 private val ActionBarSpacing = 8.dp
 
-
 /**
  * M3E SplitButtonLayout for Bandcamp's "Buy" CTA.
  *
@@ -605,7 +618,7 @@ private val ActionBarSpacing = 8.dp
  * The DropdownMenu lives inside the trailing-button slot so the popup
  * anchors to the chevron, not the wrapping centred Box.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BuyOnBandcampSplitButton(
     albumPrice: com.dustvalve.next.android.domain.model.AlbumPrice?,
@@ -629,7 +642,7 @@ private fun BuyOnBandcampSplitButton(
     }
     val activeUrl = when (activeMode) {
         "discography" -> discographyOffer?.url ?: albumUrl
-        else -> albumUrl  // "track" stays on the album page; bandcamp's UI lets the user pick a single track there.
+        else -> albumUrl // "track" stays on the album page; bandcamp's UI lets the user pick a single track there.
     }
     val activeLabel = activePrice?.let { formatPrice(it) }
         ?: stringResource(R.string.detail_buy_on_bandcamp)
@@ -695,7 +708,10 @@ private fun BuyOnBandcampSplitButton(
                                 text = {
                                     Text("${stringResource(R.string.detail_buy_this_album)} (${formatPrice(albumPrice)})")
                                 },
-                                onClick = { menuOpen = false; activeMode = "album" },
+                                onClick = {
+                                    menuOpen = false
+                                    activeMode = "album"
+                                },
                             )
                         }
                         if (activeMode != "track" && singleTrackPrice != null) {
@@ -703,7 +719,10 @@ private fun BuyOnBandcampSplitButton(
                                 text = {
                                     Text("${stringResource(R.string.detail_buy_single_track)} (${formatPrice(singleTrackPrice)})")
                                 },
-                                onClick = { menuOpen = false; activeMode = "track" },
+                                onClick = {
+                                    menuOpen = false
+                                    activeMode = "track"
+                                },
                             )
                         }
                         if (activeMode != "discography" && discographyOffer != null) {
@@ -713,10 +732,13 @@ private fun BuyOnBandcampSplitButton(
                                         stringResource(
                                             R.string.detail_buy_full_discography_priced,
                                             formatPrice(discographyOffer.price),
-                                        )
+                                        ),
                                     )
                                 },
-                                onClick = { menuOpen = false; activeMode = "discography" },
+                                onClick = {
+                                    menuOpen = false
+                                    activeMode = "discography"
+                                },
                             )
                         }
                     }
@@ -734,12 +756,10 @@ private fun BuyOnBandcampSplitButton(
  * Falls back to "<symbol> <amount>" if the currency code isn't recognized
  * by the JVM's `java.util.Currency` (defensive — bandcamp ships ISO codes).
  */
-private fun formatPrice(price: com.dustvalve.next.android.domain.model.AlbumPrice): String {
-    return try {
-        val nf = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.ENGLISH)
-        nf.currency = java.util.Currency.getInstance(price.currency)
-        nf.format(price.amount)
-    } catch (_: Throwable) {
-        "${price.currency} ${"%.2f".format(java.util.Locale.ENGLISH, price.amount)}"
-    }
+private fun formatPrice(price: com.dustvalve.next.android.domain.model.AlbumPrice): String = try {
+    val nf = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.ENGLISH)
+    nf.currency = java.util.Currency.getInstance(price.currency)
+    nf.format(price.amount)
+} catch (_: Throwable) {
+    "${price.currency} ${"%.2f".format(java.util.Locale.ENGLISH, price.amount)}"
 }

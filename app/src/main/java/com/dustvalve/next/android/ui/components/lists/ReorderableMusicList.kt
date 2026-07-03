@@ -95,7 +95,9 @@ fun <T : Any> ReorderableMusicList(
             ) { isDragging ->
                 val handleModifier = Modifier.longPressDraggableHandle(
                     onDragStarted = {
-                        dragStartIndex = index
+                        // Resolve by key: the composed index can be stale if the
+                        // list mutated since the last recomposition.
+                        dragStartIndex = displayList.indexOfFirst { keyFn(it) == keyFn(item) }
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
                     onDragStopped = {

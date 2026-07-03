@@ -18,7 +18,10 @@ class YouTubeInnertubeClientTest {
     private lateinit var server: MockWebServer
     private lateinit var visitor: YouTubeVisitorDataFetcher
     private lateinit var client: YouTubeInnertubeClient
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Before fun setUp() {
         server = MockWebServer()
@@ -94,8 +97,8 @@ class YouTubeInnertubeClientTest {
         val first = server.takeRequest()
         val second = server.takeRequest()
 
-        assertThat(first.headers["X-YouTube-Client-Name"]).isEqualTo("28")  // ANDROID_VR
-        assertThat(second.headers["X-YouTube-Client-Name"]).isEqualTo("5")  // IOS
+        assertThat(first.headers["X-YouTube-Client-Name"]).isEqualTo("28") // ANDROID_VR
+        assertThat(second.headers["X-YouTube-Client-Name"]).isEqualTo("5") // IOS
         assertThat(second.headers["User-Agent"]).contains("com.google.ios.youtube/21.03.1")
 
         val secondBody = json.parseToJsonElement(second.body.readUtf8()).jsonObject

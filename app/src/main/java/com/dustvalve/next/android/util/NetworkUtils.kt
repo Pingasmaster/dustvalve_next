@@ -8,11 +8,7 @@ object NetworkUtils {
 
     private val DUSTVALVE_HOST_REGEX = Regex(
         """^(?:[\w-]+\.)?bandcamp\.com$""",
-        RegexOption.IGNORE_CASE
-    )
-
-    private val NON_ARTIST_PATHS = setOf(
-        "search", "discover", "api", "login", "signup", "tag", "help"
+        RegexOption.IGNORE_CASE,
     )
 
     /**
@@ -47,48 +43,10 @@ object NetworkUtils {
     }
 
     /**
-     * Extracts the artist slug from a Dustvalve URL.
-     * For URLs like "https://artistname.bandcamp.com/...", returns "artistname".
-     * For URLs like "https://bandcamp.com/artistname", returns "artistname".
-     * Returns null if extraction fails or the path is a known non-artist path.
-     */
-    fun extractArtistSlug(url: String): String? {
-        return try {
-            val uri = URI(url)
-            val host = uri.host ?: return null
-
-            // Check subdomain pattern: artistname.bandcamp.com
-            if (host.endsWith(".bandcamp.com") && host != "bandcamp.com") {
-                val subdomain = host.removeSuffix(".bandcamp.com")
-                if (subdomain.isNotEmpty() && !subdomain.contains('.')) {
-                    return subdomain
-                }
-            }
-
-            // Check path pattern: bandcamp.com/artistname
-            if (host.equals("bandcamp.com", ignoreCase = true)) {
-                val path = uri.path ?: return null
-                val segments = path.trim('/').split('/')
-                if (segments.isNotEmpty() && segments[0].isNotEmpty()) {
-                    val slug = segments[0]
-                    if (slug.lowercase() in NON_ARTIST_PATHS) return null
-                    return slug
-                }
-            }
-
-            null
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    /**
      * Builds the art/image URL for a given Dustvalve art ID.
      * Returns a URL in the format used by Dustvalve's CDN for album/artist artwork.
      */
-    fun buildArtUrl(artId: Long): String {
-        return "https://f4.bcbits.com/img/a${artId}_10.jpg"
-    }
+    fun buildArtUrl(artId: Long): String = "https://f4.bcbits.com/img/a${artId}_10.jpg"
 
     /**
      * Sanitizes a file name by replacing any character not in [a-zA-Z0-9._-] with underscore.

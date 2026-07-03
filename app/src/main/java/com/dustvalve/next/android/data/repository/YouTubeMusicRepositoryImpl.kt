@@ -7,10 +7,6 @@ import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerPar
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicSearchParser
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
@@ -19,6 +15,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,6 +37,7 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
 
     private companion object {
         const val HOME_BROWSE_ID = "FEmusic_home"
+
         // YT Music's home is editorial; refresh in the background once an
         // hour. The cached snapshot is always returned first so the UI
         // never blocks on the network.
@@ -55,8 +56,7 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
 
     override suspend fun getHome(): YouTubeMusicHomeFeed = getHomeCached(key = "home", params = null)
 
-    override suspend fun getMoodHome(params: String): YouTubeMusicHomeFeed =
-        getHomeCached(key = "mood:$params", params = params)
+    override suspend fun getMoodHome(params: String): YouTubeMusicHomeFeed = getHomeCached(key = "mood:$params", params = params)
 
     /**
      * Cache-first home/mood loader. The YT Music browse response (raw
@@ -76,7 +76,9 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
                 val age = System.currentTimeMillis() - cached.cachedAt
                 if (age >= HOME_REVALIDATE_MS) {
                     backgroundScope.launch {
-                        try { fetchAndCacheHome(key, params) } catch (_: Throwable) {}
+                        try {
+                            fetchAndCacheHome(key, params)
+                        } catch (_: Throwable) {}
                     }
                 }
                 return parsed
@@ -94,7 +96,7 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
         val feed = parser.parseHome(response)
         try {
             homeCache.insert(
-                YouTubeMusicHomeCacheEntity(key = key, feedJson = response.toString())
+                YouTubeMusicHomeCacheEntity(key = key, feedJson = response.toString()),
             )
         } catch (_: Throwable) {}
         return feed
@@ -149,9 +151,13 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
             is JsonObject -> {
                 val browseEndpoint = root["browseEndpoint"] as? JsonObject
                 if (browseEndpoint != null) {
-                    val pageType = ((browseEndpoint["browseEndpointContextSupportedConfigs"]
-                        as? JsonObject)
-                        ?.get("browseEndpointContextMusicConfig") as? JsonObject)
+                    val pageType = (
+                        (
+                            browseEndpoint["browseEndpointContextSupportedConfigs"]
+                                as? JsonObject
+                            )
+                            ?.get("browseEndpointContextMusicConfig") as? JsonObject
+                        )
                         ?.get("pageType")
                         ?.let { (it as? JsonPrimitive)?.content }
                     if (pageType == "MUSIC_PAGE_TYPE_ALBUM") {
@@ -161,7 +167,9 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
                 }
                 for (v in root.values) findAlbumBrowseId(v)?.let { return it }
             }
+
             is JsonArray -> for (v in root) findAlbumBrowseId(v)?.let { return it }
+
             else -> Unit
         }
         return null
@@ -174,7 +182,9 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
                     ?.let { return it }
                 for (v in root.values) findAudioPlaylistId(v)?.let { return it }
             }
+
             is JsonArray -> for (v in root) findAudioPlaylistId(v)?.let { return it }
+
             else -> Unit
         }
         return null

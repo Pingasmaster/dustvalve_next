@@ -29,45 +29,35 @@ class StorageTracker @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) {
 
-    enum class WarningLevel { NONE, WARNING, CRITICAL }
-
     private val _sizeUpdateTrigger = MutableStateFlow(0L)
 
     fun notifyChanged() {
         _sizeUpdateTrigger.update { it + 1 }
     }
 
-    fun getCacheInfo(): Flow<CacheInfo> {
-        return combine(_sizeUpdateTrigger, settingsDataStore.storageLimit) { _, limitBytes ->
-            val pinnedSize = downloadDao.getPinnedSize()
-            val totalDownloads = downloadDao.getTotalSize()
-            val unpinnedAudioSize = (totalDownloads - pinnedSize).coerceAtLeast(0L)
-            val imagesSize = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
-            val mediaCacheSize = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
+    fun getCacheInfo(): Flow<CacheInfo> = combine(_sizeUpdateTrigger, settingsDataStore.storageLimit) { _, limitBytes ->
+        val pinnedSize = downloadDao.getPinnedSize()
+        val totalDownloads = downloadDao.getTotalSize()
+        val unpinnedAudioSize = (totalDownloads - pinnedSize).coerceAtLeast(0L)
+        val imagesSize = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
+        val mediaCacheSize = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
 
-            val totalSize = totalDownloads + imagesSize + mediaCacheSize
-            val usagePercent = when {
-                limitBytes <= 0L -> 0f
-                limitBytes == Long.MAX_VALUE -> 0f
-                else -> (totalSize.toFloat() / limitBytes.toFloat() * 100f).coerceIn(0f, 100f)
-            }
+        val totalSize = totalDownloads + imagesSize + mediaCacheSize
+        val usagePercent = when {
+            limitBytes <= 0L -> 0f
+            limitBytes == Long.MAX_VALUE -> 0f
+            else -> (totalSize.toFloat() / limitBytes.toFloat() * 100f).coerceIn(0f, 100f)
+        }
 
-            CacheInfo(
-                totalSizeBytes = totalSize,
-                limitBytes = limitBytes,
-                audioSizeBytes = unpinnedAudioSize + mediaCacheSize,
-                imageSizeBytes = imagesSize,
-                downloadSizeBytes = pinnedSize,
-                usagePercent = usagePercent,
-            )
-        }.flowOn(Dispatchers.IO)
-    }
-
-    suspend fun isOverLimit(): Boolean = withContext(Dispatchers.IO) {
-        val limit = settingsDataStore.getStorageLimitSync()
-        if (limit == Long.MAX_VALUE) return@withContext false
-        getEffectiveTotalSize() > limit
-    }
+        CacheInfo(
+            totalSizeBytes = totalSize,
+            limitBytes = limitBytes,
+            audioSizeBytes = unpinnedAudioSize + mediaCacheSize,
+            imageSizeBytes = imagesSize,
+            downloadSizeBytes = pinnedSize,
+            usagePercent = usagePercent,
+        )
+    }.flowOn(Dispatchers.IO)
 
     /** How many bytes the pool exceeds the configured limit by, or 0 if within limit. */
     suspend fun getOverageBytes(): Long = withContext(Dispatchers.IO) {
@@ -81,16 +71,5 @@ class StorageTracker @Inject constructor(
         val images = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
         val media = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
         return downloads + images + media
-    }
-
-    suspend fun getWarningLevel(): WarningLevel = withContext(Dispatchers.IO) {
-        val limit = settingsDataStore.getStorageLimitSync()
-        if (limit <= 0L || limit == Long.MAX_VALUE) return@withContext WarningLevel.NONE
-        val usage = getEffectiveTotalSize().toFloat() / limit.toFloat()
-        when {
-            usage >= 1.0f -> WarningLevel.CRITICAL
-            usage >= 0.85f -> WarningLevel.WARNING
-            else -> WarningLevel.NONE
-        }
     }
 }

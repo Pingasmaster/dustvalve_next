@@ -3,11 +3,10 @@ package com.dustvalve.next.android.ui.util
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 
-/**
- * Expressive haptic shorthands for player interactions. These map to the M3 Expressive
- * [HapticFeedbackType] constants (Compose UI maps them to platform constants with internal
- * fallback on older devices, so no API-level guard is needed).
- */
+// Expressive haptic shorthands for player interactions. These map to the M3
+// Expressive HapticFeedbackType constants (Compose UI maps them to platform
+// constants with internal fallback on older devices, so no API-level guard
+// is needed).
 
 /** A discrete on/off toggle (shuffle, repeat, favorite, play/pause). */
 fun HapticFeedback.toggle(turningOn: Boolean) =

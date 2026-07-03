@@ -3,7 +3,6 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
-import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.repository.AlbumRepository
@@ -26,7 +25,6 @@ class BandcampMusicSource @Inject constructor(
     private val albumRepository: AlbumRepository,
 ) : MusicSource {
 
-    override val provider: MusicProvider = MusicProvider.BANDCAMP
     override val id: String = "bandcamp"
     override val capabilities: Set<SourceConcept> = setOf(
         SourceConcept.SEARCH,
@@ -45,21 +43,13 @@ class BandcampMusicSource @Inject constructor(
         return searchRepository.search(query = query, type = type)
     }
 
-    override suspend fun getArtist(url: String): Artist =
-        artistRepository.getArtistDetail(url)
+    override suspend fun getArtist(url: String): Artist = artistRepository.getArtistDetail(url)
 
-    override suspend fun getArtistTracks(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection =
+    override suspend fun getArtistTracks(url: String, continuation: Any?): MusicCollection =
         throw UnsupportedSourceOperation(id, SourceConcept.ARTIST_TRACKS)
 
-    override suspend fun getAlbum(url: String): Album =
-        albumRepository.getAlbumDetail(url)
+    override suspend fun getAlbum(url: String): Album = albumRepository.getAlbumDetail(url)
 
-    override suspend fun getCollection(
-        url: String,
-        continuation: Any?,
-    ): MusicCollection =
+    override suspend fun getCollection(url: String, continuation: Any?): MusicCollection =
         throw UnsupportedSourceOperation(id, SourceConcept.COLLECTION)
 }

@@ -61,6 +61,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Matrix
@@ -79,7 +80,6 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.geometry.Size
 import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.toPath
@@ -109,11 +109,13 @@ fun YouTubeMusicHome(
 ) {
     when {
         state.ytmHome == null && state.ytmHomeLoading -> YouTubeMusicLoadingState(modifier)
+
         state.ytmHome == null && state.ytmHomeError != null -> YouTubeMusicErrorState(
             message = state.ytmHomeError,
             onRetry = onRetry,
             modifier = modifier,
         )
+
         state.ytmHome != null -> YouTubeMusicContent(
             feed = state.ytmHome,
             selectedChipParams = state.ytmSelectedChipParams,
@@ -125,6 +127,7 @@ fun YouTubeMusicHome(
             onOpenArtist = onOpenArtist,
             modifier = modifier,
         )
+
         else -> YouTubeMusicLoadingState(modifier)
     }
 }
@@ -138,11 +141,7 @@ private fun YouTubeMusicLoadingState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun YouTubeMusicErrorState(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun YouTubeMusicErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
@@ -296,14 +295,17 @@ private fun YouTubeMusicContent(
                     SectionHeader(shelf.title)
                     TilesCarousel(items = shelf.items, onOpen = onOpenTile)
                 }
+
                 is Shelf.Hero -> {
                     SectionHeader(shelf.title)
                     TilesFromHeroesCarousel(items = shelf.items, onOpen = onPlayHero)
                 }
+
                 is Shelf.QuickPicks -> {
                     TypographicBreak(title = shelf.title)
                     QuickPicksGrid(items = shelf.items, onPlay = onPlaySong)
                 }
+
                 is Shelf.Artists -> {
                     SectionHeader(shelf.title)
                     ArtistRow(artists = shelf.items, onOpen = onOpenArtist)
@@ -317,11 +319,7 @@ private fun YouTubeMusicContent(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ParallaxHeroSection(
-    hero: HeroItem,
-    scrollOffset: Int,
-    onPlay: (HeroItem) -> Unit,
-) {
+private fun ParallaxHeroSection(hero: HeroItem, scrollOffset: Int, onPlay: (HeroItem) -> Unit) {
     val cookieShape = remember { MaterialShapes.Cookie9Sided.toPolygonShape() }
     val overlayColor = MaterialTheme.colorScheme.surface
 
@@ -396,12 +394,7 @@ private fun ParallaxHeroSection(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ChipCloudRow(
-    chips: List<MoodChip>,
-    selectedParams: String?,
-    onSelect: (String?) -> Unit,
-    isRefreshing: Boolean,
-) {
+private fun ChipCloudRow(chips: List<MoodChip>, selectedParams: String?, onSelect: (String?) -> Unit, isRefreshing: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -428,16 +421,11 @@ private fun ChipCloudRow(
 
 // Wrapper that reads the Animatable each render so shape tracks animation.
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-private class PillCookieMorphShape(
-    private val progress: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
-) : Shape {
+private class PillCookieMorphShape(private val progress: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>) : Shape {
     private val morph: Morph = Morph(MaterialShapes.Pill, MaterialShapes.Cookie9Sided)
 
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline = buildOutlineFromMorph(morph, progress.value, size)
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        buildOutlineFromMorph(morph, progress.value, size)
 }
 
 // ── Shape-morph mood bento ─────────────────────────────────────────────
@@ -446,11 +434,7 @@ private const val BENTO_TILE_COUNT = 5
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ShapeMorphMoodBento(
-    chips: List<MoodChip>,
-    selectedParams: String?,
-    onSelect: (String?) -> Unit,
-) {
+private fun ShapeMorphMoodBento(chips: List<MoodChip>, selectedParams: String?, onSelect: (String?) -> Unit) {
     if (chips.isEmpty()) return
     val padded = chips.toMutableList().apply {
         while (size < BENTO_TILE_COUNT) add(MoodChip("", ""))
@@ -538,14 +522,7 @@ private fun ShapeMorphMoodBento(
 }
 
 @Composable
-private fun BentoTile(
-    chip: MoodChip,
-    selected: Boolean,
-    bg: Color,
-    fg: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun BentoTile(chip: MoodChip, selected: Boolean, bg: Color, fg: Color, onClick: () -> Unit, modifier: Modifier = Modifier) {
     if (chip.title.isBlank()) {
         Box(modifier = modifier)
         return
@@ -584,27 +561,19 @@ private fun BentoTile(
     }
 }
 
-private class TileMorphShape(
-    private val progress: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>,
-) : Shape {
+private class TileMorphShape(private val progress: Animatable<Float, androidx.compose.animation.core.AnimationVector1D>) : Shape {
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     private val morph: Morph = Morph(MaterialShapes.Cookie12Sided, MaterialShapes.Pill)
 
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline = buildOutlineFromMorph(morph, progress.value, size)
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        buildOutlineFromMorph(morph, progress.value, size)
 }
 
 // ── Quick Picks 2-row horizontal grid ──────────────────────────────────
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun QuickPicksGrid(
-    items: List<SongItem>,
-    onPlay: (SongItem) -> Unit,
-) {
+private fun QuickPicksGrid(items: List<SongItem>, onPlay: (SongItem) -> Unit) {
     val chunked = items.chunked(2)
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -614,6 +583,7 @@ private fun QuickPicksGrid(
         items(
             items = chunked,
             key = { pair -> pair.first().videoId },
+            contentType = { "quick_picks_row" },
         ) { pair ->
             Column(
                 modifier = Modifier.width(320.dp),
@@ -703,10 +673,7 @@ private fun SectionHeader(title: String) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MixedForYouHeroCarousel(
-    items: List<TileItem>,
-    onOpen: (TileItem) -> Unit,
-) {
+private fun MixedForYouHeroCarousel(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
     if (items.isEmpty()) return
     val carouselState = rememberCarouselState { items.size }
     HorizontalMultiBrowseCarousel(
@@ -744,10 +711,7 @@ private fun MixedForYouHeroCarousel(
 // ── Staggered tiles section ────────────────────────────────────────────
 
 @Composable
-private fun StaggeredTilesSection(
-    items: List<TileItem>,
-    onOpen: (TileItem) -> Unit,
-) {
+private fun StaggeredTilesSection(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
     // Render as an asymmetric grid using Row/Column composition for visual variety.
     val pairs = items.take(6).chunked(2)
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -767,11 +731,7 @@ private fun StaggeredTilesSection(
 }
 
 @Composable
-private fun StaggeredTile(
-    tile: TileItem,
-    onOpen: (TileItem) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun StaggeredTile(tile: TileItem, onOpen: (TileItem) -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .clickable { onOpen(tile) },
@@ -816,17 +776,14 @@ private fun StaggeredTile(
 // ── Tiles carousel (generic fallback) ──────────────────────────────────
 
 @Composable
-private fun TilesCarousel(
-    items: List<TileItem>,
-    onOpen: (TileItem) -> Unit,
-) {
+private fun TilesCarousel(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
     if (items.isEmpty()) return
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = items, key = { it.id }) { tile ->
+        items(items = items, key = { it.id }, contentType = { "quick_pick_tile" }) { tile ->
             Column(modifier = Modifier.width(140.dp).clickable { onOpen(tile) }) {
                 if (tile.thumbnailUrl != null) {
                     AsyncImage(
@@ -851,10 +808,7 @@ private fun TilesCarousel(
 }
 
 @Composable
-private fun TilesFromHeroesCarousel(
-    items: List<HeroItem>,
-    onOpen: (HeroItem) -> Unit,
-) {
+private fun TilesFromHeroesCarousel(items: List<HeroItem>, onOpen: (HeroItem) -> Unit) {
     if (items.isEmpty()) return
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -864,6 +818,7 @@ private fun TilesFromHeroesCarousel(
         items(
             items = items,
             key = { hero -> hero.videoId ?: hero.playlistId ?: hero.title },
+            contentType = { "hero" },
         ) { hero ->
             Column(modifier = Modifier.width(160.dp).clickable { onOpen(hero) }) {
                 if (hero.thumbnailUrl != null) {
@@ -892,10 +847,7 @@ private fun TilesFromHeroesCarousel(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ArtistSpotlightCard(
-    artist: ArtistItem,
-    onOpen: (ArtistItem) -> Unit,
-) {
+private fun ArtistSpotlightCard(artist: ArtistItem, onOpen: (ArtistItem) -> Unit) {
     val transition = rememberInfiniteTransition(label = "artist_ring")
     val morphProgress by transition.animateFloat(
         initialValue = 0f,
@@ -906,18 +858,6 @@ private fun ArtistSpotlightCard(
         ),
         label = "morph",
     )
-    val ringShape = remember {
-        object : Shape {
-            private val morph = Morph(MaterialShapes.Clover8Leaf, MaterialShapes.Cookie12Sided)
-
-            override fun createOutline(
-                size: Size,
-                layoutDirection: LayoutDirection,
-                density: Density,
-            ): Outline = buildOutlineFromMorph(morph, 0f, size)
-        }
-    }
-
     Surface(
         onClick = { onOpen(artist) },
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -983,25 +923,19 @@ private fun ArtistSpotlightCard(
 private class AnimatedMorphShape(private val progress: Float) : Shape {
     private val morph: Morph = Morph(MaterialShapes.Clover8Leaf, MaterialShapes.Cookie12Sided)
 
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline = buildOutlineFromMorph(morph, progress, size)
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        buildOutlineFromMorph(morph, progress, size)
 }
 
 @Composable
-private fun ArtistRow(
-    artists: List<ArtistItem>,
-    onOpen: (ArtistItem) -> Unit,
-) {
+private fun ArtistRow(artists: List<ArtistItem>, onOpen: (ArtistItem) -> Unit) {
     if (artists.isEmpty()) return
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(items = artists, key = { it.browseId }) { artist ->
+        items(items = artists, key = { it.browseId }, contentType = { "artist_tile" }) { artist ->
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.width(84.dp).clickable { onOpen(artist) },
@@ -1032,11 +966,7 @@ private fun ArtistRow(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun RoundedPolygon.toPolygonShape(): Shape = object : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
         val polygon = this@toPolygonShape
         val path = polygon.toPath().asComposePath()
         val bounds = polygon.calculateBounds()

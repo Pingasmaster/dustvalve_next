@@ -2,29 +2,30 @@ package com.dustvalve.next.android.ui.screens.album
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
+import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.ToggleFavoriteUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
-import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -53,6 +54,7 @@ class AlbumDetailViewModel @Inject constructor(
     private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
     private val favoriteDao: FavoriteDao,
@@ -102,8 +104,11 @@ class AlbumDetailViewModel @Inject constructor(
                             val fav = t.id in trackFavs
                             if (t.isFavorite == fav) t else t.copy(isFavorite = fav)
                         }
-                        if (newAlbumFav == a.isFavorite && newTracks === a.tracks) state
-                        else state.copy(album = a.copy(isFavorite = newAlbumFav, tracks = newTracks))
+                        if (newAlbumFav == a.isFavorite && newTracks === a.tracks) {
+                            state
+                        } else {
+                            state.copy(album = a.copy(isFavorite = newAlbumFav, tracks = newTracks))
+                        }
                     }
                 }
         }
@@ -251,15 +256,24 @@ class AlbumDetailViewModel @Inject constructor(
         _uiState.update { it.copy(downloadingTrackIds = it.downloadingTrackIds + track.id) }
         viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadTrack(track)
+                downloadController.downloadTrackBlocking(track)
                 _uiState.update {
-                    it.copy(snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)), isSnackbarError = false)
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)),
+                        isSnackbarError = false,
+                    )
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 retryAction = { downloadTrack(track) }
                 _uiState.update {
-                    it.copy(snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed), isSnackbarError = true)
+                    it.copy(
+                        snackbarMessage =
+                        e.message?.let {
+                            UiText.DynamicString(it)
+                        } ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        isSnackbarError = true,
+                    )
                 }
             } finally {
                 _uiState.update { it.copy(downloadingTrackIds = it.downloadingTrackIds - track.id) }
@@ -274,12 +288,16 @@ class AlbumDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             try {
-                downloadAlbumUseCase(album)
+                downloadController.downloadAlbumBlocking(album)
                 if (settingsDataStore.getAutoDownloadFutureContentSync()) {
                     albumRepository.setAutoDownload(album.id, true)
                 }
                 _uiState.update {
-                    it.copy(isDownloading = false, snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(album.title)), isSnackbarError = false)
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(album.title)),
+                        isSnackbarError = false,
+                    )
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -287,7 +305,8 @@ class AlbumDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
                         isSnackbarError = true,
                     )
                 }
@@ -301,12 +320,21 @@ class AlbumDetailViewModel @Inject constructor(
             try {
                 downloadAlbumUseCase.deleteAlbumDownloads(album.id)
                 _uiState.update {
-                    it.copy(snackbarMessage = UiText.StringResource(R.string.snackbar_deleted_downloads_for, listOf(album.title)), isSnackbarError = false)
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_deleted_downloads_for, listOf(album.title)),
+                        isSnackbarError = false,
+                    )
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed), isSnackbarError = true)
+                    it.copy(
+                        snackbarMessage =
+                        e.message?.let {
+                            UiText.DynamicString(it)
+                        } ?: UiText.StringResource(R.string.snackbar_delete_failed),
+                        isSnackbarError = true,
+                    )
                 }
             }
         }
@@ -317,12 +345,21 @@ class AlbumDetailViewModel @Inject constructor(
             try {
                 downloadAlbumUseCase.deleteTrackDownload(track.id)
                 _uiState.update {
-                    it.copy(snackbarMessage = UiText.StringResource(R.string.snackbar_deleted, listOf(track.title)), isSnackbarError = false)
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_deleted, listOf(track.title)),
+                        isSnackbarError = false,
+                    )
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed), isSnackbarError = true)
+                    it.copy(
+                        snackbarMessage =
+                        e.message?.let {
+                            UiText.DynamicString(it)
+                        } ?: UiText.StringResource(R.string.snackbar_delete_failed),
+                        isSnackbarError = true,
+                    )
                 }
             }
         }

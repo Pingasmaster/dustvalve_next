@@ -134,7 +134,7 @@ class DustvalveArtistScraperTest {
         // literal "...more" link tail, which surfaced in the artist screen.
         val classLoader = checkNotNull(this::class.java.classLoader)
         val html = checkNotNull(
-            classLoader.getResourceAsStream("fixtures/bandcamp/artist_angine_de_poitrine.html")
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_angine_de_poitrine.html"),
         ).bufferedReader().use { it.readText() }
         setup.server.enqueue(MockResponse().setBody(html))
 
@@ -181,7 +181,7 @@ class DustvalveArtistScraperTest {
         // we're parsing).
         val classLoader = checkNotNull(this::class.java.classLoader)
         val html = checkNotNull(
-            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html")
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html"),
         ).bufferedReader().use { it.readText() }
         setup.server.enqueue(MockResponse().setBody(html))
         // Our scraper might trigger the "/music" re-fetch on this URL because
@@ -204,7 +204,7 @@ class DustvalveArtistScraperTest {
         // Prefer the latter so the artist screen doesn't show a blurry photo.
         val classLoader = checkNotNull(this::class.java.classLoader)
         val html = checkNotNull(
-            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html")
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html"),
         ).bufferedReader().use { it.readText() }
         setup.server.enqueue(MockResponse().setBody(html))
         setup.server.enqueue(MockResponse().setBody(html))
@@ -222,7 +222,7 @@ class DustvalveArtistScraperTest {
         // instead of looking empty.
         val classLoader = checkNotNull(this::class.java.classLoader)
         val html = checkNotNull(
-            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html")
+            classLoader.getResourceAsStream("fixtures/bandcamp/artist_taylor_moore_single_album.html"),
         ).bufferedReader().use { it.readText() }
         setup.server.enqueue(MockResponse().setBody(html))
         setup.server.enqueue(MockResponse().setBody(html))
@@ -232,10 +232,10 @@ class DustvalveArtistScraperTest {
         assertThat(artist.albums).hasSize(1)
         val album = artist.albums.single()
         assertThat(album.title).isEqualTo(
-            "Worlds Beyond Number: The Wizard, the Witch, and the Wild One, Book One (Original Soundtrack)"
+            "Worlds Beyond Number: The Wizard, the Witch, and the Wild One, Book One (Original Soundtrack)",
         )
         assertThat(album.url).isEqualTo(
-            "https://taylormooremusic.bandcamp.com/album/worlds-beyond-number-the-wizard-the-witch-and-the-wild-one-book-one-original-soundtrack"
+            "https://taylormooremusic.bandcamp.com/album/worlds-beyond-number-the-wizard-the-witch-and-the-wild-one-book-one-original-soundtrack",
         )
         assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a4206992803_5.jpg")
         assertThat(album.artist).isEqualTo("Taylor Moore")
@@ -310,7 +310,8 @@ class DustvalveArtistScraperTest {
         val html = """<html><body>
             <p id="band-name-location"><span class="title">N</span></p>
             <div id="music-grid"></div>
-        </body></html>""".trimIndent()
+        </body></html>
+        """.trimIndent()
         setup.server.enqueue(MockResponse().setBody(html))
         setup.server.enqueue(MockResponse().setBody(html))
         val a = scraper.scrapeArtist(setup.url(""))

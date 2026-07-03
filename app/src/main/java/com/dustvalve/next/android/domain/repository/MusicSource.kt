@@ -3,7 +3,6 @@ package com.dustvalve.next.android.domain.repository
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
-import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.SearchResult
 
 /**
@@ -23,13 +22,10 @@ import com.dustvalve.next.android.domain.model.SearchResult
  */
 interface MusicSource {
 
-    /** Which provider this source represents. */
-    val provider: MusicProvider
-
     /**
-     * Stable per-source identifier. Two sources can share [provider] but
+     * Stable per-source identifier. Two sources can share a provider but
      * have distinct ids — e.g. the standard YouTube source and the YT Music
-     * source both return [MusicProvider.YOUTUBE] but `id` is "youtube" vs
+     * source are both YouTube-backed but `id` is "youtube" vs
      * "youtube_music". Use for navigation routing and registry lookup.
      */
     val id: String
@@ -60,10 +56,7 @@ interface MusicSource {
      * a per-artist flat track feed (Bandcamp — all Bandcamp tracks live under
      * an album, not directly under the artist).
      */
-    suspend fun getArtistTracks(
-        url: String,
-        continuation: Any? = null,
-    ): MusicCollection
+    suspend fun getArtistTracks(url: String, continuation: Any? = null): MusicCollection
 
     /** Load album detail. Throws [UnsupportedSourceOperation] on sources without an album concept. */
     suspend fun getAlbum(url: String): Album
@@ -72,16 +65,14 @@ interface MusicSource {
      * Load a collection (playlist / radio / mix). Throws
      * [UnsupportedSourceOperation] on sources without a collection concept.
      */
-    suspend fun getCollection(
-        url: String,
-        continuation: Any? = null,
-    ): MusicCollection
+    suspend fun getCollection(url: String, continuation: Any? = null): MusicCollection
 }
 
 /** The browse concepts a [MusicSource] may expose. */
 enum class SourceConcept {
     SEARCH,
     ARTIST,
+
     /** Per-artist flat track feed — distinct from ARTIST because Bandcamp supports the artist concept but not a flat track list. */
     ARTIST_TRACKS,
     ALBUM,
@@ -89,9 +80,7 @@ enum class SourceConcept {
 }
 
 /** Thrown when callers invoke a [MusicSource] method the source doesn't support. */
-class UnsupportedSourceOperation(
-    sourceId: String,
-    concept: SourceConcept,
-) : UnsupportedOperationException(
-    "Source '$sourceId' does not support ${concept.name.lowercase()}",
-)
+class UnsupportedSourceOperation(sourceId: String, concept: SourceConcept) :
+    UnsupportedOperationException(
+        "Source '$sourceId' does not support ${concept.name.lowercase()}",
+    )

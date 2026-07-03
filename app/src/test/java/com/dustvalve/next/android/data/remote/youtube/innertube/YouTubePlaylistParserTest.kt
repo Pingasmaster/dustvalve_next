@@ -8,7 +8,10 @@ import org.junit.Test
 class YouTubePlaylistParserTest {
 
     private val parser = YouTubePlaylistParser()
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Test fun `parses real MWEB playlist response into Tracks`() {
         val page = parser.parse(
@@ -56,7 +59,7 @@ class YouTubePlaylistParserTest {
                 "continuationCommand":{"token":"NEXT_CONT"}
               }}}
             ]}}]}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val page = parser.parseContinuation(cont, "PL_X", startIndex = 22)
         assertThat(page.tracks).hasSize(1)

@@ -22,9 +22,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveAlbumScraper @Inject constructor(
-    private val client: OkHttpClient
-) {
+class DustvalveAlbumScraper @Inject constructor(private val client: OkHttpClient) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -73,9 +71,7 @@ class DustvalveAlbumScraper @Inject constructor(
     )
 
     @Serializable
-    data class TrackFile(
-        @SerialName("mp3-128") val mp3128: String? = null,
-    )
+    data class TrackFile(@SerialName("mp3-128") val mp3128: String? = null)
 
     suspend fun scrapeAlbum(albumUrl: String, maxRedirects: Int = 3): Album = withContext(Dispatchers.IO) {
         require(NetworkUtils.isValidHttpsUrl(albumUrl)) { "Invalid Dustvalve URL: $albumUrl" }
@@ -128,7 +124,7 @@ class DustvalveAlbumScraper @Inject constructor(
             val trackKey = trackInfo.id?.toString() ?: "idx${index + 1}"
             val trackPageUrl = trackInfo.titleLink
                 ?.takeIf { it.isNotBlank() }
-                ?.let { runCatching { URL(parsedUrl, it).toString() }.getOrNull() }
+                ?.let { resolveAgainst(parsedUrl, it) }
                 ?.takeIf { NetworkUtils.isValidHttpsUrl(it) }
             Track(
                 id = "${albumId}_$trackKey",
@@ -167,7 +163,9 @@ class DustvalveAlbumScraper @Inject constructor(
                 // single track" option would be redundant noise.
                 if (def != null && def > 0.0 && albumPrice != null && def != albumPrice.amount) {
                     AlbumPrice(amount = def, currency = albumPrice.currency)
-                } else null
+                } else {
+                    null
+                }
             },
         )
     }
@@ -183,33 +181,32 @@ class DustvalveAlbumScraper @Inject constructor(
      * artist). Returns null on any failure (404, parse error, no defaultPrice,
      * non-positive price) so a single bad track never crashes the album view.
      */
-    suspend fun fetchTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? =
-        withContext(Dispatchers.IO) {
-            if (!NetworkUtils.isValidHttpsUrl(trackUrl)) return@withContext null
-            val request = Request.Builder().url(trackUrl).build()
-            val call = client.newCall(request)
-            coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
-            val html = try {
-                call.execute().use { response ->
-                    if (!response.isSuccessful) return@withContext null
-                    response.body.string()
-                }
-            } catch (e: IOException) {
-                return@withContext null
+    suspend fun fetchTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? = withContext(Dispatchers.IO) {
+        if (!NetworkUtils.isValidHttpsUrl(trackUrl)) return@withContext null
+        val request = Request.Builder().url(trackUrl).build()
+        val call = client.newCall(request)
+        coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+        val html = try {
+            call.execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                response.body.string()
             }
-            ensureActive()
-            val tralbumJson = HtmlUtils.extractJsonFromScript(html, "TralbumData")
-                ?: HtmlUtils.extractDataAttribute(html, "data-tralbum")
-                ?: return@withContext null
-            val tralbumData = try {
-                json.decodeFromString<TralbumData>(tralbumJson)
-            } catch (_: Throwable) {
-                return@withContext null
-            }
-            val price = tralbumData.defaultPrice ?: return@withContext null
-            if (price <= 0.0) return@withContext null
-            AlbumPrice(amount = price, currency = fallbackCurrency)
+        } catch (e: IOException) {
+            return@withContext null
         }
+        ensureActive()
+        val tralbumJson = HtmlUtils.extractJsonFromScript(html, "TralbumData")
+            ?: HtmlUtils.extractDataAttribute(html, "data-tralbum")
+            ?: return@withContext null
+        val tralbumData = try {
+            json.decodeFromString<TralbumData>(tralbumJson)
+        } catch (_: Throwable) {
+            return@withContext null
+        }
+        val price = tralbumData.defaultPrice ?: return@withContext null
+        if (price <= 0.0) return@withContext null
+        AlbumPrice(amount = price, currency = fallbackCurrency)
+    }
 
     /**
      * Extracts the album's headline buy price from the page's
@@ -241,7 +238,7 @@ class DustvalveAlbumScraper @Inject constructor(
                 val price = parseOffer(offer) ?: continue
                 return price
             }
-            return null  // Found a release block but no usable non-bundle offer.
+            return null // Found a release block but no usable non-bundle offer.
         }
         return null
     }
@@ -290,13 +287,21 @@ class DustvalveAlbumScraper @Inject constructor(
         )
         for (m in scriptRegex.findAll(html)) {
             val body = m.groupValues[1].trim()
-            val root = try { json.parseToJsonElement(body) } catch (_: Throwable) { continue }
+            val root = try {
+                json.parseToJsonElement(body)
+            } catch (_: Throwable) {
+                continue
+            }
             val obj = root as? kotlinx.serialization.json.JsonObject ?: continue
             val type = obj["@type"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }?.contentOrNull
             val releases: kotlinx.serialization.json.JsonArray? = when (type) {
                 "MusicAlbum" -> obj["albumRelease"] as? kotlinx.serialization.json.JsonArray
-                "MusicRecording" -> ((obj["inAlbum"] as? kotlinx.serialization.json.JsonObject)
-                    ?.get("albumRelease") as? kotlinx.serialization.json.JsonArray)
+
+                "MusicRecording" -> (
+                    (obj["inAlbum"] as? kotlinx.serialization.json.JsonObject)
+                        ?.get("albumRelease") as? kotlinx.serialization.json.JsonArray
+                    )
+
                 else -> null
             }
             if (releases != null) yield(releases)
@@ -310,7 +315,9 @@ class DustvalveAlbumScraper @Inject constructor(
             ?.contentOrNull
         return if (priceNum != null && priceNum > 0.0 && !currency.isNullOrBlank()) {
             AlbumPrice(amount = priceNum, currency = currency)
-        } else null
+        } else {
+            null
+        }
     }
 
     private fun additionalProperty(obj: kotlinx.serialization.json.JsonObject, name: String): String? {
@@ -353,9 +360,16 @@ class DustvalveAlbumScraper @Inject constructor(
         return regex.findAll(html).map { HtmlUtils.decodeHtmlEntities(it.groupValues[1].trim()) }.toList()
     }
 
-    private fun normalizeUrl(url: String): String {
-        return url.trimEnd('/').substringBefore('?').substringBefore('#')
+    // Resolve a possibly-relative href against `base`, returning null if the
+    // URL is malformed. URL(URL, String) throws MalformedURLException for bad
+    // input; this is a narrow non-suspend wrapper.
+    private fun resolveAgainst(base: URL, href: String): String? = try {
+        URL(base, href).toString()
+    } catch (_: java.net.MalformedURLException) {
+        null
     }
+
+    private fun normalizeUrl(url: String): String = url.trimEnd('/').substringBefore('?').substringBefore('#')
 
     private fun stableId(input: String): String {
         val normalized = normalizeUrl(input)

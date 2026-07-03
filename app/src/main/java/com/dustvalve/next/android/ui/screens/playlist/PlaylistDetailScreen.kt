@@ -21,11 +21,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import com.dustvalve.next.android.ui.components.getPlaylistIconRes
-import com.dustvalve.next.android.ui.components.lists.MusicRow
-import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
-import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
@@ -74,8 +69,13 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.components.getPlaylistIconRes
+import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
+import com.dustvalve.next.android.ui.theme.segmentedItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -84,7 +84,8 @@ fun PlaylistDetailScreen(
     onBack: () -> Unit,
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
-    playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: PlaylistDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -158,8 +159,11 @@ fun PlaylistDetailScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { paddingValues ->
+        // Local val so `playlist != null` smart-casts inside the matching branch
+        // (Kotlin can't smart-cast through a property in a `when` clause).
+        val playlist = state.playlist
         when {
             state.isLoading -> {
                 Box(
@@ -171,16 +175,18 @@ fun PlaylistDetailScreen(
                     ContainedLoadingIndicator()
                 }
             }
-            state.error != null && state.playlist == null -> {
+
+            state.error != null && playlist == null -> {
                 ErrorState(
                     message = state.error ?: stringResource(R.string.playlist_error_load),
                     onRetry = { viewModel.refreshPlaylist() },
                     modifier = Modifier.padding(paddingValues),
                 )
             }
-            state.playlist != null -> {
+
+            playlist != null -> {
                 PlaylistContent(
-                    playlist = state.playlist!!,
+                    playlist = playlist,
                     tracks = state.tracks,
                     currentTrackId = playerState.currentTrack?.id,
                     isPlaying = playerState.isPlaying,
@@ -301,6 +307,7 @@ private fun PlaylistContent(
             items(
                 count = tracks.size,
                 key = { tracks[it].id },
+                contentType = { "playlist_track" },
             ) { index ->
                 val track = tracks[index]
                 val isCurrentTrack = currentTrackId == track.id
@@ -517,8 +524,11 @@ private fun PlaylistActionBar(
                 } else {
                     Icon(
                         painter = painterResource(
-                            if (allTracksDownloaded) R.drawable.ic_download_done
-                            else R.drawable.ic_download
+                            if (allTracksDownloaded) {
+                                R.drawable.ic_download_done
+                            } else {
+                                R.drawable.ic_download
+                            },
                         ),
                         contentDescription = if (allTracksDownloaded) {
                             stringResource(R.string.playlist_cd_all_downloaded)
@@ -536,10 +546,7 @@ private val ActionBarSpacing = 8.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun EmptyPlaylistState(
-    isSystem: Boolean,
-    modifier: Modifier = Modifier,
-) {
+private fun EmptyPlaylistState(isSystem: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center,
@@ -564,7 +571,13 @@ private fun EmptyPlaylistState(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = if (isSystem) stringResource(R.string.playlist_empty_system_title) else stringResource(R.string.playlist_empty_custom_title),
+                text = if (isSystem) {
+                    stringResource(
+                        R.string.playlist_empty_system_title,
+                    )
+                } else {
+                    stringResource(R.string.playlist_empty_custom_title)
+                },
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -585,11 +598,7 @@ private fun EmptyPlaylistState(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ErrorState(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,

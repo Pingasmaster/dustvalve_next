@@ -1,5 +1,11 @@
+// slack-lints DeprecatedCall flags ButtonGroup by function name (other
+// overloads are @Deprecated). Our call resolves to the non-deprecated
+// overload; kotlinc agrees. Suppress at file level.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.youtube
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
@@ -28,21 +34,18 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
-import androidx.compose.material3.ContainedLoadingIndicator
-import androidx.compose.material3.LinearWavyProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExpandedFullScreenSearchBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -55,7 +58,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberSearchBarState
@@ -77,12 +79,15 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.components.PastedLinkChip
@@ -90,21 +95,22 @@ import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.theme.AppShapes
+import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.openInBrowser
 import com.dustvalve.next.android.util.shareUrl
-import com.dustvalve.next.android.ui.theme.AppShapes
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun YouTubeScreen(
-    playerViewModel: PlayerViewModel,
     onPlaylistClick: (url: String, name: String) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
     onOpenLink: (String) -> Unit,
+    modifier: Modifier = Modifier,
     onExpandPlayer: () -> Unit = {},
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: YouTubeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -199,8 +205,11 @@ fun YouTubeScreen(
             textFieldState = textFieldState,
             onSearch = {
                 val q = textFieldState.text.toString()
-                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) onOpenLink(q)
-                else viewModel.onSearch()
+                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) {
+                    onOpenLink(q)
+                } else {
+                    viewModel.onSearch()
+                }
             },
             placeholder = { Text(stringResource(R.string.youtube_search_placeholder)) },
             leadingIcon = {
@@ -228,6 +237,7 @@ fun YouTubeScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
     ) { scaffoldPadding ->
@@ -252,7 +262,7 @@ fun YouTubeScreen(
                     stringResource(R.string.youtube_tab_source_ytm),
                 )
                 ButtonGroup(
-                    overflowIndicator = {},
+                    overflowIndicator = { _ -> },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -300,10 +310,13 @@ fun YouTubeScreen(
                             onOpenTile = { tile ->
                                 when (tile.kind) {
                                     com.dustvalve.next.android.domain.model.TileKind.SONG,
-                                    com.dustvalve.next.android.domain.model.TileKind.VIDEO ->
+                                    com.dustvalve.next.android.domain.model.TileKind.VIDEO,
+                                    ->
                                         onPlayVideoId(tile.id)
+
                                     com.dustvalve.next.android.domain.model.TileKind.ALBUM,
-                                    com.dustvalve.next.android.domain.model.TileKind.PLAYLIST ->
+                                    com.dustvalve.next.android.domain.model.TileKind.PLAYLIST,
+                                    ->
                                         openPlaylistById(tile.id, tile.title)
                                 }
                             },
@@ -316,6 +329,7 @@ fun YouTubeScreen(
                             },
                             onRetry = { viewModel.retryYtmHome() },
                         )
+
                         YouTubeSource.YouTube -> YouTubeSourceContent(
                             state = state,
                             onMoodSelected = viewModel::onMoodSelected,
@@ -325,7 +339,6 @@ fun YouTubeScreen(
                         )
                     }
                 }
-
             }
 
             // Expanded search overlay
@@ -388,11 +401,13 @@ fun YouTubeScreen(
                                 )
                             }
                         }
+
                         state.isLoading && state.results.isEmpty() -> {
                             ContainedLoadingIndicator(
                                 modifier = Modifier.align(Alignment.Center),
                             )
                         }
+
                         state.error != null && state.results.isEmpty() -> {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -408,6 +423,7 @@ fun YouTubeScreen(
                                 )
                             }
                         }
+
                         state.results.isEmpty() && state.query.isNotBlank() && !state.isLoading -> {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -429,6 +445,7 @@ fun YouTubeScreen(
                                 )
                             }
                         }
+
                         else -> {
                             LazyColumn(
                                 state = searchListState,
@@ -483,15 +500,19 @@ fun YouTubeScreen(
                                                                 }
                                                             }
                                                         }
+
                                                         SearchResultType.YOUTUBE_PLAYLIST,
-                                                        SearchResultType.YOUTUBE_ALBUM -> {
+                                                        SearchResultType.YOUTUBE_ALBUM,
+                                                        -> {
                                                             scope.launch { searchBarState.animateToCollapsed() }
                                                             onPlaylistClick(result.url, result.name)
                                                         }
+
                                                         SearchResultType.YOUTUBE_ARTIST -> {
                                                             scope.launch { searchBarState.animateToCollapsed() }
                                                             onArtistClick(result.url, result.name, result.imageUrl)
                                                         }
+
                                                         else -> { /* not applicable */ }
                                                     }
                                                 },
@@ -521,8 +542,11 @@ fun YouTubeScreen(
                                             leadingContent = {
                                                 val thumbnailShape = when (result.type) {
                                                     SearchResultType.YOUTUBE_ARTIST -> AppShapes.SearchResultArtist
+
                                                     SearchResultType.YOUTUBE_ALBUM,
-                                                    SearchResultType.YOUTUBE_PLAYLIST -> AppShapes.SearchResultAlbum
+                                                    SearchResultType.YOUTUBE_PLAYLIST,
+                                                    -> AppShapes.SearchResultAlbum
+
                                                     else -> AppShapes.SearchResultTrack
                                                 }
                                                 if (result.imageUrl != null) {
@@ -537,8 +561,11 @@ fun YouTubeScreen(
                                                 } else {
                                                     val iconRes = when (result.type) {
                                                         SearchResultType.YOUTUBE_ARTIST -> R.drawable.ic_person
+
                                                         SearchResultType.YOUTUBE_ALBUM,
-                                                        SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_album
+                                                        SearchResultType.YOUTUBE_PLAYLIST,
+                                                        -> R.drawable.ic_album
+
                                                         else -> R.drawable.ic_music_note
                                                     }
                                                     Icon(
@@ -551,7 +578,8 @@ fun YouTubeScreen(
                                             },
                                             trailingContent = {
                                                 if (result.type == SearchResultType.YOUTUBE_PLAYLIST ||
-                                                    result.type == SearchResultType.YOUTUBE_ALBUM) {
+                                                    result.type == SearchResultType.YOUTUBE_ALBUM
+                                                ) {
                                                     val importedMsg = stringResource(R.string.common_playlist_imported, result.name)
                                                     IconButton(
                                                         onClick = {
@@ -786,11 +814,7 @@ private fun YouTubeSourceContent(
 }
 
 @Composable
-private fun MoodChipRow(
-    selectedMood: String?,
-    onMoodSelected: (String?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun MoodChipRow(selectedMood: String?, onMoodSelected: (String?) -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -832,12 +856,14 @@ private fun DiscoverCarouselSection(
             section.isLoading -> {
                 ShimmerCarouselPlaceholder()
             }
+
             section.error != null -> {
                 SectionErrorState(
                     message = section.error,
                     onRetry = onRetry,
                 )
             }
+
             section.items.isNotEmpty() -> {
                 val carouselState = rememberCarouselState { section.items.size }
                 HorizontalMultiBrowseCarousel(
@@ -869,7 +895,7 @@ private fun DiscoverCarouselSection(
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
-                                    )
+                                    ),
                                 ),
                         )
                         Column(
@@ -917,11 +943,7 @@ private fun ShimmerCarouselPlaceholder(modifier: Modifier = Modifier) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SectionErrorState(
-    message: String,
-    onRetry: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) {
+private fun SectionErrorState(message: String, onRetry: (() -> Unit)?, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxWidth()

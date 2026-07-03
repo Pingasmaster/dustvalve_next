@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.screens.bandcamp
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
@@ -9,24 +10,21 @@ import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.usecase.DiscoverDustvalveUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
-import java.util.concurrent.atomic.AtomicInteger
-import android.util.Log
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 data class BandcampUiState(
     /** Preview thumbnails per genre tag (loaded on init) */
     val categoryPreviews: Map<String, List<Album>> = emptyMap(),
-    val previewsError: Boolean = false,
 
     /** Bottom sheet state */
     val showCategorySheet: Boolean = false,
@@ -125,19 +123,15 @@ class BandcampViewModel @Inject constructor(
             // firing all ~27 requests at Bandcamp at once; tiles fill in as they
             // arrive.
             val semaphore = Semaphore(PREVIEW_CONCURRENCY)
-            val successes = AtomicInteger(0)
-            val attempts = AtomicInteger(0)
             try {
                 coroutineScope {
                     GENRE_TAGS.forEach { tag ->
                         launch {
                             semaphore.withPermit {
-                                attempts.incrementAndGet()
                                 try {
                                     val genreParam = tag.takeIf { it.isNotEmpty() }
                                     val result = discoverDustvalveUseCase(genre = genreParam)
                                     val preview = result.albums.take(PREVIEW_COUNT)
-                                    successes.incrementAndGet()
                                     _uiState.update {
                                         it.copy(categoryPreviews = it.categoryPreviews + (tag to preview))
                                     }
@@ -150,23 +144,12 @@ class BandcampViewModel @Inject constructor(
                         }
                     }
                 }
-                // Only surface the retry banner if nothing loaded at all (e.g. the
-                // network is down); partial failures just leave those tiles bare.
-                if (successes.get() == 0 && attempts.get() > 0) {
-                    _uiState.update { it.copy(previewsError = true) }
-                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "loadPreviews failed", e)
-                _uiState.update { it.copy(previewsError = true) }
             }
         }
-    }
-
-    fun retryPreviews() {
-        _uiState.update { it.copy(previewsError = false) }
-        loadPreviews()
     }
 
     fun selectCategory(tag: String, name: String) {
@@ -250,8 +233,10 @@ class BandcampViewModel @Inject constructor(
 
     companion object {
         private const val TAG = "BandcampViewModel"
+
         /** Max parallel discover requests when loading per-genre previews. */
         private const val PREVIEW_CONCURRENCY = 5
+
         /** Album thumbnails fetched per genre tile (the UI fans out the first 3). */
         private const val PREVIEW_COUNT = 4
         val GENRE_TAGS = listOf(
@@ -265,7 +250,6 @@ class BandcampViewModel @Inject constructor(
 }
 
 /** Bandcamp genre/tag slug: lowercase, non-alphanumerics collapsed to single hyphens. */
-internal fun slugifyGenre(name: String): String =
-    name.trim().lowercase()
-        .replace(Regex("[^a-z0-9]+"), "-")
-        .trim('-')
+internal fun slugifyGenre(name: String): String = name.trim().lowercase()
+    .replace(Regex("[^a-z0-9]+"), "-")
+    .trim('-')

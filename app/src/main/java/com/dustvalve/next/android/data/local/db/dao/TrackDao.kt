@@ -36,7 +36,7 @@ interface TrackDao {
         INNER JOIN favorites ON tracks.id = favorites.id
         WHERE favorites.type = 'track'
         ORDER BY favorites.addedAt DESC
-        """
+        """,
     )
     fun getFavorites(): Flow<List<TrackEntity>>
 
@@ -45,7 +45,7 @@ interface TrackDao {
         SELECT tracks.* FROM tracks
         INNER JOIN recent_tracks ON tracks.id = recent_tracks.trackId
         ORDER BY recent_tracks.playedAt DESC
-        """
+        """,
     )
     fun getRecent(): Flow<List<TrackEntity>>
 
@@ -54,15 +54,12 @@ interface TrackDao {
         SELECT tracks.* FROM tracks
         INNER JOIN downloads ON tracks.id = downloads.trackId
         ORDER BY downloads.downloadedAt DESC
-        """
+        """,
     )
     fun getDownloaded(): Flow<List<TrackEntity>>
 
     @Query("SELECT * FROM tracks WHERE source = 'local' ORDER BY title ASC")
     fun getLocalTracks(): Flow<List<TrackEntity>>
-
-    @Query("SELECT id FROM tracks WHERE source = 'local'")
-    suspend fun getLocalTrackIdsSync(): List<String>
 
     @Query("DELETE FROM tracks WHERE source = 'local'")
     suspend fun deleteAllLocalTracks()
@@ -83,7 +80,7 @@ interface TrackDao {
           OR artist LIKE '%' || :query || '%'
           OR albumTitle LIKE '%' || :query || '%')
         ORDER BY title ASC LIMIT 50
-        """
+        """,
     )
     suspend fun searchLocalTracks(query: String): List<TrackEntity>
 

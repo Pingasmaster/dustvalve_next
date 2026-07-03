@@ -11,7 +11,4 @@ import androidx.compose.runtime.Immutable
  * @param currency ISO 4217 code (e.g. `"CAD"`, `"USD"`, `"GBP"`).
  */
 @Immutable
-data class AlbumPrice(
-    val amount: Double,
-    val currency: String,
-)
+data class AlbumPrice(val amount: Double, val currency: String)

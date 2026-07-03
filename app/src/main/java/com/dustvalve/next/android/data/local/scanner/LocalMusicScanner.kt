@@ -17,17 +17,10 @@ import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class ScanResult(
-    val added: Int,
-    val removed: Int,
-    val total: Int,
-)
+data class ScanResult(val added: Int, val removed: Int, val total: Int)
 
 @Singleton
-class LocalMusicScanner @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-    private val trackDao: TrackDao,
-) {
+class LocalMusicScanner @Inject constructor(@param:ApplicationContext private val context: Context, private val trackDao: TrackDao) {
 
     companion object {
         private val AUDIO_EXTENSIONS = setOf(
@@ -61,7 +54,10 @@ class LocalMusicScanner @Inject constructor(
         // failed (e.g. revoked SAF permission, unmounted storage). Skip deletion to
         // avoid silently wiping the user's entire local music library.
         val removedIds = if (scannedIds.isEmpty() && existingIds.isNotEmpty()) {
-            android.util.Log.w("LocalMusicScanner", "Scan returned 0 files but DB has ${existingIds.size} tracks — skipping deletion (possible scan failure)")
+            android.util.Log.w(
+                "LocalMusicScanner",
+                "Scan returned 0 files but DB has ${existingIds.size} tracks — skipping deletion (possible scan failure)",
+            )
             emptySet()
         } else {
             existingIds - scannedIds
@@ -81,11 +77,7 @@ class LocalMusicScanner @Inject constructor(
         )
     }
 
-    private fun listAudioFilesRecursive(
-        treeUri: Uri,
-        parentUri: Uri,
-        result: MutableList<AudioFileInfo>,
-    ) {
+    private fun listAudioFilesRecursive(treeUri: Uri, parentUri: Uri, result: MutableList<AudioFileInfo>) {
         val docId = when {
             parentUri == treeUri -> DocumentsContract.getTreeDocumentId(treeUri)
             else -> DocumentsContract.getDocumentId(parentUri)
@@ -101,7 +93,9 @@ class LocalMusicScanner @Inject constructor(
                     DocumentsContract.Document.COLUMN_DISPLAY_NAME,
                     DocumentsContract.Document.COLUMN_MIME_TYPE,
                 ),
-                null, null, null,
+                null,
+                null,
+                null,
             )
             cursor?.use {
                 while (it.moveToNext()) {
@@ -115,12 +109,14 @@ class LocalMusicScanner @Inject constructor(
                         // Recurse into subdirectories
                         listAudioFilesRecursive(treeUri, childUri, result)
                     } else if (isAudioFile(displayName, mimeType)) {
-                        result.add(AudioFileInfo(
-                            documentId = childDocId,
-                            displayName = displayName,
-                            contentUri = childUri,
-                            mimeType = mimeType,
-                        ))
+                        result.add(
+                            AudioFileInfo(
+                                documentId = childDocId,
+                                displayName = displayName,
+                                contentUri = childUri,
+                                mimeType = mimeType,
+                            ),
+                        )
                     }
                 }
             }
@@ -164,7 +160,9 @@ class LocalMusicScanner @Inject constructor(
                 context.contentResolver.query(
                     docUri,
                     arrayOf(android.provider.DocumentsContract.Document.COLUMN_LAST_MODIFIED),
-                    null, null, null,
+                    null,
+                    null,
+                    null,
                 )?.use { c ->
                     if (c.moveToFirst()) c.getLong(0) / 1000 else 0L
                 } ?: 0L
@@ -221,24 +219,13 @@ class LocalMusicScanner @Inject constructor(
         }
     }
 
-    private fun getCoverArtFile(trackId: String): File {
-        return File(context.filesDir, "local_art/$trackId.jpg")
-    }
+    private fun getCoverArtFile(trackId: String): File = File(context.filesDir, "local_art/$trackId.jpg")
 
-    private fun generateStableId(documentId: String): String {
-        return "local_" + md5Hash(documentId).take(16)
-    }
+    private fun generateStableId(documentId: String): String = "local_" + md5Hash(documentId).take(16)
 
-    private fun md5Hash(input: String): String {
-        return MessageDigest.getInstance("MD5")
-            .digest(input.toByteArray())
-            .joinToString("") { "%02x".format(it) }
-    }
+    private fun md5Hash(input: String): String = MessageDigest.getInstance("MD5")
+        .digest(input.toByteArray())
+        .joinToString("") { "%02x".format(it) }
 
-    private data class AudioFileInfo(
-        val documentId: String,
-        val displayName: String,
-        val contentUri: Uri,
-        val mimeType: String,
-    )
+    private data class AudioFileInfo(val documentId: String, val displayName: String, val contentUri: Uri, val mimeType: String)
 }

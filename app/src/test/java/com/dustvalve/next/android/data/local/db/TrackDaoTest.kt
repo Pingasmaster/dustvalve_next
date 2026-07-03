@@ -12,10 +12,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class TrackDaoTest : DbTestBase() {
 
-    private fun t(
-        id: String, title: String = id, artist: String = "A",
-        album: String = "Alb", source: String = "bandcamp",
-    ) = TrackEntity(
+    private fun t(id: String, title: String = id, artist: String = "A", album: String = "Alb", source: String = "bandcamp") = TrackEntity(
         id = id, albumId = "al", title = title, artist = artist,
         trackNumber = 1, duration = 60f, streamUrl = null, artUrl = "",
         albumTitle = album, source = source,
@@ -48,11 +45,13 @@ class TrackDaoTest : DbTestBase() {
 
     @Test fun `deleteByAlbumId removes matching rows only`() = runTest {
         val dao = db.trackDao()
-        dao.insertAll(listOf(
-            t("t1").copy(albumId = "a1"),
-            t("t2").copy(albumId = "a1"),
-            t("t3").copy(albumId = "a2"),
-        ))
+        dao.insertAll(
+            listOf(
+                t("t1").copy(albumId = "a1"),
+                t("t2").copy(albumId = "a1"),
+                t("t3").copy(albumId = "a2"),
+            ),
+        )
         dao.deleteByAlbumId("a1")
         assertThat(dao.getByAlbumId("a1")).isEmpty()
         assertThat(dao.getByAlbumId("a2")).hasSize(1)
@@ -60,23 +59,27 @@ class TrackDaoTest : DbTestBase() {
 
     @Test fun `searchLocalTracks matches title artist and album`() = runTest {
         val dao = db.trackDao()
-        dao.insertAll(listOf(
-            t("l1", title = "foobar", source = "local"),
-            t("l2", artist = "Foo Bar", source = "local"),
-            t("l3", album = "Foobar Album", source = "local"),
-            t("l4", title = "unrelated", source = "local"),
-            t("b1", title = "foobar", source = "bandcamp"),
-        ))
+        dao.insertAll(
+            listOf(
+                t("l1", title = "foobar", source = "local"),
+                t("l2", artist = "Foo Bar", source = "local"),
+                t("l3", album = "Foobar Album", source = "local"),
+                t("l4", title = "unrelated", source = "local"),
+                t("b1", title = "foobar", source = "bandcamp"),
+            ),
+        )
         val r = dao.searchLocalTracks("foo").map { it.id }.toSet()
         assertThat(r).containsExactly("l1", "l2", "l3")
     }
 
     @Test fun `getLocalTrackIdsByFolderSync filters by folderUri`() = runTest {
         val dao = db.trackDao()
-        dao.insertAll(listOf(
-            t("l1", source = "local").copy(folderUri = "content://a"),
-            t("l2", source = "local").copy(folderUri = "content://b"),
-        ))
+        dao.insertAll(
+            listOf(
+                t("l1", source = "local").copy(folderUri = "content://a"),
+                t("l2", source = "local").copy(folderUri = "content://b"),
+            ),
+        )
         assertThat(dao.getLocalTrackIdsByFolderSync("content://a")).containsExactly("l1")
     }
 }

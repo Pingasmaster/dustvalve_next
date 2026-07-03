@@ -45,34 +45,6 @@ class NetworkUtilsTest {
         assertThat(NetworkUtils.isDustvalveDomain("http://bandcamp.com/")).isFalse()
     }
 
-    @Test fun `extractArtistSlug from subdomain`() {
-        assertThat(NetworkUtils.extractArtistSlug("https://foobar.bandcamp.com/album/x"))
-            .isEqualTo("foobar")
-    }
-
-    @Test fun `extractArtistSlug from path`() {
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/artistname"))
-            .isEqualTo("artistname")
-    }
-
-    @Test fun `extractArtistSlug returns null for known non-artist paths`() {
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/search?q=foo")).isNull()
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/api/fan/x")).isNull()
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/login")).isNull()
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/discover")).isNull()
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/signup")).isNull()
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/tag/rock")).isNull()
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/help")).isNull()
-    }
-
-    @Test fun `extractArtistSlug returns null for empty path on bandcamp root`() {
-        assertThat(NetworkUtils.extractArtistSlug("https://bandcamp.com/")).isNull()
-    }
-
-    @Test fun `extractArtistSlug returns null for malformed url`() {
-        assertThat(NetworkUtils.extractArtistSlug("not a url")).isNull()
-    }
-
     @Test fun `buildArtUrl for positive id`() {
         assertThat(NetworkUtils.buildArtUrl(12345L)).isEqualTo("https://f4.bcbits.com/img/a12345_10.jpg")
     }

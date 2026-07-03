@@ -2,14 +2,14 @@ package com.dustvalve.next.android.ui.screens.playlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
-import com.dustvalve.next.android.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,7 +38,7 @@ data class PlaylistDetailUiState(
 @HiltViewModel
 class PlaylistDetailViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
-    private val downloadAlbumUseCase: DownloadAlbumUseCase,
+    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
@@ -113,7 +113,7 @@ class PlaylistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         downloadJob = viewModelScope.launch {
             try {
-                downloadAlbumUseCase.downloadPlaylist(
+                downloadController.downloadPlaylistBlocking(
                     label = playlist?.name ?: "playlist",
                     tracks = tracks,
                 )
@@ -136,7 +136,8 @@ class PlaylistDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
-                        snackbarMessage = e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        snackbarMessage =
+                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
                         isSnackbarError = true,
                     )
                 }

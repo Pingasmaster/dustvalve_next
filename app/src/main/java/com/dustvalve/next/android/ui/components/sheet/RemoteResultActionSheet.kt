@@ -27,15 +27,18 @@ enum class RemoteItemKind { TRACK, ALBUM, PLAYLIST, ARTIST }
 
 fun SearchResultType.toRemoteKind(): RemoteItemKind? = when (this) {
     SearchResultType.TRACK,
-    SearchResultType.YOUTUBE_TRACK -> RemoteItemKind.TRACK
+    SearchResultType.YOUTUBE_TRACK,
+    -> RemoteItemKind.TRACK
 
     SearchResultType.ALBUM,
-    SearchResultType.YOUTUBE_ALBUM -> RemoteItemKind.ALBUM
+    SearchResultType.YOUTUBE_ALBUM,
+    -> RemoteItemKind.ALBUM
 
     SearchResultType.YOUTUBE_PLAYLIST -> RemoteItemKind.PLAYLIST
 
     SearchResultType.ARTIST,
-    SearchResultType.YOUTUBE_ARTIST -> RemoteItemKind.ARTIST
+    SearchResultType.YOUTUBE_ARTIST,
+    -> RemoteItemKind.ARTIST
 
     SearchResultType.LOCAL_TRACK -> null
 }
@@ -52,10 +55,11 @@ fun RemoteResultActionSheet(
     onEnqueueAll: () -> Unit,
     onShare: () -> Unit,
     onOpenInBrowser: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val kind = result.type.toRemoteKind() ?: return
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
         Text(
             text = result.name,
             style = MaterialTheme.typography.titleMedium,
@@ -102,6 +106,7 @@ fun RemoteResultActionSheet(
                     onClick = onOpenInBrowser,
                 )
             }
+
             RemoteItemKind.ALBUM, RemoteItemKind.PLAYLIST -> {
                 ActionRow(
                     labelRes = R.string.common_play_all,
@@ -124,6 +129,7 @@ fun RemoteResultActionSheet(
                     onClick = onOpenInBrowser,
                 )
             }
+
             RemoteItemKind.ARTIST -> {
                 ActionRow(
                     labelRes = R.string.common_share,
@@ -143,11 +149,7 @@ fun RemoteResultActionSheet(
 }
 
 @Composable
-private fun ActionRow(
-    labelRes: Int,
-    iconRes: Int,
-    onClick: () -> Unit,
-) {
+private fun ActionRow(labelRes: Int, iconRes: Int, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(stringResource(labelRes)) },
         leadingContent = {

@@ -20,8 +20,7 @@ class YouTubeSourceTest {
     private val ytRepo = mockk<YouTubeRepository>()
     private val source = YouTubeSource(ytRepo)
 
-    @Test fun `provider is YOUTUBE with id 'youtube'`() {
-        assertThat(source.provider).isEqualTo(MusicProvider.YOUTUBE)
+    @Test fun `id is 'youtube'`() {
         assertThat(source.id).isEqualTo("youtube")
     }
 
@@ -104,8 +103,14 @@ class YouTubeSourceTest {
     }
 
     private fun result(name: String, type: SearchResultType) = SearchResult(
-        type = type, name = name, url = "https://x",
-        imageUrl = null, artist = null, album = null, genre = null, releaseDate = null,
+        type = type,
+        name = name,
+        url = "https://x",
+        imageUrl = null,
+        artist = null,
+        album = null,
+        genre = null,
+        releaseDate = null,
     )
 
     private fun track(id: String) = Track(

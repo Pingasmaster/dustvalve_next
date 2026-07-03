@@ -8,8 +8,12 @@
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.Manifest
+import android.annotation.SuppressLint
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -67,6 +71,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -88,6 +93,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
@@ -417,7 +425,7 @@ fun SettingsScreen(
                                                         )
                                                     }
                                                 },
-                                                modifier = Modifier.padding(start = 20.dp),
+                                                modifier = Modifier.padding(start = SUB_TOGGLE_INDENT),
                                                 colors = ListItemDefaults.colors(
                                                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                                                 ),
@@ -1104,6 +1112,10 @@ fun SettingsScreen(
                                     onCheckedChange = { viewModel.setDownloadNotificationsEnabled(it) },
                                 )
                             }
+
+                            // Live Updates (status-bar chip) is a per-app runtime
+                            // permission the user must grant; prompt + deep-link when off.
+                            LiveUpdatesPromptRow()
                         }
                     }
                 }
@@ -1853,5 +1865,84 @@ private fun SearchHistorySourceRow(labelRes: Int, checked: Boolean, onCheckedCha
             modifier = Modifier.weight(1f),
         )
         Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+/**
+ * Sub-row under the download-notifications toggle that appears only when the
+ * per-app "Live Updates" permission is off (so the status-bar download chip
+ * cannot show). Tapping the button deep-links to the system toggle. Re-checks
+ * on every ON_RESUME so it disappears as soon as the user grants it.
+ */
+@Composable
+private fun LiveUpdatesPromptRow() {
+    val context = LocalContext.current
+    var canPost by remember { mutableStateOf(canPostPromotedNotifications(context)) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                canPost = canPostPromotedNotifications(context)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    AnimatedVisibility(
+        visible = !canPost,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+                Text(
+                    text = stringResource(R.string.settings_live_updates_title),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    text = stringResource(R.string.settings_live_updates_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            FilledTonalButton(onClick = { openLiveUpdatesSettings(context) }) {
+                Text(stringResource(R.string.settings_live_updates_action))
+            }
+        }
+    }
+}
+
+@SuppressLint("NewApi")
+@Suppress("TooGenericExceptionCaught", "SwallowedException")
+private fun canPostPromotedNotifications(context: Context): Boolean = try {
+    context.getSystemService(NotificationManager::class.java).canPostPromotedNotifications()
+} catch (e: Throwable) {
+    // API absent (pre-QPR1) — don't nag with a prompt that leads nowhere.
+    true
+}
+
+@Suppress("TooGenericExceptionCaught", "SwallowedException")
+private fun openLiveUpdatesSettings(context: Context) {
+    // There is no dedicated promoted-notifications settings action in API 37;
+    // the per-app "Live Updates" toggle lives in the app's notification
+    // settings. Fall back to the app details page if that screen is unavailable.
+    try {
+        context.startActivity(
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    } catch (e: Exception) {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                "package:${context.packageName}".toUri(),
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
     }
 }

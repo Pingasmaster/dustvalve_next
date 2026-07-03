@@ -13,10 +13,7 @@ import org.junit.Test
 
 class AlbumMapperTest {
 
-    private fun sampleAlbum(
-        tags: List<String> = listOf("rock", "indie"),
-        purchase: PurchaseInfo? = null,
-    ) = Album(
+    private fun sampleAlbum(tags: List<String> = listOf("rock", "indie"), purchase: PurchaseInfo? = null) = Album(
         id = "a1",
         url = "https://x.bandcamp.com/album/foo",
         title = "Foo",
@@ -142,12 +139,12 @@ class AlbumMapperTest {
             Album(
                 id = "a1", url = "u", title = "t", artist = "Artist",
                 artistUrl = "u", artUrl = "", releaseDate = null,
-                about = null, tracks = emptyList(), tags = emptyList()
+                about = null, tracks = emptyList(), tags = emptyList(),
             ),
             Album(
                 id = "a2", url = "u", title = "t", artist = "Artist",
                 artistUrl = "u", artUrl = "", releaseDate = null,
-                about = null, tracks = emptyList(), tags = emptyList()
+                about = null, tracks = emptyList(), tags = emptyList(),
             ),
         ),
         autoDownload = true,

@@ -6,6 +6,7 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.getByIds
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -46,8 +47,14 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
     private val favoriteDao: FavoriteDao,
     private val trackDao: TrackDao,
     private val downloadRepository: DownloadRepository,
+    private val downloadController: DownloadController,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(
+        SupervisorJob() + Dispatchers.IO +
+            CoroutineExceptionHandler { _, throwable ->
+                android.util.Log.e("AutoDownloadFavorites", "Auto-download coordinator failed", throwable)
+            },
+    )
     private var job: Job? = null
 
     /** Idempotent. Safe to call from Application.onCreate(). */
@@ -65,18 +72,21 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
                     if (missing.isEmpty()) return@collectLatest
                     // We're iterating favorites, so isFavorite = true.
                     val tracks = trackDao.getByIds(missing).map { it.toDomain(isFavorite = true) }
+                    // Hand off to the controller (foreground service + serial
+                    // queue, de-duped by track id). Fire-and-forget — failures
+                    // just leave the track non-downloaded and a later emission
+                    // re-enqueues it.
                     for (track in tracks) {
-                        try {
-                            downloadRepository.downloadTrack(track)
-                        } catch (_: Throwable) {
-                            // Best-effort — next emission re-tries naturally.
-                        }
+                        downloadController.enqueueTrack(track)
                     }
                 }
         }
     }
 
-    /** Stops the worker and cancels in-flight downloads it triggered. */
+    /**
+     * Stops observing favorites. Downloads already handed to
+     * [DownloadController] keep running under its foreground service.
+     */
     fun stop() {
         job?.cancel()
         job = null

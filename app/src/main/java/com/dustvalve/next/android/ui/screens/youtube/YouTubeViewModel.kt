@@ -239,8 +239,11 @@ class YouTubeViewModel @Inject constructor(
         _uiState.update { it.copy(ytmHomeLoading = true, ytmHomeError = null) }
         ytmHomeJob = viewModelScope.launch {
             try {
-                val feed = if (params == null) youtubeMusicRepository.getHome()
-                else youtubeMusicRepository.getMoodHome(params)
+                val feed = if (params == null) {
+                    youtubeMusicRepository.getHome()
+                } else {
+                    youtubeMusicRepository.getMoodHome(params)
+                }
                 _uiState.update {
                     it.copy(
                         ytmHome = feed,
@@ -313,22 +316,25 @@ class YouTubeViewModel @Inject constructor(
                 it.copy(
                     lastPlayedTrackTitle = trackTitle,
                     recommendationsSection = DiscoverSection(
-                        title = if (trackTitle != null) "Because you listened to $trackTitle"
-                        else "Recommended for you",
+                        title = if (trackTitle != null) {
+                            "Because you listened to $trackTitle"
+                        } else {
+                            "Recommended for you"
+                        },
                         isLoading = true,
-                    )
+                    ),
                 )
             }
 
             val recommendations = youtubeRepository.getRecommendations(
-                "https://www.youtube.com/watch?v=$videoId"
+                "https://www.youtube.com/watch?v=$videoId",
             )
             _uiState.update {
                 it.copy(
                     recommendationsSection = it.recommendationsSection.copy(
                         items = recommendations,
                         isLoading = false,
-                    )
+                    ),
                 )
             }
         } catch (e: Exception) {
@@ -338,7 +344,7 @@ class YouTubeViewModel @Inject constructor(
                     recommendationsSection = it.recommendationsSection.copy(
                         isLoading = false,
                         error = e.message,
-                    )
+                    ),
                 )
             }
         }
@@ -454,10 +460,12 @@ class YouTubeViewModel @Inject constructor(
     fun retrySection(key: String) {
         when (key) {
             "recommendations" -> viewModelScope.launch { loadRecommendationsSection() }
+
             "trending" -> {
                 _uiState.update { it.copy(trendingSection = it.trendingSection.copy(isLoading = true, error = null)) }
                 viewModelScope.launch { loadTrendingSection() }
             }
+
             else -> {
                 val index = key.removePrefix("genre_").toIntOrNull() ?: return
                 val genre = shuffledGenres.getOrNull(index) ?: return
@@ -565,6 +573,7 @@ class YouTubeViewModel @Inject constructor(
                     results = r
                     newNextPage = np
                 }
+
                 YouTubeSource.YouTubeMusic -> {
                     // YT Music Innertube search returns no opaque page token in this pass,
                     // so we always fetch the first page and disable pagination.
@@ -615,11 +624,7 @@ class YouTubeViewModel @Inject constructor(
         }
     }
 
-    suspend fun getTrackInfo(videoUrl: String): Track {
-        return youtubeRepository.getTrackInfo(videoUrl)
-    }
+    suspend fun getTrackInfo(videoUrl: String): Track = youtubeRepository.getTrackInfo(videoUrl)
 
-    suspend fun resolvePlaylistTracks(playlistUrl: String): List<Track> {
-        return youtubeRepository.getPlaylistTracks(playlistUrl).first
-    }
+    suspend fun resolvePlaylistTracks(playlistUrl: String): List<Track> = youtubeRepository.getPlaylistTracks(playlistUrl).first
 }

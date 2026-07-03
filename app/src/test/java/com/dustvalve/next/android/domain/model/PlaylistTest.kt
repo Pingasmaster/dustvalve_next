@@ -5,11 +5,7 @@ import org.junit.Test
 
 class PlaylistTest {
 
-    private fun base(
-        isSystem: Boolean = false,
-        trackCount: Int = 0,
-        systemType: Playlist.SystemPlaylistType? = null,
-    ) = Playlist(
+    private fun base(isSystem: Boolean = false, trackCount: Int = 0, systemType: Playlist.SystemPlaylistType? = null) = Playlist(
         id = "p1",
         name = "Test",
         isSystem = isSystem,

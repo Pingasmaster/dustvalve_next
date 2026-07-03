@@ -34,7 +34,6 @@ import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -104,7 +103,8 @@ fun ArtistDetailScreen(
     artistImageHint: String?,
     onAlbumClick: (String) -> Unit,
     onBack: () -> Unit,
-    playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: ArtistDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -171,16 +171,20 @@ fun ArtistDetailScreen(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
+        // Local val so `artist != null` smart-casts inside the matching branch
+        // (Kotlin can't smart-cast through a property in a `when` clause).
+        val artist = state.artist
         when {
-            state.isLoading && state.artist == null -> {
+            state.isLoading && artist == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,
                 ) { ContainedLoadingIndicator() }
             }
-            state.error != null && state.artist == null -> {
+
+            state.error != null && artist == null -> {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,
@@ -199,8 +203,8 @@ fun ArtistDetailScreen(
                     }
                 }
             }
-            state.artist != null -> {
-                val artist = state.artist!!
+
+            artist != null -> {
                 val renderFlatTracks = artist.albums.isEmpty() &&
                     (state.tracks.isNotEmpty() || state.hasMore || sourceId != "bandcamp")
                 if (renderFlatTracks) {
@@ -216,8 +220,11 @@ fun ArtistDetailScreen(
                         onDownload = {
                             val allDownloaded = state.tracks.isNotEmpty() &&
                                 state.tracks.all { it.id in state.downloadedTrackIds }
-                            if (allDownloaded) showDeleteDialog = true
-                            else viewModel.downloadAll()
+                            if (allDownloaded) {
+                                showDeleteDialog = true
+                            } else {
+                                viewModel.downloadAll()
+                            }
                         },
                         onLoadMore = viewModel::loadMore,
                         onTrackClick = { idx -> playerViewModel.playAlbum(state.tracks, idx) },
@@ -236,8 +243,11 @@ fun ArtistDetailScreen(
                         onDownload = {
                             val allDownloaded = artist.albums.isNotEmpty() &&
                                 artist.albums.all { it.id in state.downloadedAlbumIds }
-                            if (allDownloaded) showDeleteDialog = true
-                            else viewModel.downloadAll()
+                            if (allDownloaded) {
+                                showDeleteDialog = true
+                            } else {
+                                viewModel.downloadAll()
+                            }
                         },
                     )
                 }
@@ -309,7 +319,7 @@ private fun AlbumGridLayout(
                     modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
                 )
             }
-            items(items = artist.albums, key = { "album_${it.id}" }) { album ->
+            items(items = artist.albums, key = { "album_${it.id}" }, contentType = { "album" }) { album ->
                 Surface(
                     modifier = Modifier.padding(6.dp),
                     shape = MaterialTheme.shapes.medium,
@@ -398,6 +408,7 @@ private fun FlatTracksLayout(
             items(
                 count = state.tracks.size,
                 key = { i -> state.tracks[i].id },
+                contentType = { "artist_track" },
             ) { index ->
                 val track = state.tracks[index]
                 SegmentedListItem(
@@ -533,8 +544,11 @@ private fun ActionBar(
                 painter = painterResource(
                     if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
                 ),
-                contentDescription = if (isFavorite) stringResource(R.string.detail_cd_remove_favorites)
-                    else stringResource(R.string.detail_cd_add_favorites),
+                contentDescription = if (isFavorite) {
+                    stringResource(R.string.detail_cd_remove_favorites)
+                } else {
+                    stringResource(R.string.detail_cd_add_favorites)
+                },
             )
         }
 
@@ -552,21 +566,20 @@ private fun ActionBar(
                     painter = painterResource(
                         if (allDownloaded) R.drawable.ic_download_done else R.drawable.ic_download,
                     ),
-                    contentDescription = if (allDownloaded) stringResource(R.string.detail_cd_delete_all_downloads)
-                        else stringResource(R.string.detail_cd_download_all),
+                    contentDescription = if (allDownloaded) {
+                        stringResource(R.string.detail_cd_delete_all_downloads)
+                    } else {
+                        stringResource(R.string.detail_cd_download_all)
+                    },
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3ComponentOverrideApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun BuyDiscographySplitButton(
-    artistUrl: String,
-    onOpen: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun BuyDiscographySplitButton(artistUrl: String, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
     // Sizing mirrors the album-page Buy split-button (min 80.dp height,
     // 32×18 content padding, 28 dp icon, titleLarge) so the artist CTA
     // matches in visual weight.

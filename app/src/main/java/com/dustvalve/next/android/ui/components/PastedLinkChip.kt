@@ -36,11 +36,7 @@ import com.dustvalve.next.android.util.LinkResourceType
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun PastedLinkChip(
-    detected: DetectedLink?,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+fun PastedLinkChip(detected: DetectedLink?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     // Retain the last non-null link so the exit animation can keep rendering it.
     val shown = remember { mutableStateOf<DetectedLink?>(null) }
     if (detected != null) shown.value = detected
@@ -82,7 +78,10 @@ fun PastedLinkChip(
             interactionSource = interactionSource,
             modifier = Modifier
                 .padding(horizontal = 16.dp, vertical = 4.dp)
-                .graphicsLayer { scaleX = pressScale; scaleY = pressScale },
+                .graphicsLayer {
+                    scaleX = pressScale
+                    scaleY = pressScale
+                },
         )
     }
 }

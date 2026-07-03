@@ -1,7 +1,7 @@
 package com.dustvalve.next.android.data.remote
 
-import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.Album
+import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -31,12 +31,11 @@ class DustvalveSingleTrackPriceTest {
         setup.server.shutdown()
     }
 
-    private fun loadFixture(name: String): String =
-        checkNotNull(this::class.java.classLoader)
-            .getResourceAsStream("fixtures/bandcamp/$name")
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            ?: error("missing fixture fixtures/bandcamp/$name")
+    private fun loadFixture(name: String): String = checkNotNull(this::class.java.classLoader)
+        .getResourceAsStream("fixtures/bandcamp/$name")
+        ?.bufferedReader()
+        ?.use { it.readText() }
+        ?: error("missing fixture fixtures/bandcamp/$name")
 
     @Test fun `single-track release does not surface a redundant per-track price`() = runTest {
         // moeshop's HARDCODED is its own /track/ release: defaultPrice ==

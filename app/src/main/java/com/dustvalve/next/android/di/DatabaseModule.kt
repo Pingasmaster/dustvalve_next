@@ -2,6 +2,7 @@ package com.dustvalve.next.android.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
@@ -27,79 +28,68 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): DustvalveNextDatabase {
-        return Room.databaseBuilder(
-            context,
-            DustvalveNextDatabase::class.java,
-            "dustvalve_database",
-        )
-            .fallbackToDestructiveMigration(dropAllTables = true)
-            .build()
-    }
+    fun provideDatabase(@ApplicationContext context: Context): DustvalveNextDatabase = Room.databaseBuilder(
+        context,
+        DustvalveNextDatabase::class.java,
+        "dustvalve_database",
+    )
+        .fallbackToDestructiveMigration(dropAllTables = true)
+        // Write-Ahead Logging: readers and writers don't block each other,
+        // which matters because DownloadService / DownloadController mutate
+        // rows from a different dispatcher than UI queries. Default is
+        // TRUNCATE on Room 2.7+ which serialises everything.
+        //
+        // We deliberately do NOT call enableMultiInstanceInvalidation() — it
+        // binds a ServiceConnection that Robolectric can't satisfy, breaking
+        // the Compose-test harness (TracksHeaderLabelTest et al.), and the
+        // app is single-process anyway (one Application, no :remote Process
+        // IPC). The trade-off is that writes from a hypothetical future
+        // process boundary wouldn't invalidate this Room instance, but
+        // that's not a path we use today.
+        .setJournalMode(RoomDatabase.JournalMode.WRITE_AHEAD_LOGGING)
+        .build()
 
     @Provides
     @Singleton
-    fun provideAlbumDao(database: DustvalveNextDatabase): AlbumDao {
-        return database.albumDao()
-    }
+    fun provideAlbumDao(database: DustvalveNextDatabase): AlbumDao = database.albumDao()
 
     @Provides
     @Singleton
-    fun provideTrackDao(database: DustvalveNextDatabase): TrackDao {
-        return database.trackDao()
-    }
+    fun provideTrackDao(database: DustvalveNextDatabase): TrackDao = database.trackDao()
 
     @Provides
     @Singleton
-    fun provideArtistDao(database: DustvalveNextDatabase): ArtistDao {
-        return database.artistDao()
-    }
+    fun provideArtistDao(database: DustvalveNextDatabase): ArtistDao = database.artistDao()
 
     @Provides
     @Singleton
-    fun provideFavoriteDao(database: DustvalveNextDatabase): FavoriteDao {
-        return database.favoriteDao()
-    }
+    fun provideFavoriteDao(database: DustvalveNextDatabase): FavoriteDao = database.favoriteDao()
 
     @Provides
     @Singleton
-    fun provideRecentTrackDao(database: DustvalveNextDatabase): RecentTrackDao {
-        return database.recentTrackDao()
-    }
+    fun provideRecentTrackDao(database: DustvalveNextDatabase): RecentTrackDao = database.recentTrackDao()
 
     @Provides
     @Singleton
-    fun provideDownloadDao(database: DustvalveNextDatabase): DownloadDao {
-        return database.downloadDao()
-    }
+    fun provideDownloadDao(database: DustvalveNextDatabase): DownloadDao = database.downloadDao()
 
     @Provides
     @Singleton
-    fun providePlaylistDao(database: DustvalveNextDatabase): PlaylistDao {
-        return database.playlistDao()
-    }
+    fun providePlaylistDao(database: DustvalveNextDatabase): PlaylistDao = database.playlistDao()
 
     @Provides
     @Singleton
-    fun provideRecentSearchDao(database: DustvalveNextDatabase): RecentSearchDao {
-        return database.recentSearchDao()
-    }
+    fun provideRecentSearchDao(database: DustvalveNextDatabase): RecentSearchDao = database.recentSearchDao()
 
     @Provides
     @Singleton
-    fun provideYouTubeVideoCacheDao(database: DustvalveNextDatabase): YouTubeVideoCacheDao {
-        return database.youtubeVideoCacheDao()
-    }
+    fun provideYouTubeVideoCacheDao(database: DustvalveNextDatabase): YouTubeVideoCacheDao = database.youtubeVideoCacheDao()
 
     @Provides
     @Singleton
-    fun provideYouTubePlaylistCacheDao(database: DustvalveNextDatabase): YouTubePlaylistCacheDao {
-        return database.youtubePlaylistCacheDao()
-    }
+    fun provideYouTubePlaylistCacheDao(database: DustvalveNextDatabase): YouTubePlaylistCacheDao = database.youtubePlaylistCacheDao()
 
     @Provides
     @Singleton
-    fun provideYouTubeMusicHomeCacheDao(database: DustvalveNextDatabase): YouTubeMusicHomeCacheDao {
-        return database.youtubeMusicHomeCacheDao()
-    }
+    fun provideYouTubeMusicHomeCacheDao(database: DustvalveNextDatabase): YouTubeMusicHomeCacheDao = database.youtubeMusicHomeCacheDao()
 }

@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:class-naming", "ClassName")
+
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import kotlinx.serialization.json.JsonObject
@@ -47,17 +49,16 @@ sealed class YouTubeClient(
     ) {
         const val VERSION = "1.61.48"
         override fun resolveClientVersion(dynamic: String): String = VERSION
-        override fun toContext(visitorData: String, clientVersion: String): JsonObject =
-            buildJsonObject {
-                put("clientName", "ANDROID_VR")
-                put("clientVersion", VERSION)
-                put("androidSdkVersion", 32)
-                put("osName", "Android")
-                put("osVersion", "12L")
-                put("hl", "en")
-                put("gl", "US")
-                put("visitorData", visitorData)
-            }
+        override fun toContext(visitorData: String, clientVersion: String): JsonObject = buildJsonObject {
+            put("clientName", "ANDROID_VR")
+            put("clientVersion", VERSION)
+            put("androidSdkVersion", 32)
+            put("osName", "Android")
+            put("osVersion", "12L")
+            put("hl", "en")
+            put("gl", "US")
+            put("visitorData", visitorData)
+        }
     }
 
     object IOS : YouTubeClient(
@@ -70,18 +71,17 @@ sealed class YouTubeClient(
     ) {
         const val VERSION = "21.03.1"
         override fun resolveClientVersion(dynamic: String): String = VERSION
-        override fun toContext(visitorData: String, clientVersion: String): JsonObject =
-            buildJsonObject {
-                put("clientName", "IOS")
-                put("clientVersion", VERSION)
-                put("deviceMake", "Apple")
-                put("deviceModel", "iPhone16,2")
-                put("osName", "iOS")
-                put("osVersion", "18.2.21C5054b")
-                put("hl", "en")
-                put("gl", "US")
-                put("visitorData", visitorData)
-            }
+        override fun toContext(visitorData: String, clientVersion: String): JsonObject = buildJsonObject {
+            put("clientName", "IOS")
+            put("clientVersion", VERSION)
+            put("deviceMake", "Apple")
+            put("deviceModel", "iPhone16,2")
+            put("osName", "iOS")
+            put("osVersion", "18.2.21C5054b")
+            put("hl", "en")
+            put("gl", "US")
+            put("visitorData", visitorData)
+        }
     }
 
     object WEB_NO_AUTH : YouTubeClient(
@@ -92,14 +92,13 @@ sealed class YouTubeClient(
         origin = "https://www.youtube.com",
         referer = "https://www.youtube.com",
     ) {
-        override fun toContext(visitorData: String, clientVersion: String): JsonObject =
-            buildJsonObject {
-                put("clientName", "WEB")
-                put("clientVersion", clientVersion)
-                put("hl", "en")
-                put("gl", "US")
-                put("visitorData", visitorData)
-            }
+        override fun toContext(visitorData: String, clientVersion: String): JsonObject = buildJsonObject {
+            put("clientName", "WEB")
+            put("clientVersion", clientVersion)
+            put("hl", "en")
+            put("gl", "US")
+            put("visitorData", visitorData)
+        }
     }
 
     object MWEB_NO_AUTH : YouTubeClient(
@@ -110,13 +109,12 @@ sealed class YouTubeClient(
         origin = "https://m.youtube.com",
         referer = "https://m.youtube.com",
     ) {
-        override fun toContext(visitorData: String, clientVersion: String): JsonObject =
-            buildJsonObject {
-                put("clientName", "MWEB")
-                put("clientVersion", clientVersion)
-                put("hl", "en")
-                put("gl", "US")
-                put("visitorData", visitorData)
-            }
+        override fun toContext(visitorData: String, clientVersion: String): JsonObject = buildJsonObject {
+            put("clientName", "MWEB")
+            put("clientVersion", clientVersion)
+            put("hl", "en")
+            put("gl", "US")
+            put("visitorData", visitorData)
+        }
     }
 }

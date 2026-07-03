@@ -20,12 +20,11 @@ class DustvalveAlbumPriceTest {
 
     private val scraper = DustvalveAlbumScraper(OkHttpClient())
 
-    private fun load(name: String): String =
-        checkNotNull(this::class.java.classLoader)
-            .getResourceAsStream("fixtures/bandcamp/$name")
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            ?: error("missing fixture fixtures/bandcamp/$name")
+    private fun load(name: String): String = checkNotNull(this::class.java.classLoader)
+        .getResourceAsStream("fixtures/bandcamp/$name")
+        ?.bufferedReader()
+        ?.use { it.readText() }
+        ?: error("missing fixture fixtures/bandcamp/$name")
 
     // ── Real captured pages ──────────────────────────────────────────────
 

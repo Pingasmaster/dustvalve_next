@@ -42,7 +42,7 @@ import com.dustvalve.next.android.data.local.db.entity.YouTubeVideoCacheEntity
         YouTubeMusicHomeCacheEntity::class,
     ],
     version = 1,
-    exportSchema = false
+    exportSchema = false,
 )
 abstract class DustvalveNextDatabase : RoomDatabase() {
 

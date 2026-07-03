@@ -1,3 +1,38 @@
+// slack-lints DeprecatedCall fires here as a known false positive
+// (slackhq/slack-lints#268): `android.webkit.WebView` is NOT deprecated in
+// the Android SDK (API 37, 2026) — only WebSQL + software-draw are. The
+// rule triggers because some legacy WebView overload carries @Deprecated.
+//
+// We CANNOT use Chrome Custom Tabs: this flow must read the
+// __Secure-3PSID-style YouTube/Google session cookies via
+// CookieManager.getCookie() and CCT isolates the browser cookie jar from
+// the host app by design. Credential Manager covers passkeys / passwords /
+// Sign-in-with-Google but does not return YouTube Music's full cookie set.
+// AppAuth-Android assumes RFC 8252 with PKCE + custom-scheme redirects;
+// YouTube Music's web-only login does not expose that endpoint.
+//
+// Compensating controls (OWASP MASTG-KNOW-0018 / MASVS-AUTH 2026):
+//   * Host allowlist enforced in shouldOverrideUrlLoading — only
+//     accounts.google.com / music.youtube.com / youtube.com /
+//     myaccount.google.com are permitted.
+//   * FLAG_SECURE on the activity window — blocks screen capture of the
+//     auth page.
+//   * settings.allowFileAccess / allowContentAccess /
+//     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs OFF.
+//   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
+//   * JavaScript enabled (Google's login form requires it) but only after
+//     the first navigation has resolved to an allowlisted host.
+//   * No addJavascriptInterface.
+//   * WebViewClient.onReceivedSslError cancels.
+//   * On entry: cookies + WebStorage cleared so the captured cookie is
+//     guaranteed to originate from the user's fresh sign-in.
+//   * Cookie write-back validates Domain == .youtube.com / .google.com.
+//   * webViewRef.destroy() in DisposableEffect.onDispose.
+//
+// Revisit when AndroidX ships a "trusted in-app OAuth browser" API that
+// exposes redirect cookies safely. As of API 37 / June 2026, none exists.
+@file:Suppress("DeprecatedCall")
+
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.annotation.SuppressLint
@@ -48,10 +83,7 @@ private const val AUTH_MARKER_COOKIE = "__Secure-3PAPISID"
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun YouTubeMusicLoginScreen(
-    onLoginSuccess: (Map<String, String>) -> Unit,
-    onBack: () -> Unit,
-) {
+fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
@@ -76,6 +108,7 @@ fun YouTubeMusicLoginScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_sign_in_youtube)) },
@@ -116,10 +149,7 @@ fun YouTubeMusicLoginScreen(
                         }
 
                         webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?,
-                            ): Boolean {
+                            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString() ?: return false
                                 // Allow Google and YouTube domains for the login flow
                                 if (!isAllowedHost(url)) return true
@@ -229,7 +259,7 @@ private fun clearDomainCookies(cookieManager: CookieManager, url: String) {
                 val domain = url.toUri().host?.let { ".$it" } ?: return@forEach
                 cookieManager.setCookie(
                     url,
-                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain"
+                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain",
                 )
             }
         }

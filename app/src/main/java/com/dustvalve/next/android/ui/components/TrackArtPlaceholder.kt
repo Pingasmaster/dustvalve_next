@@ -15,10 +15,7 @@ import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 
 @Composable
-fun TrackArtPlaceholder(
-    modifier: Modifier = Modifier,
-    iconSize: Dp = 24.dp,
-) {
+fun TrackArtPlaceholder(modifier: Modifier = Modifier, iconSize: Dp = 24.dp) {
     Box(
         modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
         contentAlignment = Alignment.Center,

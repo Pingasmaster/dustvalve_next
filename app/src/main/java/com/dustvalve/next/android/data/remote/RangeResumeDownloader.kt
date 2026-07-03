@@ -1,13 +1,13 @@
 package com.dustvalve.next.android.data.remote
 
-import kotlin.coroutines.cancellation.CancellationException
-import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import java.io.OutputStream
+import kotlin.coroutines.cancellation.CancellationException
+import kotlin.coroutines.coroutineContext
 
 /**
  * Streams an HTTP resource into an [OutputStream] using a `Range: bytes=0-`
@@ -37,28 +37,36 @@ object RangeResumeDownloader {
      * @param client OkHttpClient to use. Caller provides one with appropriate
      *   timeouts / protocol config; this helper doesn't tune the client.
      * @param url Resource URL.
-     * @param sink Destination. Must be positioned at its start; the helper
-     *   appends bytes as they arrive and never seeks.
+     * @param sink Destination. Must be positioned at [startOffset]; the helper
+     *   appends bytes as they arrive and never seeks. When resuming
+     *   ([startOffset] > 0) the caller must have opened the sink in append mode
+     *   over the existing partial bytes.
      * @param trackId Tag for error messages only.
+     * @param startOffset Byte count already present in [sink] from a prior
+     *   (paused) transfer. The first request asks for `Range: bytes=<offset>-`;
+     *   a server that answers 200 (ignoring Range) is surfaced as a hard
+     *   failure since appending to a from-scratch body would corrupt the file.
      * @param maxRetries Resume attempts after the initial request fails mid-flight.
      * @param backoffMillis Function returning the delay between attempt N and N+1.
      * @param onProgress Optional callback invoked after every successful write,
-     *   carrying (bytesWritten, expectedTotal). `expectedTotal` is null until
-     *   the first response headers are parsed.
-     * @return Total bytes written.
+     *   carrying (bytesWritten, expectedTotal). `bytesWritten` includes
+     *   [startOffset]. `expectedTotal` is null until the first response headers
+     *   are parsed.
+     * @return Total bytes written (including [startOffset]).
      */
     suspend fun stream(
         client: OkHttpClient,
         url: String,
         sink: OutputStream,
         trackId: String,
+        startOffset: Long = 0L,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
         backoffMillis: (attempt: Int) -> Long = { attempt ->
             500L * (1L shl (attempt - 1).coerceAtMost(4))
         },
         onProgress: ((bytesWritten: Long, expectedTotal: Long?) -> Unit)? = null,
     ): Long {
-        var bytesWritten = 0L
+        var bytesWritten = startOffset
         var expectedTotal: Long? = null
         var serverHonorsRange = false
         var attempt = 0
@@ -70,7 +78,9 @@ object RangeResumeDownloader {
                 .header("Range", rangeHeader)
                 .build()
             val call = client.newCall(request)
-            coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
+            // Disposed after the attempt so handlers (and their captured calls)
+            // don't accumulate on the job across retries.
+            val cancelHook = coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
                 if (cause != null) call.cancel()
             }
             try {
@@ -90,11 +100,16 @@ object RangeResumeDownloader {
                                 "cannot append $bytesWritten of partial content",
                         )
                     }
-                    if (bytesWritten == 0L) {
+                    if (expectedTotal == null) {
                         val cr = response.header("Content-Range")
                             ?.substringAfterLast('/')?.toLongOrNull()
                         val cl = response.header("Content-Length")?.toLongOrNull()
-                        expectedTotal = cr ?: cl
+                        // On a 206, Content-Length is the *remaining* length —
+                        // prefer the total from Content-Range. On a from-zero
+                        // 200, Content-Length is the total. When resuming
+                        // without a Content-Range header we can't trust
+                        // Content-Length as the total, so leave it null.
+                        expectedTotal = cr ?: if (bytesWritten == 0L) cl else null
                     }
                     response.body.byteStream().use { input ->
                         val buffer = ByteArray(8192)
@@ -129,6 +144,8 @@ object RangeResumeDownloader {
                     )
                 }
                 delay(backoffMillis(attempt))
+            } finally {
+                cancelHook?.dispose()
             }
         }
 

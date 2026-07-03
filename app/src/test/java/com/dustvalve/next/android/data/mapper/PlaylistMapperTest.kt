@@ -7,10 +7,7 @@ import org.junit.Test
 
 class PlaylistMapperTest {
 
-    private fun sample(
-        isSystem: Boolean = false,
-        systemType: Playlist.SystemPlaylistType? = null,
-    ) = Playlist(
+    private fun sample(isSystem: Boolean = false, systemType: Playlist.SystemPlaylistType? = null) = Playlist(
         id = "p1",
         name = "Playlist",
         iconUrl = "https://x/icon",
@@ -42,7 +39,10 @@ class PlaylistMapperTest {
 
     @Test fun `entity with unknown system type returns null type`() {
         val e = PlaylistEntity(
-            id = "p1", name = "n", isSystem = true, systemType = "UNKNOWN_VALUE"
+            id = "p1",
+            name = "n",
+            isSystem = true,
+            systemType = "UNKNOWN_VALUE",
         )
         val p = e.toDomain()
         assertThat(p.systemType).isNull()

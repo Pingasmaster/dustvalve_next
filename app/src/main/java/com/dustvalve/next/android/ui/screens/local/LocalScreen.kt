@@ -13,8 +13,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,23 +29,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.ExpandedFullScreenSearchBar
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -55,14 +51,14 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -78,6 +74,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -86,8 +85,8 @@ import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.util.legacyAudioPermission
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.PlaylistListItem
@@ -102,9 +101,13 @@ import com.dustvalve.next.android.util.DeepLinkRouter
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun LocalScreen(
-    playerViewModel: PlayerViewModel,
-    navViewModel: com.dustvalve.next.android.ui.navigation.NavigationViewModel? = null,
+    modifier: Modifier = Modifier,
+    // Self-injected (like the other screens): hiltViewModel() resolves to the
+    // activity-scoped instance MainActivity owns, so navigation state is never
+    // forwarded down. Stays nullable so the screen can render in isolation.
+    navViewModel: com.dustvalve.next.android.ui.navigation.NavigationViewModel? = hiltViewModel(),
     onExpandPlayer: () -> Unit = {},
+    playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: LocalViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -195,6 +198,7 @@ fun LocalScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             if (filteredTracks.isNotEmpty()) {
@@ -267,7 +271,7 @@ fun LocalScreen(
                                 Button(
                                     onClick = {
                                         viewModel.enableLocalMusic()
-                                        audioPermissionLauncher.launch(legacyAudioPermission())
+                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
                                     },
                                     shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier
@@ -415,8 +419,11 @@ fun LocalScreen(
                             leadingIcon = {
                                 Icon(
                                     painter = painterResource(
-                                        if (filterState.favoritesOnly) R.drawable.ic_check
-                                        else R.drawable.ic_favorite_border
+                                        if (filterState.favoritesOnly) {
+                                            R.drawable.ic_check
+                                        } else {
+                                            R.drawable.ic_favorite_border
+                                        },
                                     ),
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp),
@@ -433,8 +440,11 @@ fun LocalScreen(
                                     Text(
                                         when (filterState.selectedFolders.size) {
                                             0 -> stringResource(R.string.local_filter_folder)
+
                                             1 -> filterState.selectedFolders.first()
-                                                .toUri().lastPathSegment?.substringAfterLast(':') ?: stringResource(R.string.local_filter_folder)
+                                                .toUri().lastPathSegment?.substringAfterLast(':')
+                                                ?: stringResource(R.string.local_filter_folder)
+
                                             else -> stringResource(R.string.local_filter_folder_count, filterState.selectedFolders.size)
                                         },
                                     )
@@ -448,7 +458,6 @@ fun LocalScreen(
                                 },
                             )
                         }
-
                     }
 
                     // Track list
@@ -552,11 +561,13 @@ fun LocalScreen(
                                 )
                             }
                         }
+
                         state.isSearching -> {
                             ContainedLoadingIndicator(
                                 modifier = Modifier.align(Alignment.Center),
                             )
                         }
+
                         state.searchResults.isEmpty() && state.query.isNotBlank() && !state.isSearching -> {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -578,6 +589,7 @@ fun LocalScreen(
                                 )
                             }
                         }
+
                         else -> {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
@@ -644,13 +656,20 @@ fun LocalScreen(
 
             ListItem(
                 headlineContent = {
-                    Text(stringResource(if (menuTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites))
+                    Text(
+                        stringResource(
+                            if (menuTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites,
+                        ),
+                    )
                 },
                 leadingContent = {
                     Icon(
                         painter = painterResource(
-                            if (menuTrack.isFavorite) R.drawable.ic_favorite
-                            else R.drawable.ic_favorite_border,
+                            if (menuTrack.isFavorite) {
+                                R.drawable.ic_favorite
+                            } else {
+                                R.drawable.ic_favorite_border
+                            },
                         ),
                         contentDescription = null,
                     )
@@ -772,8 +791,11 @@ fun LocalScreen(
                 LocalSortOption.entries.forEachIndexed { index, option ->
                     val isSelected = filterState.sortOption == option
                     val sortItemColor by animateColorAsState(
-                        targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        targetValue = if (isSelected) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        },
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "sortItemColor",
                     )
@@ -837,8 +859,11 @@ fun LocalScreen(
                 itemsIndexed(availableArtists) { index, artist ->
                     val isChecked = artist in filterState.selectedArtists
                     val artistItemColor by animateColorAsState(
-                        targetValue = if (isChecked) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        targetValue = if (isChecked) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        },
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "artistItemColor",
                     )
@@ -849,8 +874,11 @@ fun LocalScreen(
                         contentPadding = PaddingValues(0.dp),
                         modifier = Modifier.animateItem(),
                     ) {
-                        val artistLabel = if (artist.isBlank())
-                            stringResource(R.string.local_filter_unknown_artist) else artist
+                        val artistLabel = if (artist.isBlank()) {
+                            stringResource(R.string.local_filter_unknown_artist)
+                        } else {
+                            artist
+                        }
                         ListItem(
                             headlineContent = { Text(artistLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
@@ -882,8 +910,11 @@ fun LocalScreen(
                 itemsIndexed(availableAlbums) { index, album ->
                     val isChecked = album in filterState.selectedAlbums
                     val albumItemColor by animateColorAsState(
-                        targetValue = if (isChecked) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        targetValue = if (isChecked) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        },
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "albumItemColor",
                     )
@@ -894,8 +925,11 @@ fun LocalScreen(
                         contentPadding = PaddingValues(0.dp),
                         modifier = Modifier.animateItem(),
                     ) {
-                        val albumLabel = if (album.isBlank())
-                            stringResource(R.string.local_filter_unknown_album) else album
+                        val albumLabel = if (album.isBlank()) {
+                            stringResource(R.string.local_filter_unknown_album)
+                        } else {
+                            album
+                        }
                         ListItem(
                             headlineContent = { Text(albumLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = { Checkbox(checked = isChecked, onCheckedChange = null) },
@@ -932,8 +966,11 @@ fun LocalScreen(
                         folder
                     }
                     val folderItemColor by animateColorAsState(
-                        targetValue = if (isChecked) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainerLow,
+                        targetValue = if (isChecked) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerLow
+                        },
                         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
                         label = "folderItemColor",
                     )

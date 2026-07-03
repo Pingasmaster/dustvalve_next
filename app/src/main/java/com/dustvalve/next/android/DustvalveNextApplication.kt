@@ -1,6 +1,8 @@
 package com.dustvalve.next.android
 
 import android.app.Application
+import android.content.ComponentCallbacks2
+import android.os.StrictMode
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.ImageLoader
@@ -15,18 +17,22 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
+import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.update.AppUpdateController
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
-import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import javax.inject.Inject
 
 @HiltAndroidApp
-class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Configuration.Provider {
+class DustvalveNextApplication :
+    Application(),
+    SingletonImageLoader.Factory,
+    Configuration.Provider {
 
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
@@ -43,9 +49,25 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
     @Inject
     lateinit var downloadNotificationCenter: DownloadNotificationCenter
 
+    @Inject
+    lateinit var downloadController: DownloadController
+
     override fun onCreate() {
         super.onCreate()
+        // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
+        // cursors, and unclosed Closeables via logcat + a small ANR dialog
+        // for severe ThreadPolicy violations. Suppressed in release via the
+        // BuildConfig.DEBUG gate — release APKs must not stall on a stray
+        // `runOnUiThread { db.query() }`.
+        if (BuildConfig.DEBUG) installStrictMode()
+        // DiagnosticsInitializer (registered via androidx.startup in the
+        // manifest) has already run StartupMetricsCollector,
+        // DiagnosticsCollector, and ProfilingCaptureController before
+        // Application.onCreate, so the cold-start critical path stays short.
         downloadNotificationCenter.ensureChannel()
+        // Drop partial .tmp files orphaned by a previous process death; the
+        // in-memory download queue that could have resumed them is gone.
+        downloadController.purgeStalePartialsOnColdStart()
         // Idempotent — observes the "Auto-download favorites" toggle and
         // enqueues downloads for any favorited tracks not already on disk.
         autoDownloadFavoritesCoordinator.start()
@@ -56,6 +78,61 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
         // controller swallows errors + mutates shared state that
         // MainActivity's dialog host observes. See AppUpdateController.
         appUpdateController.checkSilently()
+    }
+
+    /**
+     * Voluntarily release caches the OS can regenerate cheaply. Per the
+     * Android 17 memory-efficiency guidance, focus on the two levels the OS
+     * raises when the UI is no longer visible: TRIM_MEMORY_UI_HIDDEN and
+     * TRIM_MEMORY_BACKGROUND. We drop Coil's in-memory bitmap cache (the
+     * biggest ephemeral allocation, bounded to 25 % of available memory in
+     * [newImageLoader]) and the in-memory "update available" snapshot held
+     * by [appUpdateController]. The Coil disk cache, the OkHttp HTTP cache,
+     * and the download controller's queue are intentionally untouched —
+     * they're either persistent (disk cache) or resumable across the next
+     * foreground (downloads, which run under a foreground service).
+     */
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        // UI_HIDDEN + BACKGROUND are the only levels we act on; the
+        // remaining TRIM_MEMORY_* constants are informational only and
+        // would just thrash caches.
+        when (level) {
+            ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN,
+            ComponentCallbacks2.TRIM_MEMORY_BACKGROUND,
+            -> {
+                SingletonImageLoader.get(this).memoryCache?.clear()
+                appUpdateController.releaseOnTrim()
+            }
+
+            else -> Unit
+        }
+    }
+
+    /**
+     * Debug-only policy: log every Main-thread disk read/write, network call,
+     * and SQLite leak. `penaltyLog` keeps the app running so the dev can
+     * see the stack trace without losing UI state; `penaltyDeathOnNetwork`
+     * on ThreadPolicy would crash the app and is intentionally NOT set.
+     */
+    private fun installStrictMode() {
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectDiskReads()
+                .detectDiskWrites()
+                .detectNetwork()
+                .detectCustomSlowCalls()
+                .penaltyLog()
+                .build(),
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder()
+                .detectLeakedClosableObjects()
+                .detectLeakedRegistrationObjects()
+                .detectActivityLeaks()
+                .penaltyLog()
+                .build(),
+        )
     }
 
     override val workManagerConfiguration: Configuration
@@ -84,7 +161,7 @@ class DustvalveNextApplication : Application(), SingletonImageLoader.Factory, Co
                     OkHttpNetworkFetcherFactory(
                         callFactory = { entryPoint.okHttpClient() },
                         cacheStrategy = { CacheControlCacheStrategy() },
-                    )
+                    ),
                 )
             }
             .memoryCache {

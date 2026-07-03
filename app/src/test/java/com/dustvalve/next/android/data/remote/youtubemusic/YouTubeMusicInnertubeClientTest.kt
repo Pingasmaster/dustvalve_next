@@ -19,7 +19,10 @@ class YouTubeMusicInnertubeClientTest {
     private lateinit var server: MockWebServer
     private lateinit var visitor: YouTubeMusicVisitorDataFetcher
     private lateinit var client: YouTubeMusicInnertubeClient
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Before fun setUp() {
         server = MockWebServer()

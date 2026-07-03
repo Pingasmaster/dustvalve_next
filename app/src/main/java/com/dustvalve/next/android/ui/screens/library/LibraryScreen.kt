@@ -1,5 +1,7 @@
 package com.dustvalve.next.android.ui.screens.library
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -22,9 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import com.dustvalve.next.android.ui.components.PlaylistEditSheet
-import com.dustvalve.next.android.ui.components.ShapePickerSheet
-import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,7 +37,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -45,9 +44,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleFloatingActionButton
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import com.dustvalve.next.android.ui.components.LoadingOverlay
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -57,24 +53,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
-import com.dustvalve.next.android.R
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
+import com.dustvalve.next.android.ui.components.LoadingOverlay
+import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
-import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.components.ShapePickerSheet
+import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 
@@ -82,9 +81,9 @@ import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 @Composable
 fun LibraryScreen(
     onAlbumClick: (String) -> Unit,
-    onArtistClick: (String) -> Unit = {},
     onPlaylistClick: (String) -> Unit,
-    playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+    onArtistClick: (String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -140,6 +139,7 @@ fun LibraryScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
@@ -256,6 +256,7 @@ fun LibraryScreen(
                     onConfirm = { viewModel.deletePlaylist(item.playlist.id) },
                 )
             }
+
             is LibraryItem.AlbumItem -> {
                 DeleteLibraryItemDialog(
                     title = stringResource(R.string.library_remove_title),
@@ -265,6 +266,7 @@ fun LibraryScreen(
                     onConfirm = { viewModel.deleteFavorite(item.favoriteId) },
                 )
             }
+
             is LibraryItem.ArtistItem -> {
                 DeleteLibraryItemDialog(
                     title = stringResource(R.string.library_remove_title),
@@ -375,6 +377,7 @@ private fun LibraryList(
         items(
             count = items.size,
             key = { items[it].id },
+            contentType = { "library_item" },
         ) { index ->
             val item = items[index]
             SegmentedListItem(
@@ -397,6 +400,7 @@ private fun LibraryList(
                             onMoreClick = { menuItem = item },
                         )
                     }
+
                     is LibraryItem.AlbumItem -> {
                         LibraryAlbumListItem(
                             item = item,
@@ -405,6 +409,7 @@ private fun LibraryList(
                             onMoreClick = { menuItem = item },
                         )
                     }
+
                     is LibraryItem.ArtistItem -> {
                         LibraryArtistListItem(
                             item = item,
@@ -430,7 +435,9 @@ private fun LibraryList(
 
             // Pin/Unpin — available for all types
             ListItem(
-                headlineContent = { Text(if (item.isPinned) stringResource(R.string.library_unpin) else stringResource(R.string.library_pin)) },
+                headlineContent = {
+                    Text(if (item.isPinned) stringResource(R.string.library_unpin) else stringResource(R.string.library_pin))
+                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_push_pin),
@@ -503,6 +510,7 @@ private fun LibraryList(
                         )
                     }
                 }
+
                 is LibraryItem.AlbumItem, is LibraryItem.ArtistItem -> {
                     ListItem(
                         headlineContent = { Text(stringResource(R.string.library_change_shape)) },
@@ -547,12 +555,7 @@ private fun LibraryList(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun LibraryAlbumListItem(
-    item: LibraryItem.AlbumItem,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    onMoreClick: () -> Unit,
-) {
+private fun LibraryAlbumListItem(item: LibraryItem.AlbumItem, onClick: () -> Unit, onLongClick: () -> Unit, onMoreClick: () -> Unit) {
     val hapticFeedback = LocalHapticFeedback.current
     val thumbnailShape = resolveLibraryItemShape(item.shapeKey, "album")
 
@@ -645,12 +648,7 @@ private fun LibraryAlbumListItem(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun LibraryArtistListItem(
-    item: LibraryItem.ArtistItem,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    onMoreClick: () -> Unit,
-) {
+private fun LibraryArtistListItem(item: LibraryItem.ArtistItem, onClick: () -> Unit, onLongClick: () -> Unit, onMoreClick: () -> Unit) {
     val hapticFeedback = LocalHapticFeedback.current
     val thumbnailShape = resolveLibraryItemShape(item.shapeKey, "artist")
 
@@ -751,13 +749,7 @@ private fun LibraryArtistListItem(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun DeleteLibraryItemDialog(
-    title: String,
-    message: String,
-    confirmText: String,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
+private fun DeleteLibraryItemDialog(title: String, message: String, confirmText: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -780,9 +772,7 @@ private fun DeleteLibraryItemDialog(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun EmptyState(
-    modifier: Modifier = Modifier,
-) {
+private fun EmptyState(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier,
         contentAlignment = Alignment.Center,

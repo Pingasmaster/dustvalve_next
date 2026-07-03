@@ -9,11 +9,14 @@ import org.junit.Test
 class YouTubePlayerParserTest {
 
     private val parser = YouTubePlayerParser()
-    private val json = Json { isLenient = true; ignoreUnknownKeys = true }
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Test fun `parsePlayerStreamInfo picks highest-bitrate audio from real ANDROID_VR fixture`() {
         val info = parser.parsePlayerStreamInfo(
-            Fixtures.load("player_android_vr_jNQXAC9IVRw.json")
+            Fixtures.load("player_android_vr_jNQXAC9IVRw.json"),
         )
         assertThat(info.streamUrl).startsWith("http")
         assertThat(info.bitrate).isGreaterThan(50_000)
@@ -25,7 +28,7 @@ class YouTubePlayerParserTest {
 
     @Test fun `parsePlayerStreamInfo IOS fixture also yields direct audio URL`() {
         val info = parser.parsePlayerStreamInfo(
-            Fixtures.load("player_ios_jNQXAC9IVRw.json")
+            Fixtures.load("player_ios_jNQXAC9IVRw.json"),
         )
         assertThat(info.streamUrl).startsWith("http")
         assertThat(info.bitrate).isGreaterThan(50_000)
@@ -52,7 +55,7 @@ class YouTubePlayerParserTest {
               {"mimeType":"audio/mp4; codecs=\"mp4a.40.2\"","bitrate":128000,"url":"https://aac.example/x"},
               {"mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000,"url":"https://opus.example/x"}
             ]}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val info = parser.parsePlayerStreamInfo(tied)
         assertThat(info.format).isEqualTo(AudioFormat.OPUS)
@@ -66,7 +69,7 @@ class YouTubePlayerParserTest {
               {"mimeType":"audio/webm; codecs=\"opus\"","bitrate":48000,"url":"https://opus.example/lo"},
               {"mimeType":"audio/mp4; codecs=\"mp4a.40.2\"","bitrate":256000,"url":"https://aac.example/hi"}
             ]}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val info = parser.parsePlayerStreamInfo(mixed)
         assertThat(info.format).isEqualTo(AudioFormat.AAC)
@@ -76,7 +79,7 @@ class YouTubePlayerParserTest {
 
     @Test fun `parsePlayerStreamInfo throws when no streamingData`() {
         val empty = json.parseToJsonElement(
-            """{"playabilityStatus":{"status":"LOGIN_REQUIRED"}}"""
+            """{"playabilityStatus":{"status":"LOGIN_REQUIRED"}}""",
         )
         val ex = runCatching { parser.parsePlayerStreamInfo(empty) }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
@@ -90,7 +93,7 @@ class YouTubePlayerParserTest {
             {"streamingData":{"adaptiveFormats":[
               {"mimeType":"video/mp4","bitrate":500000,"url":"https://x"}
             ]}, "playabilityStatus":{"status":"OK"}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val ex = runCatching { parser.parsePlayerStreamInfo(videoOnly) }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
@@ -103,7 +106,7 @@ class YouTubePlayerParserTest {
             {"streamingData":{"adaptiveFormats":[
               {"mimeType":"audio/webm; codecs=\"opus\"","bitrate":128000,"signatureCipher":"x"}
             ]}}
-            """.trimIndent()
+            """.trimIndent(),
         )
         val ex = runCatching { parser.parsePlayerStreamInfo(noUrl) }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)

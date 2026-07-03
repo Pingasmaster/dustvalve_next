@@ -62,29 +62,44 @@ class YouTubeMusicSearchParser @Inject constructor() {
                 url = "https://www.youtube.com/watch?v=$watch",
                 imageUrl = thumbnail,
                 artist = subtitle,
-                album = null, genre = null, releaseDate = null,
+                album = null,
+                genre = null,
+                releaseDate = null,
             )
+
             browseId != null && pageType?.contains("ARTIST") == true -> SearchResult(
                 type = SearchResultType.YOUTUBE_ARTIST,
                 name = title,
                 url = "https://www.youtube.com/channel/$browseId",
                 imageUrl = thumbnail,
-                artist = null, album = null, genre = null, releaseDate = null,
+                artist = null,
+                album = null,
+                genre = null,
+                releaseDate = null,
             )
+
             browseId != null && pageType?.contains("ALBUM") == true -> SearchResult(
                 type = SearchResultType.YOUTUBE_ALBUM,
                 name = title,
                 url = "https://www.youtube.com/playlist?list=${browseId.removePrefix("VL")}",
                 imageUrl = thumbnail,
-                artist = subtitle, album = null, genre = null, releaseDate = null,
+                artist = subtitle,
+                album = null,
+                genre = null,
+                releaseDate = null,
             )
+
             browseId != null -> SearchResult(
                 type = SearchResultType.YOUTUBE_PLAYLIST,
                 name = title,
                 url = "https://www.youtube.com/playlist?list=${browseId.removePrefix("VL")}",
                 imageUrl = thumbnail,
-                artist = subtitle, album = null, genre = null, releaseDate = null,
+                artist = subtitle,
+                album = null,
+                genre = null,
+                releaseDate = null,
             )
+
             else -> null
         }
     }
@@ -141,6 +156,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
                 genre = null,
                 releaseDate = null,
             )
+
             browseId != null && pageType?.contains("ARTIST") == true -> SearchResult(
                 type = SearchResultType.YOUTUBE_ARTIST,
                 name = title,
@@ -151,6 +167,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
                 genre = null,
                 releaseDate = null,
             )
+
             browseId != null && pageType?.contains("ALBUM") == true -> SearchResult(
                 type = SearchResultType.YOUTUBE_ALBUM,
                 name = title,
@@ -161,6 +178,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
                 genre = null,
                 releaseDate = null,
             )
+
             browseId != null && pageType?.contains("PLAYLIST") == true -> SearchResult(
                 type = SearchResultType.YOUTUBE_PLAYLIST,
                 name = title,
@@ -171,6 +189,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
                 genre = null,
                 releaseDate = null,
             )
+
             else -> null
         }
     }

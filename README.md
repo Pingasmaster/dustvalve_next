@@ -10,30 +10,23 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Android-8.0%E2%80%9316-FFA726?logo=android&logoColor=white" alt="Min SDK 26 (legacy backport)"/>
-  <img src="https://img.shields.io/badge/branch-legacy--android8-orange" alt="Legacy branch"/>
+  <img src="https://img.shields.io/badge/Android-8%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 26 (default install)"/>
   <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin"/>
+  <img src="https://img.shields.io/badge/Jetpack_Compose-1.12-4285F4?logo=jetpackcompose&logoColor=white" alt="Compose"/>
   <img src="https://img.shields.io/badge/Material_3-Expressive-E8DEF8" alt="M3 Expressive"/>
   <img src="https://img.shields.io/badge/License-GPLv3-blue" alt="GPLv3"/>
 </p>
 
-> ## Legacy backport branch
->
-> This is the **`legacy-android8`** branch: the **default-shipped** backport that runs on **Android 8.0 (API 26) through Android 16 (API 36)**. It is updated manually by cherry-picking from `master` and may lag behind. The official build APK is named **`dustvalve_next.apk`** and is the main download button on the project README; the future Android 17+ build is named **`dustvalve_next-future.apk`** and ships alongside it on the same GitHub Release.
->
-> **On Android 17?** Use the [`master` branch](https://github.com/Pingasmaster/dustvalve_next/tree/master) and grab `dustvalve_next-future.apk` from the [latest release](https://github.com/Pingasmaster/dustvalve_next/releases/latest) for the bleeding-edge stack with the status-bar Live Updates download chip.
->
-> Known degradations vs. master:
-> - No predictive-back gesture animation (API 33+ only).
-> - Status/nav bars may not be fully edge-to-edge on Android 8-9.
-> - Notification posting works without a runtime prompt on API < 33 (no degradation, just behavior).
-
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download latest APK" width="220"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download for Android 8 to Android 16" width="260"/></a>
 </p>
 
 <p align="center">
-  <sub>On <b>Android 16 QPR1+</b> and want the future build with the status-bar Live Updates download chip and the full bleeding-edge stack? Grab <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a> (built from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/master"><code>master</code></a> branch — minSdk 36, rises to 37 once Robolectric supports API 37). The default <code>dustvalve_next.apk</code> button above covers Android 8.0 → 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch.</sub>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><img src="./download-future.svg" alt="Android 17 only version" width="260"/></a>
+</p>
+
+<p align="center">
+  <sub>The first button serves Android 8.0 to Android 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch. The second button is the battery-optimized, perf-focused, bleeding-edge stack build for <b>Android 17</b> only (<a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a>).</sub>
 </p>
 
 ---

@@ -28,10 +28,7 @@ internal object YouTubeYtcfgExtractor {
         isLenient = true
     }
 
-    data class YtcfgData(
-        val visitorData: String,
-        val clientVersion: String?,
-    )
+    data class YtcfgData(val visitorData: String, val clientVersion: String?)
 
     /**
      * Returns the first ytcfg body that yields a non-empty visitorData, or
@@ -42,8 +39,13 @@ internal object YouTubeYtcfgExtractor {
      */
     fun extract(html: String): YtcfgData? {
         for (body in allYtcfgBodies(html)) {
-            val obj = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull()
-                ?: continue
+            val obj = try {
+                json.parseToJsonElement(body).jsonObject
+            } catch (_: kotlinx.serialization.SerializationException) {
+                continue
+            } catch (_: IllegalArgumentException) {
+                continue
+            }
             val visitor = obj["INNERTUBE_CONTEXT"]?.jsonObject
                 ?.get("client")?.jsonObject
                 ?.get("visitorData")?.jsonPrimitive?.content
@@ -96,14 +98,18 @@ internal object YouTubeYtcfgExtractor {
                     i = skipQuotedString(s, i, c)
                     if (i < 0) return -1
                 }
+
                 '{' -> {
-                    depth++; i++
+                    depth++
+                    i++
                 }
+
                 '}' -> {
                     depth--
                     if (depth == 0) return i
                     i++
                 }
+
                 else -> i++
             }
         }
@@ -129,5 +135,4 @@ internal object YouTubeYtcfgExtractor {
         }
         return -1
     }
-
 }

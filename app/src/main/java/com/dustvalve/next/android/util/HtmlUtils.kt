@@ -15,7 +15,7 @@ object HtmlUtils {
         // Match patterns like: var TralbumData = {...}; or variableName = {...};
         val varPattern = Regex(
             """(?:var\s+)?${Regex.escape(variableName)}\s*=\s*""",
-            RegexOption.MULTILINE
+            RegexOption.MULTILINE,
         )
         val matchResult = varPattern.find(html) ?: return null
         val startOfJson = matchResult.range.last + 1
@@ -94,6 +94,7 @@ object HtmlUtils {
 
             when (c) {
                 openChar -> depth++
+
                 closeChar -> {
                     depth--
                     if (depth == 0) {
@@ -158,49 +159,6 @@ object HtmlUtils {
     }
 
     /**
-     * Strips HTML tags and decodes common HTML entities.
-     */
-    fun cleanHtml(html: String): String {
-        // Remove HTML tags
-        var cleaned = html.replace(Regex("<[^>]*>"), "")
-
-        // Decode numeric HTML entities first (before named entities to prevent double-decoding)
-        // Decimal entities
-        cleaned = Regex("&#(\\d+);").replace(cleaned) { matchResult ->
-            val code = matchResult.groupValues[1].toIntOrNull()
-            if (code != null && Character.isValidCodePoint(code)) {
-                String(Character.toChars(code))
-            } else {
-                matchResult.value
-            }
-        }
-
-        // Hexadecimal entities
-        cleaned = Regex("&#x([0-9a-fA-F]+);").replace(cleaned) { matchResult ->
-            val code = matchResult.groupValues[1].toIntOrNull(16)
-            if (code != null && Character.isValidCodePoint(code)) {
-                String(Character.toChars(code))
-            } else {
-                matchResult.value
-            }
-        }
-
-        // Decode common named HTML entities — &amp; must be LAST to prevent double-decoding
-        cleaned = cleaned
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-
-        // Collapse whitespace
-        cleaned = cleaned.replace(Regex("\\s+"), " ").trim()
-
-        return cleaned
-    }
-
-    /**
      * Extracts the content attribute from a meta tag with the given property or name.
      *
      * Matches patterns like:
@@ -212,27 +170,27 @@ object HtmlUtils {
         // Try double-quoted content first, then single-quoted.
         // Each pattern only excludes its own delimiter, so the other quote type is allowed.
         val dqPattern = Regex(
-            """<meta\s+[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*content\s*=\s*"([^"]*)"[^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*"([^"]*)"[^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         dqPattern.find(html)?.let { return it.groupValues[1] }
 
         val sqPattern = Regex(
-            """<meta\s+[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*content\s*=\s*'([^']*)'[^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*'([^']*)'[^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         sqPattern.find(html)?.let { return it.groupValues[1] }
 
         // Also try reversed attribute order: content before property/name
         val dqReversed = Regex(
-            """<meta\s+[^>]*content\s*=\s*"([^"]*)"[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*content\s*=\s*"([^"]*)"[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         dqReversed.find(html)?.let { return it.groupValues[1] }
 
         val sqReversed = Regex(
-            """<meta\s+[^>]*content\s*=\s*'([^']*)'[^>]*(?:property|name)\s*=\s*["']${escapedProp}["'][^>]*/?>""",
-            RegexOption.IGNORE_CASE
+            """<meta\s+[^>]*content\s*=\s*'([^']*)'[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
+            RegexOption.IGNORE_CASE,
         )
         sqReversed.find(html)?.let { return it.groupValues[1] }
 

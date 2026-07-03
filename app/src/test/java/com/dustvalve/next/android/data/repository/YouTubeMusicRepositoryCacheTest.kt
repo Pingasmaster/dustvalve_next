@@ -43,7 +43,11 @@ class YouTubeMusicRepositoryCacheTest {
         ytPlayerParser = mockk(relaxed = true)
         homeCache = mockk(relaxed = true)
         repo = YouTubeMusicRepositoryImpl(
-            client, parser, searchParser, ytClient, ytPlayerParser,
+            client,
+            parser,
+            searchParser,
+            ytClient,
+            ytPlayerParser,
             homeCache,
         )
     }
@@ -53,7 +57,7 @@ class YouTubeMusicRepositoryCacheTest {
         coEvery { homeCache.getByKey("home") } returns YouTubeMusicHomeCacheEntity(
             key = "home",
             feedJson = "{}",
-            cachedAt = System.currentTimeMillis(),  // Fresh — no background refresh.
+            cachedAt = System.currentTimeMillis(), // Fresh — no background refresh.
         )
         val cachedFeed = YouTubeMusicHomeFeed(chips = emptyList(), shelves = emptyList())
         every { parser.parseHome(any()) } returns cachedFeed
