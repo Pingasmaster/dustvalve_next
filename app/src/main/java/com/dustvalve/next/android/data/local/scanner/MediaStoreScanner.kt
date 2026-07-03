@@ -6,21 +6,27 @@ import android.provider.MediaStore
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.deleteByIds
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MediaStoreScanner @Inject constructor(@param:ApplicationContext private val context: Context, private val trackDao: TrackDao) {
+class MediaStoreScanner @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+    private val trackDao: TrackDao,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     companion object {
         private const val FOLDER_URI_SENTINEL = "mediastore"
     }
 
-    suspend fun scan(): ScanResult = withContext(Dispatchers.IO) {
+    suspend fun scan(): ScanResult = withContext(ioDispatcher) {
         val collection = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
         val projection = arrayOf(

@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.data.remote.youtubemusic
 
-import kotlinx.coroutines.Dispatchers
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -18,6 +20,7 @@ import javax.inject.Singleton
 open class YouTubeMusicInnertubeClient @Inject constructor(
     sharedOkHttpClient: OkHttpClient,
     private val visitorDataFetcher: YouTubeMusicVisitorDataFetcher,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     /** Overridable in tests to point at MockWebServer. */
@@ -93,7 +96,7 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
     }
 
     private suspend fun post(endpoint: String, visitor: YouTubeMusicVisitorDataFetcher.VisitorConfig, body: JsonObject): JsonElement =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val request = Request.Builder()
                 .url("$baseUrl/$endpoint")
                 .header("Origin", "https://music.youtube.com")

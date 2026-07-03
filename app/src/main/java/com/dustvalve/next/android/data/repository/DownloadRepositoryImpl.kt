@@ -15,6 +15,8 @@ import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.data.storage.folder.DedicatedFolderPaths
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.PurchaseInfo
@@ -27,7 +29,7 @@ import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.download.isPauseCancellation
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -54,6 +56,7 @@ class DownloadRepositoryImpl @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
     private val notificationCenter: DownloadNotificationCenter,
     @param:ApplicationContext private val context: Context,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : DownloadRepository {
 
     override suspend fun downloadAlbum(album: Album) {
@@ -106,7 +109,7 @@ class DownloadRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun downloadTrack(track: Track, formatOverride: AudioFormat?) = withContext(Dispatchers.IO) {
+    override suspend fun downloadTrack(track: Track, formatOverride: AudioFormat?) = withContext(ioDispatcher) {
         notificationCenter.trackStarted(track.id, track.title)
         var success = false
         try {
@@ -427,7 +430,7 @@ class DownloadRepositoryImpl @Inject constructor(
         storageTracker.notifyChanged()
     }
 
-    override suspend fun clearAll() = withContext(Dispatchers.IO) {
+    override suspend fun clearAll() = withContext(ioDispatcher) {
         // Drop every DB row + every file under downloads/ (including the
         // images subdir managed by Coil). ExoPlayer's media_cache lives in
         // cacheDir/media_cache and is wiped here too — Media3's SimpleCache

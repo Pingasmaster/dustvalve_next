@@ -51,7 +51,7 @@ class AppUpdateControllerTest {
             apkDownloadUrl = "https://releases/9.9.9/app-release.apk",
             releaseNotes = "notes",
         )
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
 
         controller.checkSilently()
         advanceUntilIdle()
@@ -63,7 +63,7 @@ class AppUpdateControllerTest {
 
     @Test fun `checkSilently keeps state Idle when no update is available`() = runTest(dispatcher) {
         coEvery { service.checkForUpdate() } returns null
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
 
         controller.checkSilently()
         advanceUntilIdle()
@@ -73,7 +73,7 @@ class AppUpdateControllerTest {
 
     @Test fun `checkSilently swallows failures - no message, no state change`() = runTest(dispatcher) {
         coEvery { service.checkForUpdate() } throws IOException("network dead")
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
         val messagesSeen = mutableListOf<Any>()
         backgroundScope.launch {
             controller.messages.collect { messagesSeen += it }
@@ -93,7 +93,7 @@ class AppUpdateControllerTest {
             apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
 
         controller.checkSilently()
         controller.checkSilently()
@@ -110,7 +110,7 @@ class AppUpdateControllerTest {
             apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
 
         controller.checkSilently()
         advanceUntilIdle()
@@ -127,7 +127,7 @@ class AppUpdateControllerTest {
             apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
 
         controller.checkManually()
         advanceUntilIdle()
@@ -146,7 +146,7 @@ class AppUpdateControllerTest {
             apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
         // Simulate an in-flight download started by the manual path.
         controller::class.java.getDeclaredField("_state").apply {
             isAccessible = true
@@ -163,7 +163,7 @@ class AppUpdateControllerTest {
 
     @Test fun `checkManually emits no-update message on null`() = runTest(dispatcher) {
         coEvery { service.checkForUpdate() } returns null
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
 
         controller.messages.test {
             controller.checkManually()
@@ -177,7 +177,7 @@ class AppUpdateControllerTest {
 
     @Test fun `checkManually emits check-failed message on exception`() = runTest(dispatcher) {
         coEvery { service.checkForUpdate() } throws IOException("boom")
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
 
         controller.messages.test {
             controller.checkManually()
@@ -194,7 +194,7 @@ class AppUpdateControllerTest {
             apkDownloadUrl = "https://x/app-release.apk",
             releaseNotes = "notes",
         )
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
         controller.checkSilently()
         advanceUntilIdle()
         assertThat(controller.state.value).isInstanceOf(UpdateUiState.Available::class.java)
@@ -205,7 +205,7 @@ class AppUpdateControllerTest {
     }
 
     @Test fun `dismiss is a no-op while Downloading (user can't abort silently)`() = runTest(dispatcher) {
-        val controller = AppUpdateController(service, settingsDataStore).also { it.scope = this }
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
         controller::class.java.getDeclaredField("_state").apply {
             isAccessible = true
             @Suppress("UNCHECKED_CAST")

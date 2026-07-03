@@ -435,9 +435,6 @@ private fun LibraryList(
 
             // Pin/Unpin — available for all types
             ListItem(
-                headlineContent = {
-                    Text(if (item.isPinned) stringResource(R.string.library_unpin) else stringResource(R.string.library_pin))
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_push_pin),
@@ -452,14 +449,15 @@ private fun LibraryList(
                     }
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(if (item.isPinned) stringResource(R.string.library_unpin) else stringResource(R.string.library_pin))
+            }
 
             when (item) {
                 is LibraryItem.PlaylistItem -> {
                     val playlist = item.playlist
                     if (playlist.isEditable) {
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.library_modify)) },
                             leadingContent = {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_edit),
@@ -471,10 +469,11 @@ private fun LibraryList(
                                 onRenameClick(playlist)
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(stringResource(R.string.library_modify))
+                        }
                     }
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.library_export_playlist)) },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_cloud_download),
@@ -486,15 +485,11 @@ private fun LibraryList(
                             onExportClick(playlist)
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                    ) {
+                        Text(stringResource(R.string.library_export_playlist))
+                    }
                     if (playlist.isDeletable) {
                         ListItem(
-                            headlineContent = {
-                                Text(
-                                    text = stringResource(R.string.common_action_delete),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            },
                             leadingContent = {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_delete),
@@ -507,13 +502,17 @@ private fun LibraryList(
                                 onDeleteClick(item)
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(
+                                text = stringResource(R.string.common_action_delete),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
 
                 is LibraryItem.AlbumItem, is LibraryItem.ArtistItem -> {
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.library_change_shape)) },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_palette),
@@ -525,14 +524,10 @@ private fun LibraryList(
                             onChangeShapeClick(item)
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                    ) {
+                        Text(stringResource(R.string.library_change_shape))
+                    }
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = stringResource(R.string.library_remove_from_library),
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_delete),
@@ -545,7 +540,12 @@ private fun LibraryList(
                             onDeleteClick(item)
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.library_remove_from_library),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(28.dp))
@@ -599,14 +599,6 @@ private fun LibraryAlbumListItem(item: LibraryItem.AlbumItem, onClick: () -> Uni
                 )
             }
         },
-        headlineContent = {
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (item.isPinned) {
@@ -643,7 +635,14 @@ private fun LibraryAlbumListItem(item: LibraryItem.AlbumItem, onClick: () -> Uni
                 )
             }
         },
-    )
+    ) {
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -701,14 +700,6 @@ private fun LibraryArtistListItem(item: LibraryItem.ArtistItem, onClick: () -> U
                 }
             }
         },
-        headlineContent = {
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (item.isPinned) {
@@ -744,7 +735,14 @@ private fun LibraryArtistListItem(item: LibraryItem.ArtistItem, onClick: () -> U
                 )
             }
         },
-    )
+    ) {
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

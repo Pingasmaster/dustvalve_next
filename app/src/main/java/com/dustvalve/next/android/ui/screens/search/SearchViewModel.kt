@@ -8,6 +8,8 @@ import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.data.mapper.toDomain
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
@@ -15,7 +17,7 @@ import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +52,7 @@ class SearchViewModel @Inject constructor(
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
     private val settingsDataStore: SettingsDataStore,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -138,7 +141,7 @@ class SearchViewModel @Inject constructor(
     fun playLocalTrack(trackId: String, playerViewModel: PlayerViewModel) {
         viewModelScope.launch {
             try {
-                val entity = withContext(Dispatchers.IO) { trackDao.getById(trackId) } ?: return@launch
+                val entity = withContext(ioDispatcher) { trackDao.getById(trackId) } ?: return@launch
                 val isFav = favoriteDao.isFavorite(trackId)
                 val track = entity.toDomain(isFav)
                 playerViewModel.playTrack(track)
@@ -257,7 +260,7 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    private suspend fun searchLocalTracks(query: String): List<SearchResult> = withContext(Dispatchers.IO) {
+    private suspend fun searchLocalTracks(query: String): List<SearchResult> = withContext(ioDispatcher) {
         trackDao.searchLocalTracks(query).map { entity ->
             SearchResult(
                 type = SearchResultType.LOCAL_TRACK,

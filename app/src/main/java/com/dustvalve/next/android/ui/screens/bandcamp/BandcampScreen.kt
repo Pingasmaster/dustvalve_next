@@ -906,13 +906,6 @@ private fun SearchResultItem(result: SearchResult) {
     val artistLabel = stringResource(R.string.bandcamp_type_artist)
     val localLabel = stringResource(R.string.bandcamp_type_local)
     ListItem(
-        headlineContent = {
-            Text(
-                text = result.name,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             val supporting = buildString {
                 when (result.type) {
@@ -994,7 +987,13 @@ private fun SearchResultItem(result: SearchResult) {
             }
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
+    ) {
+        Text(
+            text = result.name,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -1085,14 +1084,6 @@ private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> 
                     },
             ) {
                 ListItem(
-                    headlineContent = {
-                        Text(
-                            text = album.title,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = Color.White,
-                        )
-                    },
                     supportingContent = {
                         Text(
                             text = album.artist,
@@ -1113,7 +1104,14 @@ private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> 
                         )
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                )
+                ) {
+                    Text(
+                        text = album.title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = Color.White,
+                    )
+                }
             }
         }
     }

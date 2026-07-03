@@ -523,13 +523,6 @@ fun YouTubeScreen(
                                             ),
                                     ) {
                                         ListItem(
-                                            headlineContent = {
-                                                Text(
-                                                    text = result.name,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                )
-                                            },
                                             supportingContent = {
                                                 result.artist?.let {
                                                     Text(
@@ -598,7 +591,13 @@ fun YouTubeScreen(
                                                 }
                                             },
                                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                        )
+                                        ) {
+                                            Text(
+                                                text = result.name,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
                                     }
                                 }
 

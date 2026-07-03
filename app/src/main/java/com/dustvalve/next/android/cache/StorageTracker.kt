@@ -4,9 +4,11 @@ import android.content.Context
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.CacheInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,6 +29,7 @@ class StorageTracker @Inject constructor(
     private val downloadDao: DownloadDao,
     private val settingsDataStore: SettingsDataStore,
     @param:ApplicationContext private val context: Context,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     private val _sizeUpdateTrigger = MutableStateFlow(0L)
@@ -57,10 +60,10 @@ class StorageTracker @Inject constructor(
             downloadSizeBytes = pinnedSize,
             usagePercent = usagePercent,
         )
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(ioDispatcher)
 
     /** How many bytes the pool exceeds the configured limit by, or 0 if within limit. */
-    suspend fun getOverageBytes(): Long = withContext(Dispatchers.IO) {
+    suspend fun getOverageBytes(): Long = withContext(ioDispatcher) {
         val limit = settingsDataStore.getStorageLimitSync()
         if (limit == Long.MAX_VALUE) return@withContext 0L
         (getEffectiveTotalSize() - limit).coerceAtLeast(0L)

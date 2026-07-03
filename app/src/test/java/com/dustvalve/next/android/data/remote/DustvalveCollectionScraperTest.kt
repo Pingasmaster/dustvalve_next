@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.remote
 
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
@@ -15,7 +16,7 @@ class DustvalveCollectionScraperTest {
 
     @Before fun setUp() {
         setup = TlsTestServer.start()
-        scraper = DustvalveCollectionScraper(setup.client)
+        scraper = DustvalveCollectionScraper(setup.client, UnconfinedTestDispatcher())
     }
 
     @After fun tearDown() {

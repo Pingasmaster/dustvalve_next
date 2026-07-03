@@ -15,9 +15,11 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -58,8 +60,9 @@ class FolderMirror @Inject constructor(
     private val ytVideoDao: YouTubeVideoCacheDao,
     private val ytPlaylistDao: YouTubePlaylistCacheDao,
     private val ytmHomeDao: YouTubeMusicHomeCacheDao,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private var activeJobs: MutableList<Job> = mutableListOf()
     private val metadataJobs: MutableList<Job> = mutableListOf()
 
@@ -136,6 +139,7 @@ class FolderMirror @Inject constructor(
                 DedicatedFolderPaths.FILE_FAVORITES,
                 FavoritesFile.serializer(),
                 FavoritesFile(list.map { it.toSnapshot() }),
+                ioDispatcher,
             )
         }
         jobs += mirrorFlow(trackDao.getAllFlow()) { list, uri ->
@@ -145,6 +149,7 @@ class FolderMirror @Inject constructor(
                 DedicatedFolderPaths.FILE_TRACKS,
                 TracksFile.serializer(),
                 TracksFile(list.map { it.toSnapshot() }),
+                ioDispatcher,
             )
         }
         jobs += mirrorFlow(albumDao.getAllFlow()) { list, uri ->
@@ -154,6 +159,7 @@ class FolderMirror @Inject constructor(
                 DedicatedFolderPaths.FILE_ALBUMS,
                 AlbumsFile.serializer(),
                 AlbumsFile(list.map { it.toSnapshot() }),
+                ioDispatcher,
             )
         }
         jobs += mirrorFlow(artistDao.getAllFlow()) { list, uri ->
@@ -163,6 +169,7 @@ class FolderMirror @Inject constructor(
                 DedicatedFolderPaths.FILE_ARTISTS,
                 ArtistsFile.serializer(),
                 ArtistsFile(list.map { it.toSnapshot() }),
+                ioDispatcher,
             )
         }
         jobs += mirrorFlow(downloadDao.getAll()) { list, uri ->
@@ -172,6 +179,7 @@ class FolderMirror @Inject constructor(
                 DedicatedFolderPaths.FILE_DOWNLOADS,
                 DownloadsFile.serializer(),
                 DownloadsFile(list.map { it.toSnapshot() }),
+                ioDispatcher,
             )
         }
         jobs += mirrorFlow(
@@ -184,6 +192,7 @@ class FolderMirror @Inject constructor(
                 DedicatedFolderPaths.FILE_HISTORY,
                 HistoryFile.serializer(),
                 HistoryFile(tracks.map { it.toSnapshot() }, searches.map { it.toSnapshot() }),
+                ioDispatcher,
             )
         }
 
@@ -195,6 +204,7 @@ class FolderMirror @Inject constructor(
                 DedicatedFolderPaths.FILE_SETTINGS,
                 SettingsFile.serializer(),
                 captureSettingsFile(),
+                ioDispatcher,
             )
         }
 
@@ -244,6 +254,7 @@ class FolderMirror @Inject constructor(
             DedicatedFolderPaths.FILE_PLAYLISTS,
             PlaylistsFile.serializer(),
             PlaylistsFile(playlists, mappings),
+            ioDispatcher,
         )
     }
 

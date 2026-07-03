@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.remote
 
 import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import okhttp3.OkHttpClient
 import org.junit.Test
 
@@ -18,7 +19,7 @@ import org.junit.Test
  */
 class DustvalveAlbumPriceTest {
 
-    private val scraper = DustvalveAlbumScraper(OkHttpClient())
+    private val scraper = DustvalveAlbumScraper(OkHttpClient(), UnconfinedTestDispatcher())
 
     private fun load(name: String): String = checkNotNull(this::class.java.classLoader)
         .getResourceAsStream("fixtures/bandcamp/$name")

@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.dustvalve.next.android.BuildConfig
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -35,7 +37,11 @@ import kotlin.coroutines.coroutineContext
  * "Automatic update checks" toggle (Settings → About); the manual button never.
  */
 @Singleton
-open class AppUpdateService @Inject constructor(private val client: OkHttpClient, @param:ApplicationContext private val context: Context) {
+open class AppUpdateService @Inject constructor(
+    private val client: OkHttpClient,
+    @param:ApplicationContext private val context: Context,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     /**
      * Overridable in tests so MockWebServer can answer the releases GET.
@@ -86,7 +92,7 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
      *         GitHub is the same or older than the installed build.
      * @throws IOException on network or parse failure.
      */
-    open suspend fun checkForUpdate(): AvailableUpdate? = withContext(Dispatchers.IO) {
+    open suspend fun checkForUpdate(): AvailableUpdate? = withContext(ioDispatcher) {
         val request = Request.Builder()
             .url(releasesUrl)
             .header("Accept", "application/vnd.github.v3+json")
@@ -160,7 +166,7 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
             tempFile.copyTo(targetFile, overwrite = true)
             tempFile.delete()
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(ioDispatcher)
 
     /**
      * Hands the downloaded APK to the system installer via FileProvider.

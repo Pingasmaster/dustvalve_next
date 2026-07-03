@@ -150,19 +150,6 @@ fun MusicRow(
                 }
             }
         },
-        headlineContent = {
-            Text(
-                text = track.title,
-                style = if (isCurrentTrack) {
-                    MaterialTheme.typography.titleMediumEmphasized
-                } else {
-                    MaterialTheme.typography.titleMedium
-                },
-                color = headlineColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             val supporting = supportingOverride ?: defaultSupportingText(track, priceSuffix)
             if (supporting.isNotEmpty()) {
@@ -185,7 +172,19 @@ fun MusicRow(
             isDownloading = isDownloading,
             dragHandle = dragHandle,
         ),
-    )
+    ) {
+        Text(
+            text = track.title,
+            style = if (isCurrentTrack) {
+                MaterialTheme.typography.titleMediumEmphasized
+            } else {
+                MaterialTheme.typography.titleMedium
+            },
+            color = headlineColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 private fun defaultSupportingText(track: Track, priceSuffix: String?): String {

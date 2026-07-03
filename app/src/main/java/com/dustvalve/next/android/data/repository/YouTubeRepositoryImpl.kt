@@ -10,14 +10,16 @@ import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeNextParse
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
@@ -43,9 +45,10 @@ class YouTubeRepositoryImpl @Inject constructor(
     private val videoCache: YouTubeVideoCacheDao,
     private val playlistCache: YouTubePlaylistCacheDao,
     private val youTubeMusicRepository: com.dustvalve.next.android.domain.repository.YouTubeMusicRepository,
+    @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) : YouTubeRepository {
 
-    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val backgroundScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val json = Json { ignoreUnknownKeys = true }
     private val stringListSerializer = ListSerializer(String.serializer())
 

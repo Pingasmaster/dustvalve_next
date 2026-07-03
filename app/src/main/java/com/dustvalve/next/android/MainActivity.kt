@@ -53,6 +53,8 @@ import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.storage.folder.FolderHealthChecker
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.data.storage.folder.FolderRehydrator
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
@@ -68,7 +70,7 @@ import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -105,6 +107,10 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var appUpdateController: com.dustvalve.next.android.update.AppUpdateController
+
+    @Inject
+    @Dispatcher(AppDispatchers.IO)
+    lateinit var ioDispatcher: CoroutineDispatcher
 
     sealed interface BootState {
         object Loading : BootState
@@ -171,7 +177,7 @@ class MainActivity : ComponentActivity() {
 
                     BootState.DedicatedFolderUnreachable -> com.dustvalve.next.android.ui.screens.folder.DedicatedFolderErrorScreen(
                         onLocateFolder = { uri ->
-                            lifecycleScope.launch(Dispatchers.IO) {
+                            lifecycleScope.launch(ioDispatcher) {
                                 try {
                                     val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                                     try {
@@ -187,7 +193,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onTurnOff = {
-                            lifecycleScope.launch(Dispatchers.IO) {
+                            lifecycleScope.launch(ioDispatcher) {
                                 try {
                                     settingsDataStore.setDedicatedFolder(enabled = false, treeUri = null)
                                     settingsDataStore.setDedicatedFolderIncludeImageCache(false)
@@ -215,7 +221,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun triggerLocalMusicRescanIfNeeded() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(ioDispatcher) {
             try {
                 if (settingsDataStore.getLocalMusicEnabledSync() &&
                     (
@@ -232,7 +238,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun bootstrapDedicatedFolderIfNeeded() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(ioDispatcher) {
             try {
                 val enabled = settingsDataStore.getDedicatedFolderEnabledSync()
                 if (!enabled) {

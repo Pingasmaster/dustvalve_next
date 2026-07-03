@@ -12,11 +12,13 @@ import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.data.mapper.toDomain
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,6 +87,7 @@ class LocalViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val localMusicRepository: LocalMusicRepository,
     @param:ApplicationContext private val appContext: Context,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LocalUiState())
@@ -422,7 +425,7 @@ class LocalViewModel @Inject constructor(
         _uiState.update { it.copy(isSearching = true) }
         try {
             val filter = _uiState.value.searchFilter
-            val results = withContext(Dispatchers.IO) {
+            val results = withContext(ioDispatcher) {
                 val entities = trackDao.searchLocalTracks(query)
                 val ids = entities.map { it.id }
                 val favoriteIds = if (ids.isNotEmpty()) favoriteDao.getFavoriteIdsChunk(ids).toSet() else emptySet()

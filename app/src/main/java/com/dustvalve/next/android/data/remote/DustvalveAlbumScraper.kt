@@ -1,11 +1,13 @@
 package com.dustvalve.next.android.data.remote
 
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.util.HtmlUtils
 import com.dustvalve.next.android.util.NetworkUtils
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -22,7 +24,10 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class DustvalveAlbumScraper @Inject constructor(private val client: OkHttpClient) {
+class DustvalveAlbumScraper @Inject constructor(
+    private val client: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -73,7 +78,7 @@ class DustvalveAlbumScraper @Inject constructor(private val client: OkHttpClient
     @Serializable
     data class TrackFile(@SerialName("mp3-128") val mp3128: String? = null)
 
-    suspend fun scrapeAlbum(albumUrl: String, maxRedirects: Int = 3): Album = withContext(Dispatchers.IO) {
+    suspend fun scrapeAlbum(albumUrl: String, maxRedirects: Int = 3): Album = withContext(ioDispatcher) {
         require(NetworkUtils.isValidHttpsUrl(albumUrl)) { "Invalid Dustvalve URL: $albumUrl" }
 
         val request = Request.Builder()
@@ -181,7 +186,7 @@ class DustvalveAlbumScraper @Inject constructor(private val client: OkHttpClient
      * artist). Returns null on any failure (404, parse error, no defaultPrice,
      * non-positive price) so a single bad track never crashes the album view.
      */
-    suspend fun fetchTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? = withContext(Dispatchers.IO) {
+    suspend fun fetchTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? = withContext(ioDispatcher) {
         if (!NetworkUtils.isValidHttpsUrl(trackUrl)) return@withContext null
         val request = Request.Builder().url(trackUrl).build()
         val call = client.newCall(request)

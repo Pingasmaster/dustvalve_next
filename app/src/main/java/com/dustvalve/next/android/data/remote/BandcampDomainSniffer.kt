@@ -1,11 +1,13 @@
 package com.dustvalve.next.android.data.remote
 
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.ui.navigation.NavDestination
 import com.dustvalve.next.android.util.DeepLinkAction
 import com.dustvalve.next.android.util.DetectedLink
 import com.dustvalve.next.android.util.LinkResourceType
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -20,9 +22,12 @@ import javax.inject.Singleton
  * This runs only on Enter (one network GET), never while typing.
  */
 @Singleton
-class BandcampDomainSniffer @Inject constructor(private val client: OkHttpClient) {
+class BandcampDomainSniffer @Inject constructor(
+    private val client: OkHttpClient,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
     /** Fetch [url] and, if it's a Bandcamp page, return the matching [DetectedLink]. */
-    suspend fun sniff(url: String): DetectedLink? = withContext(Dispatchers.IO) {
+    suspend fun sniff(url: String): DetectedLink? = withContext(ioDispatcher) {
         val request = Request.Builder().url(url).header("User-Agent", USER_AGENT).build()
         val html = try {
             client.newCall(request).execute().use { response ->

@@ -8,8 +8,10 @@ import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -40,11 +42,12 @@ class StorageMigrator @Inject constructor(
     private val database: DustvalveNextDatabase,
     private val downloadDao: DownloadDao,
     private val mirror: FolderMirror,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     data class Progress(val fraction: Float, val label: String)
 
     suspend fun migrateToFolder(treeUriStr: String, includeImages: Boolean, includeMetadata: Boolean, onProgress: (Progress) -> Unit) =
-        withContext(Dispatchers.IO) {
+        withContext(ioDispatcher) {
             val treeUri = treeUriStr.toUri()
             onProgress(Progress(0f, "Preparing folder"))
             DedicatedFolderPaths.dustvalveRoot(context, treeUri)
@@ -101,7 +104,7 @@ class StorageMigrator @Inject constructor(
             onProgress(Progress(1f, "Done"))
         }
 
-    suspend fun migrateFromFolder(onProgress: (Progress) -> Unit) = withContext(Dispatchers.IO) {
+    suspend fun migrateFromFolder(onProgress: (Progress) -> Unit) = withContext(ioDispatcher) {
         onProgress(Progress(0f, "Preparing"))
         val treeUriStr = settingsDataStore.getDedicatedFolderTreeUriSync()
         val treeUri = treeUriStr?.toUri()
@@ -157,7 +160,7 @@ class StorageMigrator @Inject constructor(
     }
 
     /** Sub-toggle: toggle the image cache mirror on/off without touching the main toggle. */
-    suspend fun setIncludeImageCache(include: Boolean) = withContext(Dispatchers.IO) {
+    suspend fun setIncludeImageCache(include: Boolean) = withContext(ioDispatcher) {
         settingsDataStore.setDedicatedFolderIncludeImageCache(include)
         val treeUri = settingsDataStore.getDedicatedFolderTreeUriSync()?.toUri() ?: return@withContext
         if (include) {
@@ -169,7 +172,7 @@ class StorageMigrator @Inject constructor(
     }
 
     /** Sub-toggle: toggle metadata cache mirror on/off. */
-    suspend fun setIncludeMetadataCache(include: Boolean) = withContext(Dispatchers.IO) {
+    suspend fun setIncludeMetadataCache(include: Boolean) = withContext(ioDispatcher) {
         settingsDataStore.setDedicatedFolderIncludeMetadataCache(include)
         // Enabling causes FolderMirror to start its metadata-cache observer,
         // which writes cache/metadata.json on the next DB change. Disabling
@@ -204,15 +207,16 @@ class StorageMigrator @Inject constructor(
             DedicatedFolderPaths.FILE_SETTINGS,
             SettingsFile.serializer(),
             settingsFile,
+            ioDispatcher,
         )
         val snap = folderSnapshotFromDb()
-        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_PLAYLISTS, PlaylistsFile.serializer(), snap.playlists)
-        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_FAVORITES, FavoritesFile.serializer(), snap.favorites)
-        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_TRACKS, TracksFile.serializer(), snap.tracks)
-        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_ALBUMS, AlbumsFile.serializer(), snap.albums)
-        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_ARTISTS, ArtistsFile.serializer(), snap.artists)
-        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_DOWNLOADS, DownloadsFile.serializer(), snap.downloads)
-        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_HISTORY, HistoryFile.serializer(), snap.history)
+        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_PLAYLISTS, PlaylistsFile.serializer(), snap.playlists, ioDispatcher)
+        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_FAVORITES, FavoritesFile.serializer(), snap.favorites, ioDispatcher)
+        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_TRACKS, TracksFile.serializer(), snap.tracks, ioDispatcher)
+        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_ALBUMS, AlbumsFile.serializer(), snap.albums, ioDispatcher)
+        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_ARTISTS, ArtistsFile.serializer(), snap.artists, ioDispatcher)
+        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_DOWNLOADS, DownloadsFile.serializer(), snap.downloads, ioDispatcher)
+        FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_HISTORY, HistoryFile.serializer(), snap.history, ioDispatcher)
         if (includeMetadata && snap.metadata != null) {
             val cache = DedicatedFolderPaths.cacheDir(context, treeUri) ?: return
             val tmpName = "${DedicatedFolderPaths.FILE_METADATA_CACHE}.tmp"

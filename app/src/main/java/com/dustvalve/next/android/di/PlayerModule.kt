@@ -149,7 +149,11 @@ object PlayerModule {
         return player
     }
 
+    // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
+    // tests substitute it globally via Dispatchers.setMain, so qualifying
+    // it would only add ceremony.
     @OptIn(UnstableApi::class)
+    @Suppress("RawDispatchersUse")
     @Provides
     @Singleton
     fun provideMediaSession(

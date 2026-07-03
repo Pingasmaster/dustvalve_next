@@ -33,6 +33,10 @@ class PlaybackService : MediaSessionService() {
     @Inject
     lateinit var mediaSession: MediaSession
 
+    // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
+    // tests substitute it globally via Dispatchers.setMain, so qualifying
+    // it would only add ceremony.
+    @Suppress("RawDispatchersUse")
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var idleStopJob: Job? = null
 

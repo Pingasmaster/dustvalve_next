@@ -10,11 +10,13 @@ import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.PlaylistEntity
 import com.dustvalve.next.android.data.local.db.entity.PlaylistTrackEntity
 import com.dustvalve.next.android.data.mapper.toDomain
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -31,6 +33,7 @@ class PlaylistRepositoryImpl @Inject constructor(
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
     private val downloadRepository: DownloadRepository,
+    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : PlaylistRepository {
 
     override fun getAllPlaylists(): Flow<List<Playlist>> {
@@ -51,11 +54,11 @@ class PlaylistRepositoryImpl @Inject constructor(
                 }
                 entity.toDomain().copy(trackCount = liveCount)
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(ioDispatcher)
     }
 
     override fun getPlaylistById(playlistId: String): Flow<Playlist?> = playlistDao.getPlaylistByIdFlow(playlistId).map { it?.toDomain() }
-        .flowOn(Dispatchers.IO)
+        .flowOn(ioDispatcher)
 
     override suspend fun getPlaylistByIdSync(playlistId: String): Playlist? = playlistDao.getPlaylistById(playlistId)?.toDomain()
 
@@ -189,7 +192,7 @@ class PlaylistRepositoryImpl @Inject constructor(
                 }
                 trackEntities.map { it.toDomain(it.id in favoriteIds) }
             }
-        }.flowOn(Dispatchers.IO)
+        }.flowOn(ioDispatcher)
     }
 
     /**
@@ -319,7 +322,7 @@ class PlaylistRepositoryImpl @Inject constructor(
         playlistDao.isTrackInPlaylist(playlistId, trackId)
 
     override fun getTrackIdsInUserPlaylists(): Flow<Set<String>> = playlistDao.getTrackIdsInUserPlaylists().map { it.toSet() }
-        .flowOn(Dispatchers.IO)
+        .flowOn(ioDispatcher)
 
     override suspend fun syncRecentPlaylist() {
         val playlist = getSystemPlaylistSync(Playlist.SystemPlaylistType.RECENT) ?: return

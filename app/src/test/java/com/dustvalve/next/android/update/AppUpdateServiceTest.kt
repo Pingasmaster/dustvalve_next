@@ -3,6 +3,7 @@ package com.dustvalve.next.android.update
 import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import io.mockk.mockk
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -23,6 +24,7 @@ class AppUpdateServiceTest {
     private lateinit var server: MockWebServer
     private val context = mockk<Context>(relaxed = true)
     private val client = OkHttpClient()
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before fun setUp() {
         server = MockWebServer()
@@ -244,7 +246,7 @@ class AppUpdateServiceTest {
 
     // --- helpers ------------------------------------------------------------
 
-    private fun testService(installed: String): AppUpdateService = object : AppUpdateService(client, context) {
+    private fun testService(installed: String): AppUpdateService = object : AppUpdateService(client, context, testDispatcher) {
         override val releasesUrl: String = server.url("/releases").toString()
         override val installedVersion: String = installed
     }

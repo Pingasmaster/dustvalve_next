@@ -42,6 +42,10 @@ fun StorageIndicator(cacheInfo: CacheInfo, modifier: Modifier = Modifier) {
         label = "storageColor",
     )
     var freeBytes by remember { mutableLongStateOf(0L) }
+    // Composables can't be Hilt-injected; the project's @Dispatcher indirection
+    // lives in Hilt-managed classes. Suppressing locally keeps the call out of
+    // the baseline filter without dragging DI plumbing into @Composable.
+    @Suppress("RawDispatchersUse")
     LaunchedEffect(cacheInfo) {
         freeBytes = withContext(Dispatchers.IO) {
             val stat = StatFs(Environment.getDataDirectory().path)

@@ -121,14 +121,6 @@ fun PlaylistListItem(
                 }
             }
         },
-        headlineContent = {
-            Text(
-                text = playlist.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             val subtitle = when {
                 playlist.isSystem -> stringResource(R.string.playlist_auto)
@@ -174,7 +166,14 @@ fun PlaylistListItem(
         } else {
             null
         },
-    )
+    ) {
+        Text(
+            text = playlist.name,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 fun getPlaylistIconRes(playlist: Playlist): Int = when (playlist.systemType) {
