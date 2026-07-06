@@ -3,7 +3,9 @@ package com.dustvalve.next.android.util
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.IOException
@@ -12,8 +14,11 @@ import javax.inject.Singleton
 
 /**
  * Cold-start diagnostics: surfaces [ApplicationExitInfo] for past process
- * deaths that weren't the user closing the app. minSdk=37 on this app means
- * the ApplicationExitInfo API (added in API 30) is always available.
+ * deaths that weren't the user closing the app. Available API 30+ on stock
+ * Android; legacy branch keeps minSdk=26, so the call site has to bail out
+ * via [Build.VERSION.SDK_INT] before touching the new ApplicationExitInfo
+ * surface (and the helpers are annotated @RequiresApi(R) to keep lint happy
+ * after the early-return guard).
  *
  * Pure logging + on-disk dump. No UI, no telemetry — the diagnostics file
  * lives under filesDir/diagnostics/exit-info-<timestamp>.txt and can be
@@ -30,9 +35,11 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
     /**
      * Best-effort: read the last few process exit reasons and dump them.
      * Bounded to 5 entries so we don't spam logcat after a long uptime.
+     * No-op on pre-API 30.
      */
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
     fun collectOnColdStart() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val reasons = am.getHistoricalProcessExitReasons(context.packageName, PID_UNQUERIED, MAX_ENTRIES)
@@ -51,6 +58,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun writeDiagnosticsFile(reasons: List<ApplicationExitInfo>) {
         try {
             val dir = File(context.filesDir, "diagnostics").apply { mkdirs() }
@@ -63,6 +71,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun ApplicationExitInfo.compactLine(): String = buildString {
         append("reason=").append(reasonName(reason))
         append(" importance=").append(importance)
@@ -73,6 +82,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         append(" process=").append(processName)
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun reasonName(reason: Int): String = when (reason) {
         ApplicationExitInfo.REASON_EXIT_SELF -> "EXIT_SELF"
         ApplicationExitInfo.REASON_CRASH -> "CRASH"
