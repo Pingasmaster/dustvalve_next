@@ -304,14 +304,13 @@ dependencies {
 
 // lintVital* runs with --fatalOnly during assembleRelease, so the
 // RawDispatchersUse error-severity entries in lint-baseline.xml are never
-// reported and the baseline looks 100% stale to this task — printing both
-// "N entries not found" and "creation variant ... different" warnings on
-// every CI build. Clearing the baseline for lintVital* only silences both,
-// while lintRelease (used by ./build.sh) keeps the baseline and continues
-// to enforce the ratchet documented in config/lint/lint.xml.
-tasks.withType<AndroidLintTask>()
-    .matching { it.name.startsWith("lintVital") }
-    .configureEach {
-        projectInputs.lintOptions.baseline.set(null as RegularFile?)
-        missingBaselineIsEmptyBaseline.set(true)
-    }
+// reported and the baseline looks 100% stale to this task — printing
+// "N entries not found" on every CI build alongside the warnings we
+// actually want to suppress. AGP 9.x seals the baseline property via
+// disallowChanges() inside the task initialization action, so we can't
+// null it out at the task level. The pragmatic fix is to keep
+// lint-baseline.xml as an EMPTY baseline (see app/lint-baseline.xml):
+// nothing for the fatal-only lint to consider stale, so no "N entries not
+// found" diagnostic. lintRelease (run separately via ./build.sh) still
+// runs full lint and reports any new warnings, but warnings don't fail
+// the build (warningsAsErrors = false).
