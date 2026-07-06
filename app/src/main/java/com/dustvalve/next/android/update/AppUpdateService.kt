@@ -40,7 +40,7 @@ import kotlin.coroutines.coroutineContext
 open class AppUpdateService @Inject constructor(
     private val client: OkHttpClient,
     @param:ApplicationContext private val context: Context,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     /**

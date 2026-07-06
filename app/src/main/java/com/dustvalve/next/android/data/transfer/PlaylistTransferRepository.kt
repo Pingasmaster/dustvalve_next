@@ -51,7 +51,7 @@ class PlaylistTransferRepository @Inject constructor(
     private val trackDao: TrackDao,
     private val downloadDao: DownloadDao,
     private val client: OkHttpClient,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     private val json = FolderSnapshotSerializer.json
 

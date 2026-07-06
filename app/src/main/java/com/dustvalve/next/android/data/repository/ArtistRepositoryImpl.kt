@@ -39,7 +39,7 @@ class ArtistRepositoryImpl @Inject constructor(
     private val artistScraper: DustvalveArtistScraper,
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ArtistRepository {
 
     companion object {

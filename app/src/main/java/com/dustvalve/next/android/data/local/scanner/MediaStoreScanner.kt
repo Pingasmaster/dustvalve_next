@@ -19,7 +19,7 @@ import javax.inject.Singleton
 class MediaStoreScanner @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val trackDao: TrackDao,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     companion object {

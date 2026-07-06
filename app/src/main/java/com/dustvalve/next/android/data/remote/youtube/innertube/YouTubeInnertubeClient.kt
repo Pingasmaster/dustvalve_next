@@ -37,7 +37,7 @@ import javax.inject.Singleton
 open class YouTubeInnertubeClient @Inject constructor(
     sharedOkHttpClient: OkHttpClient,
     private val visitorDataFetcher: YouTubeVisitorDataFetcher,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     /** Overridable in tests to point at MockWebServer. */

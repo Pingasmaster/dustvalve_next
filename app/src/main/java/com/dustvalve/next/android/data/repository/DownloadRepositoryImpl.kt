@@ -56,7 +56,7 @@ class DownloadRepositoryImpl @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
     private val notificationCenter: DownloadNotificationCenter,
     @param:ApplicationContext private val context: Context,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : DownloadRepository {
 
     override suspend fun downloadAlbum(album: Album) {

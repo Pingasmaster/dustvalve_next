@@ -42,7 +42,7 @@ class StorageMigrator @Inject constructor(
     private val database: DustvalveNextDatabase,
     private val downloadDao: DownloadDao,
     private val mirror: FolderMirror,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     data class Progress(val fraction: Float, val label: String)
 

@@ -33,7 +33,7 @@ class PlaylistRepositoryImpl @Inject constructor(
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
     private val downloadRepository: DownloadRepository,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : PlaylistRepository {
 
     override fun getAllPlaylists(): Flow<List<Playlist>> {

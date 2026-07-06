@@ -19,7 +19,7 @@ import javax.inject.Singleton
 @Singleton
 class DustvalveStreamResolver @Inject constructor(
     private val client: OkHttpClient,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     private val json = Json {

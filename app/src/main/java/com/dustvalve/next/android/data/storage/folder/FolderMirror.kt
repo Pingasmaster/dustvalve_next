@@ -60,7 +60,7 @@ class FolderMirror @Inject constructor(
     private val ytVideoDao: YouTubeVideoCacheDao,
     private val ytPlaylistDao: YouTubePlaylistCacheDao,
     private val ytmHomeDao: YouTubeMusicHomeCacheDao,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private var activeJobs: MutableList<Job> = mutableListOf()

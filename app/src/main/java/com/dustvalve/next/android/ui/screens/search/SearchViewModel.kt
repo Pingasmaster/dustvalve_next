@@ -52,7 +52,7 @@ class SearchViewModel @Inject constructor(
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
     private val settingsDataStore: SettingsDataStore,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())

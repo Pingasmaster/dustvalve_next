@@ -32,7 +32,7 @@ class AlbumThemeManager @Inject constructor(
     private val queueManager: QueueManager,
     private val settingsDataStore: SettingsDataStore,
     @param:ApplicationContext private val context: Context,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

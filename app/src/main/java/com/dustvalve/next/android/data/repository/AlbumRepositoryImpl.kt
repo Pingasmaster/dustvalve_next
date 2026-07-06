@@ -32,7 +32,7 @@ class AlbumRepositoryImpl @Inject constructor(
     private val favoriteDao: FavoriteDao,
     private val albumScraper: DustvalveAlbumScraper,
     private val downloadRepository: DownloadRepository,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : AlbumRepository {
 
     companion object {

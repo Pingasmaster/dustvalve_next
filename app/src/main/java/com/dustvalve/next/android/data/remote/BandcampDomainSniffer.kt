@@ -24,7 +24,7 @@ import javax.inject.Singleton
 @Singleton
 class BandcampDomainSniffer @Inject constructor(
     private val client: OkHttpClient,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     /** Fetch [url] and, if it's a Bandcamp page, return the matching [DetectedLink]. */
     suspend fun sniff(url: String): DetectedLink? = withContext(ioDispatcher) {

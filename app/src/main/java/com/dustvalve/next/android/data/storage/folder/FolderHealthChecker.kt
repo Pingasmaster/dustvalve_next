@@ -20,7 +20,7 @@ import javax.inject.Singleton
 class FolderHealthChecker @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val settingsDataStore: SettingsDataStore,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     /**
      * Returns true when the feature is on, a tree URI is stored, we still

@@ -44,7 +44,7 @@ import javax.inject.Singleton
 @Singleton
 open class YouTubeMusicVisitorDataFetcher @Inject constructor(
     sharedOkHttpClient: OkHttpClient,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     /**

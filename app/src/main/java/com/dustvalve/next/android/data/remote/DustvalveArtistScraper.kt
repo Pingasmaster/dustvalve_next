@@ -25,7 +25,7 @@ import kotlin.coroutines.coroutineContext
 @Singleton
 class DustvalveArtistScraper @Inject constructor(
     sharedClient: OkHttpClient,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     /**

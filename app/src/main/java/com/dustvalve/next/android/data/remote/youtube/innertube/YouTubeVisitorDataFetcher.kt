@@ -27,7 +27,7 @@ import javax.inject.Singleton
 @Singleton
 open class YouTubeVisitorDataFetcher @Inject constructor(
     sharedOkHttpClient: OkHttpClient,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     private val okHttpClient: OkHttpClient = sharedOkHttpClient.newBuilder()

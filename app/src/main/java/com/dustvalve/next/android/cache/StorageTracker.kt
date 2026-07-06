@@ -29,7 +29,7 @@ class StorageTracker @Inject constructor(
     private val downloadDao: DownloadDao,
     private val settingsDataStore: SettingsDataStore,
     @param:ApplicationContext private val context: Context,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     private val _sizeUpdateTrigger = MutableStateFlow(0L)

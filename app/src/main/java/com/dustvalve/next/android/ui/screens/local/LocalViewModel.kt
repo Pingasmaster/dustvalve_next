@@ -87,7 +87,7 @@ class LocalViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val localMusicRepository: LocalMusicRepository,
     @param:ApplicationContext private val appContext: Context,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LocalUiState())

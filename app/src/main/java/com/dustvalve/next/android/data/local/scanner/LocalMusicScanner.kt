@@ -25,7 +25,7 @@ data class ScanResult(val added: Int, val removed: Int, val total: Int)
 class LocalMusicScanner @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val trackDao: TrackDao,
-    @Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     companion object {
