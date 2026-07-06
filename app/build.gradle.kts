@@ -153,7 +153,7 @@ android {
 
     lint {
         abortOnError = true
-        warningsAsErrors = false
+        warningsAsErrors = true
         checkDependencies = true
         checkReleaseBuilds = true
         explainIssues = true
@@ -312,5 +312,6 @@ dependencies {
 // lint-baseline.xml as an EMPTY baseline (see app/lint-baseline.xml):
 // nothing for the fatal-only lint to consider stale, so no "N entries not
 // found" diagnostic. lintRelease (run separately via ./build.sh) still
-// runs full lint and reports any new warnings, but warnings don't fail
-// the build (warningsAsErrors = false).
+// runs full lint and reports any new warnings — and now (with
+// warningsAsErrors = true) treats each as a build failure, since the
+// baseline is empty and there's no place left to hide them.
