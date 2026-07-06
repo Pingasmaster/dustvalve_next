@@ -3,7 +3,9 @@ package com.dustvalve.next.android.util
 import android.app.ActivityManager
 import android.app.ApplicationStartInfo
 import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -28,6 +30,10 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
 
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
     fun collectOnColdStart() {
+        // ApplicationStartInfo and ActivityManager#getHistoricalProcessStartReasons
+        // are API 35+. On legacy minSdk=26 we must early-return before touching
+        // them; the caller (DiagnosticsInitializer) runs unconditionally.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val infos = am.getHistoricalProcessStartReasons(MAX_ENTRIES)
@@ -47,6 +53,7 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun ApplicationStartInfo.compactLine(): String {
         val ts = startupTimestamps
         fun delta(from: Int, to: Int): Long? {
@@ -79,6 +86,7 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun reasonName(reason: Int): String = when (reason) {
         ApplicationStartInfo.START_REASON_ALARM -> "ALARM"
         ApplicationStartInfo.START_REASON_BACKUP -> "BACKUP"
@@ -89,6 +97,7 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         else -> "UNKNOWN($reason)"
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun writeRow(info: ApplicationStartInfo) {
         try {
             val dir = File(context.filesDir, "metrics").apply { mkdirs() }
