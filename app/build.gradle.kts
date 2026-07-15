@@ -22,8 +22,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 37
         targetSdk = 37
-        versionCode = 275
-        versionName = "0.4.69"
+        versionCode = 276
+        versionName = "0.4.70"
     }
 
     signingConfigs {
@@ -119,6 +119,22 @@ android {
         buildConfig = true
     }
 
+    androidResources {
+        // App strings are English-only (res/values + values-night); drop the
+        // ~85 locales of androidx/Material3/Media3 library translations that
+        // would otherwise ship in the universal APK. Remove if the app ever
+        // gains its own translations.
+        localeFilters += "en"
+    }
+
+    // The dependency-metadata block is an encrypted blob only Google Play can
+    // read; releases ship as plain APKs on GitHub, so it's dead weight (and
+    // F-Droid rejects APKs that carry it).
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     composeCompiler {
         // Treat kotlin.collections.{List,Set,Map,Collection} as stable so
         // composables that take them as params can skip on equal-reference
@@ -157,6 +173,9 @@ android {
     // in this build env). Opt them out explicitly so AGP doesn't print a noisy
     // "Unable to strip" notice on every build.
     packaging {
+        // kotlinx-coroutines debug-probe stub; only read by the IDE debugger
+        // agent, never at runtime on device.
+        resources.excludes += "DebugProbesKt.bin"
         jniLibs {
             keepDebugSymbols += setOf(
                 "**/libandroidx.graphics.path.so",

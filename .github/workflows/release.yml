@@ -36,6 +36,19 @@ jobs:
       - name: Rename APK to dustvalve_next-future.apk
         run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve_next-future.apk
 
+      - name: Report APK size
+        run: |
+          apk=app/build/outputs/apk/release/dustvalve_next-future.apk
+          {
+            echo "### APK size — dustvalve_next-future.apk"
+            echo
+            echo '| Metric | Size |'
+            echo '| --- | --- |'
+            echo "| File size | $(du -h "$apk" | cut -f1) ($(stat -c%s "$apk") bytes) |"
+            echo "| DEX (uncompressed) | $(unzip -l "$apk" '*.dex' | tail -1 | awk '{printf "%.1f MB", $1/1048576}') |"
+            echo "| Native libs (uncompressed) | $(unzip -l "$apk" 'lib/*' | tail -1 | awk '{printf "%.1f MB", $1/1048576}') |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v3.0.1
         with:
