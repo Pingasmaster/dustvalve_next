@@ -199,6 +199,14 @@ detekt {
 }
 
 dependencies {
+    // Project modules
+    implementation(project(":core:common"))
+    implementation(project(":core:model"))
+    implementation(project(":core:database"))
+    implementation(project(":core:datastore"))
+    implementation(project(":domain"))
+    implementation(project(":data"))
+
     // Compose BOM
     val composeBom = platform(libs.compose.bom)
     implementation(composeBom)

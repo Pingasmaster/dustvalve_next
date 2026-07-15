@@ -43,5 +43,11 @@ enableFeaturePreview("STABLE_CONFIGURATION_CACHE")
 
 rootProject.name = "DustvalveNext"
 include(":app")
+include(":core:common")
+include(":core:model")
+include(":core:database")
+include(":core:datastore")
+include(":domain")
+include(":data")
 include(":baselineprofile")
 include(":macrobenchmark")

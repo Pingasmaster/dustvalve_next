@@ -43,6 +43,7 @@ import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
 import com.dustvalve.next.android.ui.screens.settings.YouTubeMusicLoginScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
+import com.dustvalve.next.android.ui.util.iconRes
 import com.dustvalve.next.android.util.LinkResourceType
 import kotlinx.coroutines.launch
 

@@ -17,11 +17,12 @@ import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.ApplicationScope
+import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
+import com.dustvalve.next.android.domain.repository.DownloadProgressReporter.BatchKind
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -54,8 +55,8 @@ import javax.inject.Singleton
 class DownloadNotificationCenter @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val settingsDataStore: SettingsDataStore,
-) {
-    enum class BatchKind { ALBUM, ARTIST, PLAYLIST }
+    @param:ApplicationScope private val scope: CoroutineScope,
+) : DownloadProgressReporter {
 
     internal data class Batch(val id: Long, val label: String, val totalTracks: Int, val kind: BatchKind)
 
@@ -101,7 +102,6 @@ class DownloadNotificationCenter @Inject constructor(
     internal fun shutdownForTest() {
         scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
     }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val batchSeq = AtomicLong(0L)
     private val notificationManager = NotificationManagerCompat.from(context)
 
@@ -121,7 +121,7 @@ class DownloadNotificationCenter @Inject constructor(
      * Wraps a logical batch (album/artist/playlist). While `block` runs,
      * the notification shows aggregated progress against `totalTracks`.
      */
-    suspend fun <T> withBatch(label: String, totalTracks: Int, kind: BatchKind, block: suspend () -> T): T {
+    override suspend fun <T> withBatch(label: String, totalTracks: Int, kind: BatchKind, block: suspend () -> T): T {
         val id = batchSeq.incrementAndGet()
         mutex.withLock {
             state.update { s ->
@@ -147,7 +147,7 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    fun trackStarted(trackId: String, title: String) {
+    override fun trackStarted(trackId: String, title: String) {
         state.update { s ->
             s.copy(
                 activeTracks = s.activeTracks + (trackId to TrackProgress(trackId, title, 0L, null)),
@@ -155,7 +155,7 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    fun trackProgress(trackId: String, bytesWritten: Long, expectedTotal: Long?) {
+    override fun trackProgress(trackId: String, bytesWritten: Long, expectedTotal: Long?) {
         state.update { s ->
             val existing = s.activeTracks[trackId] ?: return@update s
             val updated = existing.copy(bytesWritten = bytesWritten, expectedTotal = expectedTotal)
@@ -163,7 +163,7 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    fun trackFinished(trackId: String, @Suppress("UNUSED_PARAMETER") success: Boolean) {
+    override fun trackFinished(trackId: String, @Suppress("UNUSED_PARAMETER") success: Boolean) {
         state.update { s ->
             val newActive = s.activeTracks - trackId
             val inBatch = s.batchStack.isNotEmpty()

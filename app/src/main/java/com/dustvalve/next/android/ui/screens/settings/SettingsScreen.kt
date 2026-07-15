@@ -103,6 +103,7 @@ import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.ui.components.StorageIndicator
 import com.dustvalve.next.android.ui.components.update.AppUpdateDialog
 import com.dustvalve.next.android.ui.theme.AppShapes
+import com.dustvalve.next.android.ui.util.displayNameRes
 import com.dustvalve.next.android.update.UpdateUiState
 import kotlin.math.roundToInt
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi as M3E

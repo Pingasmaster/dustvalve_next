@@ -309,9 +309,11 @@ fun YouTubeScreen(
                             onChipSelected = viewModel::onYtmChipSelected,
                             onPlaySong = { song -> onPlayVideoId(song.videoId) },
                             onPlayHero = { hero ->
+                                val videoId = hero.videoId
+                                val playlistId = hero.playlistId
                                 when {
-                                    hero.videoId != null -> onPlayVideoId(hero.videoId)
-                                    hero.playlistId != null -> openPlaylistById(hero.playlistId, hero.title)
+                                    videoId != null -> onPlayVideoId(videoId)
+                                    playlistId != null -> openPlaylistById(playlistId, hero.title)
                                     else -> scope.launch { snackbarHostState.showSnackbar(failedLoadMsg) }
                                 }
                             },

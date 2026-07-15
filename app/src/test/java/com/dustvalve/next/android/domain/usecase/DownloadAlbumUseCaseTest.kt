@@ -4,8 +4,8 @@ import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AlbumRepository
+import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
 import com.dustvalve.next.android.domain.repository.DownloadRepository
-import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -20,7 +20,7 @@ class DownloadAlbumUseCaseTest {
 
     private lateinit var downloadRepo: DownloadRepository
     private lateinit var albumRepo: AlbumRepository
-    private lateinit var notificationCenter: DownloadNotificationCenter
+    private lateinit var notificationCenter: DownloadProgressReporter
     private lateinit var useCase: DownloadAlbumUseCase
 
     @Before fun setUp() {
@@ -76,7 +76,7 @@ class DownloadAlbumUseCaseTest {
             notificationCenter.withBatch(
                 "Mix",
                 3,
-                DownloadNotificationCenter.BatchKind.PLAYLIST,
+                DownloadProgressReporter.BatchKind.PLAYLIST,
                 any<suspend () -> Unit>(),
             )
         }
@@ -112,7 +112,7 @@ class DownloadAlbumUseCaseTest {
             notificationCenter.withBatch(
                 "Artist",
                 3,
-                DownloadNotificationCenter.BatchKind.ARTIST,
+                DownloadProgressReporter.BatchKind.ARTIST,
                 any<suspend () -> Unit>(),
             )
         }
