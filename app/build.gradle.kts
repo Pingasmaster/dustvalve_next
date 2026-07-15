@@ -12,6 +12,7 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
+    alias(libs.plugins.roborazzi)
 }
 
 android {
@@ -165,6 +166,10 @@ android {
         // Robolectric 4.17 pokes JDK internals (FileDescriptor, reflection)
         // that modern JDKs seal by default; open them for the test JVM only.
         unitTests.all { test ->
+            // Roborazzi: render through the real hardware-accelerated PixelCopy
+            // path so every test in a class captures actual pixels (the default
+            // software path yields blank frames after the first capture).
+            test.systemProperty("robolectric.pixelCopyRenderMode", "hardware")
             test.jvmArgs(
                 "--add-opens=java.base/java.lang=ALL-UNNAMED",
                 "--add-opens=java.base/java.util=ALL-UNNAMED",
@@ -194,6 +199,9 @@ android {
     }
 
     lint {
+        // Off-by-default check; enabled in every module so the shared
+        // lint.xml can hold it at error severity.
+        enable += "TypographyQuotes"
         abortOnError = true
         warningsAsErrors = true
         checkDependencies = true
@@ -224,6 +232,11 @@ detekt {
     config.setFrom(rootProject.files("config/detekt/detekt.yml"))
     baseline = rootProject.file("config/detekt/detekt-baseline.xml")
     parallel = true
+}
+
+roborazzi {
+    // Checked-in screenshot baselines; verifyRoborazziDebug diffs against these.
+    outputDir.set(layout.projectDirectory.dir("src/test/snapshots/roborazzi"))
 }
 
 dependencies {
@@ -337,6 +350,8 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
     testImplementation(libs.androidx.test.espresso.core)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
