@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="track_count">
+        <item quantity="one">%d Track</item>
+        <item quantity="other">%d Tracks</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d Song</item>
+        <item quantity="other">%d Songs</item>
+    </plurals>
+    <plurals name="song_count_filtered">
+        <item quantity="one">%1$d von %2$d Song</item>
+        <item quantity="other">%1$d von %2$d Songs</item>
+    </plurals>
+    <plurals name="scan_found">
+        <item quantity="one">%1$d Song gefunden</item>
+        <item quantity="other">%1$d Songs gefunden</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="one">%1$d Song gefunden (%2$d neu, %3$d entfernt)</item>
+        <item quantity="other">%1$d Songs gefunden (%2$d neu, %3$d entfernt)</item>
+    </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="one">%1$d Track zur Warteschlange hinzugefügt</item>
+        <item quantity="other">%1$d Tracks zur Warteschlange hinzugefügt</item>
+    </plurals>
+</resources>

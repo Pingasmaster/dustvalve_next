@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="track_count">
+        <item quantity="one">%d pista</item>
+        <item quantity="many">%d de pistas</item>
+        <item quantity="other">%d pistas</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d canción</item>
+        <item quantity="many">%d de canciones</item>
+        <item quantity="other">%d canciones</item>
+    </plurals>
+    <plurals name="song_count_filtered">
+        <item quantity="one">%1$d de %2$d canción</item>
+        <item quantity="many">%1$d de %2$d canciones</item>
+        <item quantity="other">%1$d de %2$d canciones</item>
+    </plurals>
+    <plurals name="scan_found">
+        <item quantity="one">Se encontró %1$d canción</item>
+        <item quantity="many">Se encontraron %1$d de canciones</item>
+        <item quantity="other">Se encontraron %1$d canciones</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="one">Se encontró %1$d canción (%2$d nuevas, %3$d eliminadas)</item>
+        <item quantity="many">Se encontraron %1$d de canciones (%2$d nuevas, %3$d eliminadas)</item>
+        <item quantity="other">Se encontraron %1$d canciones (%2$d nuevas, %3$d eliminadas)</item>
+    </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="one">Se agregó %1$d pista a la cola</item>
+        <item quantity="many">Se agregaron %1$d de pistas a la cola</item>
+        <item quantity="other">Se agregaron %1$d pistas a la cola</item>
+    </plurals>
+</resources>

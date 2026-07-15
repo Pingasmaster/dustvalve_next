@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Machine-translated (Claude). Corrections welcome via PR. -->
+    <plurals name="track_count">
+        <item quantity="other">%d首曲目</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="other">%d首歌曲</item>
+    </plurals>
+    <plurals name="song_count_filtered">
+        <item quantity="other">%1$d/%2$d首歌曲</item>
+    </plurals>
+    <plurals name="scan_found">
+        <item quantity="other">找到%1$d首歌曲</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="other">找到%1$d首歌曲（新增%2$d首，移除%3$d首）</item>
+    </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="other">已将%1$d首曲目添加到队列</item>
+    </plurals>
+</resources>

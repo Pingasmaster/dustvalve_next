@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="track_count">
+        <item quantity="one">%d трек</item>
+        <item quantity="few">%d трека</item>
+        <item quantity="many">%d треков</item>
+        <item quantity="other">%d трека</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d песня</item>
+        <item quantity="few">%d песни</item>
+        <item quantity="many">%d песен</item>
+        <item quantity="other">%d песни</item>
+    </plurals>
+    <plurals name="song_count_filtered">
+        <item quantity="one">%1$d из %2$d песен</item>
+        <item quantity="few">%1$d из %2$d песен</item>
+        <item quantity="many">%1$d из %2$d песен</item>
+        <item quantity="other">%1$d из %2$d песен</item>
+    </plurals>
+    <plurals name="scan_found">
+        <item quantity="one">Найдена %1$d песня</item>
+        <item quantity="few">Найдено %1$d песни</item>
+        <item quantity="many">Найдено %1$d песен</item>
+        <item quantity="other">Найдено %1$d песни</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="one">Найдена %1$d песня (новых: %2$d, удалено: %3$d)</item>
+        <item quantity="few">Найдено %1$d песни (новых: %2$d, удалено: %3$d)</item>
+        <item quantity="many">Найдено %1$d песен (новых: %2$d, удалено: %3$d)</item>
+        <item quantity="other">Найдено %1$d песни (новых: %2$d, удалено: %3$d)</item>
+    </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="one">В очередь добавлен %1$d трек</item>
+        <item quantity="few">В очередь добавлено %1$d трека</item>
+        <item quantity="many">В очередь добавлено %1$d треков</item>
+        <item quantity="other">В очередь добавлено %1$d трека</item>
+    </plurals>
+</resources>
