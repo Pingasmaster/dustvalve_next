@@ -182,7 +182,7 @@ object PlayerModule {
                     .add(MediaSessionConstants.COMMAND_TOGGLE_FAVORITE)
                     .build()
                 val playerCommands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
-                return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                     .setAvailableSessionCommands(sessionCommands)
                     .setAvailablePlayerCommands(playerCommands)
                     .build()

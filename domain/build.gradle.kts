@@ -11,6 +11,12 @@ android {
     compileSdk = 37
     defaultConfig { minSdk = 37 }
 
+    lint {
+        // Off-by-default check; must be enabled here so :app (checkDependencies
+        // = true) can enforce it at error severity across module boundaries.
+        enable += "StopShip"
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
