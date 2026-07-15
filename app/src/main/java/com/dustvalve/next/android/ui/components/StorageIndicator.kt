@@ -1,7 +1,5 @@
 package com.dustvalve.next.android.ui.components
 
-import android.os.Environment
-import android.os.StatFs
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,19 +11,13 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.util.StorageUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -41,18 +33,6 @@ fun StorageIndicator(cacheInfo: CacheInfo, modifier: Modifier = Modifier) {
         animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
         label = "storageColor",
     )
-    var freeBytes by remember { mutableLongStateOf(0L) }
-    // Composables can't be Hilt-injected; the project's @Dispatcher indirection
-    // lives in Hilt-managed classes. Suppressing locally keeps the call out of
-    // the baseline filter without dragging DI plumbing into @Composable.
-    @Suppress("RawDispatchersUse")
-    LaunchedEffect(cacheInfo) {
-        freeBytes = withContext(Dispatchers.IO) {
-            val stat = StatFs(Environment.getDataDirectory().path)
-            stat.availableBytes
-        }
-    }
-
     val cacheSizeBytes = (cacheInfo.totalSizeBytes - cacheInfo.downloadSizeBytes).coerceAtLeast(0)
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -73,7 +53,7 @@ fun StorageIndicator(cacheInfo: CacheInfo, modifier: Modifier = Modifier) {
                     R.string.storage_info,
                     StorageUtils.formatFileSize(cacheInfo.downloadSizeBytes),
                     StorageUtils.formatFileSize(cacheSizeBytes),
-                    StorageUtils.formatFileSize(freeBytes),
+                    StorageUtils.formatFileSize(cacheInfo.freeSpaceBytes),
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

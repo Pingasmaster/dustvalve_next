@@ -1,8 +1,3 @@
-// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
-// overload is @Deprecated). Our call uses the non-deprecated overload;
-// kotlinc emits no warning. Suppress at file level.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.screens.bandcamp
 
 import androidx.compose.animation.core.Animatable
@@ -19,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -98,6 +92,7 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
@@ -516,7 +511,7 @@ fun BandcampScreen(
                 inputField = inputField,
             ) {
                 // Type filter chips
-                FlowRow(
+                AppFlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),

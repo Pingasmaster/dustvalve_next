@@ -1,7 +1,3 @@
-// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
-// overload is @Deprecated). Our call uses the non-deprecated overload.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.components
 
 import androidx.compose.animation.animateColorAsState
@@ -12,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -84,7 +79,7 @@ fun ShapePickerSheet(
             )
             Spacer(Modifier.height(16.dp))
 
-            FlowRow(
+            AppFlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {

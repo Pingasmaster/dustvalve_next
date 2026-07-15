@@ -1,3 +1,0 @@
-[workspace]
-members = ["librespot-ffi"]
-resolver = "2"

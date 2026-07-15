@@ -1,10 +1,3 @@
-// slack-lints' DeprecatedCall matches by function NAME — every call to a
-// ButtonGroup or FlowRow site is flagged because OTHER overloads of those
-// names carry @Deprecated. kotlinc emits no deprecation warning for the
-// overloads we call (verified via compile output + javap). Suppress at
-// file level rather than per-call.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.Manifest
@@ -41,7 +34,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -100,6 +92,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.AudioFormat
+import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.ui.components.StorageIndicator
 import com.dustvalve.next.android.ui.components.update.AppUpdateDialog
 import com.dustvalve.next.android.ui.theme.AppShapes
@@ -625,7 +618,7 @@ fun SettingsScreen(
                                         stringResource(R.string.settings_youtube_music),
                                     )
                                     val ytSourceSelected = ytSourceOptions.indexOf(state.youtubeDefaultSource).coerceAtLeast(0)
-                                    ButtonGroup(
+                                    AppButtonGroup(
                                         overflowIndicator = { _ -> },
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
@@ -1255,7 +1248,7 @@ fun SettingsScreen(
                             )
                             val selectedIndex = themeOptions.indexOf(state.themeMode).coerceAtLeast(0)
 
-                            ButtonGroup(
+                            AppButtonGroup(
                                 overflowIndicator = { _ -> },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
@@ -1380,7 +1373,7 @@ fun SettingsScreen(
                                     stringResource(R.string.settings_progress_bar_style_wavy),
                                     stringResource(R.string.settings_progress_bar_style_linear),
                                 )
-                                ButtonGroup(
+                                AppButtonGroup(
                                     overflowIndicator = { _ -> },
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {

@@ -167,8 +167,6 @@ fun AppNavigation(
                 is NavDestination.PlaylistDetail -> PlaylistDetailScreen(
                     playlistId = destination.playlistId,
                     onBack = { navViewModel.navigateBack() },
-                    onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                    onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                     viewModel = hiltViewModel(key = destination.playlistId),
                 )
 

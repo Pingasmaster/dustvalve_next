@@ -1,8 +1,3 @@
-// slack-lints DeprecatedCall flags ButtonGroup by function name (other
-// overloads are @Deprecated). Our call resolves to the non-deprecated
-// overload; kotlinc agrees. Suppress at file level.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.screens.youtube
 
 import androidx.compose.animation.AnimatedContent
@@ -42,7 +37,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExpandedFullScreenSearchBar
@@ -98,6 +92,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
@@ -269,7 +264,7 @@ fun YouTubeScreen(
                     stringResource(R.string.youtube_tab_source_yt),
                     stringResource(R.string.youtube_tab_source_ytm),
                 )
-                ButtonGroup(
+                AppButtonGroup(
                     overflowIndicator = { _ -> },
                     modifier = Modifier
                         .fillMaxWidth()

@@ -1,8 +1,3 @@
-// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
-// overload is @Deprecated). Our call uses the non-deprecated overload;
-// kotlinc emits no warning. Suppress at file level.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.screens.album
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,6 +70,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
@@ -434,7 +429,7 @@ fun AlbumDetailScreen(
                                         style = MaterialTheme.typography.titleMediumEmphasized,
                                         modifier = Modifier.padding(bottom = 12.dp),
                                     )
-                                    FlowRow(
+                                    AppFlowRow(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {

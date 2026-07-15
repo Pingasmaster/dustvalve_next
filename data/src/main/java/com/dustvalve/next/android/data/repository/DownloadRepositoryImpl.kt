@@ -184,7 +184,7 @@ class DownloadRepositoryImpl @Inject constructor(
         val (finalPath, fileSize) = if (settingsDataStore.getDedicatedFolderEnabledSync()) {
             writeDownloadToFolder(safeAlbumId, fileName, format, downloadUrl, track.id)
         } else {
-            writeDownloadToInternal(safeAlbumId, fileName, format, downloadUrl, track.id)
+            writeDownloadToInternal(safeAlbumId, fileName, downloadUrl, track.id)
         }
 
         // Atomically insert the track row + the unified-pool download record.
@@ -211,7 +211,6 @@ class DownloadRepositoryImpl @Inject constructor(
     private suspend fun writeDownloadToInternal(
         safeAlbumId: String,
         fileName: String,
-        format: AudioFormat,
         downloadUrl: String,
         trackId: String,
     ): Pair<String, Long> {

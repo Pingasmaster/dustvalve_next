@@ -1,6 +1,8 @@
 package com.dustvalve.next.android.cache
 
 import android.content.Context
+import android.os.Environment
+import android.os.StatFs
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
@@ -59,6 +61,7 @@ class StorageTracker @Inject constructor(
             imageSizeBytes = imagesSize,
             downloadSizeBytes = pinnedSize,
             usagePercent = usagePercent,
+            freeSpaceBytes = StatFs(Environment.getDataDirectory().path).availableBytes,
         )
     }.flowOn(ioDispatcher)
 

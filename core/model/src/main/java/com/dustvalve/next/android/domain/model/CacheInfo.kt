@@ -10,4 +10,6 @@ data class CacheInfo(
     val imageSizeBytes: Long,
     val downloadSizeBytes: Long,
     val usagePercent: Float,
+    /** Free space remaining on the data partition, sampled with the sizes above. */
+    val freeSpaceBytes: Long,
 )

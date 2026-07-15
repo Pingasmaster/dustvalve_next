@@ -82,8 +82,6 @@ import com.dustvalve.next.android.ui.theme.segmentedItemShape
 fun PlaylistDetailScreen(
     playlistId: String,
     onBack: () -> Unit,
-    onAlbumClick: (String) -> Unit,
-    onArtistClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: PlaylistDetailViewModel = hiltViewModel(),

@@ -2,7 +2,7 @@
 <lint>
     <issue id="MissingTranslation"            severity="ignore" />
     <issue id="GoogleAppIndexingWarning"      severity="ignore" />
-    <issue id="ObsoleteSdkInt"                severity="informational" />
+    <issue id="ObsoleteSdkInt"                severity="error" />
 
     <!--
         NewerVersionAvailable / AndroidGradlePluginVersion report that some
@@ -73,22 +73,5 @@
         <ignore path="**/src/androidTest/**" />
     </issue>
 
-    <!--
-        slack-lints' RawDispatchersUse forbids direct Dispatchers.{IO,Default,Main}
-        references in favour of injected, Hilt-qualified CoroutineDispatcher.
-
-        Strategy here is "ratchet, don't refactor everything at once":
-        - Set severity = error so any NEW Dispatchers.{IO,Default} usage breaks
-          the build.
-        - lint-baseline.xml freezes the existing ~69 sites; they don't fail the
-          build but are listed as known debt.
-        - New code (and any refactor that touches an existing site) must inject
-          @Dispatcher(AppDispatchers.IO) / @Dispatcher(AppDispatchers.Default)
-          via the Hilt module at app/src/main/.../di/DispatchersModule.kt.
-
-        Dispatchers.Main / Main.immediate is not policed — its only sensible
-        replacement is TestDispatcher swapping at the Dispatchers.setMain
-        level, which doesn't need a qualifier.
-    -->
     <issue id="RawDispatchersUse"             severity="error" />
 </lint>
