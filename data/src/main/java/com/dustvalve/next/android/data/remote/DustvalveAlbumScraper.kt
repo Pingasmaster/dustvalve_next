@@ -20,6 +20,7 @@ import okhttp3.Request
 import java.io.IOException
 import java.net.URL
 import java.security.MessageDigest
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -117,6 +118,8 @@ class DustvalveAlbumScraper @Inject constructor(
         val artUrl = "https://f4.bcbits.com/img/a${tralbumData.artId}_10.jpg"
 
         val albumId = stableId(tralbumData.url.ifEmpty { albumUrl })
+        // Wire-level fallback persisted with the record; not localized on purpose
+        // (metadata, not UI copy — the UI has its own localized "unknown" labels).
         val artistName = tralbumData.current.artist ?: extractArtistFromHtml(html) ?: "Unknown Artist"
 
         val tags = extractTags(html)
@@ -379,6 +382,6 @@ class DustvalveAlbumScraper @Inject constructor(
     private fun stableId(input: String): String {
         val normalized = normalizeUrl(input)
         val bytes = MessageDigest.getInstance("SHA-256").digest(normalized.toByteArray())
-        return bytes.take(16).joinToString("") { "%02x".format(it) }
+        return bytes.take(16).joinToString("") { "%02x".format(Locale.ROOT, it) }
     }
 }

@@ -89,6 +89,7 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    val loadErrorFallback = stringResource(R.string.error_load_page)
     val currentOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
 
     // Prevent screenshots/screen recordings on the login screen
@@ -173,7 +174,7 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
                                 super.onReceivedError(view, request, error)
                                 if (request.isForMainFrame) {
                                     isPageLoading = false
-                                    loadError = error.description?.toString() ?: "Failed to load page"
+                                    loadError = error.description?.toString() ?: loadErrorFallback
                                 }
                             }
 

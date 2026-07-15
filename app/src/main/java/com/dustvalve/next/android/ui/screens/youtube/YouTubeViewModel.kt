@@ -1,8 +1,10 @@
 package com.dustvalve.next.android.ui.screens.youtube
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
@@ -17,6 +19,7 @@ import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
+import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -33,15 +36,15 @@ import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 data class DiscoverSection(
-    val title: String,
+    val title: UiText? = null,
     val items: List<SearchResult> = emptyList(),
     val isLoading: Boolean = true,
     val error: String? = null,
 )
 
-data class MoodChip(val label: String, val query: String)
+data class MoodChip(@StringRes val labelRes: Int, val query: String)
 
-data class GenreQuery(val displayName: String, val searchQuery: String)
+data class GenreQuery(@StringRes val displayNameRes: Int, val searchQuery: String)
 
 enum class YouTubeSource { YouTube, YouTubeMusic }
 
@@ -54,97 +57,97 @@ data class YouTubeUiState(
     val results: List<SearchResult> = emptyList(),
     val isLoading: Boolean = false,
     val hasMore: Boolean = true,
-    val error: String? = null,
+    val error: UiText? = null,
     val selectedFilter: String? = null,
     val searchGeneration: Int = 0,
 
     // Mood chip state
-    val selectedMood: String? = null,
+    val selectedMood: MoodChip? = null,
     val moodResults: List<SearchResult> = emptyList(),
     val isMoodLoading: Boolean = false,
-    val moodError: String? = null,
+    val moodError: UiText? = null,
 
     // Discovery feed sections (YouTube sub-tab)
-    val recommendationsSection: DiscoverSection = DiscoverSection(title = ""),
+    val recommendationsSection: DiscoverSection = DiscoverSection(),
     val lastPlayedTrackTitle: String? = null,
-    val trendingSection: DiscoverSection = DiscoverSection(title = "Trending now"),
+    val trendingSection: DiscoverSection = DiscoverSection(title = UiText.StringResource(R.string.ytm_section_trending)),
     val genreSections: List<DiscoverSection> = emptyList(),
     val genresExhausted: Boolean = false,
 
     // YouTube Music sub-tab home
     val ytmHome: YouTubeMusicHomeFeed? = null,
     val ytmHomeLoading: Boolean = false,
-    val ytmHomeError: String? = null,
+    val ytmHomeError: UiText? = null,
     val ytmSelectedChipParams: String? = null,
 )
 
 val moodChips = listOf(
-    MoodChip("Chill", "chill vibes music"),
-    MoodChip("Energize", "energize pump up music"),
-    MoodChip("Focus", "focus concentration music"),
-    MoodChip("Feel Good", "feel good happy music"),
-    MoodChip("Party", "party dance music"),
-    MoodChip("Sad", "sad emotional music"),
-    MoodChip("Workout", "workout gym music"),
-    MoodChip("Sleep", "sleep relaxing music"),
-    MoodChip("Romance", "romantic love songs"),
-    MoodChip("Commute", "driving road trip music"),
-    MoodChip("Gaming", "gaming music mix"),
+    MoodChip(R.string.mood_chill, "chill vibes music"),
+    MoodChip(R.string.mood_energize, "energize pump up music"),
+    MoodChip(R.string.mood_focus, "focus concentration music"),
+    MoodChip(R.string.mood_feel_good, "feel good happy music"),
+    MoodChip(R.string.mood_party, "party dance music"),
+    MoodChip(R.string.mood_sad, "sad emotional music"),
+    MoodChip(R.string.mood_workout, "workout gym music"),
+    MoodChip(R.string.mood_sleep, "sleep relaxing music"),
+    MoodChip(R.string.mood_romance, "romantic love songs"),
+    MoodChip(R.string.mood_commute, "driving road trip music"),
+    MoodChip(R.string.mood_gaming, "gaming music mix"),
 )
 
 val allGenres = listOf(
     // Core genres
-    GenreQuery("Pop", "pop music hits"),
-    GenreQuery("Rock", "rock music"),
-    GenreQuery("Hip-Hop", "hip hop rap music"),
-    GenreQuery("R&B & Soul", "r&b soul music"),
-    GenreQuery("Jazz", "jazz music"),
-    GenreQuery("Electronic", "electronic dance music"),
-    GenreQuery("Classical", "classical music"),
-    GenreQuery("Country", "country music"),
-    GenreQuery("Metal", "metal music"),
-    GenreQuery("Blues", "blues music"),
-    GenreQuery("Indie", "indie alternative music"),
-    GenreQuery("Folk", "folk acoustic music"),
-    GenreQuery("Reggae", "reggae dancehall music"),
-    GenreQuery("Funk", "funk music"),
-    GenreQuery("Punk", "punk rock music"),
-    GenreQuery("Lo-fi", "lo-fi hip hop beats"),
+    GenreQuery(R.string.genre_pop, "pop music hits"),
+    GenreQuery(R.string.genre_rock, "rock music"),
+    GenreQuery(R.string.genre_hiphop, "hip hop rap music"),
+    GenreQuery(R.string.genre_rnb_soul, "r&b soul music"),
+    GenreQuery(R.string.genre_jazz, "jazz music"),
+    GenreQuery(R.string.genre_electronic, "electronic dance music"),
+    GenreQuery(R.string.genre_classical, "classical music"),
+    GenreQuery(R.string.genre_country, "country music"),
+    GenreQuery(R.string.genre_metal, "metal music"),
+    GenreQuery(R.string.genre_blues, "blues music"),
+    GenreQuery(R.string.genre_indie, "indie alternative music"),
+    GenreQuery(R.string.genre_folk, "folk acoustic music"),
+    GenreQuery(R.string.genre_reggae, "reggae dancehall music"),
+    GenreQuery(R.string.genre_funk, "funk music"),
+    GenreQuery(R.string.genre_punk, "punk rock music"),
+    GenreQuery(R.string.genre_lofi, "lo-fi hip hop beats"),
     // Regional & cultural
-    GenreQuery("Latin", "latin reggaeton music"),
-    GenreQuery("K-Pop", "k-pop music"),
-    GenreQuery("J-Pop", "j-pop japanese music"),
-    GenreQuery("Afrobeats", "afrobeats african music"),
-    GenreQuery("Bollywood", "bollywood hindi songs"),
-    GenreQuery("Arabic", "arabic music"),
-    GenreQuery("French Pop", "french pop musique"),
+    GenreQuery(R.string.genre_latin, "latin reggaeton music"),
+    GenreQuery(R.string.genre_kpop, "k-pop music"),
+    GenreQuery(R.string.genre_jpop, "j-pop japanese music"),
+    GenreQuery(R.string.genre_afrobeats, "afrobeats african music"),
+    GenreQuery(R.string.genre_bollywood, "bollywood hindi songs"),
+    GenreQuery(R.string.genre_arabic, "arabic music"),
+    GenreQuery(R.string.genre_french_pop, "french pop musique"),
     // Subgenres & styles
-    GenreQuery("Ambient", "ambient music"),
-    GenreQuery("Phonk", "phonk music"),
-    GenreQuery("Drill", "drill music"),
-    GenreQuery("Trap", "trap music"),
-    GenreQuery("Drum & Bass", "drum and bass music"),
-    GenreQuery("House", "house music"),
-    GenreQuery("Techno", "techno music"),
-    GenreQuery("Trance", "trance music"),
-    GenreQuery("Shoegaze", "shoegaze dream pop"),
-    GenreQuery("Post-Punk", "post punk dark wave"),
-    GenreQuery("Grunge", "grunge music"),
-    GenreQuery("Ska", "ska music"),
-    GenreQuery("Gospel", "gospel music"),
-    GenreQuery("Amapiano", "amapiano music"),
-    GenreQuery("Bossa Nova", "bossa nova music"),
-    GenreQuery("Cumbia", "cumbia music"),
-    GenreQuery("Salsa", "salsa music"),
+    GenreQuery(R.string.genre_ambient, "ambient music"),
+    GenreQuery(R.string.genre_phonk, "phonk music"),
+    GenreQuery(R.string.genre_drill, "drill music"),
+    GenreQuery(R.string.genre_trap, "trap music"),
+    GenreQuery(R.string.genre_dnb, "drum and bass music"),
+    GenreQuery(R.string.genre_house, "house music"),
+    GenreQuery(R.string.genre_techno, "techno music"),
+    GenreQuery(R.string.genre_trance, "trance music"),
+    GenreQuery(R.string.genre_shoegaze, "shoegaze dream pop"),
+    GenreQuery(R.string.genre_post_punk, "post punk dark wave"),
+    GenreQuery(R.string.genre_grunge, "grunge music"),
+    GenreQuery(R.string.genre_ska, "ska music"),
+    GenreQuery(R.string.genre_gospel, "gospel music"),
+    GenreQuery(R.string.genre_amapiano, "amapiano music"),
+    GenreQuery(R.string.genre_bossa_nova, "bossa nova music"),
+    GenreQuery(R.string.genre_cumbia, "cumbia music"),
+    GenreQuery(R.string.genre_salsa, "salsa music"),
     // Decades
-    GenreQuery("80s Hits", "80s music hits"),
-    GenreQuery("90s Hits", "90s music hits"),
-    GenreQuery("2000s Hits", "2000s music hits"),
+    GenreQuery(R.string.genre_80s, "80s music hits"),
+    GenreQuery(R.string.genre_90s, "90s music hits"),
+    GenreQuery(R.string.genre_2000s, "2000s music hits"),
     // Misc
-    GenreQuery("Soundtracks", "film soundtrack music"),
-    GenreQuery("Musical Theater", "broadway musical songs"),
-    GenreQuery("Video Game OST", "video game soundtrack music"),
-    GenreQuery("Disney", "disney songs music"),
+    GenreQuery(R.string.genre_soundtracks, "film soundtrack music"),
+    GenreQuery(R.string.genre_musical_theater, "broadway musical songs"),
+    GenreQuery(R.string.genre_vgm, "video game soundtrack music"),
+    GenreQuery(R.string.genre_disney, "disney songs music"),
 )
 
 private const val INITIAL_GENRE_COUNT = 6
@@ -254,7 +257,7 @@ class YouTubeViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(ytmHomeLoading = false, ytmHomeError = e.message ?: "Failed to load")
+                    it.copy(ytmHomeLoading = false, ytmHomeError = UiText.orResource(e.message, R.string.snackbar_failed_load))
                 }
             }
         }
@@ -284,7 +287,12 @@ class YouTubeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 genreSections = initialGenres.map { genre ->
-                    DiscoverSection(title = "Discover: ${genre.displayName}")
+                    DiscoverSection(
+                        title = UiText.StringResource(
+                            R.string.ytm_section_discover,
+                            listOf(UiText.StringResource(genre.displayNameRes)),
+                        ),
+                    )
                 },
                 genresExhausted = loadedGenreCount >= shuffledGenres.size,
             )
@@ -306,7 +314,7 @@ class YouTubeViewModel @Inject constructor(
             val videoId = settingsDataStore.lastYoutubeVideoId.firstOrNull()
             if (videoId == null) {
                 _uiState.update {
-                    it.copy(recommendationsSection = DiscoverSection(title = "", isLoading = false))
+                    it.copy(recommendationsSection = DiscoverSection(isLoading = false))
                 }
                 return
             }
@@ -317,9 +325,9 @@ class YouTubeViewModel @Inject constructor(
                     lastPlayedTrackTitle = trackTitle,
                     recommendationsSection = DiscoverSection(
                         title = if (trackTitle != null) {
-                            "Because you listened to $trackTitle"
+                            UiText.StringResource(R.string.ytm_section_because_listened, listOf(trackTitle))
                         } else {
-                            "Recommended for you"
+                            UiText.StringResource(R.string.ytm_section_recommended)
                         },
                         isLoading = true,
                     ),
@@ -407,7 +415,12 @@ class YouTubeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 genreSections = it.genreSections + batch.map { genre ->
-                    DiscoverSection(title = "Discover: ${genre.displayName}")
+                    DiscoverSection(
+                        title = UiText.StringResource(
+                            R.string.ytm_section_discover,
+                            listOf(UiText.StringResource(genre.displayNameRes)),
+                        ),
+                    )
                 },
                 genresExhausted = loadedGenreCount >= shuffledGenres.size,
             )
@@ -424,8 +437,8 @@ class YouTubeViewModel @Inject constructor(
 
     // ── Mood selection ──────────────────────────────────────────────────
 
-    fun onMoodSelected(mood: String?) {
-        if (mood == _uiState.value.selectedMood) {
+    fun onMoodSelected(mood: MoodChip?) {
+        if (mood == null || mood == _uiState.value.selectedMood) {
             // Deselect
             moodJob?.cancel()
             _uiState.update {
@@ -441,9 +454,8 @@ class YouTubeViewModel @Inject constructor(
         moodJob?.cancel()
         moodJob = viewModelScope.launch {
             try {
-                val chip = moodChips.first { it.label == mood }
                 val (results, _) = youtubeRepository.search(
-                    query = chip.query,
+                    query = mood.query,
                     filter = "songs",
                     page = null,
                 )
@@ -451,7 +463,7 @@ class YouTubeViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(isMoodLoading = false, moodError = e.message ?: "Failed to load")
+                    it.copy(isMoodLoading = false, moodError = UiText.orResource(e.message, R.string.snackbar_failed_load))
                 }
             }
         }
@@ -600,7 +612,7 @@ class YouTubeViewModel @Inject constructor(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             _uiState.update {
-                it.copy(isLoading = false, error = e.message ?: "Search failed")
+                it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.common_search_failed))
             }
         }
     }
@@ -619,7 +631,14 @@ class YouTubeViewModel @Inject constructor(
                 favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = "Failed to import playlist: ${e.message}") }
+                _uiState.update {
+                    it.copy(
+                        error = UiText.StringResource(
+                            R.string.error_import_playlist,
+                            listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
+                        ),
+                    )
+                }
             }
         }
     }

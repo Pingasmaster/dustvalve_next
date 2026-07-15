@@ -1,32 +1,14 @@
 package com.dustvalve.next.android.util
 
-import java.util.Locale
+import android.content.Context
+import android.text.format.Formatter
 
 object StorageUtils {
 
     /**
-     * Formats a byte count into a human-readable string.
-     * Examples: "1.2 MB", "3.4 GB", "512 B", "15.0 KB".
+     * Formats a byte count into a human-readable, locale-aware string via the
+     * platform [Formatter], matching the system Settings storage UI (SI units,
+     * localized unit names and digits). Examples: "1.2 MB", "3.4 GB", "512 B".
      */
-    fun formatFileSize(bytes: Long): String {
-        val absBytes = if (bytes < 0) 0L else bytes
-        return when {
-            absBytes < 1024L -> "$absBytes B"
-
-            absBytes < 1024L * 1024L -> {
-                val kb = absBytes / 1024.0
-                String.format(Locale.getDefault(), "%.1f KB", kb)
-            }
-
-            absBytes < 1024L * 1024L * 1024L -> {
-                val mb = absBytes / (1024.0 * 1024.0)
-                String.format(Locale.getDefault(), "%.1f MB", mb)
-            }
-
-            else -> {
-                val gb = absBytes / (1024.0 * 1024.0 * 1024.0)
-                String.format(Locale.getDefault(), "%.1f GB", gb)
-            }
-        }
-    }
+    fun formatFileSize(context: Context, bytes: Long): String = Formatter.formatFileSize(context, bytes.coerceAtLeast(0L))
 }

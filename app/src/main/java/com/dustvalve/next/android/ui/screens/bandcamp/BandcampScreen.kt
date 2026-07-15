@@ -196,8 +196,9 @@ fun BandcampScreen(
     }
 
     // Show search pagination errors via snackbar
-    LaunchedEffect(searchState.error) {
-        val error = searchState.error ?: return@LaunchedEffect
+    val searchErrorText = searchState.error?.asString()
+    LaunchedEffect(searchErrorText) {
+        val error = searchErrorText ?: return@LaunchedEffect
         try {
             if (searchState.results.isNotEmpty()) {
                 snackbarHostState.showSnackbar(error)
@@ -286,7 +287,7 @@ fun BandcampScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.categoryError ?: stringResource(R.string.bandcamp_something_went_wrong),
+                            text = state.categoryError?.asString() ?: stringResource(R.string.bandcamp_something_went_wrong),
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White.copy(alpha = 0.7f),
                         )
@@ -575,7 +576,7 @@ fun BandcampScreen(
 
                         searchState.error != null && searchState.results.isEmpty() -> {
                             Text(
-                                text = searchState.error ?: stringResource(R.string.common_search_failed),
+                                text = searchState.error?.asString() ?: stringResource(R.string.common_search_failed),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.align(Alignment.Center),
@@ -900,6 +901,7 @@ private fun SearchResultItem(result: SearchResult) {
 
     val artistLabel = stringResource(R.string.bandcamp_type_artist)
     val localLabel = stringResource(R.string.bandcamp_type_local)
+    val separator = stringResource(R.string.metadata_separator_compact)
     ListItem(
         supportingContent = {
             val supporting = buildString {
@@ -913,7 +915,7 @@ private fun SearchResultItem(result: SearchResult) {
                     SearchResultType.TRACK -> {
                         result.artist?.let { append(it) }
                         result.album?.let {
-                            if (isNotEmpty()) append(" - ")
+                            if (isNotEmpty()) append(separator)
                             append(it)
                         }
                     }
@@ -921,15 +923,11 @@ private fun SearchResultItem(result: SearchResult) {
                     SearchResultType.LOCAL_TRACK -> {
                         append(localLabel)
                         result.artist?.let {
-                            append(" \u00B7 ")
+                            append(separator)
                             append(it)
                         }
                         result.album?.let {
-                            if (result.artist != null) {
-                                append(" - ")
-                            } else {
-                                append(" \u00B7 ")
-                            }
+                            append(separator)
                             append(it)
                         }
                     }
@@ -941,7 +939,7 @@ private fun SearchResultItem(result: SearchResult) {
                     }
                 }
                 result.genre?.let {
-                    if (isNotEmpty()) append(" \u00B7 ")
+                    if (isNotEmpty()) append(separator)
                     append(it)
                 }
             }

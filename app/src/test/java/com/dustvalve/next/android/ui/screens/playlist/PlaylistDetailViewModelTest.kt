@@ -93,7 +93,7 @@ class PlaylistDetailViewModelTest {
         vm.loadPlaylist("p1")
         advanceUntilIdle()
 
-        assertThat(vm.uiState.value.error).isEqualTo("db broken")
+        assertThat(vm.uiState.value.error).isEqualTo(UiText.DynamicString("db broken"))
         assertThat(vm.uiState.value.isLoading).isFalse()
     }
 
@@ -193,7 +193,7 @@ class PlaylistDetailViewModelTest {
 
         vm.removeTrack("t1")
         advanceUntilIdle()
-        assertThat(vm.uiState.value.error).isEqualTo("nope")
+        assertThat(vm.uiState.value.error).isEqualTo(UiText.DynamicString("nope"))
 
         vm.clearError()
         assertThat(vm.uiState.value.error).isNull()

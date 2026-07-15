@@ -16,6 +16,7 @@ import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
+import com.dustvalve.next.android.util.LocaleCollation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -149,12 +151,15 @@ class LocalViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private fun blankLastComparator(): Comparator<String> = Comparator { a, b ->
-        when {
-            a.isBlank() && b.isBlank() -> 0
-            a.isBlank() -> 1
-            b.isBlank() -> -1
-            else -> String.CASE_INSENSITIVE_ORDER.compare(a, b)
+    private fun blankLastComparator(): Comparator<String> {
+        val byName = LocaleCollation.comparator()
+        return Comparator { a, b ->
+            when {
+                a.isBlank() && b.isBlank() -> 0
+                a.isBlank() -> 1
+                b.isBlank() -> -1
+                else -> byName.compare(a, b)
+            }
         }
     }
 
@@ -351,23 +356,26 @@ class LocalViewModel @Inject constructor(
         return true
     }
 
-    private fun getSortComparator(option: LocalSortOption): Comparator<Track> = when (option) {
-        LocalSortOption.TITLE_AZ -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+    private fun getSortComparator(option: LocalSortOption): Comparator<Track> {
+        val byName = LocaleCollation.comparator()
+        return when (option) {
+            LocalSortOption.TITLE_AZ -> compareBy(byName) { it.title }
 
-        LocalSortOption.ARTIST_AZ -> compareBy<Track, String>(String.CASE_INSENSITIVE_ORDER) { it.artist }
-            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+            LocalSortOption.ARTIST_AZ -> compareBy<Track, String>(byName) { it.artist }
+                .thenBy(byName) { it.title }
 
-        LocalSortOption.ALBUM_AZ -> compareBy<Track, String>(String.CASE_INSENSITIVE_ORDER) { it.albumTitle }
-            .thenBy { it.trackNumber }
+            LocalSortOption.ALBUM_AZ -> compareBy<Track, String>(byName) { it.albumTitle }
+                .thenBy { it.trackNumber }
 
-        LocalSortOption.SHORTEST -> compareBy { it.duration }
+            LocalSortOption.SHORTEST -> compareBy { it.duration }
 
-        LocalSortOption.LONGEST -> compareByDescending { it.duration }
+            LocalSortOption.LONGEST -> compareByDescending { it.duration }
 
-        LocalSortOption.DATE_ADDED -> compareByDescending { it.dateAdded }
+            LocalSortOption.DATE_ADDED -> compareByDescending { it.dateAdded }
 
-        LocalSortOption.RELEASE_YEAR -> compareByDescending<Track> { it.year }
-            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+            LocalSortOption.RELEASE_YEAR -> compareByDescending<Track> { it.year }
+                .thenBy(byName) { it.title }
+        }
     }
 
     // Search
@@ -430,12 +438,14 @@ class LocalViewModel @Inject constructor(
                 val ids = entities.map { it.id }
                 val favoriteIds = if (ids.isNotEmpty()) favoriteDao.getFavoriteIdsChunk(ids).toSet() else emptySet()
                 val all = entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
-                val lowerQuery = query.lowercase()
+                // Locale-aware case folding (e.g. Turkish dotted/dotless i)
+                val locale = Locale.getDefault()
+                val lowerQuery = query.lowercase(locale)
                 when (filter) {
                     null -> all
-                    LocalSearchFilter.TRACKS -> all.filter { it.title.lowercase().contains(lowerQuery) }
-                    LocalSearchFilter.ARTISTS -> all.filter { it.artist.lowercase().contains(lowerQuery) }
-                    LocalSearchFilter.ALBUMS -> all.filter { it.albumTitle.lowercase().contains(lowerQuery) }
+                    LocalSearchFilter.TRACKS -> all.filter { it.title.lowercase(locale).contains(lowerQuery) }
+                    LocalSearchFilter.ARTISTS -> all.filter { it.artist.lowercase(locale).contains(lowerQuery) }
+                    LocalSearchFilter.ALBUMS -> all.filter { it.albumTitle.lowercase(locale).contains(lowerQuery) }
                 }
             }
             _uiState.update { it.copy(searchResults = results, isSearching = false) }

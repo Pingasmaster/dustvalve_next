@@ -90,8 +90,9 @@ fun LibraryScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
+    val errorText = state.error?.asString()
+    LaunchedEffect(errorText) {
+        errorText?.let { error ->
             try {
                 snackbarHostState.showSnackbar(error)
             } finally {
@@ -100,8 +101,9 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(state.message) {
-        state.message?.let { msg ->
+    val messageText = state.message?.asString()
+    LaunchedEffect(messageText) {
+        messageText?.let { msg ->
             try {
                 snackbarHostState.showSnackbar(msg)
             } finally {
@@ -335,7 +337,7 @@ fun LibraryScreen(
                 if (progress.importing) R.string.library_importing else R.string.library_exporting,
             ),
             progress = fraction,
-            message = if (total > 0) "${progress.done} / $total" else null,
+            message = if (total > 0) stringResource(R.string.library_transfer_progress, progress.done, total) else null,
         )
     }
 }

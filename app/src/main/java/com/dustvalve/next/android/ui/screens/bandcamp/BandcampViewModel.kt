@@ -3,11 +3,13 @@ package com.dustvalve.next.android.ui.screens.bandcamp
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.remote.SubTag
 import com.dustvalve.next.android.data.remote.genreSubTags
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.usecase.DiscoverDustvalveUseCase
+import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -32,7 +34,7 @@ data class BandcampUiState(
     val selectedGenreTag: String = "",
     val categoryAlbums: List<Album> = emptyList(),
     val isCategoryLoading: Boolean = false,
-    val categoryError: String? = null,
+    val categoryError: UiText? = null,
     val selectedSubTag: String? = null,
     val availableSubTags: List<SubTag> = emptyList(),
 
@@ -201,7 +203,7 @@ class BandcampViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isCategoryLoading = false,
-                        categoryError = e.message ?: "Failed to load",
+                        categoryError = UiText.orResource(e.message, R.string.snackbar_failed_load),
                     )
                 }
             }

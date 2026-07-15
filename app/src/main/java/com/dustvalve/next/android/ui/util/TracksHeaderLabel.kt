@@ -35,5 +35,5 @@ fun tracksHeaderLabel(trackCount: Int, totalDurationSec: Long): String {
         // dot-separator pattern stays uniform.
         stringResource(R.string.detail_duration_minutes, totalMinutes.coerceAtLeast(1))
     }
-    return "$countPart  ·  $durationPart"
+    return stringResource(R.string.label_count_duration, countPart, durationPart)
 }

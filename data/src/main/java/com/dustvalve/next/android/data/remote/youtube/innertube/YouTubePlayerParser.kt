@@ -63,6 +63,7 @@ class YouTubePlayerParser @Inject constructor() {
     fun parseTrack(playerJson: JsonElement, videoId: String): Track {
         val details = playerJson.path("videoDetails")
             ?: throw IllegalStateException("YouTube /player response missing videoDetails")
+        // Wire-level fallbacks persisted with the record; not localized on purpose.
         val title = details.str("title") ?: "Unknown"
         val artist = details.str("author") ?: "Unknown"
         val duration = (details.str("lengthSeconds")?.toFloatOrNull()) ?: 0f

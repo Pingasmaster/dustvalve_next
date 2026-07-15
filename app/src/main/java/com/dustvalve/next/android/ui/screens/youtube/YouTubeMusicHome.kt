@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -92,7 +93,7 @@ fun YouTubeMusicHome(
 ) {
     when {
         state.ytmHome == null && state.ytmHomeError != null -> YtmErrorState(
-            message = state.ytmHomeError,
+            message = state.ytmHomeError.asString(),
             onRetry = onRetry,
             modifier = modifier,
         )
@@ -280,7 +281,7 @@ private fun YtmHero(hero: HeroItem, scrollOffset: Int, onPlay: (HeroItem) -> Uni
         ) {
             if (hero.subtitle.isNotBlank()) {
                 Text(
-                    text = hero.subtitle.uppercase(),
+                    text = hero.subtitle.uppercase(LocalConfiguration.current.locales[0]),
                     style = MaterialTheme.typography.labelLargeEmphasized.copy(letterSpacing = 2.sp),
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
@@ -429,7 +430,7 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = listOfNotNull(song.artist, song.album).joinToString(" • "),
+                text = listOfNotNull(song.artist, song.album).joinToString(stringResource(R.string.metadata_separator_compact)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -639,7 +640,7 @@ private fun ArtistSpotlightCard(artist: ArtistItem, onOpen: (ArtistItem) -> Unit
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = stringResource(R.string.ytm_artist_spotlight).uppercase(),
+                    text = stringResource(R.string.ytm_artist_spotlight).uppercase(LocalConfiguration.current.locales[0]),
                     style = MaterialTheme.typography.labelMediumEmphasized.copy(letterSpacing = 2.sp),
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
                 )

@@ -224,7 +224,7 @@ fun AlbumDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: stringResource(R.string.detail_error_load_album),
+                            text = state.error?.asString() ?: stringResource(R.string.detail_error_load_album),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -701,7 +701,7 @@ private fun BuyOnBandcampSplitButton(
                         if (activeMode != "album" && albumPrice != null) {
                             androidx.compose.material3.DropdownMenuItem(
                                 text = {
-                                    Text("${stringResource(R.string.detail_buy_this_album)} (${formatPrice(albumPrice)})")
+                                    Text(stringResource(R.string.detail_buy_this_album_priced, formatPrice(albumPrice)))
                                 },
                                 onClick = {
                                     menuOpen = false
@@ -712,7 +712,7 @@ private fun BuyOnBandcampSplitButton(
                         if (activeMode != "track" && singleTrackPrice != null) {
                             androidx.compose.material3.DropdownMenuItem(
                                 text = {
-                                    Text("${stringResource(R.string.detail_buy_single_track)} (${formatPrice(singleTrackPrice)})")
+                                    Text(stringResource(R.string.detail_buy_single_track_priced, formatPrice(singleTrackPrice)))
                                 },
                                 onClick = {
                                     menuOpen = false

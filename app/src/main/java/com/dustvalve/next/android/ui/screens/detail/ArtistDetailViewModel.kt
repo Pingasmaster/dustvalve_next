@@ -2,6 +2,7 @@ package com.dustvalve.next.android.ui.screens.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
@@ -18,6 +19,7 @@ import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,7 +45,7 @@ data class ArtistDetailUiState(
     val isLoadingMix: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
     val downloadedAlbumIds: Set<String> = emptySet(),
-    val error: String? = null,
+    val error: UiText? = null,
 )
 
 /**
@@ -140,7 +142,9 @@ class ArtistDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val source = sources[sourceId]
             if (source == null) {
-                _uiState.update { it.copy(isLoading = false, error = "Unknown source: $sourceId") }
+                _uiState.update {
+                    it.copy(isLoading = false, error = UiText.StringResource(R.string.error_unknown_source, listOf(sourceId)))
+                }
                 return@launch
             }
 
@@ -178,7 +182,7 @@ class ArtistDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load artist")
+                    it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_artist))
                 }
             }
         }

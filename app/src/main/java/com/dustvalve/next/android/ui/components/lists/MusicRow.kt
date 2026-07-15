@@ -151,7 +151,8 @@ fun MusicRow(
             }
         },
         supportingContent = {
-            val supporting = supportingOverride ?: defaultSupportingText(track, priceSuffix)
+            val supporting = supportingOverride
+                ?: defaultSupportingText(track, priceSuffix, stringResource(R.string.metadata_separator))
             if (supporting.isNotEmpty()) {
                 Text(
                     text = supporting,
@@ -187,17 +188,17 @@ fun MusicRow(
     }
 }
 
-private fun defaultSupportingText(track: Track, priceSuffix: String?): String {
+private fun defaultSupportingText(track: Track, priceSuffix: String?, separator: String): String {
     val parts = buildList {
         if (track.artist.isNotBlank()) add(track.artist)
         if (track.albumTitle.isNotBlank()) add(track.albumTitle)
     }
     val base = if (parts.isNotEmpty()) {
-        parts.joinToString("  ·  ")
+        parts.joinToString(separator)
     } else {
         TimeUtils.formatDuration(track.duration)
     }
-    return if (!priceSuffix.isNullOrBlank()) "$base  ·  $priceSuffix" else base
+    return if (!priceSuffix.isNullOrBlank()) "$base$separator$priceSuffix" else base
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

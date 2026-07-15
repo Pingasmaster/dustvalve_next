@@ -28,7 +28,7 @@ data class PlaylistDetailUiState(
     val isLoading: Boolean = true,
     val isDownloading: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
-    val error: String? = null,
+    val error: UiText? = null,
     val snackbarMessage: UiText? = null,
     val isSnackbarError: Boolean = false,
     /** When true AND this is the Favorites system playlist, hide the manual Download button. */
@@ -86,7 +86,7 @@ class PlaylistDetailViewModel @Inject constructor(
                 .catch { e ->
                     _uiState.update {
                         it.copy(
-                            error = e.message ?: "Failed to load playlist",
+                            error = UiText.orResource(e.message, R.string.playlist_error_load),
                             isLoading = false,
                         )
                     }
@@ -114,7 +114,7 @@ class PlaylistDetailViewModel @Inject constructor(
         downloadJob = viewModelScope.launch {
             try {
                 downloadController.downloadPlaylistBlocking(
-                    label = playlist?.name ?: "playlist",
+                    label = playlist?.name.orEmpty(),
                     tracks = tracks,
                 )
                 // Enable auto-download for this playlist if the global setting is on
@@ -126,7 +126,10 @@ class PlaylistDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
-                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded_all_in, listOf(playlist?.name ?: "playlist")),
+                        snackbarMessage = UiText.StringResource(
+                            R.string.snackbar_downloaded_all_in,
+                            listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
+                        ),
                         isSnackbarError = false,
                     )
                 }
@@ -153,7 +156,7 @@ class PlaylistDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = e.message ?: "Failed to remove track") }
+                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.playlist_error_remove_track)) }
             }
         }
     }
@@ -166,7 +169,7 @@ class PlaylistDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = e.message ?: "Failed to move track") }
+                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.playlist_error_move_track)) }
             }
         }
     }

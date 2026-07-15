@@ -172,7 +172,7 @@ fun CollectionDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: stringResource(R.string.detail_error_load_playlist),
+                            text = state.error?.asString() ?: stringResource(R.string.detail_error_load_playlist),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )

@@ -162,8 +162,9 @@ fun YouTubeScreen(
         }
     }
 
-    LaunchedEffect(state.error) {
-        val error = state.error ?: return@LaunchedEffect
+    val errorText = state.error?.asString()
+    LaunchedEffect(errorText) {
+        val error = errorText ?: return@LaunchedEffect
         if (state.results.isNotEmpty()) {
             try {
                 snackbarHostState.showSnackbar(error)
@@ -337,7 +338,7 @@ fun YouTubeScreen(
 
                         YouTubeSource.YouTube -> YouTubeSourceContent(
                             state = state,
-                            onMoodSelected = viewModel::onMoodSelected,
+                            onMoodSelect = viewModel::onMoodSelected,
                             onPlayItem = onPlayItem,
                             onRetrySection = viewModel::retrySection,
                             onLoadMoreGenres = { viewModel.loadMoreGenres() },
@@ -421,7 +422,7 @@ fun YouTubeScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = state.error ?: stringResource(R.string.common_search_failed),
+                                    text = state.error?.asString() ?: stringResource(R.string.common_search_failed),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -731,7 +732,7 @@ fun YouTubeScreen(
 @Composable
 private fun YouTubeSourceContent(
     state: YouTubeUiState,
-    onMoodSelected: (String?) -> Unit,
+    onMoodSelect: (MoodChip?) -> Unit,
     onPlayItem: (SearchResult) -> Unit,
     onRetrySection: (String) -> Unit,
     onLoadMoreGenres: () -> Unit,
@@ -744,14 +745,14 @@ private fun YouTubeSourceContent(
         item(key = "yt_moods") {
             MoodToggleRow(
                 selectedMood = state.selectedMood,
-                onMoodSelected = onMoodSelected,
+                onMoodSelect = onMoodSelect,
             )
         }
 
         if (state.selectedMood != null) {
             item(key = "yt_mood_header") {
                 Text(
-                    text = state.selectedMood,
+                    text = stringResource(state.selectedMood.labelRes),
                     style = MaterialTheme.typography.displaySmallEmphasized,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
@@ -766,8 +767,8 @@ private fun YouTubeSourceContent(
 
                 state.moodError != null -> item(key = "yt_mood_error") {
                     FeedErrorCard(
-                        message = state.moodError,
-                        onRetry = { onMoodSelected(state.selectedMood) },
+                        message = state.moodError.asString(),
+                        onRetry = { onMoodSelect(state.selectedMood) },
                         modifier = Modifier.animateItem(),
                     )
                 }
@@ -855,7 +856,7 @@ private fun YouTubeSourceContent(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MoodToggleRow(selectedMood: String?, onMoodSelected: (String?) -> Unit, modifier: Modifier = Modifier) {
+private fun MoodToggleRow(selectedMood: MoodChip?, onMoodSelect: (MoodChip?) -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -864,12 +865,12 @@ private fun MoodToggleRow(selectedMood: String?, onMoodSelected: (String?) -> Un
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         moodChips.forEach { chip ->
-            val isSelected = selectedMood == chip.label
+            val isSelected = selectedMood == chip
             ToggleButton(
                 checked = isSelected,
-                onCheckedChange = { onMoodSelected(if (isSelected) null else chip.label) },
+                onCheckedChange = { onMoodSelect(if (isSelected) null else chip) },
             ) {
-                Text(chip.label, maxLines = 1)
+                Text(stringResource(chip.labelRes), maxLines = 1)
             }
         }
     }
@@ -887,9 +888,9 @@ private fun DiscoverShelf(
     showHero: Boolean = false,
 ) {
     Column(modifier = modifier) {
-        if (section.title.isNotBlank()) {
+        section.title?.let { title ->
             Text(
-                text = section.title,
+                text = title.asString(),
                 style = MaterialTheme.typography.titleLargeEmphasized,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier

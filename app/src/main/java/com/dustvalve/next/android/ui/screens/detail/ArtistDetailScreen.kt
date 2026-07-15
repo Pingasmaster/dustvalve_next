@@ -191,7 +191,7 @@ fun ArtistDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: stringResource(R.string.detail_error_load_artist),
+                            text = state.error?.asString() ?: stringResource(R.string.detail_error_load_artist),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )

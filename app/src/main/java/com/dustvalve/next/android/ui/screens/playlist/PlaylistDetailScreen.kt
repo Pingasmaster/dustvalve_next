@@ -95,8 +95,9 @@ fun PlaylistDetailScreen(
         viewModel.loadPlaylist(playlistId)
     }
 
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
+    val errorText = state.error?.asString()
+    LaunchedEffect(errorText) {
+        errorText?.let { error ->
             try {
                 snackbarHostState.showSnackbar(error)
             } finally {
@@ -176,7 +177,7 @@ fun PlaylistDetailScreen(
 
             state.error != null && playlist == null -> {
                 ErrorState(
-                    message = state.error ?: stringResource(R.string.playlist_error_load),
+                    message = state.error?.asString() ?: stringResource(R.string.playlist_error_load),
                     onRetry = { viewModel.refreshPlaylist() },
                     modifier = Modifier.padding(paddingValues),
                 )

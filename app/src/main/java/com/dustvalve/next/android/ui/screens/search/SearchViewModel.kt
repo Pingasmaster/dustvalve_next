@@ -2,6 +2,7 @@ package com.dustvalve.next.android.ui.screens.search
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
@@ -16,6 +17,7 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
@@ -40,7 +42,7 @@ data class SearchUiState(
     val isLoading: Boolean = false,
     val page: Int = 1,
     val hasMore: Boolean = true,
-    val error: String? = null,
+    val error: UiText? = null,
     val searchGeneration: Int = 0,
 )
 
@@ -254,7 +256,7 @@ class SearchViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    error = e.message ?: "Search failed",
+                    error = UiText.orResource(e.message, R.string.common_search_failed),
                 )
             }
         }

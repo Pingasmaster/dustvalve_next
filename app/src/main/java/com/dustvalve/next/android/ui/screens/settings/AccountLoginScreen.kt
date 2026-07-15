@@ -97,6 +97,7 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    val loadErrorFallback = stringResource(R.string.error_load_page)
     // Keep a stable reference to the latest callback to avoid stale lambda captures in WebView
     val currentOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
 
@@ -192,7 +193,7 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
                                 // Only handle errors for the main frame to avoid spurious sub-resource errors
                                 if (request.isForMainFrame) {
                                     isPageLoading = false
-                                    loadError = error.description?.toString() ?: "Failed to load page"
+                                    loadError = error.description?.toString() ?: loadErrorFallback
                                 }
                             }
 

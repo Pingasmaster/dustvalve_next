@@ -16,6 +16,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.security.MessageDigest
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -229,7 +230,7 @@ class LocalMusicScanner @Inject constructor(
 
     private fun md5Hash(input: String): String = MessageDigest.getInstance("MD5")
         .digest(input.toByteArray())
-        .joinToString("") { "%02x".format(it) }
+        .joinToString("") { "%02x".format(Locale.ROOT, it) }
 
     private data class AudioFileInfo(val documentId: String, val displayName: String, val contentUri: Uri, val mimeType: String)
 }

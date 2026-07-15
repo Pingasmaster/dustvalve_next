@@ -9,6 +9,7 @@ import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
+import com.dustvalve.next.android.util.UiText
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -176,7 +177,7 @@ class SearchViewModelTest {
         vm.onQueryChange("beat")
         advanceUntilIdle()
 
-        assertThat(vm.uiState.value.error).isEqualTo("offline")
+        assertThat(vm.uiState.value.error).isEqualTo(UiText.DynamicString("offline"))
         assertThat(vm.uiState.value.isLoading).isFalse()
 
         vm.clearError()

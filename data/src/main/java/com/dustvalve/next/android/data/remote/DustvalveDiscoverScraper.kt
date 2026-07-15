@@ -18,6 +18,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -143,6 +144,6 @@ class DustvalveDiscoverScraper @Inject constructor(
     private fun stableId(input: String): String {
         val normalized = normalizeUrl(input)
         val bytes = MessageDigest.getInstance("SHA-256").digest(normalized.toByteArray())
-        return bytes.take(16).joinToString("") { "%02x".format(it) }
+        return bytes.take(16).joinToString("") { "%02x".format(Locale.ROOT, it) }
     }
 }

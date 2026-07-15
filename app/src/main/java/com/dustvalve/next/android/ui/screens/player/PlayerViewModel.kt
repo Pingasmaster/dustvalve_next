@@ -695,7 +695,10 @@ class PlayerViewModel @Inject constructor(
                 val playlist = _extraState.value.playlists.find { it.id == playlistId }
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist?.name ?: "playlist")),
+                        snackbarMessage = UiText.StringResource(
+                            R.string.snackbar_added_to_playlist,
+                            listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
+                        ),
                         isSnackbarError = false,
                     )
                 }
@@ -795,7 +798,10 @@ class PlayerViewModel @Inject constructor(
                 val playlist = _extraState.value.playlists.find { it.id == playlistId }
                 _extraState.update {
                     it.copy(
-                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist?.name ?: "playlist")),
+                        snackbarMessage = UiText.StringResource(
+                            R.string.snackbar_added_to_playlist,
+                            listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
+                        ),
                         isSnackbarError = false,
                     )
                 }

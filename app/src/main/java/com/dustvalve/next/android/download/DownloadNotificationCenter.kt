@@ -232,8 +232,13 @@ class DownloadNotificationCenter @Inject constructor(
         if (outer != null) {
             title = when (outer.kind) {
                 BatchKind.ALBUM -> context.getString(R.string.notification_downloading_batch_album, outer.label)
+
                 BatchKind.ARTIST -> context.getString(R.string.notification_downloading_batch_artist, outer.label)
-                BatchKind.PLAYLIST -> context.getString(R.string.notification_downloading_batch_playlist, outer.label)
+
+                BatchKind.PLAYLIST -> context.getString(
+                    R.string.notification_downloading_batch_playlist,
+                    outer.label.ifBlank { context.getString(R.string.playlist_default_title) },
+                )
             }
             val currentIndex = (snapshot.completedInBatch + 1).coerceAtMost(outer.totalTracks)
             text = if (currentTrack != null) {

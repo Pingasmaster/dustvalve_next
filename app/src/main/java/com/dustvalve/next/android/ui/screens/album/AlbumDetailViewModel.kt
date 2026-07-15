@@ -34,7 +34,7 @@ import kotlin.coroutines.cancellation.CancellationException
 data class AlbumDetailUiState(
     val album: Album? = null,
     val isLoading: Boolean = true,
-    val error: String? = null,
+    val error: UiText? = null,
     val isDownloading: Boolean = false,
     val downloadingTrackIds: Set<String> = emptySet(),
     val downloadedTrackIds: Set<String> = emptySet(),
@@ -146,7 +146,7 @@ class AlbumDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = e.message ?: "Failed to load album",
+                        error = UiText.orResource(e.message, R.string.detail_error_load_album),
                     )
                 }
             }

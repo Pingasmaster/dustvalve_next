@@ -18,6 +18,7 @@ import okhttp3.Request
 import org.jsoup.Jsoup
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
@@ -277,7 +278,7 @@ class DustvalveArtistScraper @Inject constructor(
     private fun stableId(input: String): String {
         val normalized = normalizeUrl(input)
         val bytes = MessageDigest.getInstance("SHA-256").digest(normalized.toByteArray())
-        return bytes.take(16).joinToString("") { "%02x".format(it) }
+        return bytes.take(16).joinToString("") { "%02x".format(Locale.ROOT, it) }
     }
 
     companion object {
