@@ -92,6 +92,11 @@ android {
     }
 
     buildTypes {
+        debug {
+            // en-XA (accented/expanded) and ar-XB (RTL) pseudolocales for
+            // localizability testing; never enabled on release.
+            isPseudoLocalesEnabled = true
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -120,11 +125,15 @@ android {
     }
 
     androidResources {
-        // App strings are English-only (res/values + values-night); drop the
-        // ~85 locales of androidx/Material3/Media3 library translations that
-        // would otherwise ship in the universal APK. Remove if the app ever
-        // gains its own translations.
-        localeFilters += "en"
+        // Ship exactly the locales the app is translated into (res/values-*);
+        // this still strips the ~75 other locales of androidx/Material3/Media3
+        // library translations from the universal APK. Keep in sync with the
+        // values-* directories when adding a language.
+        localeFilters += listOf("en", "de", "es", "fr", "it", "pt-rBR", "ja", "zh-rCN", "ru")
+        // Auto-generate the Android 13+ LocaleConfig from the values-* dirs +
+        // res/resources.properties so the app appears in
+        // Settings > System > App languages (per-app language preference).
+        generateLocaleConfig = true
     }
 
     // The dependency-metadata block is an encrypted blob only Google Play can
