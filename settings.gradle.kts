@@ -24,6 +24,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Robolectric 4.17-SNAPSHOT for SDK 37 emulation (no stable release
+        // supports Android 17 yet — drop this repo once 4.17 ships).
+        maven("https://central.sonatype.com/repository/maven-snapshots") {
+            content { includeGroup("org.robolectric") }
+        }
     }
 }
 

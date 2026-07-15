@@ -137,6 +137,20 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
+        // Robolectric 4.17 pokes JDK internals (FileDescriptor, reflection)
+        // that modern JDKs seal by default; open them for the test JVM only.
+        unitTests.all { test ->
+            test.jvmArgs(
+                "--add-opens=java.base/java.lang=ALL-UNNAMED",
+                "--add-opens=java.base/java.util=ALL-UNNAMED",
+                "--add-opens=java.base/java.io=ALL-UNNAMED",
+                "--add-opens=java.base/java.nio=ALL-UNNAMED",
+                "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+                // SDK-37 ApplicationSharedMemory shadow reaches SharedSecrets.
+                "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
+                "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+            )
+        }
     }
 
     // AGP can't run NDK strip on these AAR-supplied .so files (no NDK installed
@@ -287,6 +301,7 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.espresso.core)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.room.testing)
