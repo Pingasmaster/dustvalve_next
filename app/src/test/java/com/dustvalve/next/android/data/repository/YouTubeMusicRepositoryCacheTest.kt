@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.repository
 
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao

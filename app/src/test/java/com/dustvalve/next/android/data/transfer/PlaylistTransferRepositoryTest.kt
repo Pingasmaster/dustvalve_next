@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.transfer
 
 import android.content.Context

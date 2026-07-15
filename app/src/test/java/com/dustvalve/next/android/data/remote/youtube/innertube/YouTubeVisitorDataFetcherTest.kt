@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import com.google.common.truth.Truth.assertThat

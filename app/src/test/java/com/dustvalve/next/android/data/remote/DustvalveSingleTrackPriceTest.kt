@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote
 
 import com.dustvalve.next.android.domain.model.Album

@@ -48,6 +48,10 @@ jobs:
             echo "| DEX (uncompressed) | $(unzip -l "$apk" '*.dex' | tail -1 | awk '{printf "%.1f MB", $1/1048576}') |"
             echo "| Native libs (uncompressed) | $(unzip -l "$apk" 'lib/*' | tail -1 | awk '{printf "%.1f MB", $1/1048576}') |"
           } >> "$GITHUB_STEP_SUMMARY"
+          size=$(stat -c%s "$apk")
+          if [ "$size" -gt $((10 * 1024 * 1024)) ]; then
+            echo "::warning title=APK size::Release APK is $(du -h "$apk" | cut -f1) (> 10 MB budget). Investigate size regression."
+          fi
 
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v3.0.1
