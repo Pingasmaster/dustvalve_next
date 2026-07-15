@@ -1,9 +1,10 @@
 name: Regenerate Baseline + Startup Profile
 
+# Deliberately NOT triggered by pull_request: this job holds contents:write /
+# pull-requests:write, and workflows must never run on unreviewed fork code.
+# Runs on commits landed on master and on manual dispatch only.
 on:
   push:
-    branches: [master]
-  pull_request:
     branches: [master]
   workflow_dispatch:
 

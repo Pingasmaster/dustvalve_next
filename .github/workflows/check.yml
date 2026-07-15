@@ -1,9 +1,10 @@
 name: Checks (lint, tests, screenshots)
 
+# Deliberately NOT triggered by pull_request: workflows must never run on
+# unreviewed fork code, so nothing here can be aimed at repo credentials.
+# Runs on commits landed on master and on manual dispatch only.
 on:
   push:
-    branches: [master]
-  pull_request:
     branches: [master]
   workflow_dispatch:
 
