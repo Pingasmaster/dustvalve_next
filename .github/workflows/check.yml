@@ -1,0 +1,57 @@
+name: Checks (lint, tests, screenshots)
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ktlint + detekt + lint + unit tests + locale screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.3.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5.4.0
+        with:
+          distribution: 'zulu'
+          java-version: 21
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3.2.2
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4.4.4
+
+      - name: Style (ktlint + detekt)
+        run: ./gradlew ktlintCheck detekt
+
+      - name: Android Lint (all modules, warnings-as-errors)
+        run: ./gradlew lintRelease
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Locale screenshot verification (Roborazzi)
+        run: ./gradlew :app:verifyRoborazziDebug
+
+      - name: Upload screenshot diffs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roborazzi-diffs
+          path: |
+            app/src/test/snapshots/roborazzi/*_compare.png
+            app/build/outputs/roborazzi/
+          if-no-files-found: ignore

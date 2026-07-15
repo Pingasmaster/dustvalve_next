@@ -16,6 +16,7 @@ android {
         // Off-by-default check; must be enabled here so :app (checkDependencies
         // = true) can enforce it at error severity across module boundaries.
         enable += "StopShip"
+        enable += "TypographyQuotes"
     }
 
     compileOptions {

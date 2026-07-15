@@ -1,6 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <lint>
-    <issue id="MissingTranslation"            severity="ignore" />
+    <!--
+        The app ships translations (values-de/es/fr/it/pt-rBR/ja/zh-rCN/ru).
+        Every new default string must land with all 8 translations in the same
+        change — machine-translate at PR time, native corrections welcome.
+    -->
+    <issue id="MissingTranslation"            severity="error" />
+    <issue id="ExtraTranslation"              severity="error" />
+    <!-- Translation integrity: placeholder parity and plural quantity sets -->
+    <issue id="StringFormatInvalid"           severity="error" />
+    <issue id="StringFormatMatches"           severity="error" />
+    <issue id="StringFormatCount"             severity="error" />
+    <issue id="MissingQuantity"               severity="error" />
+    <issue id="ImpliedQuantity"               severity="error" />
+    <issue id="PluralsCandidate"              severity="error" />
+    <!-- i18n hygiene -->
+    <issue id="SetTextI18n"                   severity="error" />
+    <issue id="TypographyEllipsis"            severity="error" />
+    <issue id="TypographyQuotes"              severity="error" />
+    <issue id="TypographyDashes"              severity="error" />
+    <issue id="RelativeOverlap"               severity="error" />
+    <issue id="RtlHardcoded"                  severity="error" />
     <issue id="GoogleAppIndexingWarning"      severity="ignore" />
     <issue id="ObsoleteSdkInt"                severity="error" />
 
