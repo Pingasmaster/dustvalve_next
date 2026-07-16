@@ -57,7 +57,7 @@ class DustvalveNextApplication :
         // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
         // cursors, and unclosed Closeables via logcat + a small ANR dialog
         // for severe ThreadPolicy violations. Suppressed in release via the
-        // BuildConfig.DEBUG gate — release APKs must not stall on a stray
+        // BuildConfig.DEBUG gate - release APKs must not stall on a stray
         // `runOnUiThread { db.query() }`.
         if (BuildConfig.DEBUG) installStrictMode()
         // DiagnosticsInitializer (registered via androidx.startup in the
@@ -68,7 +68,7 @@ class DustvalveNextApplication :
         // Drop partial .tmp files orphaned by a previous process death; the
         // in-memory download queue that could have resumed them is gone.
         downloadController.purgeStalePartialsOnColdStart()
-        // Idempotent — observes the "Auto-download favorites" toggle and
+        // Idempotent - observes the "Auto-download favorites" toggle and
         // enqueues downloads for any favorited tracks not already on disk.
         autoDownloadFavoritesCoordinator.start()
         // Observes the dedicated-folder toggle; when on, mirrors every user-
@@ -88,7 +88,7 @@ class DustvalveNextApplication :
      * biggest ephemeral allocation, bounded to 25 % of available memory in
      * [newImageLoader]) and the in-memory "update available" snapshot held
      * by [appUpdateController]. The Coil disk cache, the OkHttp HTTP cache,
-     * and the download controller's queue are intentionally untouched —
+     * and the download controller's queue are intentionally untouched -
      * they're either persistent (disk cache) or resumable across the next
      * foreground (downloads, which run under a foreground service).
      */

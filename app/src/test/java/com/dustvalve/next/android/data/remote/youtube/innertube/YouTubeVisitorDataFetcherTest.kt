@@ -1,6 +1,10 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -22,6 +26,7 @@ class YouTubeVisitorDataFetcherTest {
             client = OkHttpClient(),
             primaryUrl = primary.url("/").toString(),
             fallbackUrl = fallback.url("/").toString(),
+            dispatcher = UnconfinedTestDispatcher(),
         )
     }
 
@@ -143,7 +148,12 @@ class YouTubeVisitorDataFetcherTest {
         assertThat(cfg.visitorData).isEqualTo("after_503")
     }
 
-    private class TestableFetcher(client: OkHttpClient, primaryUrl: String, fallbackUrl: String) : YouTubeVisitorDataFetcher(client) {
+    private class TestableFetcher(
+        client: OkHttpClient,
+        primaryUrl: String,
+        fallbackUrl: String,
+        dispatcher: CoroutineDispatcher,
+    ) : YouTubeVisitorDataFetcher(client, dispatcher) {
         override val landingUrl: String = primaryUrl
         override val fallbackLandingUrl: String = fallbackUrl
     }

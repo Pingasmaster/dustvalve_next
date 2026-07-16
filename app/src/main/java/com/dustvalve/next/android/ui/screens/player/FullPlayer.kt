@@ -142,6 +142,7 @@ import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
+import com.dustvalve.next.android.ui.util.displayNameRes
 import com.dustvalve.next.android.ui.util.tick
 import com.dustvalve.next.android.ui.util.toggle
 import kotlinx.coroutines.delay
@@ -149,7 +150,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-/** Number of haptic segments across the seek bar (≈ticks per full-width scrub). */
+/** Number of haptic segments across the seek bar (~ticks per full-width scrub). */
 private const val SEEK_TICK_SEGMENTS = 40
 
 /** Number of haptic segments across a volume slider. */
@@ -278,7 +279,7 @@ fun FullPlayer(
             ) {
                 Text(
                     text = stringResource(R.string.player_volume),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleMedium,
                 )
                 Spacer(modifier = Modifier.height(32.dp))
                 Icon(
@@ -329,7 +330,7 @@ fun FullPlayer(
                     val autoSelected = state.activeAudioDevice == null
                     val autoColor by animateColorAsState(
                         targetValue = if (autoSelected) {
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            MaterialTheme.colorScheme.secondaryContainer
                         } else {
                             Color.Transparent
                         },
@@ -347,7 +348,6 @@ fun FullPlayer(
                             ),
                     ) {
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.player_automatic)) },
                             leadingContent = { RadioButton(selected = autoSelected, onClick = null) },
                             trailingContent = {
                                 Icon(
@@ -356,14 +356,16 @@ fun FullPlayer(
                                 )
                             },
                             colors = ListItemDefaults.colors(containerColor = autoColor),
-                        )
+                        ) {
+                            Text(stringResource(R.string.player_automatic))
+                        }
                     }
                     state.audioOutputDevices.forEachIndexed { index, device ->
                         val deviceIndex = index + 1
                         val isActive = state.activeAudioDevice?.id == device.id
                         val bgColor by animateColorAsState(
                             targetValue = if (isActive) {
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                MaterialTheme.colorScheme.secondaryContainer
                             } else {
                                 Color.Transparent
                             },
@@ -374,7 +376,8 @@ fun FullPlayer(
                             shape = segmentedItemShape(deviceIndex, totalDeviceCount),
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                             modifier = Modifier
-                                .padding(top = 1.dp)
+                                // Standard 2dp segmented-list gap.
+                                .padding(top = 2.dp)
                                 .selectable(
                                     selected = isActive,
                                     onClick = { playerViewModel.setAudioOutputDevice(device) },
@@ -382,7 +385,6 @@ fun FullPlayer(
                                 ),
                         ) {
                             ListItem(
-                                headlineContent = { Text(audioDeviceDisplayName(device)) },
                                 leadingContent = { RadioButton(selected = isActive, onClick = null) },
                                 trailingContent = {
                                     Icon(
@@ -391,11 +393,13 @@ fun FullPlayer(
                                     )
                                 },
                                 colors = ListItemDefaults.colors(containerColor = bgColor),
-                            )
+                            ) {
+                                Text(audioDeviceDisplayName(device))
+                            }
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(28.dp))
             }
         }
     }
@@ -539,7 +543,7 @@ fun FullPlayer(
                                             }
                                         }
                                     } else {
-                                        // No upcoming tracks — close carousel
+                                        // No upcoming tracks - close carousel
                                         LaunchedEffect(Unit) { isCarouselMode = false }
                                     }
                                 } else {
@@ -669,9 +673,9 @@ fun FullPlayer(
                                                     },
                                                     onLongPress = {
                                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        // Settings → Debug → "Show debug info":
-                                                        //   ON  → long-press shows the debug sheet
-                                                        //   OFF → long-press opens the cover carousel (default)
+                                                        // Settings -> Debug -> "Show debug info":
+                                                        //   ON  -> long-press shows the debug sheet
+                                                        //   OFF -> long-press opens the cover carousel (default)
                                                         if (state.albumCoverLongPressCarousel) {
                                                             showDebugSheet = true
                                                         } else {
@@ -794,11 +798,11 @@ fun FullPlayer(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        // Connected M3E ButtonGroup: Artist · Album · Favorite ·
-                        // Download · Add-to-playlist. All icon-only (the artist
+                        // Connected M3E ButtonGroup: Artist / Album / Favorite /
+                        // Download / Add-to-playlist. All icon-only (the artist
                         // name is already in the title above), all ~40 dp tall to
                         // match the previous TonalToggleButton sizing. Spaced 8 dp
-                        // apart for visual breathing room — wider than the 2 dp
+                        // apart for visual breathing room - wider than the 2 dp
                         // ButtonGroupDefaults.ConnectedSpaceBetween.
                         val isTrackDownloaded = track.id in state.downloadedTrackIds
                         val isDownloading = state.downloadingTrackId == track.id
@@ -809,7 +813,7 @@ fun FullPlayer(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         ) {
-                            // Artist navigation (icon-only — name is in the title above).
+                            // Artist navigation (icon-only - name is in the title above).
                             // Stateless action: FilledTonalButton, not TonalToggleButton,
                             // so TalkBack announces "button" rather than "not selected".
                             FilledTonalButton(
@@ -826,10 +830,10 @@ fun FullPlayer(
                             }
                             // Album navigation (new). Disabled when the track has
                             // no album page (streaming sources where it's not
-                            // canonical). Also stateless — same FilledTonalButton.
+                            // canonical). Also stateless - same FilledTonalButton.
                             FilledTonalButton(
                                 onClick = { onAlbumClick(track) },
-                                shape = RoundedCornerShape(4.dp),
+                                shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
                                 enabled = albumNavEnabled,
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(0.dp),
@@ -898,7 +902,7 @@ fun FullPlayer(
                                     )
                                 }
                             }
-                            // Add to playlist (new — opens the existing AddToPlaylistSheet).
+                            // Add to playlist (new - opens the existing AddToPlaylistSheet).
                             TonalToggleButton(
                                 checked = track.id in state.userPlaylistTrackIds,
                                 onCheckedChange = { showPlaylistSheet = true },
@@ -913,7 +917,7 @@ fun FullPlayer(
                         }
                     }
 
-                    // Wavy seek bar — keyed to track so state resets on track change
+                    // Wavy seek bar - keyed to track so state resets on track change
                     val trackId = track.id
                     var isSeeking by remember(trackId) { mutableStateOf(false) }
                     var seekPosition by remember(trackId) { mutableFloatStateOf(0f) }
@@ -1025,7 +1029,7 @@ fun FullPlayer(
                         }
                     }
 
-                    // Time labels — reflect seek position during drag
+                    // Time labels - reflect seek position during drag
                     val displayPosition = if (state.isLoadingTrack) {
                         null
                     } else if (isSeeking) {
@@ -1034,9 +1038,7 @@ fun FullPlayer(
                         state.currentPosition
                     }
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
@@ -1125,7 +1127,7 @@ fun FullPlayer(
                         }
                     }
 
-                    // Bottom control row: Shuffle | Repeat — same connected
+                    // Bottom control row: Shuffle | Repeat - same connected
                     // ButtonGroup styling as the top action row above (8 dp gap,
                     // connected leading/trailing shapes, weight(1f) per button,
                     // ~40 dp tall). Repeat is tri-state (OFF/ON/ONE): checked is
@@ -1153,7 +1155,7 @@ fun FullPlayer(
                         TonalToggleButton(
                             checked = state.repeatMode != RepeatMode.OFF,
                             onCheckedChange = {
-                                // Cycle OFF→ALL→ONE→OFF; only ONE→OFF is "turning off".
+                                // Cycle OFF->ALL->ONE->OFF; only ONE->OFF is "turning off".
                                 hapticFeedback.toggle(state.repeatMode != RepeatMode.ONE)
                                 playerViewModel.onToggleRepeat()
                             },
@@ -1176,7 +1178,7 @@ fun FullPlayer(
                     Spacer(modifier = Modifier.height(80.dp))
                 }
 
-                // Transparent overlay — collapse + volume icons. Doubles as the
+                // Transparent overlay - collapse + volume icons. Doubles as the
                 // swipe-down-to-collapse drag handle (inverse of the mini bar's
                 // swipe-up-to-expand): a downward drag scrubs the host morph back
                 // to the mini player, committed by velocity on release.
@@ -1300,97 +1302,103 @@ fun FullPlayer(
                     },
                 )
 
-                Surface(
-                    shape = segmentedItemShape(0, 6),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                SegmentedListItem(
+                    index = 0,
+                    count = 6,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     ListItem(
-                        headlineContent = { Text(formatDisplay) },
                         supportingContent = { Text(stringResource(R.string.player_debug_audio_format)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_audio_file), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(formatDisplay)
+                    }
                 }
-                Surface(
-                    shape = segmentedItemShape(1, 6),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                SegmentedListItem(
+                    index = 1,
+                    count = 6,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     ListItem(
-                        headlineContent = { Text(sourceDisplay) },
                         supportingContent = { Text(stringResource(R.string.player_debug_source)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_cloud), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(sourceDisplay)
+                    }
                 }
-                Surface(
-                    shape = segmentedItemShape(2, 6),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                SegmentedListItem(
+                    index = 2,
+                    count = 6,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     ListItem(
-                        headlineContent = { Text(downloadStatus) },
                         supportingContent = { Text(stringResource(R.string.player_debug_download_status)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_download), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(downloadStatus)
+                    }
                 }
-                Surface(
-                    shape = segmentedItemShape(3, 6),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                SegmentedListItem(
+                    index = 3,
+                    count = 6,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = state.currentSourcePath?.let {
-                                    it.substringAfterLast("/downloads/")
-                                } ?: track.streamUrl?.take(60) ?: stringResource(R.string.player_debug_none),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
                         supportingContent = { Text(stringResource(R.string.player_debug_file_path)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_storage), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(
+                            text = state.currentSourcePath?.let {
+                                it.substringAfterLast("/downloads/")
+                            } ?: track.streamUrl?.take(60) ?: stringResource(R.string.player_debug_none),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
-                Surface(
-                    shape = segmentedItemShape(4, 6),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                SegmentedListItem(
+                    index = 4,
+                    count = 6,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = track.id,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
                         supportingContent = { Text(stringResource(R.string.player_debug_track_id)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(
+                            text = track.id,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
-                Surface(
-                    shape = segmentedItemShape(5, 6),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                SegmentedListItem(
+                    index = 5,
+                    count = 6,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = track.albumId,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        },
                         supportingContent = { Text(stringResource(R.string.player_debug_album_id)) },
                         leadingContent = {
                             Icon(painterResource(R.drawable.ic_info), contentDescription = null)
                         },
-                    )
+                    ) {
+                        Text(
+                            text = track.albumId,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(28.dp))
@@ -1427,13 +1435,6 @@ fun FullPlayer(
             )
 
             ListItem(
-                headlineContent = {
-                    Text(
-                        stringResource(
-                            if (contextTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites,
-                        ),
-                    )
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(
@@ -1451,10 +1452,15 @@ fun FullPlayer(
                     upNextContextTrack = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(
+                    stringResource(
+                        if (contextTrack.isFavorite) R.string.player_remove_from_favorites else R.string.player_add_to_favorites,
+                    ),
+                )
+            }
 
             ListItem(
-                headlineContent = { Text(stringResource(R.string.common_add_to_playlist)) },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_playlist_add),
@@ -1465,15 +1471,11 @@ fun FullPlayer(
                     showUpNextPlaylistSheet = true
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(stringResource(R.string.common_add_to_playlist))
+            }
 
             ListItem(
-                headlineContent = {
-                    Text(
-                        text = stringResource(R.string.player_remove_from_queue),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_close),
@@ -1486,13 +1488,18 @@ fun FullPlayer(
                     upNextContextTrack = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(
+                    text = stringResource(R.string.player_remove_from_queue),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
             Spacer(modifier = Modifier.height(28.dp))
         }
     }
 
-    // Up Next — add to playlist sheet
+    // Up Next - add to playlist sheet
     if (showUpNextPlaylistSheet) {
         AddToPlaylistSheet(
             playlists = state.playlists,
@@ -1552,6 +1559,8 @@ fun FullPlayer(
                     androidx.compose.material3.SheetValue.Expanded,
                 ),
             ),
+            // Contrasts with the surfaceContainerLow segmented rows inside;
+            // the M3 default (surfaceContainerLow) would swallow them.
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(

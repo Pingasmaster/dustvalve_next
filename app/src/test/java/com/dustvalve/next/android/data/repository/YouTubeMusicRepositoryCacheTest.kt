@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.repository
 
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
@@ -14,6 +16,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
@@ -22,7 +25,7 @@ import org.junit.Test
 
 /**
  * Verifies the YouTube Music home-cache behaviour. The home feed is
- * editorial (changes daily) but never blocks the UI — cached snapshots
+ * editorial (changes daily) but never blocks the UI - cached snapshots
  * always emit first; background refresh is best-effort and silent.
  */
 class YouTubeMusicRepositoryCacheTest {
@@ -49,15 +52,16 @@ class YouTubeMusicRepositoryCacheTest {
             ytClient,
             ytPlayerParser,
             homeCache,
+            ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
 
     @Test fun `getHome cache hit returns cached feed without browsing`() = runTest {
-        // Cached payload — empty JSON object is fine; parser is mocked.
+        // Cached payload - empty JSON object is fine; parser is mocked.
         coEvery { homeCache.getByKey("home") } returns YouTubeMusicHomeCacheEntity(
             key = "home",
             feedJson = "{}",
-            cachedAt = System.currentTimeMillis(), // Fresh — no background refresh.
+            cachedAt = System.currentTimeMillis(), // Fresh - no background refresh.
         )
         val cachedFeed = YouTubeMusicHomeFeed(chips = emptyList(), shelves = emptyList())
         every { parser.parseHome(any()) } returns cachedFeed

@@ -216,7 +216,7 @@ class SettingsViewModel @Inject constructor(
                         folderMigrationInProgress = false,
                         folderMigrationError = UiText.StringResource(
                             R.string.settings_dedicated_folder_migration_failed,
-                            listOf(e.message ?: "Unknown error"),
+                            listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
                         ),
                     )
                 }
@@ -260,7 +260,7 @@ class SettingsViewModel @Inject constructor(
                         folderMigrationInProgress = false,
                         folderMigrationError = UiText.StringResource(
                             R.string.settings_dedicated_folder_migration_failed,
-                            listOf(e.message ?: "Unknown error"),
+                            listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
                         ),
                     )
                 }
@@ -727,7 +727,7 @@ class SettingsViewModel @Inject constructor(
                         isScanning = false,
                         scanMessage =
                         e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
-                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
+                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf(UiText.StringResource(R.string.error_unknown))),
                     )
                 }
             }
@@ -755,7 +755,7 @@ class SettingsViewModel @Inject constructor(
                         isScanning = false,
                         scanMessage =
                         e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
-                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
+                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf(UiText.StringResource(R.string.error_unknown))),
                     )
                 }
             }
@@ -799,7 +799,7 @@ class SettingsViewModel @Inject constructor(
                         isScanning = false,
                         scanMessage =
                         e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
-                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf("Unknown error")),
+                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf(UiText.StringResource(R.string.error_unknown))),
                     )
                 }
             }
@@ -923,7 +923,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(searchHistoryClearedMessage = null) }
     }
 
-    // ─── App update ────────────────────────────────────────────────────────
+    // --- App update --------------------------------------------------------
     //
     // Thin delegates over [AppUpdateController] so the cold-start dialog and
     // the Settings row share one source of truth for state + an in-flight

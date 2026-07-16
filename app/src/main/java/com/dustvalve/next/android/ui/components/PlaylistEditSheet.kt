@@ -1,7 +1,3 @@
-// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
-// overload is @Deprecated). Our call uses the non-deprecated overload.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.components
 
 import androidx.compose.animation.animateColorAsState
@@ -12,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -94,9 +89,11 @@ fun PlaylistEditSheet(
         ) {
             Text(
                 text = stringResource(if (isCreate) R.string.playlist_new else R.string.playlist_edit),
-                style = MaterialTheme.typography.titleLarge,
+                // titleMedium + 4dp - the app-wide sheet header convention.
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = 4.dp),
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = name,
@@ -113,7 +110,7 @@ fun PlaylistEditSheet(
             )
             Spacer(Modifier.height(8.dp))
 
-            FlowRow(
+            AppFlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -266,7 +263,7 @@ fun PlaylistEditSheet(
                     Text(stringResource(if (isCreate) R.string.common_action_create else R.string.common_action_save))
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }

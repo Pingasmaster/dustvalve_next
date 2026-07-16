@@ -27,7 +27,7 @@ class RangeResumeDownloaderTest {
 
     private lateinit var server: MockWebServer
 
-    // No connection pooling — each request gets a fresh socket. MockWebServer
+    // No connection pooling - each request gets a fresh socket. MockWebServer
     // gets confused when a single connection is reused across enqueued
     // responses in our retry-based test shapes.
     private val client = OkHttpClient.Builder()
@@ -84,7 +84,7 @@ class RangeResumeDownloaderTest {
     @Test
     fun `resumes from bytes written when CDN truncates body mid-stream`() = runBlocking {
         // CDN lies: advertises 8000 bytes but closes after sending 3000. This is
-        // the shape we see in practice — the socket stays open and data flows,
+        // the shape we see in practice - the socket stays open and data flows,
         // then the CDN closes. Our helper must detect bytesWritten < expected,
         // reconnect with Range: bytes=3000-, and append the remainder.
         val fullBody = ByteArray(8000) { (it and 0xFF).toByte() }
@@ -161,7 +161,7 @@ class RangeResumeDownloaderTest {
 
         assertThat(ex).isInstanceOf(IOException::class.java)
         assertThat(ex!!.message).contains("ignored Range on resume")
-        // Sink is left with the 2000 partial bytes written before the reset —
+        // Sink is left with the 2000 partial bytes written before the reset -
         // verifying we did NOT silently append the full 5000-byte body on top,
         // which would have produced a 7000-byte corrupt file.
         assertThat(out.toByteArray().size).isEqualTo(partial.size)

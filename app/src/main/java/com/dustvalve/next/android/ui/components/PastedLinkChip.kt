@@ -32,7 +32,7 @@ import com.dustvalve.next.android.util.LinkResourceType
 /**
  * Inline action affordance shown under any search bar when a pasted link is detected.
  * Uses an M3 [AssistChip] (the semantic for a dynamic, contextual "smart action"), a tonal
- * secondary-container look, and motion-scheme spring enter/exit — matching house style.
+ * secondary-container look, and motion-scheme spring enter/exit - matching house style.
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

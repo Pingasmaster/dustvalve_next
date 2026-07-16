@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Machine-translated (Claude). Corrections welcome via PR. -->
+    <plurals name="track_count">
+        <item quantity="one">%d traccia</item>
+        <item quantity="many">%d di tracce</item>
+        <item quantity="other">%d tracce</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d brano</item>
+        <item quantity="many">%d di brani</item>
+        <item quantity="other">%d brani</item>
+    </plurals>
+    <plurals name="song_count_filtered">
+        <item quantity="one">%1$d brano su %2$d</item>
+        <item quantity="many">%1$d di brani su %2$d</item>
+        <item quantity="other">%1$d brani su %2$d</item>
+    </plurals>
+    <plurals name="scan_found">
+        <item quantity="one">Trovato %1$d brano</item>
+        <item quantity="many">Trovati %1$d di brani</item>
+        <item quantity="other">Trovati %1$d brani</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="one">Trovato %1$d brano (%2$d nuovi, %3$d rimossi)</item>
+        <item quantity="many">Trovati %1$d di brani (%2$d nuovi, %3$d rimossi)</item>
+        <item quantity="other">Trovati %1$d brani (%2$d nuovi, %3$d rimossi)</item>
+    </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="one">%1$d traccia aggiunta alla coda</item>
+        <item quantity="many">%1$d di tracce aggiunte alla coda</item>
+        <item quantity="other">%1$d tracce aggiunte alla coda</item>
+    </plurals>
+</resources>

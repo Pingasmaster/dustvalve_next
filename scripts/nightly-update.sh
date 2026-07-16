@@ -51,7 +51,7 @@ echo "=================================================================="
 # Two problems for a non-interactive shell:
 #   (a) .bashrc's standard `[[ $- != *i* ]] && return` guard fires before
 #       any alias line, so the alias is invisible here.
-#   (b) `--permission-mode plan` is read-only — the agent would only
+#   (b) `--permission-mode plan` is read-only - the agent would only
 #       propose changes, never make them. Useless for an autonomous run.
 #       We substitute `bypassPermissions` so the agent can actually
 #       edit files at 03:00 without a human at the keyboard.
@@ -94,7 +94,7 @@ ALLOWED_TOOLS="Bash Read Edit Write Workflow Agent WebFetch WebSearch"
 
 # -----------------------------------------------------------------------------
 # Acquire a separate nightly lock so two nightly runs don't trample
-# each other. We deliberately do NOT take build.sh's .build.lock —
+# each other. We deliberately do NOT take build.sh's .build.lock -
 # build.sh manages that itself and a single nightly run needs to call
 # build.sh many times (once per iteration of the recovery loop).
 # -----------------------------------------------------------------------------
@@ -144,7 +144,7 @@ if ! git diff --quiet HEAD 2>/dev/null || [ -n "$(git ls-files --others --exclud
 fi
 
 # -----------------------------------------------------------------------------
-# Sync with origin. Fast-forward only — never destroy local work.
+# Sync with origin. Fast-forward only - never destroy local work.
 # -----------------------------------------------------------------------------
 git fetch origin
 if ! git pull --ff-only; then
@@ -169,7 +169,7 @@ mini -p "
 You are the dependency update agent for the Android Kotlin project at
 $REPO_DIR (package: dustvalve_next, AGGRESSIVE bump policy).
 
-POLICY (per project memory — this is the opposite of conservative):
+POLICY (per project memory - this is the opposite of conservative):
 - Bump EVERY dep that has a newer published version, including alphas
   and betas. Do NOT preemptively skip 'risky' or 'cascading' bumps.
 - AGP, Kotlin, KSP, Hilt plugin are all in scope. Bump them.
@@ -178,21 +178,21 @@ POLICY (per project memory — this is the opposite of conservative):
 - Detekt 2.0.0-alpha.3 and ktlint 14.2.0 are pinned only because
   alpha N+1 isn't published; if a newer version is published, bump it.
 
-VERSION-EXISTENCE VERIFICATION (mandatory — non-negotiable):
+VERSION-EXISTENCE VERIFICATION (mandatory - non-negotiable):
 Before recommending a version, fetch
   https://repo1.maven.org/maven2/<group>/<artifact>/maven-metadata.xml
 (or https://dl.google.com/android/maven2/<group>/<artifact>/maven-metadata.xml
 for Google Maven). Parse the XML and confirm the proposed version literally
 appears inside <versioning><versions>...</versions></versioning> (or is
 the value of <latest> for prerelease-only artifacts). The Maven Central
-JSON redirect at search.maven.org is NOT acceptable — only the raw
+JSON redirect at search.maven.org is NOT acceptable - only the raw
 maven-metadata.xml response. If the version is not in the metadata, set
 latest=current and add "version-not-published" to breaking=. NEVER
 recommend a version you have not seen in the metadata XML body.
 This is what caused the 2026-06-13 run to bump compose-bom to
 2026.05.02, which does not exist; do not repeat that.
 
-KOTLIN-METADATA VERSION GUARD (mandatory — non-negotiable):
+KOTLIN-METADATA VERSION GUARD (mandatory - non-negotiable):
 Project max supported Kotlin metadata version is 2.3.0 (Kotlin 2.3.x).
 Hilt's bundled kotlin-metadata-jvm caps at 2.3.0. If you bump a dep
 whose published JAR carries embedded Kotlin metadata (kotlinx-*,
@@ -207,10 +207,10 @@ that's outside the scope of this run. Treat the dep as already-at-
 latest and add "kotlin-metadata-incompat" to breaking= so the
 recovery agent doesn't keep trying.
 
-APPLY-EVERYTHING-THAT-IS-SAFE (mandatory — non-negotiable):
+APPLY-EVERYTHING-THAT-IS-SAFE (mandatory - non-negotiable):
 Your job is to MAXIMIZE the number of bumps APPLIED in Phase 1.
 The Phase 3 recovery loop is the safety net that reverts the bad
-ones — do NOT pre-emptively skip a bump "to be safe". If the
+ones - do NOT pre-emptively skip a bump "to be safe". If the
 metadata verification above passed and the Kotlin-metadata guard
 above didn't fire, apply the bump. A nightly run that touches
 zero deps is a failure even though the build is green.
@@ -227,7 +227,7 @@ script uses agent() and parallel() to fan out work.
 
 IMPORTANT: do NOT pass a schema option to agent() (StructuredOutput
 has a known issue with top-level array schemas). Have each subagent
-return PLAIN TEXT — one finding per line, formatted like
+return PLAIN TEXT - one finding per line, formatted like
 'lib=<name> current=<v> latest=<v> breaking=<notes or none>'. Lines
 starting with # are comments.
 
@@ -246,7 +246,7 @@ Template (adapt to this project):
        for any direct coordinates (e.g. com.github.* jitpack deps).
        For EACH entry published on Maven Central (Kotlin, JetBrains,
        kotlinx-*, coroutines, Hilt, OkHttp, jsoup, Coil, MockK, Truth,
-       Robolectric, Turbine, etc. — every key in [versions] that is
+       Robolectric, Turbine, etc. - every key in [versions] that is
        NOT a Google Maven artifact, see the second subagent for that
        split), look up the latest published version (alpha/beta/rc/
        stable all count) on Maven Central via WebFetch.
@@ -255,13 +255,13 @@ Template (adapt to this project):
        and confirm the proposed version literally appears inside
        <versioning><versions>...</versions></versioning> (or is the
        value of <latest> for prerelease-only artifacts). If the
-       version is NOT in the metadata body, do NOT recommend it —
+       version is NOT in the metadata body, do NOT recommend it -
        set latest=current and add "version-not-published" to
        breaking=. A previous run shipped compose-bom 2026.05.02
        that way; never again.
        KOTLIN-METADATA GUARD: if the proposed version would embed
        Kotlin metadata > 2.3.0 in its published JAR (typical of any
-       dep built against Kotlin 2.4+ — kotlinx, ksp-generated, Coil,
+       dep built against Kotlin 2.4+ - kotlinx, ksp-generated, Coil,
        Compose, Room-compiler, Hilt-compiler, media3), do NOT bump
        it; the projects Hilt processor caps at 2.3.0. Set
        latest=current and add "kotlin-metadata-incompat" to
@@ -269,14 +269,14 @@ Template (adapt to this project):
        Return a plain-text list, ONE FINDING PER LINE in the exact
        format: lib=<name> current=<v> latest=<v> breaking=<notes or
        none>. Lines starting with # are comments. Do not return JSON.
-       Cover EVERY key in [versions] that this subagent owns — the
+       Cover EVERY key in [versions] that this subagent owns - the
        catalog has ~40 keys; even if latest==current for most, list
        them so the orchestrator can prove the audit was complete.',
       {phase: 'Research'}
     ),
     () => agent(
       'Read gradle/libs.versions.toml. For EACH entry published on
-       Google Maven (every androidx.* key — compose-bom, compose,
+       Google Maven (every androidx.* key - compose-bom, compose,
        material3, activity-compose, lifecycle, core-ktx, work, room,
        datastore, documentfile, palette, media3, hilt-androidx, AND
        any other androidx.* group), look up the latest published
@@ -287,11 +287,11 @@ Template (adapt to this project):
        and confirm the proposed version literally appears inside
        <versioning><versions>...</versions></versioning> (or is the
        value of <latest> for prerelease-only artifacts). If the
-       version is NOT in the metadata body, do NOT recommend it —
+       version is NOT in the metadata body, do NOT recommend it -
        set latest=current and add "version-not-published" to
        breaking=. A previous run shipped compose-bom 2026.05.02
        that way; never again.
-       KOTLIN-METADATA GUARD: same as the Maven Central subagent —
+       KOTLIN-METADATA GUARD: same as the Maven Central subagent -
        if the proposed version embeds Kotlin metadata > 2.3.0 in
        its published JAR, do not bump it; set latest=current and
        add "kotlin-metadata-incompat" to breaking=.
@@ -304,12 +304,12 @@ Template (adapt to this project):
     () => agent(
       'Read gradle/libs.versions.toml. For EACH entry whose version
        is published via GitHub Releases or a non-standard Maven
-       coordinate — this includes: ktllint-gradle, ktlint-engine,
+       coordinate - this includes: ktllint-gradle, ktlint-engine,
        detekt, compose-rules, slack-lint-checks, slack-compose-lints,
        dependency-analysis, AGP (agp), KSP (ksp), kotlin-compose
        plugin, kotlin-serialization plugin, and any com.github.*
        jitpack deps found by grepping app/build.gradle.kts (e.g.
-       NewPipeExtractor) — look up the latest GitHub release tag
+       NewPipeExtractor) - look up the latest GitHub release tag
        via WebFetch to https://github.com/<owner>/<repo>/releases
        and also to https://github.com/<owner>/<repo>/releases.atom
        (atom feed is the canonical "is this version out" source).
@@ -349,7 +349,7 @@ Template (adapt to this project):
   // { bumped, skipped, guarded }.
   //
   // PHILOSOPHY: maximize the number of bumps APPLIED. The Phase 3
-  // recovery loop is the safety net that reverts the bad ones — do
+  // recovery loop is the safety net that reverts the bad ones - do
   // NOT pre-emptively skip a bump "to be safe". A nightly run that
   // touches zero deps is a failure even though the build is green.
   // The only legitimate reasons to skip a bump here are the two
@@ -387,7 +387,7 @@ for i in $(seq 1 $MAX_ITER); do
     if ./build.sh; then
       echo "Restored snapshot builds clean. Aborting nightly run with no commit."
     else
-      echo "Even snapshot fails to build — pre-existing broken state, not touching."
+      echo "Even snapshot fails to build - pre-existing broken state, not touching."
     fi
     exit 1
   fi
@@ -402,12 +402,12 @@ $REPO_DIR. The latest './build.sh' run failed.
 POLICY (per project memory):
 - This project tracks bleeding-edge deps. Build.sh runs detekt with
   autoCorrect, which rewrites source files and invalidates the
-  detekt/lint baselines — so failures often appear in files you didn't
+  detekt/lint baselines - so failures often appear in files you didn't
   touch, and the right answer is to fix the code, NOT to revert the dep.
 - Only revert a dep bump if the build genuinely cannot be made green
   with a code/config fix.
 - PRINCIPLE: KEEP EVERY BUMP THAT ISN'T THE CAUSE. The orchestrator
-  applied a wide set of bumps in Phase 1 on purpose — your job is to
+  applied a wide set of bumps in Phase 1 on purpose - your job is to
   identify the one or two that broke the build and revert ONLY those.
   The next build attempt will re-verify that the surviving bumps are
   still present in libs.versions.toml. If you over-revert and lose a
@@ -457,14 +457,14 @@ Template (adapt to this project):
                   TO RECOGNIZE (in priority order):
                     a) '[Hilt] Provided Metadata instance has version
                        2.4.0, while maximum supported version is 2.3.0'
-                       — the offending_dep is whichever Phase 1 bump
+                       - the offending_dep is whichever Phase 1 bump
                        introduced a JAR compiled against Kotlin 2.4+
                        (typical: coil 3.5.0, kotlinx-* 1.12+, ksp-
                        generated, media3 1.11+). Revert ONLY that
                        key; do not revert unrelated Phase 1 bumps.
                     b) 'Could not find <group>:<artifact>:<version>'
                        from processReleaseNavigationResources or any
-                       other task — the offending_dep is the key
+                       other task - the offending_dep is the key
                        whose version is not actually published on
                        the repository the build is searching. The
                        Phase 1 research agent failed to verify the
@@ -472,7 +472,7 @@ Template (adapt to this project):
                        that key.
                     c) Plain 'Compilation failed' pointing at
                        a generated *_HiltModules.kt / *_Factory.java
-                       with a kotlin-metadata version warning — same
+                       with a kotlin-metadata version warning - same
                        fix as (a): identify the bumping dep from
                        the offending_dep field, revert ONLY it.
                   Return a plain-text one-line in the same format
@@ -492,14 +492,14 @@ Template (adapt to this project):
   //   - slack-compose-lints rule (ViewModelForwarding under two
   //     engines). Fix by self-injecting via hiltViewModel() default;
   //     do NOT forward.
-  //   - RawDispatchersUse → inject @Dispatcher; runCatching → catch
+  //   - RawDispatchersUse -> inject @Dispatcher; runCatching -> catch
   //     Throwable with structured logging.
-  //   - ktlint import-order → run './gradlew ktlintFormat'.
-  //   - Kotlin-metadata 2.4.0 vs Hilt 2.3.0 incompatibility →
+  //   - ktlint import-order -> run './gradlew ktlintFormat'.
+  //   - Kotlin-metadata 2.4.0 vs Hilt 2.3.0 incompatibility ->
   //     revert ONLY the offending dep (do NOT revert all Phase 1
   //     bumps; do NOT modify kotlin-metadata-jvm; the matching
   //     Hilt bump is a separate decision).
-  //   - 'Could not find <group>:<artifact>:<version>' → revert ONLY
+  //   - 'Could not find <group>:<artifact>:<version>' -> revert ONLY
   //     the offending [versions] key whose value isn't published.
   //
   // SCOPE DISCIPLINE: when reverting, restore ONLY the keys named
@@ -511,24 +511,24 @@ Template (adapt to this project):
   //
   // If multiple keys ARE causally linked (e.g. compose-bom + compose
   // + material3 + graphics-shapes move as a set; if compose-bom
-  // itself is bad, all four are bad), revert them as a set — and
+  // itself is bad, all four are bad), revert them as a set - and
   // ONLY them.
 
-Steps (semantic — adapt as needed):
+Steps (semantic - adapt as needed):
 3. PREFER FIXING THE CODE. Most failures will be one of the patterns
    above.
 4. If the cause is unambiguously a dep bump, restore ONLY the
    offending key(s) in gradle/libs.versions.toml to the snapshotted
    value. To do this, read both files with Read, find the offending
    key, and Edit the working file to set it back to the snapshotted
-   value. Do not touch other keys — even if they look related, even
+   value. Do not touch other keys - even if they look related, even
    if they were bumped in the same Phase 1 run, even if reverting
    them would "obviously be safer". The orchestrator's apply phase
    already applied as many safe bumps as it could find; your job is
    to surgically remove the bad ones, not to be conservative.
 5. If multiple bumps ARE causally linked (compose set; or a Kotlin
    bump that pulls in a transitive KSP bump that breaks the build),
-   revert them as a set — and ONLY that set.
+   revert them as a set - and ONLY that set.
 6. Exit 0 once you have made any change (fix or revert). Exit 1 only
    if you cannot identify the cause at all.
 

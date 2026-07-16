@@ -2,11 +2,15 @@ package com.dustvalve.next.android.download
 
 import androidx.test.core.app.ApplicationProvider
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
 import com.dustvalve.next.android.util.CookieEncryption
 import com.google.common.truth.Truth.assertThat
 import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -39,7 +43,7 @@ class DownloadNotificationCenterTest {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         File(ctx.filesDir, "datastore/settings.preferences_pb").delete()
         store = SettingsDataStore(ctx)
-        center = DownloadNotificationCenter(ctx, store)
+        center = DownloadNotificationCenter(ctx, store, CoroutineScope(SupervisorJob() + Dispatchers.Default))
     }
 
     @After fun tearDown() {
@@ -99,13 +103,13 @@ class DownloadNotificationCenterTest {
     // --- Batch wrapping --------------------------------------------------
 
     @Test fun `withBatch pushes a batch and clears it on completion`() = runTest {
-        center.withBatch("Greatest Hits", totalTracks = 10, kind = DownloadNotificationCenter.BatchKind.ALBUM) {
+        center.withBatch("Greatest Hits", totalTracks = 10, kind = DownloadProgressReporter.BatchKind.ALBUM) {
             val s = center.currentState
             assertThat(s.batchStack).hasSize(1)
             val b = s.batchStack.single()
             assertThat(b.label).isEqualTo("Greatest Hits")
             assertThat(b.totalTracks).isEqualTo(10)
-            assertThat(b.kind).isEqualTo(DownloadNotificationCenter.BatchKind.ALBUM)
+            assertThat(b.kind).isEqualTo(DownloadProgressReporter.BatchKind.ALBUM)
         }
 
         val after = center.currentState
@@ -115,7 +119,7 @@ class DownloadNotificationCenterTest {
 
     @Test fun `withBatch clears stack even when block throws`() = runTest {
         val thrown = runCatching {
-            center.withBatch("Sad Songs", 3, DownloadNotificationCenter.BatchKind.PLAYLIST) {
+            center.withBatch("Sad Songs", 3, DownloadProgressReporter.BatchKind.PLAYLIST) {
                 throw IllegalStateException("boom")
             }
         }.exceptionOrNull()
@@ -126,7 +130,7 @@ class DownloadNotificationCenterTest {
     }
 
     @Test fun `trackFinished inside a batch increments completedInBatch`() = runTest {
-        center.withBatch("Greatest Hits", 5, DownloadNotificationCenter.BatchKind.ALBUM) {
+        center.withBatch("Greatest Hits", 5, DownloadProgressReporter.BatchKind.ALBUM) {
             center.trackStarted("t1", "A")
             center.trackFinished("t1", true)
             center.trackStarted("t2", "B")
@@ -145,18 +149,18 @@ class DownloadNotificationCenterTest {
     // --- Nested batches --------------------------------------------------
 
     @Test fun `nested batches both appear on the stack`() = runTest {
-        center.withBatch("Artist Discography", 30, DownloadNotificationCenter.BatchKind.ARTIST) {
+        center.withBatch("Artist Discography", 30, DownloadProgressReporter.BatchKind.ARTIST) {
             assertThat(center.currentState.batchStack).hasSize(1)
             assertThat(center.currentState.batchStack.first().kind)
-                .isEqualTo(DownloadNotificationCenter.BatchKind.ARTIST)
+                .isEqualTo(DownloadProgressReporter.BatchKind.ARTIST)
 
-            center.withBatch("Album 1", 10, DownloadNotificationCenter.BatchKind.ALBUM) {
+            center.withBatch("Album 1", 10, DownloadProgressReporter.BatchKind.ALBUM) {
                 assertThat(center.currentState.batchStack).hasSize(2)
-                // Outer (artist) is still first — the "outer wins" invariant for chip rendering.
+                // Outer (artist) is still first - the "outer wins" invariant for chip rendering.
                 assertThat(center.currentState.batchStack.first().kind)
-                    .isEqualTo(DownloadNotificationCenter.BatchKind.ARTIST)
+                    .isEqualTo(DownloadProgressReporter.BatchKind.ARTIST)
                 assertThat(center.currentState.batchStack.last().kind)
-                    .isEqualTo(DownloadNotificationCenter.BatchKind.ALBUM)
+                    .isEqualTo(DownloadProgressReporter.BatchKind.ALBUM)
             }
 
             // Inner batch popped; outer still active. completedInBatch survives.
@@ -167,21 +171,21 @@ class DownloadNotificationCenterTest {
     }
 
     @Test fun `popping inner batch preserves outer completedInBatch counter`() = runTest {
-        center.withBatch("Outer", 20, DownloadNotificationCenter.BatchKind.ARTIST) {
+        center.withBatch("Outer", 20, DownloadProgressReporter.BatchKind.ARTIST) {
             center.trackStarted("t1", "A")
             center.trackFinished("t1", true)
             center.trackStarted("t2", "B")
             center.trackFinished("t2", true)
 
-            center.withBatch("Inner", 5, DownloadNotificationCenter.BatchKind.ALBUM) {
+            center.withBatch("Inner", 5, DownloadProgressReporter.BatchKind.ALBUM) {
                 center.trackStarted("t3", "C")
                 center.trackFinished("t3", true)
             }
 
-            // 3 tracks finished in total while outer was active → counter is 3.
+            // 3 tracks finished in total while outer was active -> counter is 3.
             assertThat(center.currentState.completedInBatch).isEqualTo(3)
         }
-        // Outer popped → counter reset.
+        // Outer popped -> counter reset.
         assertThat(center.currentState.completedInBatch).isEqualTo(0)
     }
 
@@ -197,7 +201,7 @@ class DownloadNotificationCenterTest {
     // --- BatchKind exhaustiveness ----------------------------------------
 
     @Test fun `every BatchKind round-trips through withBatch`() = runTest {
-        for (kind in DownloadNotificationCenter.BatchKind.values()) {
+        for (kind in DownloadProgressReporter.BatchKind.values()) {
             center.withBatch("L", 1, kind) {
                 assertThat(center.currentState.batchStack.single().kind).isEqualTo(kind)
             }

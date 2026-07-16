@@ -6,7 +6,7 @@
  *
  *   ./gradlew :macrobenchmark:pixel6Api33AndroidTest
  *
- * These benchmarks are NOT executed in the local CI build — they
+ * These benchmarks are NOT executed in the local CI build - they
  * require a managed device (Pixel 6 / API 33 / AOSP). They are intended
  * for the optional `baseline-profile` GitHub Actions workflow which has
  * KVM access.
@@ -50,7 +50,7 @@ class StartupBenchmarks {
             setupBlock = { pressHome() },
         ) {
             // Start the canonical entry point. We deliberately do NOT
-            // stub AppUpdateController.checkSilently() — the cold-start
+            // stub AppUpdateController.checkSilently() - the cold-start
             // path that the baseline profile targets is the realistic
             // first-launch path, with DiagnosticsInitializer +
             // AppUpdateController running in the androidx.startup chain.

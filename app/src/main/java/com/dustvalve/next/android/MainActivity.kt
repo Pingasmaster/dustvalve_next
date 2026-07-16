@@ -53,6 +53,8 @@ import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.storage.folder.FolderHealthChecker
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.data.storage.folder.FolderRehydrator
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
@@ -68,7 +70,7 @@ import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -106,6 +108,10 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var appUpdateController: com.dustvalve.next.android.update.AppUpdateController
 
+    @Inject
+    @Dispatcher(AppDispatchers.IO)
+    lateinit var ioDispatcher: CoroutineDispatcher
+
     sealed interface BootState {
         object Loading : BootState
         object Ready : BootState
@@ -124,7 +130,7 @@ class MainActivity : ComponentActivity() {
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { /* Result not needed — media session works without it, just no notification */ }
+    ) { /* Result not needed - media session works without it, just no notification */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -171,7 +177,7 @@ class MainActivity : ComponentActivity() {
 
                     BootState.DedicatedFolderUnreachable -> com.dustvalve.next.android.ui.screens.folder.DedicatedFolderErrorScreen(
                         onLocateFolder = { uri ->
-                            lifecycleScope.launch(Dispatchers.IO) {
+                            lifecycleScope.launch(ioDispatcher) {
                                 try {
                                     val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                                     try {
@@ -187,7 +193,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onTurnOff = {
-                            lifecycleScope.launch(Dispatchers.IO) {
+                            lifecycleScope.launch(ioDispatcher) {
                                 try {
                                     settingsDataStore.setDedicatedFolder(enabled = false, treeUri = null)
                                     settingsDataStore.setDedicatedFolderIncludeImageCache(false)
@@ -215,7 +221,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun triggerLocalMusicRescanIfNeeded() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(ioDispatcher) {
             try {
                 if (settingsDataStore.getLocalMusicEnabledSync() &&
                     (
@@ -232,7 +238,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun bootstrapDedicatedFolderIfNeeded() {
-        lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch(ioDispatcher) {
             try {
                 val enabled = settingsDataStore.getDedicatedFolderEnabledSync()
                 if (!enabled) {
@@ -280,6 +286,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestNotificationPermissionIfNeeded() {
+        // Legacy branch: POST_NOTIFICATIONS only exists on API 33+; below that
+        // notifications are granted at install time and the prompt is a no-op.
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {
@@ -306,7 +315,7 @@ private val MINI_BAR_HEIGHT = 66.dp
 // own `hiltViewModel()` default param. Because MainActivity is the
 // ViewModelStoreOwner, every hiltViewModel<PlayerViewModel>() /
 // hiltViewModel<NavigationViewModel>() call from this composition returns
-// the SAME activity-scoped instance — no VM is passed as a parameter and
+// the SAME activity-scoped instance - no VM is passed as a parameter and
 // the lint rule no longer fires.
 //
 // CyclomaticComplexMethod: the complexity is intrinsic to this orchestration
@@ -338,9 +347,9 @@ private fun MainContent(
     }.collectAsStateWithLifecycle(initialValue = false)
 
     // keepScreenOnWhilePlaying is a sub-toggle of keepScreenOnInApp:
-    // - parent off            → never keep screen on
-    // - parent on, sub off    → screen on whenever the app is open
-    // - parent on, sub on     → screen on only while the app is open AND playing
+    // - parent off            -> never keep screen on
+    // - parent on, sub off    -> screen on whenever the app is open
+    // - parent on, sub on     -> screen on only while the app is open AND playing
     val shouldKeepScreenOn = keepScreenOnInApp && (!keepScreenOnWhilePlaying || isPlaying)
 
     DisposableEffect(shouldKeepScreenOn) {
@@ -355,8 +364,8 @@ private fun MainContent(
     }
 
     // The self-update flow has two entry points: a silent cold-start check
-    // (DustvalveNextApplication.onCreate → AppUpdateController.checkSilently,
-    // gated by the "Automatic update checks" toggle in Settings → About) and
+    // (DustvalveNextApplication.onCreate -> AppUpdateController.checkSilently,
+    // gated by the "Automatic update checks" toggle in Settings -> About) and
     // the manual "Search for updates" button. Both feed the dialog hosted above.
 
     // Deep link handling

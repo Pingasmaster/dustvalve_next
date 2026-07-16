@@ -30,7 +30,7 @@ object NetworkModule {
      * Matches [com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent].
      * Kept as a duplicate constant (rather than a cross-module import) so this
      * low-level network module has no dependency on the YouTube innertube
-     * layer — it only needs the UA string for host-based routing.
+     * layer - it only needs the UA string for host-based routing.
      */
     private const val ANDROID_VR_USER_AGENT =
         "com.google.android.apps.youtube.vr.oculus/1.61.48 " +
@@ -84,7 +84,7 @@ object NetworkModule {
      * (Innertube POSTs set their own per-client UA and must pass through
      * untouched) and picks the UA by host for everything else. `googlevideo`
      * + youtube-family hosts get the ANDROID_VR UA so streaming requests
-     * align with the `/player` client that issued the URL — avoiding the
+     * align with the `/player` client that issued the URL - avoiding the
      * client/URL-identity mismatch that triggers googlevideo's soft throttle
      * (the "1-2 s play, 1 s stall" pattern).
      */

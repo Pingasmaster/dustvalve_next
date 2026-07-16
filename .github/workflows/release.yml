@@ -13,16 +13,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.0
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5.4.0
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.5.0
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.2.0
+        with:
+          cache-provider: basic
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
@@ -36,8 +38,25 @@ jobs:
       - name: Rename APK to dustvalve_next-future.apk
         run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve_next-future.apk
 
+      - name: Report APK size
+        run: |
+          apk=app/build/outputs/apk/release/dustvalve_next-future.apk
+          {
+            echo "### APK size - dustvalve_next-future.apk"
+            echo
+            echo '| Metric | Size |'
+            echo '| --- | --- |'
+            echo "| File size | $(du -h "$apk" | cut -f1) ($(stat -c%s "$apk") bytes) |"
+            echo "| DEX (uncompressed) | $(unzip -l "$apk" '*.dex' | tail -1 | awk '{printf "%.1f MB", $1/1048576}') |"
+            echo "| Native libs (uncompressed) | $(unzip -l "$apk" 'lib/*' | tail -1 | awk '{printf "%.1f MB", $1/1048576}') |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          size=$(stat -c%s "$apk")
+          if [ "$size" -gt $((10 * 1024 * 1024)) ]; then
+            echo "::warning title=APK size::Release APK is $(du -h "$apk" | cut -f1) (> 10 MB budget). Investigate size regression."
+          fi
+
       - name: Upload APK to GitHub Release
-        uses: softprops/action-gh-release@v3.0.1
+        uses: softprops/action-gh-release@v3.0.2
         with:
           files: app/build/outputs/apk/release/dustvalve_next-future.apk
 
@@ -46,18 +65,20 @@ jobs:
 
     steps:
       - name: Checkout legacy-android8 branch
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@v7.0.0
         with:
           ref: legacy-android8
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5.4.0
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.5.0
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.2.0
+        with:
+          cache-provider: basic
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
@@ -72,6 +93,6 @@ jobs:
         run: mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/dustvalve_next.apk
 
       - name: Upload legacy APK to GitHub Release
-        uses: softprops/action-gh-release@v3.0.1
+        uses: softprops/action-gh-release@v3.0.2
         with:
           files: app/build/outputs/apk/release/dustvalve_next.apk

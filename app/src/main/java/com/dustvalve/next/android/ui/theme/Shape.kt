@@ -14,7 +14,7 @@ import com.dustvalve.next.android.R
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 object AppShapes {
-    /** Rounded shape for album art in cards — theme medium shape */
+    /** Rounded shape for album art in cards - theme medium shape */
     val AlbumArt: Shape
         @Composable
         get() = MaterialTheme.shapes.medium
@@ -22,17 +22,17 @@ object AppShapes {
     /** Circular shape for user avatars */
     val Avatar: Shape = CircleShape
 
-    /** Large rounded shape for player and album detail hero art — theme extraLarge shape */
+    /** Large rounded shape for player and album detail hero art - theme extraLarge shape */
     val PlayerArt: Shape
         @Composable
         get() = MaterialTheme.shapes.extraLarge
 
-    /** Small rounded shape for thumbnails and tags — theme small shape */
+    /** Small rounded shape for thumbnails and tags - theme small shape */
     val Thumbnail: Shape
         @Composable
         get() = MaterialTheme.shapes.small
 
-    /** Expressive shape for the "now playing" indicator badge — a soft burst */
+    /** Expressive shape for the "now playing" indicator badge - a soft burst */
     val NowPlaying: Shape
         @Composable
         get() = MaterialShapes.SoftBurst.toShape()
@@ -194,7 +194,7 @@ fun resolveLibraryItemShape(shapeKey: String?, itemType: String): Shape {
 }
 
 /**
- * Shape for segmented list items — first item has large top corners,
+ * Shape for segmented list items - first item has large top corners,
  * last item has large bottom corners, middle items have small corners.
  */
 fun segmentedItemShape(index: Int, count: Int): RoundedCornerShape {

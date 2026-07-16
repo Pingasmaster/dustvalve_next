@@ -27,7 +27,7 @@ class FavoriteDaoTest : DbTestBase() {
 
     @Test fun `getFavoriteIds chunks across SQLite bind limit`() = runTest {
         val dao = db.favoriteDao()
-        // Insert 2000 favorites — bigger than the 900 bind-param chunk size.
+        // Insert 2000 favorites - bigger than the 900 bind-param chunk size.
         val ids = (1..2000).map { "id_$it" }
         ids.forEach { dao.insert(FavoriteEntity(id = it, type = "track")) }
 

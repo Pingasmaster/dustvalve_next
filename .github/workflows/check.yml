@@ -1,0 +1,63 @@
+name: Checks (lint, tests, screenshots)
+
+# Deliberately NOT triggered by pull_request: workflows must never run on
+# unreviewed fork code, so nothing here can be aimed at repo credentials.
+# Runs on commits landed on master and on manual dispatch only.
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ktlint + detekt + lint + unit tests + locale screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: ASCII-only source check
+        run: ./scripts/check_ascii.sh
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.5.0
+        with:
+          distribution: 'zulu'
+          java-version: 25
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4.0.1
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.2.0
+        with:
+          cache-provider: basic
+
+      - name: Style (ktlint + detekt)
+        run: ./gradlew ktlintCheck detekt
+
+      - name: Android Lint (all modules, warnings-as-errors)
+        run: ./gradlew lintRelease
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest
+
+      - name: Locale screenshot verification (Roborazzi)
+        run: ./gradlew :app:verifyRoborazziDebug
+
+      - name: Upload screenshot diffs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: roborazzi-diffs
+          path: |
+            app/src/test/snapshots/roborazzi/*_compare.png
+            app/build/outputs/roborazzi/
+          if-no-files-found: ignore

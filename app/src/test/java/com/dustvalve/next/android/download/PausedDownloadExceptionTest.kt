@@ -10,7 +10,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * keeps its partial `.tmp` (pause) or deletes it (real cancel/failure).
  * Cancelling a parent coroutine wraps the original [PausedDownloadException]
  * in another exception for child coroutines, so a direct `is` check is not
- * enough — [isPauseCancellation] must walk the cause chain.
+ * enough - [isPauseCancellation] must walk the cause chain.
  */
 class PausedDownloadExceptionTest {
 

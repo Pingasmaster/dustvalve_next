@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Machine-translated (Claude). Corrections welcome via PR. -->
+    <plurals name="track_count">
+        <item quantity="one">%d titre</item>
+        <item quantity="many">%d de titres</item>
+        <item quantity="other">%d titres</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d morceau</item>
+        <item quantity="many">%d de morceaux</item>
+        <item quantity="other">%d morceaux</item>
+    </plurals>
+    <plurals name="song_count_filtered">
+        <item quantity="one">%1$d morceau sur %2$d</item>
+        <item quantity="many">%1$d de morceaux sur %2$d</item>
+        <item quantity="other">%1$d morceaux sur %2$d</item>
+    </plurals>
+    <plurals name="scan_found">
+        <item quantity="one">%1$d morceau trouvé</item>
+        <item quantity="many">%1$d de morceaux trouvés</item>
+        <item quantity="other">%1$d morceaux trouvés</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="one">%1$d morceau trouvé (%2$d nouveaux, %3$d supprimés)</item>
+        <item quantity="many">%1$d de morceaux trouvés (%2$d nouveaux, %3$d supprimés)</item>
+        <item quantity="other">%1$d morceaux trouvés (%2$d nouveaux, %3$d supprimés)</item>
+    </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="one">%1$d titre ajouté à la file d’attente</item>
+        <item quantity="many">%1$d de titres ajoutés à la file d’attente</item>
+        <item quantity="other">%1$d titres ajoutés à la file d’attente</item>
+    </plurals>
+</resources>

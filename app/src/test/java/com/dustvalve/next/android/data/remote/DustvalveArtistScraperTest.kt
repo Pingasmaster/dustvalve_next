@@ -1,6 +1,9 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote
 
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
@@ -14,7 +17,7 @@ class DustvalveArtistScraperTest {
 
     @Before fun setUp() {
         setup = TlsTestServer.start()
-        scraper = DustvalveArtistScraper(setup.client)
+        scraper = DustvalveArtistScraper(setup.client, UnconfinedTestDispatcher())
     }
 
     @After fun tearDown() {
@@ -81,7 +84,7 @@ class DustvalveArtistScraperTest {
     }
 
     @Test fun `album redirect refetches music page`() = runTest {
-        // First response is an album page (path /album/foo) — scraper should refetch /music
+        // First response is an album page (path /album/foo) - scraper should refetch /music
         val albumHtml = """<html><body></body></html>"""
         val musicHtml = """
             <html><body>
@@ -145,7 +148,7 @@ class DustvalveArtistScraperTest {
         // The full bio (including the previously-hidden peekaboo-text portion)
         // must round-trip without the show-more overlay tail.
         assertThat(bio).contains("crise cardiaque")
-        // The "...more" overlay must be gone — neither the literal word "more"
+        // The "...more" overlay must be gone - neither the literal word "more"
         // tail nor the leading ellipsis from peekaboo-ellipsis.
         assertThat(bio).doesNotContain("...more")
         assertThat(bio).doesNotContain("... more")
@@ -155,7 +158,7 @@ class DustvalveArtistScraperTest {
 
     @Test fun `scrapeArtist sends a desktop User-Agent to bandcamp (not the shared mobile UA)`() = runTest {
         // Bandcamp serves a heavily-stripped HTML to mobile UAs (no
-        // band-name-location / band-photo / bio markup) — see the
+        // band-name-location / band-photo / bio markup) - see the
         // `artist_taylor_moore_mobile_layout.html` fixture for proof. The
         // shared OkHttpClient injected app-wide carries a mobile UA via
         // NetworkModule's userAgentInterceptor, so the artist scraper
@@ -165,17 +168,17 @@ class DustvalveArtistScraperTest {
         scraper.scrapeArtist(setup.url(""))
         val recorded = setup.server.takeRequest()
         val ua = recorded.headers["User-Agent"] ?: ""
-        // A "Mobile" UA fragment is the giveaway — Bandcamp gates the stripped
+        // A "Mobile" UA fragment is the giveaway - Bandcamp gates the stripped
         // layout on its presence. We send a desktop Chrome string instead.
         assertThat(ua).doesNotContain("Mobile")
         assertThat(ua).contains("Chrome")
     }
 
     @Test fun `scrapes single-album artist (Taylor Moore Music) without dropping name+photo+bio`() = runTest {
-        // Captured directly from https://taylormooremusic.bandcamp.com/ — that
+        // Captured directly from https://taylormooremusic.bandcamp.com/ - that
         // root URL redirects to the artist's only album page, and our /music
         // re-fetch then redirects to the same album page. The rendered HTML
-        // still carries band-name-location, band-photo, and the bio block —
+        // still carries band-name-location, band-photo, and the bio block -
         // so the scraper must extract them even when the album list is empty
         // (no `.music-grid-item` because the discography is the very page
         // we're parsing).
@@ -185,7 +188,7 @@ class DustvalveArtistScraperTest {
         ).bufferedReader().use { it.readText() }
         setup.server.enqueue(MockResponse().setBody(html))
         // Our scraper might trigger the "/music" re-fetch on this URL because
-        // its path matches /album/... — enqueue the same fixture again so the
+        // its path matches /album/... - enqueue the same fixture again so the
         // re-fetch succeeds.
         setup.server.enqueue(MockResponse().setBody(html))
 

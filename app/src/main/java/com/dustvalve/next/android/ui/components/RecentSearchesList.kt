@@ -62,13 +62,6 @@ fun RecentSearchesList(
             contentType = { "recent_search" },
         ) { query ->
             ListItem(
-                headlineContent = {
-                    Text(
-                        text = query,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_history),
@@ -88,7 +81,13 @@ fun RecentSearchesList(
                 modifier = Modifier
                     .animateItem()
                     .clickable { onSearchClick(query) },
-            )
+            ) {
+                Text(
+                    text = query,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

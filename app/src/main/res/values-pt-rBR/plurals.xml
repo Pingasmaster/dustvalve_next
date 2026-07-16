@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Machine-translated (Claude). Corrections welcome via PR. -->
+    <plurals name="track_count">
+        <item quantity="one">%d faixa</item>
+        <item quantity="many">%d de faixas</item>
+        <item quantity="other">%d faixas</item>
+    </plurals>
+    <plurals name="song_count">
+        <item quantity="one">%d música</item>
+        <item quantity="many">%d de músicas</item>
+        <item quantity="other">%d músicas</item>
+    </plurals>
+    <plurals name="song_count_filtered">
+        <item quantity="one">%1$d de %2$d música</item>
+        <item quantity="many">%1$d de %2$d de músicas</item>
+        <item quantity="other">%1$d de %2$d músicas</item>
+    </plurals>
+    <plurals name="scan_found">
+        <item quantity="one">%1$d música encontrada</item>
+        <item quantity="many">%1$d de músicas encontradas</item>
+        <item quantity="other">%1$d músicas encontradas</item>
+    </plurals>
+    <plurals name="scan_found_detailed">
+        <item quantity="one">%1$d música encontrada (%2$d novas, %3$d removidas)</item>
+        <item quantity="many">%1$d de músicas encontradas (%2$d novas, %3$d removidas)</item>
+        <item quantity="other">%1$d músicas encontradas (%2$d novas, %3$d removidas)</item>
+    </plurals>
+    <plurals name="snackbar_added_n_to_queue">
+        <item quantity="one">%1$d faixa adicionada à fila</item>
+        <item quantity="many">%1$d de faixas adicionadas à fila</item>
+        <item quantity="other">%1$d faixas adicionadas à fila</item>
+    </plurals>
+</resources>

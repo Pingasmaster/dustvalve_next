@@ -43,6 +43,7 @@ import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
 import com.dustvalve.next.android.ui.screens.settings.YouTubeMusicLoginScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
+import com.dustvalve.next.android.ui.util.iconRes
 import com.dustvalve.next.android.util.LinkResourceType
 import kotlinx.coroutines.launch
 
@@ -166,8 +167,6 @@ fun AppNavigation(
                 is NavDestination.PlaylistDetail -> PlaylistDetailScreen(
                     playlistId = destination.playlistId,
                     onBack = { navViewModel.navigateBack() },
-                    onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                    onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                     viewModel = hiltViewModel(key = destination.playlistId),
                 )
 
@@ -187,7 +186,7 @@ fun AppNavigation(
                             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                                 throw e
                             } catch (_: Exception) {
-                                // Cookie save failed — still navigate back
+                                // Cookie save failed - still navigate back
                             }
                             navViewModel.navigateBack()
                         }
@@ -203,7 +202,7 @@ fun AppNavigation(
                             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                                 throw e
                             } catch (_: Exception) {
-                                // Cookie save failed — still navigate back
+                                // Cookie save failed - still navigate back
                             }
                             navViewModel.navigateBack()
                         }

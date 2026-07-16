@@ -1,8 +1,3 @@
-// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
-// overload is @Deprecated). Our call uses the non-deprecated overload;
-// kotlinc emits no warning. Suppress at file level.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.screens.bandcamp
 
 import androidx.compose.animation.core.Animatable
@@ -19,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +46,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -98,8 +93,10 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
+import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -201,8 +198,9 @@ fun BandcampScreen(
     }
 
     // Show search pagination errors via snackbar
-    LaunchedEffect(searchState.error) {
-        val error = searchState.error ?: return@LaunchedEffect
+    val searchErrorText = searchState.error?.asString()
+    LaunchedEffect(searchErrorText) {
+        val error = searchErrorText ?: return@LaunchedEffect
         try {
             if (searchState.results.isNotEmpty()) {
                 snackbarHostState.showSnackbar(error)
@@ -291,7 +289,7 @@ fun BandcampScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.categoryError ?: stringResource(R.string.bandcamp_something_went_wrong),
+                            text = state.categoryError?.asString() ?: stringResource(R.string.bandcamp_something_went_wrong),
                             style = MaterialTheme.typography.bodyLarge,
                             color = Color.White.copy(alpha = 0.7f),
                         )
@@ -374,14 +372,14 @@ fun BandcampScreen(
                 // Discover category rows
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp),
                 ) {
                     item(key = "discover_header") {
                         StaggeredAnimatedItem(index = 0) {
                             Text(
                                 text = stringResource(R.string.bandcamp_discover),
                                 style = MaterialTheme.typography.headlineMediumEmphasized,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                // Page-header rhythm shared with Library/Settings.
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
                             )
                         }
                     }
@@ -485,8 +483,8 @@ fun BandcampScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp),
-                                color = Color.Black,
-                                contentColor = Color.White,
+                                color = MaterialTheme.colorScheme.inverseSurface,
+                                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     Text(
@@ -516,7 +514,7 @@ fun BandcampScreen(
                 inputField = inputField,
             ) {
                 // Type filter chips
-                FlowRow(
+                AppFlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
@@ -579,12 +577,19 @@ fun BandcampScreen(
                         }
 
                         searchState.error != null && searchState.results.isEmpty() -> {
-                            Text(
-                                text = searchState.error ?: stringResource(R.string.common_search_failed),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.align(Alignment.Center),
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(horizontal = 32.dp),
+                            ) {
+                                Text(
+                                    text = searchState.error?.asString() ?: stringResource(R.string.common_search_failed),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
 
                         searchState.results.isEmpty() && searchState.query.isNotBlank() && !searchState.isLoading -> {
@@ -631,12 +636,7 @@ fun BandcampScreen(
                                         shape = segmentedItemShape(index, searchState.results.size),
                                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                                         modifier = Modifier
-                                            .padding(
-                                                start = 16.dp,
-                                                end = 16.dp,
-                                                top = if (index == 0) 8.dp else 1.dp,
-                                                bottom = if (index == searchState.results.lastIndex) 0.dp else 1.dp,
-                                            )
+                                            .padding(segmentedItemPadding(index, searchState.results.size))
                                             .animateItem(
                                                 fadeInSpec = null,
                                                 fadeOutSpec = null,
@@ -684,18 +684,16 @@ fun BandcampScreen(
                                     }
                                 }
 
-                                // Loading indicator at bottom
+                                // Pagination footer (M3E wavy linear indicator) -
+                                // matches the YouTube search overlay.
                                 if (searchState.isLoading && searchState.results.isNotEmpty()) {
                                     item {
-                                        Box(
+                                        LinearWavyProgressIndicator(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .padding(horizontal = 16.dp, vertical = 12.dp)
                                                 .animateItem(),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            ContainedLoadingIndicator()
-                                        }
+                                        )
                                     }
                                 }
                             }
@@ -808,7 +806,7 @@ fun BandcampScreen(
         )
     }
 
-    // Add custom genre — validated against Bandcamp before it's added.
+    // Add custom genre - validated against Bandcamp before it's added.
     if (state.showAddGenreDialog) {
         AlertDialog(
             onDismissRequest = { if (!state.genreValidating) viewModel.setShowAddGenreDialog(false) },
@@ -905,14 +903,8 @@ private fun SearchResultItem(result: SearchResult) {
 
     val artistLabel = stringResource(R.string.bandcamp_type_artist)
     val localLabel = stringResource(R.string.bandcamp_type_local)
+    val separator = stringResource(R.string.metadata_separator_compact)
     ListItem(
-        headlineContent = {
-            Text(
-                text = result.name,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             val supporting = buildString {
                 when (result.type) {
@@ -925,7 +917,7 @@ private fun SearchResultItem(result: SearchResult) {
                     SearchResultType.TRACK -> {
                         result.artist?.let { append(it) }
                         result.album?.let {
-                            if (isNotEmpty()) append(" - ")
+                            if (isNotEmpty()) append(separator)
                             append(it)
                         }
                     }
@@ -933,15 +925,11 @@ private fun SearchResultItem(result: SearchResult) {
                     SearchResultType.LOCAL_TRACK -> {
                         append(localLabel)
                         result.artist?.let {
-                            append(" \u00B7 ")
+                            append(separator)
                             append(it)
                         }
                         result.album?.let {
-                            if (result.artist != null) {
-                                append(" - ")
-                            } else {
-                                append(" \u00B7 ")
-                            }
+                            append(separator)
                             append(it)
                         }
                     }
@@ -953,7 +941,7 @@ private fun SearchResultItem(result: SearchResult) {
                     }
                 }
                 result.genre?.let {
-                    if (isNotEmpty()) append(" \u00B7 ")
+                    if (isNotEmpty()) append(separator)
                     append(it)
                 }
             }
@@ -994,7 +982,13 @@ private fun SearchResultItem(result: SearchResult) {
             }
         },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-    )
+    ) {
+        Text(
+            text = result.name,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -1085,14 +1079,6 @@ private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> 
                     },
             ) {
                 ListItem(
-                    headlineContent = {
-                        Text(
-                            text = album.title,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = Color.White,
-                        )
-                    },
                     supportingContent = {
                         Text(
                             text = album.artist,
@@ -1113,7 +1099,14 @@ private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> 
                         )
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                )
+                ) {
+                    Text(
+                        text = album.title,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = Color.White,
+                    )
+                }
             }
         }
     }

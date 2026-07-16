@@ -1,7 +1,5 @@
 package com.dustvalve.next.android.ui.components
 
-import android.os.Environment
-import android.os.StatFs
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -13,19 +11,15 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.util.StorageUtils
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import java.text.NumberFormat
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -41,15 +35,8 @@ fun StorageIndicator(cacheInfo: CacheInfo, modifier: Modifier = Modifier) {
         animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
         label = "storageColor",
     )
-    var freeBytes by remember { mutableLongStateOf(0L) }
-    LaunchedEffect(cacheInfo) {
-        freeBytes = withContext(Dispatchers.IO) {
-            val stat = StatFs(Environment.getDataDirectory().path)
-            stat.availableBytes
-        }
-    }
-
     val cacheSizeBytes = (cacheInfo.totalSizeBytes - cacheInfo.downloadSizeBytes).coerceAtLeast(0)
+    val context = LocalContext.current
 
     Column(modifier = modifier.fillMaxWidth()) {
         LinearWavyProgressIndicator(
@@ -67,15 +54,16 @@ fun StorageIndicator(cacheInfo: CacheInfo, modifier: Modifier = Modifier) {
             Text(
                 text = stringResource(
                     R.string.storage_info,
-                    StorageUtils.formatFileSize(cacheInfo.downloadSizeBytes),
-                    StorageUtils.formatFileSize(cacheSizeBytes),
-                    StorageUtils.formatFileSize(freeBytes),
+                    StorageUtils.formatFileSize(context, cacheInfo.downloadSizeBytes),
+                    StorageUtils.formatFileSize(context, cacheSizeBytes),
+                    StorageUtils.formatFileSize(context, cacheInfo.freeSpaceBytes),
                 ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                text = "${cacheInfo.usagePercent.toInt()}%",
+                // Locale-aware percent (glyph and placement vary by locale)
+                text = NumberFormat.getPercentInstance().format(cacheInfo.usagePercent.toInt() / 100.0),
                 style = MaterialTheme.typography.bodySmall,
                 color = color,
             )

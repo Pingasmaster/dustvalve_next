@@ -1,8 +1,40 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <lint>
-    <issue id="MissingTranslation"            severity="ignore" />
+    <!--
+        The app ships translations (values-de/es/fr/it/pt-rBR/ja/zh-rCN/ru).
+        Every new default string must land with all 8 translations in the same
+        change - machine-translate at PR time, native corrections welcome.
+    -->
+    <issue id="MissingTranslation"            severity="error" />
+    <issue id="ExtraTranslation"              severity="error" />
+    <!-- Translation integrity: placeholder parity and plural quantity sets -->
+    <issue id="StringFormatInvalid"           severity="error" />
+    <issue id="StringFormatMatches"           severity="error" />
+    <issue id="StringFormatCount"             severity="error" />
+    <issue id="MissingQuantity"               severity="error" />
+    <issue id="ImpliedQuantity"               severity="error" />
+    <issue id="PluralsCandidate"              severity="error" />
+    <!-- i18n hygiene -->
+    <issue id="SetTextI18n"                   severity="error" />
+    <issue id="TypographyEllipsis"            severity="error" />
+    <issue id="TypographyQuotes"              severity="error" />
+    <issue id="TypographyDashes"              severity="error" />
+    <issue id="RelativeOverlap"               severity="error" />
+    <issue id="RtlHardcoded"                  severity="error" />
     <issue id="GoogleAppIndexingWarning"      severity="ignore" />
-    <issue id="ObsoleteSdkInt"                severity="informational" />
+    <issue id="ObsoleteSdkInt"                severity="error" />
+
+    <!--
+        NewerVersionAvailable / AndroidGradlePluginVersion report that some
+        dependency in gradle/libs.versions.toml has a newer release. The
+        project tracks upgrades via routine dependency review (Dependabot +
+        manual sweep), not via lint. With warningsAsErrors = true these
+        would otherwise fail lintRelease. Demote to informational so they
+        stay visible in editor lint markers without blocking CI.
+    -->
+    <issue id="NewerVersionAvailable"         severity="informational" />
+    <issue id="AndroidGradlePluginVersion"    severity="informational" />
+    <issue id="GradleDependency"              severity="informational" />
 
     <issue id="UnusedResources"               severity="error" />
     <issue id="HardcodedText"                 severity="error" />
@@ -37,7 +69,7 @@
         slack-lints' AvoidUsingNotNullOperator flags every `!!` usage. In test
         code `!!` is the idiomatic "I'm asserting this is non-null in this
         test path; if it isn't, NPE fails the test with a stack trace pointing
-        to the offending line" — equivalent to `requireNotNull(x) { "..." }`
+        to the offending line" - equivalent to `requireNotNull(x) { "..." }`
         but more concise, especially in JSON / assertion chains. Refactoring
         ~90 test sites to requireNotNull adds noise without changing failure
         semantics. Suppressed only under src/test and src/androidTest.
@@ -61,22 +93,5 @@
         <ignore path="**/src/androidTest/**" />
     </issue>
 
-    <!--
-        slack-lints' RawDispatchersUse forbids direct Dispatchers.{IO,Default,Main}
-        references in favour of injected, Hilt-qualified CoroutineDispatcher.
-
-        Strategy here is "ratchet, don't refactor everything at once":
-        - Set severity = error so any NEW Dispatchers.{IO,Default} usage breaks
-          the build.
-        - lint-baseline.xml freezes the existing ~69 sites; they don't fail the
-          build but are listed as known debt.
-        - New code (and any refactor that touches an existing site) must inject
-          @Dispatcher(AppDispatchers.IO) / @Dispatcher(AppDispatchers.Default)
-          via the Hilt module at app/src/main/.../di/DispatchersModule.kt.
-
-        Dispatchers.Main / Main.immediate is not policed — its only sensible
-        replacement is TestDispatcher swapping at the Dispatchers.setMain
-        level, which doesn't need a qualifier.
-    -->
     <issue id="RawDispatchersUse"             severity="error" />
 </lint>

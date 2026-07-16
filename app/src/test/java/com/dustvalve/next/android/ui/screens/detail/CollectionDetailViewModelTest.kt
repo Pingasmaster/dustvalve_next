@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.screens.detail
 
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
@@ -16,6 +17,7 @@ import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.repository.UnsupportedSourceOperation
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.util.UiText
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.every
@@ -97,7 +99,9 @@ class CollectionDetailViewModelTest {
 
         val state = vm.uiState.value
         assertThat(state.isLoading).isFalse()
-        assertThat(state.error).contains("Unknown source: nope")
+        val error = state.error as UiText.StringResource
+        assertThat(error.resId).isEqualTo(R.string.error_unknown_source)
+        assertThat(error.args).containsExactly("nope")
     }
 
     @Test fun `load surfaces error when source lacks COLLECTION capability`() = runTest(dispatcher) {
@@ -110,7 +114,8 @@ class CollectionDetailViewModelTest {
 
         val state = vm.uiState.value
         assertThat(state.isLoading).isFalse()
-        assertThat(state.error).contains("does not expose collections")
+        assertThat((state.error as UiText.StringResource).resId)
+            .isEqualTo(R.string.error_source_no_collections)
     }
 
     @Test fun `load surfaces message from UnsupportedSourceOperation thrown by getCollection`() = runTest(dispatcher) {

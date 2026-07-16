@@ -17,11 +17,12 @@ import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.ApplicationScope
+import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
+import com.dustvalve.next.android.domain.repository.DownloadProgressReporter.BatchKind
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -35,11 +36,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Owns the single user-visible "downloads in progress" notification —
+ * Owns the single user-visible "downloads in progress" notification -
  * always rendered as the Android 16 QPR1+ status-bar **Live Update** chip
  * via `Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
  * `setShortCriticalText(...)`. The app's `minSdk = 36` (Android 16 base);
- * the Live Update APIs technically require API 36.1 (QPR1) — we accept
+ * the Live Update APIs technically require API 36.1 (QPR1) - we accept
  * that residual risk pre-QPR1, see `@SuppressLint("NewApi")` on
  * `buildNotification`. minSdk will rise to 37 (Android 17) once Robolectric
  * supports it for unit tests.
@@ -54,8 +55,8 @@ import javax.inject.Singleton
 class DownloadNotificationCenter @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val settingsDataStore: SettingsDataStore,
-) {
-    enum class BatchKind { ALBUM, ARTIST, PLAYLIST }
+    @param:ApplicationScope private val scope: CoroutineScope,
+) : DownloadProgressReporter {
 
     internal data class Batch(val id: Long, val label: String, val totalTracks: Int, val kind: BatchKind)
 
@@ -78,7 +79,7 @@ class DownloadNotificationCenter @Inject constructor(
     /**
      * True while [DownloadService] holds [NOTIFICATION_ID] as its foreground
      * notification. While owned, this center must NOT `cancel()` the id on an
-     * empty/disabled state — the service tears it down via `stopForeground`.
+     * empty/disabled state - the service tears it down via `stopForeground`.
      */
     @Volatile
     private var foregroundOwned = false
@@ -101,14 +102,13 @@ class DownloadNotificationCenter @Inject constructor(
     internal fun shutdownForTest() {
         scope.coroutineContext[kotlinx.coroutines.Job]?.cancel()
     }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val batchSeq = AtomicLong(0L)
     private val notificationManager = NotificationManagerCompat.from(context)
 
     init {
         scope.launch {
             // Debounce so a flurry of byte-write callbacks coalesces into a
-            // single rebuild — NotificationManager bins ~10 posts/sec/app
+            // single rebuild - NotificationManager bins ~10 posts/sec/app
             // and we don't want to compete with our own updates.
             combine(state, settingsDataStore.downloadNotificationsEnabled) { s, enabled -> s to enabled }
                 .debounce(NOTIFICATION_DEBOUNCE_MS)
@@ -121,7 +121,7 @@ class DownloadNotificationCenter @Inject constructor(
      * Wraps a logical batch (album/artist/playlist). While `block` runs,
      * the notification shows aggregated progress against `totalTracks`.
      */
-    suspend fun <T> withBatch(label: String, totalTracks: Int, kind: BatchKind, block: suspend () -> T): T {
+    override suspend fun <T> withBatch(label: String, totalTracks: Int, kind: BatchKind, block: suspend () -> T): T {
         val id = batchSeq.incrementAndGet()
         mutex.withLock {
             state.update { s ->
@@ -147,7 +147,7 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    fun trackStarted(trackId: String, title: String) {
+    override fun trackStarted(trackId: String, title: String) {
         state.update { s ->
             s.copy(
                 activeTracks = s.activeTracks + (trackId to TrackProgress(trackId, title, 0L, null)),
@@ -155,7 +155,7 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    fun trackProgress(trackId: String, bytesWritten: Long, expectedTotal: Long?) {
+    override fun trackProgress(trackId: String, bytesWritten: Long, expectedTotal: Long?) {
         state.update { s ->
             val existing = s.activeTracks[trackId] ?: return@update s
             val updated = existing.copy(bytesWritten = bytesWritten, expectedTotal = expectedTotal)
@@ -163,7 +163,7 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    fun trackFinished(trackId: String, @Suppress("UNUSED_PARAMETER") success: Boolean) {
+    override fun trackFinished(trackId: String, @Suppress("UNUSED_PARAMETER") success: Boolean) {
         state.update { s ->
             val newActive = s.activeTracks - trackId
             val inBatch = s.batchStack.isNotEmpty()
@@ -182,7 +182,7 @@ class DownloadNotificationCenter @Inject constructor(
                 snapshot.paused
             if (!enabled || !hasPostPermission() || !hasWork) {
                 // When the service owns the foreground notification it drives
-                // teardown via stopForeground — cancelling here would fight it
+                // teardown via stopForeground - cancelling here would fight it
                 // (and an FGS notification can't be cancelled while foregrounded).
                 if (!foregroundOwned) notificationManager.cancel(NOTIFICATION_ID)
                 return
@@ -203,10 +203,17 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    private fun hasPostPermission(): Boolean = ActivityCompat.checkSelfPermission(
-        context,
-        Manifest.permission.POST_NOTIFICATIONS,
-    ) == PackageManager.PERMISSION_GRANTED
+    // Legacy branch: the whole pipeline renders Notification.ProgressStyle,
+    // an API 36 class, so it is gated at BAKLAVA - below Android 16 legacy
+    // shows no download-progress notification at all (downloads themselves
+    // are unaffected). This also keeps the API 33 POST_NOTIFICATIONS check
+    // behind an SDK gate.
+    private fun hasPostPermission(): Boolean =
+        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA &&
+            ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS,
+            ) == PackageManager.PERMISSION_GRANTED
 
     // setRequestPromotedOngoing + setShortCriticalText are API 36.1 (Android
     // 16 QPR1) APIs. minSdk is 36 (Android 16 base) until Robolectric 4.17+
@@ -216,7 +223,7 @@ class DownloadNotificationCenter @Inject constructor(
     @android.annotation.SuppressLint("NewApi")
     private fun buildNotification(snapshot: State): Notification? {
         // While paused the batch has unwound (its coroutine was cancelled), so
-        // activeTracks/batchStack are empty — show a static "paused" card with a
+        // activeTracks/batchStack are empty - show a static "paused" card with a
         // Resume action instead of falling through to the empty case.
         if (snapshot.paused) return buildPausedNotification()
 
@@ -232,8 +239,13 @@ class DownloadNotificationCenter @Inject constructor(
         if (outer != null) {
             title = when (outer.kind) {
                 BatchKind.ALBUM -> context.getString(R.string.notification_downloading_batch_album, outer.label)
+
                 BatchKind.ARTIST -> context.getString(R.string.notification_downloading_batch_artist, outer.label)
-                BatchKind.PLAYLIST -> context.getString(R.string.notification_downloading_batch_playlist, outer.label)
+
+                BatchKind.PLAYLIST -> context.getString(
+                    R.string.notification_downloading_batch_playlist,
+                    outer.label.ifBlank { context.getString(R.string.playlist_default_title) },
+                )
             }
             val currentIndex = (snapshot.completedInBatch + 1).coerceAtMost(outer.totalTracks)
             text = if (currentTrack != null) {
@@ -275,7 +287,7 @@ class DownloadNotificationCenter @Inject constructor(
             } else {
                 progressMax = UNIT_PER_TRACK
                 progressCurrent = 0
-                chipText = "…"
+                chipText = "..."
             }
         }
 

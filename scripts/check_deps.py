@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 MAVEN_CENTRAL = "https://repo1.maven.org/maven2"
 GOOGLE_MAVEN = "https://dl.google.com/android/maven2"
 
-# (group, artifact, repo) — repo is "central" or "google"
+# (group, artifact, repo) - repo is "central" or "google"
 ARTIFACTS = [
     # Core plugins (Google Maven)
     ("com.android.tools.build", "gradle", "google"),
@@ -112,7 +112,7 @@ def fetch_metadata(group: str, artifact: str, repo: str) -> tuple[str, str, str,
 def main():
     out_dir = Path("/tmp/dep_metadata")
     out_dir.mkdir(exist_ok=True)
-    print(f"Fetching metadata for {len(ARTIFACTS)} artifacts…")
+    print(f"Fetching metadata for {len(ARTIFACTS)} artifacts...")
     with ThreadPoolExecutor(max_workers=12) as ex:
         futures = {ex.submit(fetch_metadata, g, a, r): (g, a) for g, a, r in ARTIFACTS}
         results = {}

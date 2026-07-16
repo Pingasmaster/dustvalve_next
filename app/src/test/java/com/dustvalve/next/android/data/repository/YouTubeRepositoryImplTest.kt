@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.repository
 
 import com.dustvalve.next.android.data.remote.youtube.innertube.PlayerStreamInfo
@@ -18,6 +20,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.buildJsonObject
@@ -57,6 +60,7 @@ class YouTubeRepositoryImplTest {
             videoCache = videoCacheMock,
             playlistCache = playlistCacheMock,
             youTubeMusicRepository = ytmRepoMock,
+            ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
 
@@ -118,14 +122,14 @@ class YouTubeRepositoryImplTest {
         every { playerParser.parseTrack(empty, "vidVidVid12") } returns track
 
         val out = repo.getTrackInfo("https://www.youtube.com/watch?v=vidVidVid12")
-        // getTrackInfo now returns parsed.copy(albumUrl = resolved) — a new
-        // instance rather than the parser's exact object — so compare fields
+        // getTrackInfo now returns parsed.copy(albumUrl = resolved) - a new
+        // instance rather than the parser's exact object - so compare fields
         // instead of identity.
         assertThat(out.id).isEqualTo(track.id)
         assertThat(out.title).isEqualTo(track.title)
         assertThat(out.artist).isEqualTo(track.artist)
         assertThat(out.source).isEqualTo(track.source)
-        // YTM album lookup is stubbed to null → empty albumUrl.
+        // YTM album lookup is stubbed to null -> empty albumUrl.
         assertThat(out.albumUrl).isEmpty()
     }
 

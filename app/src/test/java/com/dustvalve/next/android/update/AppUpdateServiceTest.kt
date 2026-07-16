@@ -1,8 +1,11 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.update
 
 import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import io.mockk.mockk
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -16,13 +19,14 @@ import org.junit.Test
  *
  * Specifically locks in the pre-alpha requirement: every CI build ships as a
  * GitHub *pre-release*, so the check MUST NOT filter them out. The pre-fix
- * code did — and the user reported it "never detects newer versions".
+ * code did - and the user reported it "never detects newer versions".
  */
 class AppUpdateServiceTest {
 
     private lateinit var server: MockWebServer
     private val context = mockk<Context>(relaxed = true)
     private val client = OkHttpClient()
+    private val testDispatcher = UnconfinedTestDispatcher()
 
     @Before fun setUp() {
         server = MockWebServer()
@@ -40,7 +44,7 @@ class AppUpdateServiceTest {
         val update = svc.checkForUpdate()
         assertThat(update).isNotNull()
         assertThat(update!!.versionName).isEqualTo("0.3.50")
-        assertThat(update.apkDownloadUrl).endsWith("dustvalve_next-future.apk")
+        assertThat(update.apkDownloadUrl).endsWith("dustvalve_next.apk")
     }
 
     @Test fun `detects a newer stable release too`() = runTest {
@@ -65,7 +69,7 @@ class AppUpdateServiceTest {
     }
 
     @Test fun `picks the first (newest) entry and ignores older ones even if out of version order`() = runTest {
-        // GitHub returns releases newest-first by publish date. Our code relies on that — the version
+        // GitHub returns releases newest-first by publish date. Our code relies on that - the version
         // comparison gate catches the edge case where the first entry is older than the installed
         // build (which happens when we've locally moved past the latest CI release).
         server.enqueue(
@@ -102,7 +106,7 @@ class AppUpdateServiceTest {
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v0.3.60", prerelease = true, assetName = "source.zip"),
-                    release(tag = "v0.3.55", prerelease = true, assetName = "dustvalve_next-future.apk"),
+                    release(tag = "v0.3.55", prerelease = true, assetName = "dustvalve_next.apk"),
                 ),
             ),
         )
@@ -135,7 +139,7 @@ class AppUpdateServiceTest {
 
     @Test fun `isNewer compares dotted-int versions correctly`() {
         with(AppUpdateService) {
-            // Strictly greater — patch bump
+            // Strictly greater - patch bump
             assertThat(isNewer("0.3.47", "0.3.46")).isTrue()
             // Minor bump, not just a patch increment (user raised this explicitly)
             assertThat(isNewer("0.4.0", "0.3.99")).isTrue()
@@ -151,7 +155,7 @@ class AppUpdateServiceTest {
             // Strictly less
             assertThat(isNewer("0.3.45", "0.3.46")).isFalse()
             assertThat(isNewer("0.2.99", "0.3.0")).isFalse()
-            // Mismatched length — shorter implies .0
+            // Mismatched length - shorter implies .0
             assertThat(isNewer("0.4", "0.3.99")).isTrue()
             assertThat(isNewer("0.3", "0.3.0")).isFalse()
             assertThat(isNewer("1", "0.99.99")).isTrue()
@@ -176,12 +180,12 @@ class AppUpdateServiceTest {
         assertThat(svc.checkForUpdate()?.versionName).isEqualTo("1.0.0")
     }
 
-    @Test fun `picks dustvalve_next-future-apk when release also ships the legacy dustvalve_next-apk`() = runTest {
+    @Test fun `picks dustvalve_next-apk when release also ships the modern dustvalve_next-future-apk`() = runTest {
         // Each release now ships TWO apks side by side:
-        //   dustvalve_next.apk         -> Android 8-16 build from legacy-android8
-        //   dustvalve_next-future.apk  -> Android 17 build from master (THIS apk)
-        // Master users MUST get the future apk; otherwise the updater silently
-        // downgrades them to the legacy build.
+        //   dustvalve_next.apk         -> this legacy build (Android 8-16)
+        //   dustvalve_next-future.apk  -> the master/Android 17 build
+        // Legacy users MUST NOT be auto-downgraded to the future apk, which
+        // has minSdk 37 and cannot install on the devices this branch serves.
         val release = """
             {
               "tag_name": "v1.2.3",
@@ -190,8 +194,8 @@ class AppUpdateServiceTest {
               "prerelease": true,
               "draft": false,
               "assets": [
-                {"name": "dustvalve_next.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next.apk"},
-                {"name": "dustvalve_next-future.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next-future.apk"}
+                {"name": "dustvalve_next-future.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next-future.apk"},
+                {"name": "dustvalve_next.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next.apk"}
               ]
             }
         """.trimIndent()
@@ -199,10 +203,10 @@ class AppUpdateServiceTest {
         val svc = testService(installed = "1.0.0")
 
         val update = svc.checkForUpdate()
-        assertThat(update?.apkDownloadUrl).endsWith("dustvalve_next-future.apk")
+        assertThat(update?.apkDownloadUrl).endsWith("dustvalve_next.apk")
     }
 
-    @Test fun `skips release that only has the legacy dustvalve_next-apk (master never installs legacy)`() = runTest {
+    @Test fun `skips release that only has the modern dustvalve_next-future-apk (legacy never installs Android 17 build)`() = runTest {
         val release = """
             {
               "tag_name": "v9.9.9",
@@ -211,7 +215,7 @@ class AppUpdateServiceTest {
               "prerelease": true,
               "draft": false,
               "assets": [
-                {"name": "dustvalve_next.apk", "browser_download_url": "https://releases.example/v9.9.9/dustvalve_next.apk"}
+                {"name": "dustvalve_next-future.apk", "browser_download_url": "https://releases.example/v9.9.9/dustvalve_next-future.apk"}
               ]
             }
         """.trimIndent()
@@ -231,8 +235,8 @@ class AppUpdateServiceTest {
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v9.9.9", prerelease = false, assetName = null),
-                    release(tag = "v9.9.8", prerelease = true, assetName = "dustvalve_next-future.apk"),
-                    release(tag = "v9.9.7", prerelease = true, assetName = "dustvalve_next-future.apk"),
+                    release(tag = "v9.9.8", prerelease = true, assetName = "dustvalve_next.apk"),
+                    release(tag = "v9.9.7", prerelease = true, assetName = "dustvalve_next.apk"),
                 ),
             ),
         )
@@ -244,7 +248,7 @@ class AppUpdateServiceTest {
 
     // --- helpers ------------------------------------------------------------
 
-    private fun testService(installed: String): AppUpdateService = object : AppUpdateService(client, context) {
+    private fun testService(installed: String): AppUpdateService = object : AppUpdateService(client, context, testDispatcher) {
         override val releasesUrl: String = server.url("/releases").toString()
         override val installedVersion: String = installed
     }
@@ -253,7 +257,7 @@ class AppUpdateServiceTest {
         tag: String,
         prerelease: Boolean = false,
         draft: Boolean = false,
-        assetName: String? = "dustvalve_next-future.apk",
+        assetName: String? = "dustvalve_next.apk",
     ): String {
         val assetsJson = if (assetName == null) {
             "[]"

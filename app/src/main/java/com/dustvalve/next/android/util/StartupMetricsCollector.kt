@@ -28,7 +28,7 @@ import javax.inject.Singleton
 @Singleton
 class StartupMetricsCollector @Inject constructor(@param:ApplicationContext private val context: Context) {
 
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
     fun collectOnColdStart() {
         // ApplicationStartInfo and ActivityManager#getHistoricalProcessStartReasons
         // are API 35+. On legacy minSdk=26 we must early-return before touching

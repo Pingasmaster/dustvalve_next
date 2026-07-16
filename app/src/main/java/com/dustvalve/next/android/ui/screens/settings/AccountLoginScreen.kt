@@ -1,6 +1,6 @@
 // slack-lints DeprecatedCall fires here as a known false positive
 // (slackhq/slack-lints#268): `android.webkit.WebView` is NOT deprecated in
-// the Android SDK (API 37, 2026) — only WebSQL + software-draw are. The rule
+// the Android SDK (API 37, 2026) - only WebSQL + software-draw are. The rule
 // triggers because some legacy WebView overload carries @Deprecated and
 // slack-lints' DeprecatedCallDetector flags every overload of any name with
 // any @Deprecated symbol.
@@ -11,14 +11,14 @@
 // exposes it to the host app. Credential Manager only supports passkeys /
 // passwords / Sign-in-with-Google; Bandcamp publishes neither an OAuth code
 // endpoint nor an OIDC provider, so AppAuth-Android is also off the table.
-// RFC 8252 §8.12 prefers external user-agents but does not address legacy
+// RFC 8252 section 8.12 prefers external user-agents but does not address legacy
 // cookie-only login providers.
 //
 // Compensating controls applied to this WebView (OWASP MASTG-KNOW-0018 /
 // MASVS-AUTH 2026, Oversecured WebView checklist):
 //   * Strict scheme+host allowlist via WebViewClient.shouldOverrideUrlLoading
 //     (everything off-allowlist is blocked, not just non-https).
-//   * FLAG_SECURE on the activity window — blocks screenshots / screen
+//   * FLAG_SECURE on the activity window - blocks screenshots / screen
 //     recording / RecentScreens preview of the auth page.
 //   * settings.allowFileAccess / allowContentAccess /
 //     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs all OFF
@@ -32,7 +32,7 @@
 //     to ensure the captured cookie originates from the user's fresh
 //     session, not a stale residual.
 //   * Cookies are read with CookieManager.getCookie("https://bandcamp.com")
-//     and Domain-scoped manually — we never persist cookies for subdomains
+//     and Domain-scoped manually - we never persist cookies for subdomains
 //     we did not navigate to.
 //   * webViewRef.destroy() in DisposableEffect.onDispose to clear native
 //     resources and break in-memory caches.
@@ -97,6 +97,7 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    val loadErrorFallback = stringResource(R.string.error_load_page)
     // Keep a stable reference to the latest callback to avoid stale lambda captures in WebView
     val currentOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
 
@@ -192,7 +193,7 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
                                 // Only handle errors for the main frame to avoid spurious sub-resource errors
                                 if (request.isForMainFrame) {
                                     isPageLoading = false
-                                    loadError = error.description?.toString() ?: "Failed to load page"
+                                    loadError = error.description?.toString() ?: loadErrorFallback
                                 }
                             }
 

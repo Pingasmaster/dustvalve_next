@@ -11,11 +11,13 @@ import coil3.request.allowHardware
 import coil3.size.Size
 import coil3.toBitmap
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.ApplicationScope
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.player.QueueManager
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -29,8 +31,9 @@ class AlbumThemeManager @Inject constructor(
     private val queueManager: QueueManager,
     private val settingsDataStore: SettingsDataStore,
     @param:ApplicationContext private val context: Context,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    @param:ApplicationScope private val scope: CoroutineScope,
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val seedCache = LruCache<String, Int>(20)
 
@@ -48,7 +51,7 @@ class AlbumThemeManager @Inject constructor(
     private suspend fun extractSeedColor(artUrl: String): Color? {
         seedCache.get(artUrl)?.let { return Color(it) }
 
-        return withContext(Dispatchers.IO) {
+        return withContext(ioDispatcher) {
             try {
                 val imageLoader = SingletonImageLoader.get(context)
                 val request = ImageRequest.Builder(context)

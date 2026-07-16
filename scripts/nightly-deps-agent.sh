@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nightly-deps-agent.sh — nightly runner for the dustvalve_next Android project.
+# nightly-deps-agent.sh - nightly runner for the dustvalve_next Android project.
 #
 # Spawns a `claude` TUI session with the golden-honesty-rule prompt,
 # captures output, writes a run report, exits with a status cron records.
@@ -13,7 +13,7 @@
 #   - single-instance (flock on agent.lock)
 #   - if the working tree is dirty, auto-commit it as a `wip:` snapshot
 #     before spawning the agent (the agent's own commit will land on top,
-#     and the push will carry both) — so the agent always runs against a
+#     and the push will carry both) - so the agent always runs against a
 #     clean tree, but the user's uncommitted work is never lost
 #   - refuses to start if the repo is in a merge state with unresolved
 #     conflicts (can't auto-commit those safely)
@@ -23,7 +23,7 @@
 #   - all env-vars overridable
 set -uo pipefail
 
-# ── config (env-overridable) ────────────────────────────────────────────
+# -- config (env-overridable) --------------------------------------------
 REPO="${NIGHTLY_DEPS_REPO:-/home/user/dustvalve_next}"
 BRANCH="${NIGHTLY_DEPS_BRANCH:-master}"
 STATE_DIR="${NIGHTLY_DEPS_STATE:-$HOME/.local/share/dustvalve-next/nightly-deps-agent}"
@@ -71,7 +71,7 @@ fi
 [ -f "$PROMPT_FILE" ] || { log "missing prompt: $PROMPT_FILE"; exit 2; }
 
 if [ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]; then
-  log "repo $REPO has uncommitted changes — auto-committing as 'wip:' snapshot before agent run"
+  log "repo $REPO has uncommitted changes - auto-committing as 'wip:' snapshot before agent run"
   if [ -n "$(git -C "$REPO" ls-files --unmerged 2>/dev/null)" ]; then
     log "repo $REPO is in a merge state with unmerged paths; refusing to run (resolve conflicts first)"
     exit 1
@@ -117,7 +117,7 @@ directive="Read the canonical prompt at $PROMPT_FILE (also copied to $session_pr
 # (the `mini` / `glm` bashrc aliases route claude through the local
 # proxy with a custom settings file; we MUST NOT use that path). The
 # runner calls the real `claude` by absolute path so this array is
-# load-bearing — without it, the agent would silently compress every
+# load-bearing - without it, the agent would silently compress every
 # request through the local proxy.
 proxy_strip_env=(
   -u ANTHROPIC_API_KEY

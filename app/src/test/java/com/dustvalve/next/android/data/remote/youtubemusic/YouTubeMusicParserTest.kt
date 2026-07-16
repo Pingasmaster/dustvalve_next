@@ -72,7 +72,7 @@ class YouTubeMusicParserTest {
         }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
         assertThat(ex!!.message).isEqualTo(
-            "YouTube Music: YouTube Music isn't available in your country — Try again later.",
+            "YouTube Music: YouTube Music isn't available in your country - Try again later.",
         )
     }
 }

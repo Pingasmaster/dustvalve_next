@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.theme
 
+import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -33,7 +34,9 @@ fun DustvalveNextTheme(
             )
         }
 
-        dynamicColor -> {
+        // Material You dynamic color needs API 31+; older devices fall
+        // through to the static schemes below.
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }

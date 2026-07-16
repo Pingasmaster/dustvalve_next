@@ -1,6 +1,6 @@
 // slack-lints DeprecatedCall fires here as a known false positive
 // (slackhq/slack-lints#268): `android.webkit.WebView` is NOT deprecated in
-// the Android SDK (API 37, 2026) — only WebSQL + software-draw are. The
+// the Android SDK (API 37, 2026) - only WebSQL + software-draw are. The
 // rule triggers because some legacy WebView overload carries @Deprecated.
 //
 // We CANNOT use Chrome Custom Tabs: this flow must read the
@@ -12,10 +12,10 @@
 // YouTube Music's web-only login does not expose that endpoint.
 //
 // Compensating controls (OWASP MASTG-KNOW-0018 / MASVS-AUTH 2026):
-//   * Host allowlist enforced in shouldOverrideUrlLoading — only
+//   * Host allowlist enforced in shouldOverrideUrlLoading - only
 //     accounts.google.com / music.youtube.com / youtube.com /
 //     myaccount.google.com are permitted.
-//   * FLAG_SECURE on the activity window — blocks screen capture of the
+//   * FLAG_SECURE on the activity window - blocks screen capture of the
 //     auth page.
 //   * settings.allowFileAccess / allowContentAccess /
 //     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs OFF.
@@ -89,6 +89,7 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    val loadErrorFallback = stringResource(R.string.error_load_page)
     val currentOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
 
     // Prevent screenshots/screen recordings on the login screen
@@ -173,7 +174,7 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
                                 super.onReceivedError(view, request, error)
                                 if (request.isForMainFrame) {
                                     isPageLoading = false
-                                    loadError = error.description?.toString() ?: "Failed to load page"
+                                    loadError = error.description?.toString() ?: loadErrorFallback
                                 }
                             }
 

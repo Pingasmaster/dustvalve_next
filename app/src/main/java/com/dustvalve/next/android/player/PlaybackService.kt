@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.player
 
 import android.content.Intent
+import android.os.Build
 import android.os.PerformanceHintManager
 import android.os.Process
 import androidx.annotation.OptIn
@@ -33,6 +34,10 @@ class PlaybackService : MediaSessionService() {
     @Inject
     lateinit var mediaSession: MediaSession
 
+    // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
+    // tests substitute it globally via Dispatchers.setMain, so qualifying
+    // it would only add ceremony.
+    @Suppress("RawDispatchersUse")
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var idleStopJob: Job? = null
 
@@ -49,6 +54,8 @@ class PlaybackService : MediaSessionService() {
     private var perfHintSession: PerformanceHintManager.Session? = null
 
     private fun ensurePerfHintSession(): PerformanceHintManager.Session? {
+        // ADPF PerformanceHintManager is API 31+; legacy minSdk is 26.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
         if (perfHintSession == null) {
             val mgr = getSystemService(PerformanceHintManager::class.java) ?: return null
             perfHintSession = mgr.createHintSession(
@@ -67,15 +74,19 @@ class PlaybackService : MediaSessionService() {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             idleStopJob?.cancel()
             idleStopJob = if (isPlaying) {
-                ensurePerfHintSession()?.reportActualWorkDuration(
-                    TimeUnit.MILLISECONDS.toNanos(PERF_HINT_ACTUAL_MS),
-                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    ensurePerfHintSession()?.reportActualWorkDuration(
+                        TimeUnit.MILLISECONDS.toNanos(PERF_HINT_ACTUAL_MS),
+                    )
+                }
                 null
             } else {
-                // Paused → lots of CPU headroom; nudge the OS toward lower clocks.
-                perfHintSession?.reportActualWorkDuration(
-                    TimeUnit.MICROSECONDS.toNanos(PERF_HINT_IDLE_US),
-                )
+                // Paused -> lots of CPU headroom; nudge the OS toward lower clocks.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    perfHintSession?.reportActualWorkDuration(
+                        TimeUnit.MICROSECONDS.toNanos(PERF_HINT_IDLE_US),
+                    )
+                }
                 serviceScope.launch {
                     delay(TimeUnit.MINUTES.toMillis(IDLE_STOP_MINUTES))
                     mediaSession.player.stop()
@@ -114,7 +125,9 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         idleStopJob?.cancel()
         mediaSession.player.removeListener(pauseIdleListener)
-        perfHintSession?.close()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            perfHintSession?.close()
+        }
         perfHintSession = null
         serviceScope.cancel()
         playbackManager.release()

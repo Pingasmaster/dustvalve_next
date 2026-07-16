@@ -1,0 +1,541 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Machine-translated (Claude). Corrections welcome via PR. -->
+    <string name="playback_notification_channel">Сейчас играет</string>
+    <string name="notification_channel_downloads">Загрузки</string>
+    <string name="notification_channel_downloads_desc">Прогресс загрузки песен в реальном времени</string>
+    <string name="notification_downloading_single">Загружается <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_album">Загрузка альбома · <xliff:g id="album" example="Night Drive">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_artist">Загрузка исполнителя · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_playlist">Загрузка плейлиста · <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress">Трек <xliff:g id="current" example="3">%1$d</xliff:g> из <xliff:g id="total" example="12">%2$d</xliff:g> — <xliff:g id="track" example="Cosmic Dust">%3$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress_idle">Трек <xliff:g id="current" example="3">%1$d</xliff:g> из <xliff:g id="total" example="12">%2$d</xliff:g></string>
+    <string name="notification_download_preparing">Подготовка загрузок…</string>
+    <string name="notification_download_paused">Загрузки приостановлены</string>
+    <string name="notification_download_paused_chip">Пауза</string>
+    <string name="notification_download_pause">Пауза</string>
+    <string name="notification_download_resume">Продолжить</string>
+    <string name="notification_download_cancel">Отмена</string>
+
+    <string name="common_action_cancel">Отмена</string>
+    <string name="common_action_enable">Включить</string>
+    <string name="common_action_delete">Удалить</string>
+    <string name="common_action_retry">Повторить</string>
+    <string name="common_action_save">Сохранить</string>
+    <string name="common_action_create">Создать</string>
+    <string name="common_action_remove">Убрать</string>
+    <string name="common_action_disconnect">Отключить</string>
+    <string name="common_play_all">Слушать все</string>
+
+    <string name="link_open_video">Открыть видео <xliff:g id="brand">YouTube</xliff:g></string>
+    <string name="link_open_song">Открыть трек <xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="link_open_playlist">Открыть плейлист <xliff:g id="brand">YouTube</xliff:g></string>
+    <string name="link_open_album">Открыть альбом <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="link_open_artist">Открыть исполнителя</string>
+    <string name="link_open_track">Открыть трек <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="link_kind_video">это видео</string>
+    <string name="link_kind_song">эту песню</string>
+    <string name="link_kind_playlist">этот плейлист</string>
+    <string name="link_kind_album">этот альбом</string>
+    <string name="link_kind_artist">этого исполнителя</string>
+    <string name="link_kind_track">этот трек</string>
+    <string name="provider_enable_title">Включить <xliff:g id="provider" example="Bandcamp">%1$s</xliff:g>?</string>
+    <string name="provider_enable_text"><xliff:g id="provider" example="Bandcamp">%1$s</xliff:g> сейчас отключен. Включить, чтобы открыть <xliff:g id="kind" example="album">%2$s</xliff:g>?</string>
+    <string name="snackbar_unsupported_source">Эта ссылка не из поддерживаемого источника.</string>
+
+    <string name="library_new_playlist">Новый плейлист</string>
+    <string name="library_import_playlist">Импортировать плейлист</string>
+    <string name="library_export_playlist">Экспортировать плейлист</string>
+    <string name="library_export_title">Экспорт плейлиста</string>
+    <string name="library_export_text">Экспортировать копию для офлайна? В режиме «Офлайн» скачиваются все песни и обложки — плейлист играет без интернета. «Онлайн» оставляет файл небольшим и заново стримит музыку при импорте.</string>
+    <string name="library_export_offline">Офлайн</string>
+    <string name="library_export_lightweight">Онлайн</string>
+    <string name="library_exporting">Экспорт плейлиста</string>
+    <string name="library_importing">Импорт плейлиста</string>
+    <string name="library_transfer_progress"><xliff:g id="done" example="3">%1$d</xliff:g> / <xliff:g id="total" example="12">%2$d</xliff:g></string>
+    <string name="library_exported">Плейлист «<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>» экспортирован</string>
+    <string name="library_imported">Плейлист «<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>» импортирован</string>
+    <string name="library_error_export">Не удалось экспортировать</string>
+    <string name="library_error_import">Не удалось импортировать</string>
+    <string name="library_error_open_export_destination">Не удалось открыть папку для экспорта</string>
+    <string name="library_error_open_import_file">Не удалось открыть файл плейлиста</string>
+    <string name="library_error_update_playlist">Не удалось обновить плейлист</string>
+    <string name="library_error_delete_playlist">Не удалось удалить плейлист</string>
+    <string name="library_error_update_pin">Не удалось изменить закрепление</string>
+    <string name="library_error_remove">Не удалось убрать из библиотеки</string>
+    <string name="library_error_update_shape">Не удалось изменить форму</string>
+    <string name="library_error_load">Не удалось загрузить библиотеку</string>
+
+    <string name="bandcamp_add_custom_genre">Добавить свой жанр</string>
+    <string name="bandcamp_add_genre_title">Добавить свой жанр</string>
+    <string name="bandcamp_add_genre_hint">Введи жанр <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="bandcamp_add_genre_validating">Проверяем <xliff:g id="brand">Bandcamp</xliff:g>…</string>
+    <string name="bandcamp_add_genre_exists">Жанр уже добавлен</string>
+    <string name="bandcamp_add_genre_not_found">На <xliff:g id="brand">Bandcamp</xliff:g> нет релизов в этом жанре</string>
+    <string name="bandcamp_add_genre_network">Не удалось связаться с <xliff:g id="brand">Bandcamp</xliff:g>. Попробуй еще раз.</string>
+    <string name="bandcamp_remove_genre_title">Убрать жанр?</string>
+    <string name="bandcamp_remove_genre_text">Убрать «<xliff:g id="genre" example="shoegaze">%1$s</xliff:g>» из твоих жанров?</string>
+    <string name="common_action_add">Добавить</string>
+    <string name="common_play_mix">Слушать микс</string>
+    <string name="common_loading">Загрузка…</string>
+    <string name="common_connected">Подключено</string>
+    <string name="common_selected_folder">Выбранная папка</string>
+    <string name="common_failed_to_play">Не удалось воспроизвести</string>
+    <string name="common_playlist_imported">Плейлист импортирован: <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="common_add_to_playlist">Добавить в плейлист</string>
+    <string name="common_play_next">Играть следующим</string>
+    <string name="common_add_to_queue">Добавить в очередь</string>
+    <string name="common_enqueue_all">Все в очередь</string>
+    <string name="common_share">Поделиться</string>
+    <string name="common_open_in_browser">Открыть в браузере</string>
+    <string name="common_loading_track">Загрузка трека…</string>
+    <string name="common_loading_album">Загрузка альбома…</string>
+    <string name="common_loading_playlist">Загрузка плейлиста…</string>
+    <string name="snackbar_failed_load">Не удалось загрузить</string>
+
+    <string name="common_cd_back">Назад</string>
+    <string name="common_cd_search">Поиск</string>
+    <string name="common_cd_clear">Очистить</string>
+    <string name="common_cd_shuffle_play">Играть вперемешку</string>
+    <string name="common_cd_now_playing">Сейчас играет</string>
+    <string name="common_cd_create_playlist">Создать плейлист</string>
+    <string name="common_cd_more_options">Другие действия</string>
+    <string name="common_cd_selected">Выбрано</string>
+    <string name="common_cd_reorder">Изменить порядок</string>
+    <string name="common_cd_delete">Удалить</string>
+    <string name="common_cd_downloaded">Скачано</string>
+    <string name="common_cd_import_playlist">Импортировать плейлист</string>
+
+    <string name="nav_label_local">Локально</string>
+    <string name="nav_label_library">Библиотека</string>
+    <string name="nav_label_settings">Настройки</string>
+
+    <string name="player_volume">Громкость</string>
+    <string name="player_output">Вывод звука</string>
+    <string name="player_automatic">Автоматически</string>
+    <string name="player_no_track">Ничего не играет</string>
+    <string name="player_queue_count">Очередь (<xliff:g id="count" example="7">%1$d</xliff:g>)</string>
+    <string name="player_up_next_count">Дальше (<xliff:g id="count" example="7">%1$d</xliff:g>)</string>
+    <string name="player_cd_previous">Предыдущий</string>
+    <string name="player_cd_next">Следующий</string>
+    <string name="player_cd_pause">Пауза</string>
+    <string name="player_cd_play">Играть</string>
+    <string name="player_cd_shuffle">Перемешать</string>
+    <string name="player_cd_add_to_playlist">Добавить в плейлист</string>
+    <string name="player_cd_repeat">Повтор</string>
+    <string name="player_cd_collapse">Свернуть</string>
+    <string name="player_cd_volume">Громкость</string>
+    <string name="player_cd_local_file">Локальный файл</string>
+    <string name="player_cd_delete_download">Удалить загрузку</string>
+    <string name="player_cd_download_track">Скачать трек</string>
+    <string name="player_cd_remove_from_favorites">Убрать из избранного</string>
+    <string name="player_cd_add_to_favorites">В избранное</string>
+    <string name="player_cd_album_art">Обложка альбома</string>
+    <string name="player_delete_download_title">Удалить загрузку</string>
+    <string name="player_delete_download_text">Удалить скачанный файл трека «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»?</string>
+    <string name="player_playback_info">Сведения о воспроизведении</string>
+    <string name="player_debug_audio_format">Формат аудио</string>
+    <string name="player_debug_source">Источник</string>
+    <string name="player_debug_download_status">Статус загрузки</string>
+    <string name="player_debug_file_path">Путь к файлу</string>
+    <string name="player_debug_track_id">ID трека</string>
+    <string name="player_debug_album_id">ID альбома</string>
+    <string name="player_debug_local_file">Локальный файл</string>
+    <string name="player_debug_downloading">Загрузка…</string>
+    <string name="player_debug_downloaded">Скачано</string>
+    <string name="player_debug_cached">В кеше</string>
+    <string name="player_debug_not_downloaded">Не скачано</string>
+    <string name="player_debug_local">Локально</string>
+    <string name="player_debug_streaming">Стриминг</string>
+    <string name="player_debug_unknown">Неизвестно</string>
+    <string name="player_debug_none">Нет</string>
+    <string name="player_no_playlists">Плейлистов пока нет</string>
+    <string name="player_create_to_start">Создай первый, чтобы начать</string>
+    <string name="player_remove_from_favorites">Убрать из избранного</string>
+    <string name="player_add_to_favorites">В избранное</string>
+    <string name="player_remove_from_queue">Убрать из очереди</string>
+    <string name="player_audio_device_speaker">Динамик</string>
+    <string name="player_audio_device_earpiece">Разговорный динамик</string>
+    <string name="player_audio_device_wired_headset">Проводная гарнитура</string>
+    <string name="player_audio_device_wired_headphones">Проводные наушники</string>
+    <string name="player_audio_device_usb">USB-аудио</string>
+    <string name="player_audio_device_usb_accessory">USB-аксессуар</string>
+    <string name="player_audio_device_usb_headset">USB-гарнитура</string>
+    <string name="player_audio_device_dock">Док-станция</string>
+    <string name="player_audio_device_aux">AUX</string>
+    <string name="player_audio_device_ble_headset">BLE-гарнитура</string>
+    <string name="player_audio_device_ble_speaker">BLE-колонка</string>
+    <string name="player_audio_device_unknown">Аудиоустройство</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_section_sources">Источники</string>
+    <string name="settings_section_connections">Подключения</string>
+    <string name="settings_section_storage">Хранилище</string>
+    <string name="settings_section_audio_quality">Качество звука</string>
+    <string name="settings_section_appearance">Внешний вид</string>
+    <string name="settings_section_player">Плеер</string>
+    <string name="settings_section_search">Поиск</string>
+    <string name="settings_section_about">О приложении</string>
+    <string name="settings_section_debug">Отладка</string>
+    <string name="settings_source_local">Локальные файлы</string>
+    <string name="settings_use_individual_folders">Отдельные папки</string>
+    <string name="settings_use_individual_folders_desc">Выбирать конкретные папки вместо сканирования всего аудио</string>
+    <string name="settings_remove_downloads_title">Удалить все загрузки</string>
+    <string name="settings_remove_downloads_text">Будет очищен весь пул загрузок: скачанные вручную треки, автоматически кешированное аудио, обложки альбомов и фото исполнителей.</string>
+    <string name="settings_download_format">Формат загрузки</string>
+    <string name="settings_download_format_desc">Формат скачиваемых покупок <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g> отключен</string>
+    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g> отключен</string>
+    <string name="settings_add_folder">Добавить папку</string>
+    <string name="settings_rescan">Пересканировать</string>
+    <string name="settings_cd_remove_folder">Убрать папку</string>
+    <string name="settings_cd_avatar">Аватар</string>
+    <string name="settings_connect_bandcamp">Подключить <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_connect_bandcamp_desc">Подключи, чтобы получить доступ к своим покупкам <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_connect_youtube">Подключить <xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="settings_connect_youtube_desc">Подключи, чтобы получить доступ к своей библиотеке <xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="settings_youtube_default_source_title">Вид по умолчанию</string>
+    <string name="settings_youtube_default_source_desc">Что открывается при нажатии на вкладку <xliff:g id="brand">YouTube</xliff:g></string>
+    <string name="common_play">Играть</string>
+    <string name="ytm_artist_spotlight">В центре внимания</string>
+    <string name="settings_remove_all_downloads">Удалить все загрузки</string>
+    <string name="settings_dedicated_folder_title">Хранить все в отдельной папке</string>
+    <string name="settings_dedicated_folder_desc">Плейлисты, избранное, загрузки, история и настройки хранятся в выбранной тобой папке. Нужна при каждом запуске приложения.</string>
+    <string name="settings_dedicated_folder_change">Сменить папку</string>
+    <string name="settings_dedicated_folder_image_cache">Также хранить кеш изображений в папке</string>
+    <string name="settings_dedicated_folder_image_cache_desc">Обложки альбомов зеркалируются в папку и переживают переустановку.</string>
+    <string name="settings_dedicated_folder_metadata_cache">Также хранить кеш метаданных в папке</string>
+    <string name="settings_dedicated_folder_metadata_cache_desc">Кеши запросов <xliff:g id="brand">YouTube</xliff:g> и <xliff:g id="brand_2">Bandcamp</xliff:g> зеркалируются в папку.</string>
+    <string name="settings_dedicated_folder_disable_title">Вернуть данные в хранилище приложения?</string>
+    <string name="settings_dedicated_folder_disable_text">Все содержимое отдельной папки будет скопировано обратно в приложение. После этого содержимое папки удаляется.</string>
+    <string name="settings_dedicated_folder_disable_confirm">Вернуть</string>
+    <string name="settings_dedicated_folder_migrating">Переносим твои данные…</string>
+    <string name="settings_dedicated_folder_migration_success">Отдельная папка готова</string>
+    <string name="settings_dedicated_folder_migration_reverted">Данные снова в хранилище приложения</string>
+    <string name="settings_dedicated_folder_migration_failed">Перенос не удался: <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
+    <string name="settings_dedicated_folder_unreachable_title">Отдельная папка недоступна</string>
+    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g> не может открыть папку с твоими данными. Укажи ее заново или отключи функцию, чтобы вернуться к хранилищу приложения.</string>
+    <string name="settings_dedicated_folder_locate">Найти папку</string>
+    <string name="settings_dedicated_folder_turn_off">Отключить и использовать хранилище приложения</string>
+    <string name="settings_auto_download_purchases">Автозагрузка покупок</string>
+    <string name="settings_auto_download_purchases_desc">Автоматически скачивать твои покупки <xliff:g id="brand">Dustvalve</xliff:g></string>
+    <string name="settings_auto_download_future">Автозагрузка новинок</string>
+    <string name="settings_auto_download_future_desc">Автоматически скачивать новые треки для загруженных плейлистов, альбомов и исполнителей</string>
+    <string name="settings_mp3_on_metered">Только <xliff:g id="format">MP3</xliff:g> в мобильной сети</string>
+    <string name="settings_mp3_on_metered_desc">Скачивать <xliff:g id="format">MP3</xliff:g> вместо lossless при мобильном интернете</string>
+    <string name="settings_progressive_download">Прогрессивная загрузка</string>
+    <string name="settings_progressive_download_desc">Сначала стрим в качестве превью, затем плавный переход на полное качество</string>
+    <string name="settings_seamless_upgrade">Бесшовное повышение качества</string>
+    <string name="settings_seamless_upgrade_desc">Сначала стрим, затем фоновая загрузка и подмена. В момент подмены возможна одна короткая запинка.</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Темная</string>
+    <string name="settings_theme_system">Как в системе</string>
+    <string name="settings_dynamic_color">Динамические цвета</string>
+    <string name="settings_dynamic_color_desc">Использовать цвета твоих обоев</string>
+    <string name="settings_album_art_colors">Цвета обложки</string>
+    <string name="settings_album_art_colors_desc">Окрашивать приложение в цвета обложки играющего трека</string>
+    <string name="settings_oled_black">Черный <xliff:g id="tech">OLED</xliff:g></string>
+    <string name="settings_oled_black_desc">Использовать чисто черный фон для <xliff:g id="tech">OLED</xliff:g>-экранов</string>
+    <string name="settings_progress_bar_style">Полоса прогресса плеера</string>
+    <string name="settings_progress_bar_style_wavy">Волнистая</string>
+    <string name="settings_progress_bar_style_linear">Прямая</string>
+    <string name="settings_progress_bar_size">Толщина: <xliff:g id="size" example="4">%1$d</xliff:g> dp</string>
+    <string name="settings_auto_download_favorites">Автозагрузка избранного</string>
+    <string name="settings_auto_download_favorites_desc">Также скачивать в фоне каждый трек из избранного</string>
+    <string name="settings_download_notifications">Уведомления о загрузках</string>
+    <string name="settings_download_notifications_desc">Показывать уведомление с прогрессом, пока скачиваются песни</string>
+    <string name="settings_live_updates_title">Live Updates отключены</string>
+    <string name="settings_live_updates_desc">Разреши Live Updates в настройках уведомлений, чтобы видеть прогресс загрузки в строке состояния</string>
+    <string name="settings_live_updates_action">Открыть настройки</string>
+    <string name="player_cd_open_artist">Открыть страницу исполнителя</string>
+    <string name="player_cd_open_album">Открыть страницу альбома</string>
+    <string name="snackbar_no_album_for_track">У этого трека нет альбома</string>
+    <string name="settings_volume_slider">Ползунок громкости</string>
+    <string name="settings_volume_slider_desc">Показывать ползунок громкости рядом с обложкой в плеере</string>
+    <string name="settings_volume_button">Кнопка громкости</string>
+    <string name="settings_volume_button_desc">Показывать кнопку громкости, открывающую полноэкранную регулировку</string>
+    <string name="settings_show_debug_info">Показывать отладочную информацию</string>
+    <string name="settings_show_debug_info_desc">Заменить карусель обложек в плеере отладочным оверлеем</string>
+    <string name="settings_keep_screen_open">Не гасить экран в приложении</string>
+    <string name="settings_keep_screen_open_desc">Не давать экрану блокироваться, пока приложение открыто</string>
+    <string name="settings_keep_screen_only_playing">Только во время воспроизведения</string>
+    <string name="settings_keep_screen_only_playing_desc">Держать экран включенным только пока музыка действительно играет</string>
+    <string name="settings_search_history">История поиска</string>
+    <string name="settings_search_history_desc">Сохранять недавние запросы для быстрого доступа</string>
+    <string name="settings_search_history_per_source">Настройки по источникам</string>
+    <string name="settings_search_history_clear_all">Стереть историю поиска</string>
+    <string name="settings_search_history_cleared">Вся история поиска очищена</string>
+    <string name="settings_search_history_source_local">Локальные файлы</string>
+    <string name="settings_version">Версия</string>
+    <string name="settings_license">Распространяется по лицензии <xliff:g id="license">GPLv3</xliff:g></string>
+    <string name="settings_open_repository">Открыть репозиторий</string>
+    <string name="settings_check_for_updates">Проверить обновления</string>
+    <string name="settings_report_issue">Сообщить о проблеме</string>
+    <string name="settings_update_no_update">У тебя последняя версия</string>
+    <string name="settings_update_check_failed">Не удалось проверить обновления</string>
+    <string name="settings_update_available_title">Доступно обновление</string>
+    <string name="settings_update_available_text">Доступна версия <xliff:g id="version" example="0.4.71">%1$s</xliff:g>. Скачать и установить сейчас?</string>
+    <string name="settings_update_whats_new">Что нового</string>
+    <string name="settings_update_download_action">Скачать и установить</string>
+    <string name="settings_update_downloading">Загрузка <xliff:g id="version" example="0.4.71">%1$s</xliff:g>…</string>
+    <string name="settings_update_install_failed">Не удалось открыть установщик</string>
+    <string name="settings_update_download_failed">Загрузка не удалась</string>
+    <string name="settings_auto_update_title">Автопроверка обновлений</string>
+    <string name="settings_auto_update_desc">Проверять при запуске, нет ли новой сборки, и предлагать ее установить. Приложение очень активно развивается — иногда по несколько обновлений в день, поэтому настоятельно рекомендуем не выключать. Проверить вручную всегда можно выше.</string>
+    <string name="settings_storage_limit_unlimited">Лимит хранилища: без ограничений</string>
+    <string name="settings_storage_limit_mb">Лимит хранилища: <xliff:g id="size" example="500">%1$d</xliff:g> МБ</string>
+    <string name="settings_storage_limit_gb">Лимит хранилища: <xliff:g id="size" example="2">%1$d</xliff:g> ГБ</string>
+    <string name="settings_sign_in_bandcamp">Войти в <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_sign_in_youtube">Войти в <xliff:g id="brand">YouTube Music</xliff:g></string>
+
+    <string name="local_search_placeholder">Поиск по локальной музыке…</string>
+    <string name="local_scan_title">Просканируй свою музыку</string>
+    <string name="local_scan_subtitle">Найди и слушай музыку, которая хранится на устройстве</string>
+    <string name="local_enable">Включить локальную музыку</string>
+    <string name="local_scanning">Сканируем твою музыку…</string>
+    <string name="local_cd_mix">Микс</string>
+    <string name="local_tab_favorites">Избранное</string>
+    <string name="local_tab_all">Все</string>
+    <string name="local_tab_artists">Исполнители</string>
+    <string name="local_tab_albums">Альбомы</string>
+    <string name="local_tab_tracks">Треки</string>
+    <string name="local_play_next">Играть следующим</string>
+    <string name="local_delete_song_title">Удалить песню</string>
+    <string name="local_delete_song_text">Удалить «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»? Это действие нельзя отменить.</string>
+    <string name="local_reverse_order">Обратный порядок</string>
+    <string name="local_no_local_music">Нет локальной музыки</string>
+    <string name="local_no_local_music_subtitle">Выбери папку в настройках, чтобы просканировать музыкальные файлы</string>
+    <string name="local_sort_by">Сортировка</string>
+    <string name="local_filter_by_artist">Фильтр по исполнителю</string>
+    <string name="local_filter_by_album">Фильтр по альбому</string>
+    <string name="local_filter_by_folder">Фильтр по папке</string>
+    <string name="local_filter_artist">Исполнитель</string>
+    <string name="local_filter_artist_count">Исполнитель (<xliff:g id="count" example="3">%1$d</xliff:g>)</string>
+    <string name="local_filter_album">Альбом</string>
+    <string name="local_filter_album_count">Альбом (<xliff:g id="count" example="3">%1$d</xliff:g>)</string>
+    <string name="local_filter_folder">Папка</string>
+    <string name="local_filter_folder_count">Папка (<xliff:g id="count" example="3">%1$d</xliff:g>)</string>
+    <string name="local_filter_unknown_artist">Неизвестный исполнитель</string>
+    <string name="local_filter_unknown_album">Неизвестный альбом</string>
+    <string name="local_add_to_playlist">Добавить в плейлист</string>
+    <string name="settings_local_keep_sort">Помнить сортировку между запусками</string>
+    <string name="settings_local_keep_sort_desc">Восстанавливать сортировку (и обратный порядок) вкладки «Локально» при повторном открытии приложения</string>
+    <string name="settings_local_keep_filters">Помнить фильтры между запусками</string>
+    <string name="settings_local_keep_filters_desc">Восстанавливать фильтры вкладки «Локально» — исполнитель, альбом, папка, длительность и «только избранное» — при повторном открытии приложения</string>
+
+    <string name="common_search_failed">Поиск не удался</string>
+    <string name="common_no_results_title">Ничего не найдено</string>
+    <string name="common_no_results_subtitle">Попробуй другой запрос</string>
+
+    <string name="bandcamp_search_placeholder">Поиск на <xliff:g id="brand">Bandcamp</xliff:g>…</string>
+    <string name="bandcamp_tab_all">Все</string>
+    <string name="bandcamp_tab_artists">Исполнители</string>
+    <string name="bandcamp_tab_albums">Альбомы</string>
+    <string name="bandcamp_tab_tracks">Треки</string>
+    <string name="bandcamp_discover">Обзор</string>
+    <string name="bandcamp_more">Еще</string>
+    <string name="bandcamp_something_went_wrong">Что-то пошло не так</string>
+    <string name="bandcamp_type_artist">Исполнитель</string>
+    <string name="bandcamp_type_local">Локальный</string>
+
+    <string name="youtube_search_placeholder">Поиск на <xliff:g id="brand">YouTube</xliff:g>…</string>
+    <string name="youtube_tab_all">Все</string>
+    <string name="youtube_tab_artists">Исполнители</string>
+    <string name="youtube_tab_playlists">Плейлисты</string>
+    <string name="youtube_tab_tracks">Треки</string>
+
+    <string name="ytm_section_trending">В тренде</string>
+    <string name="ytm_section_discover">Открой для себя: <xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
+    <string name="ytm_section_recommended">Рекомендации для тебя</string>
+    <string name="ytm_section_because_listened">Похоже на <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g></string>
+    <string name="error_import_playlist">Не удалось импортировать плейлист: <xliff:g id="reason" example="network error">%1$s</xliff:g></string>
+
+    <string name="mood_chill">Чилл</string>
+    <string name="mood_energize">Энергия</string>
+    <string name="mood_focus">Фокус</string>
+    <string name="mood_feel_good">Позитив</string>
+    <string name="mood_party">Вечеринка</string>
+    <string name="mood_sad">Грусть</string>
+    <string name="mood_workout">Тренировка</string>
+    <string name="mood_sleep">Сон</string>
+    <string name="mood_romance">Романтика</string>
+    <string name="mood_commute">В дорогу</string>
+    <string name="mood_gaming">Игры</string>
+
+    <string name="genre_pop">Поп</string>
+    <string name="genre_rock">Рок</string>
+    <string name="genre_hiphop">Хип-хоп</string>
+    <string name="genre_rnb_soul">R&amp;B и соул</string>
+    <string name="genre_jazz">Джаз</string>
+    <string name="genre_electronic">Электроника</string>
+    <string name="genre_classical">Классика</string>
+    <string name="genre_country">Кантри</string>
+    <string name="genre_metal">Метал</string>
+    <string name="genre_blues">Блюз</string>
+    <string name="genre_indie">Инди</string>
+    <string name="genre_folk">Фолк</string>
+    <string name="genre_reggae">Регги</string>
+    <string name="genre_funk">Фанк</string>
+    <string name="genre_punk">Панк</string>
+    <string name="genre_lofi">Lo-fi</string>
+    <string name="genre_latin">Латина</string>
+    <string name="genre_kpop">K-pop</string>
+    <string name="genre_jpop">J-pop</string>
+    <string name="genre_afrobeats">Афробитс</string>
+    <string name="genre_bollywood">Болливуд</string>
+    <string name="genre_arabic">Арабская музыка</string>
+    <string name="genre_french_pop">Французский поп</string>
+    <string name="genre_ambient">Эмбиент</string>
+    <string name="genre_phonk">Фонк</string>
+    <string name="genre_drill">Дрилл</string>
+    <string name="genre_trap">Трэп</string>
+    <string name="genre_dnb">Драм-н-бейс</string>
+    <string name="genre_house">Хаус</string>
+    <string name="genre_techno">Техно</string>
+    <string name="genre_trance">Транс</string>
+    <string name="genre_shoegaze">Шугейз</string>
+    <string name="genre_post_punk">Пост-панк</string>
+    <string name="genre_grunge">Гранж</string>
+    <string name="genre_ska">Ска</string>
+    <string name="genre_gospel">Госпел</string>
+    <string name="genre_amapiano">Амапиано</string>
+    <string name="genre_bossa_nova">Босса-нова</string>
+    <string name="genre_cumbia">Кумбия</string>
+    <string name="genre_salsa">Сальса</string>
+    <string name="genre_80s">Хиты 80-х</string>
+    <string name="genre_90s">Хиты 90-х</string>
+    <string name="genre_2000s">Хиты 2000-х</string>
+    <string name="genre_soundtracks">Саундтреки</string>
+    <string name="genre_musical_theater">Мюзиклы</string>
+    <string name="genre_vgm">Игровая музыка</string>
+
+    <string name="library_title">Библиотека</string>
+    <string name="library_pin">Закрепить</string>
+    <string name="library_unpin">Открепить</string>
+    <string name="library_modify">Изменить</string>
+    <string name="library_change_shape">Изменить форму</string>
+    <string name="library_remove_from_library">Убрать из библиотеки</string>
+    <string name="library_album_label">Альбом · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="library_artist_label">Исполнитель</string>
+    <string name="library_empty_title">Библиотека пуста</string>
+    <string name="library_empty_subtitle">Здесь появятся твои плейлисты и избранное</string>
+    <string name="library_delete_playlist_title">Удалить плейлист</string>
+    <string name="library_delete_playlist_text">Удалить «<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>»? Это действие нельзя отменить.</string>
+    <string name="library_remove_title">Убрать из библиотеки</string>
+    <string name="library_remove_text">Убрать «<xliff:g id="item" example="Night Drive">%1$s</xliff:g>» из библиотеки? Также будет удалено из избранного.</string>
+
+    <string name="playlist_new">Новый плейлист</string>
+    <string name="playlist_edit">Редактировать плейлист</string>
+    <string name="playlist_name_label">Название</string>
+    <string name="playlist_shape">Форма</string>
+    <string name="playlist_cover">Обложка</string>
+    <string name="playlist_cd_no_cover">Без обложки</string>
+    <string name="playlist_cd_album_art">Обложка альбома</string>
+    <string name="playlist_auto">Автоплейлист</string>
+    <string name="playlist_cd_pinned">Закреплен</string>
+    <string name="playlist_cd_all_downloaded">Все треки скачаны</string>
+    <string name="playlist_cd_play_all">Слушать все</string>
+    <string name="playlist_cd_download_all">Скачать все</string>
+    <string name="playlist_default_title">Плейлист</string>
+    <string name="playlist_fallback_name">плейлист</string>
+    <string name="playlist_error_load">Не удалось загрузить плейлист</string>
+    <string name="playlist_error_remove_track">Не удалось убрать трек</string>
+    <string name="playlist_error_move_track">Не удалось переместить трек</string>
+    <string name="playlist_empty_system_title">Треков пока нет</string>
+    <string name="playlist_empty_custom_title">Пустой плейлист</string>
+    <string name="playlist_empty_system_subtitle">Треки появятся здесь автоматически</string>
+    <string name="playlist_empty_custom_subtitle">Добавь песни, чтобы начать</string>
+
+    <string name="detail_tracks_label">Треки</string>
+    <string name="label_count_duration"><xliff:g id="count" example="5 tracks">%1$s</xliff:g>  ·  <xliff:g id="duration" example="23 min">%2$s</xliff:g></string>
+    <string name="metadata_separator">"  ·  "</string>
+    <string name="metadata_separator_compact">" · "</string>
+    <string name="detail_duration_minutes"><xliff:g id="minutes" example="23">%1$d</xliff:g> мин</string>
+    <string name="detail_duration_hours_only"><xliff:g id="hours" example="2">%1$d</xliff:g> ч</string>
+    <string name="detail_duration_hours_minutes"><xliff:g id="hours" example="2">%1$d</xliff:g> ч <xliff:g id="minutes" example="5">%2$d</xliff:g> мин</string>
+    <string name="detail_buy_full_discography">Купить всю дискографию</string>
+    <string name="detail_buy_full_discography_priced">Купить всю дискографию (<xliff:g id="price" example="$8.00">%1$s</xliff:g>)</string>
+    <string name="detail_buy_this_album_priced">Купить этот альбом (<xliff:g id="price" example="$8.00">%1$s</xliff:g>)</string>
+    <string name="detail_buy_single_track_priced">Купить один трек (<xliff:g id="price" example="$1.00">%1$s</xliff:g>)</string>
+    <string name="detail_delete_downloads_title">Удалить загрузки</string>
+    <string name="detail_delete_download_title">Удалить загрузку</string>
+    <string name="detail_error_load_album">Не удалось загрузить альбом</string>
+    <string name="detail_error_load_artist">Не удалось загрузить исполнителя</string>
+    <string name="detail_error_load_playlist">Не удалось загрузить плейлист</string>
+    <string name="detail_error_load_collection">Не удалось загрузить коллекцию</string>
+    <string name="detail_delete_album_downloads_text">Удалить все скачанные треки альбома «<xliff:g id="album" example="Night Drive">%1$s</xliff:g>»?</string>
+    <string name="detail_delete_track_download_text">Удалить скачанный файл трека «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»?</string>
+    <string name="detail_delete_artist_downloads_text">Удалить все скачанные треки исполнителя <xliff:g id="artist" example="The Valves">%1$s</xliff:g>?</string>
+    <string name="detail_delete_playlist_downloads_text">Удалить все скачанные треки из этого плейлиста?</string>
+    <string name="detail_cd_remove_favorites">Убрать из избранного</string>
+    <string name="detail_cd_add_favorites">В избранное</string>
+    <string name="detail_cd_delete_album_downloads">Удалить загрузки альбома</string>
+    <string name="detail_cd_download_album">Скачать альбом</string>
+    <string name="detail_cd_delete_all_downloads">Удалить все загрузки</string>
+    <string name="detail_cd_download_all">Скачать все</string>
+    <string name="detail_cd_delete_downloads">Удалить загрузки</string>
+    <string name="detail_show_more">Развернуть</string>
+    <string name="detail_show_less">Свернуть</string>
+    <string name="detail_buy_on_bandcamp">Купить на <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="detail_buy_more_options">Другие варианты покупки</string>
+    <string name="detail_send_as_gift">Отправить в подарок</string>
+    <string name="detail_cd_open_artist">Открыть страницу исполнителя</string>
+    <string name="detail_tags">Теги</string>
+    <string name="detail_discography">Дискография</string>
+    <string name="detail_no_releases">Релизов пока нет</string>
+
+    <string name="search_recent">Недавние запросы</string>
+    <string name="search_clear_all">Очистить все</string>
+    <string name="search_cd_remove">Убрать</string>
+
+    <string name="shape_choose">Выбери форму</string>
+    <string name="shape_clover">Клевер</string>
+    <string name="shape_heart">Сердце</string>
+    <string name="shape_cookie">Печенье</string>
+    <string name="shape_burst">Вспышка</string>
+    <string name="shape_pentagon">Пятиугольник</string>
+    <string name="shape_gem">Кристалл</string>
+    <string name="shape_flower">Цветок</string>
+    <string name="shape_pill">Капсула</string>
+    <string name="shape_ghost">Привидение</string>
+    <string name="shape_slanted">Наклон</string>
+    <string name="shape_circle">Круг</string>
+    <string name="shape_triangle">Треугольник</string>
+    <string name="shape_sunny">Солнце</string>
+    <string name="shape_arch">Арка</string>
+
+    <string name="audio_format_flac">FLAC (без потерь)</string>
+
+    <string name="sort_title_az">Название А–Я</string>
+    <string name="sort_artist_az">Исполнитель А–Я</string>
+    <string name="sort_album_az">Альбом А–Я</string>
+    <string name="sort_shortest">Сначала короткие</string>
+    <string name="sort_longest">Сначала длинные</string>
+    <string name="sort_date_added">Дата добавления</string>
+    <string name="sort_release_year">Год выпуска</string>
+
+    <string name="duration_under_3">До 3 мин</string>
+    <string name="duration_3_to_5">3–5 мин</string>
+    <string name="duration_over_5">Более 5 мин</string>
+
+    <string name="storage_info">Загрузки: <xliff:g id="downloads" example="1.2 GB">%1$s</xliff:g>, кеш: <xliff:g id="cache" example="300 MB">%2$s</xliff:g>, свободно: <xliff:g id="free" example="12 GB">%3$s</xliff:g></string>
+
+    <string name="error_unknown">Неизвестная ошибка</string>
+    <string name="error_unknown_source">Неизвестный источник: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
+    <string name="error_source_no_collections">Этот источник не поддерживает коллекции</string>
+    <string name="error_load_page">Не удалось загрузить страницу</string>
+
+    <string name="snackbar_downloaded">Скачано: «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»</string>
+    <string name="snackbar_deleted">Удалено: «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»</string>
+    <string name="snackbar_deleted_downloads_for">Загрузки «<xliff:g id="item" example="Night Drive">%1$s</xliff:g>» удалены</string>
+    <string name="snackbar_downloaded_all_in">Скачаны все треки в <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="snackbar_download_failed">Загрузка не удалась</string>
+    <string name="snackbar_delete_failed">Не удалось удалить</string>
+    <string name="snackbar_added_to_playlist">Добавлено в <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="snackbar_add_to_playlist_failed">Не удалось добавить в плейлист</string>
+    <string name="snackbar_create_playlist_failed">Не удалось создать плейлист</string>
+    <string name="snackbar_playing_next">«<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>» будет следующим</string>
+    <string name="snackbar_audio_stream_failed">Не удалось загрузить аудиопоток</string>
+    <string name="snackbar_scan_failed">Сканирование не удалось: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+</resources>

@@ -149,7 +149,11 @@ object PlayerModule {
         return player
     }
 
+    // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
+    // tests substitute it globally via Dispatchers.setMain, so qualifying
+    // it would only add ceremony.
     @OptIn(UnstableApi::class)
+    @Suppress("RawDispatchersUse")
     @Provides
     @Singleton
     fun provideMediaSession(
@@ -178,7 +182,7 @@ object PlayerModule {
                     .add(MediaSessionConstants.COMMAND_TOGGLE_FAVORITE)
                     .build()
                 val playerCommands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
-                return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                     .setAvailableSessionCommands(sessionCommands)
                     .setAvailablePlayerCommands(playerCommands)
                     .build()
@@ -195,7 +199,7 @@ object PlayerModule {
                         val trackId = queueManager.currentTrack.value?.id ?: return@launch
                         val newIsFavorite = libraryRepository.toggleTrackFavorite(trackId)
                         // Queue state is patched via PlayerViewModel.collectFavoriteTrackIds
-                        // → applyFavoriteIds, which preserves the unshuffle snapshot.
+                        // -> applyFavoriteIds, which preserves the unshuffle snapshot.
                         // setQueue here would null it.
                         updateFavoriteLayout(session, newIsFavorite)
                     }

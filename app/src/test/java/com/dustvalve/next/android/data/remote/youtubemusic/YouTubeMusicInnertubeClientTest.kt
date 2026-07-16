@@ -1,8 +1,12 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote.youtubemusic
 
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -32,7 +36,7 @@ class YouTubeMusicInnertubeClientTest {
             visitorData = "MY_VISITOR_DATA_TOKEN",
             clientVersion = "1.20260417.03.00",
         )
-        client = TestableInnertubeClient(OkHttpClient(), visitor, server.url("/").toString())
+        client = TestableInnertubeClient(OkHttpClient(), visitor, server.url("/").toString(), UnconfinedTestDispatcher())
     }
 
     @After fun tearDown() {
@@ -124,7 +128,8 @@ class YouTubeMusicInnertubeClientTest {
         sharedOkHttpClient: OkHttpClient,
         visitorDataFetcher: YouTubeMusicVisitorDataFetcher,
         private val mockBaseUrl: String,
-    ) : YouTubeMusicInnertubeClient(sharedOkHttpClient, visitorDataFetcher) {
+        dispatcher: CoroutineDispatcher,
+    ) : YouTubeMusicInnertubeClient(sharedOkHttpClient, visitorDataFetcher, dispatcher) {
         // We override only the URL by constructing the real OkHttp request via
         // reflection-free means: shadow the BASE_URL by overriding the post()
         // entrypoints. Easier: re-implement browse/search/continuation against

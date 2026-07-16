@@ -1,8 +1,11 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote
 
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
@@ -24,7 +27,7 @@ class DustvalveSingleTrackPriceTest {
 
     @Before fun setUp() {
         setup = TlsTestServer.start()
-        scraper = DustvalveAlbumScraper(setup.client)
+        scraper = DustvalveAlbumScraper(setup.client, UnconfinedTestDispatcher())
     }
 
     @After fun tearDown() {
@@ -50,7 +53,7 @@ class DustvalveSingleTrackPriceTest {
     @Test fun `multi-track album with differing defaultPrice surfaces a per-track price`() = runTest {
         // Radiohead's "In Rainbows": album 9.99 GBP, defaultPrice 9.0 GBP.
         // Different -> singleTrackPrice exposed so the album viewer can show
-        // a "Buy a single track (£9.00)" option.
+        // a "Buy a single track (GBP 9.00)" option.
         setup.server.enqueue(MockResponse().setBody(loadFixture("album_radiohead_in_rainbows.html")))
         val album = scraper.scrapeAlbum(setup.url("/album/in-rainbows"))
         assertThat(album.price).isEqualTo(AlbumPrice(amount = 9.99, currency = "GBP"))
@@ -58,7 +61,7 @@ class DustvalveSingleTrackPriceTest {
     }
 
     @Test fun `defaultPrice equal to album price is suppressed`() = runTest {
-        // moeshop track again — defaultPrice == album price (both 1.5). The
+        // moeshop track again - defaultPrice == album price (both 1.5). The
         // suppression rule lives in the scraper, not the UI, so we double
         // down on it here.
         setup.server.enqueue(MockResponse().setBody(loadFixture("track_moeshop_hardcoded.html")))

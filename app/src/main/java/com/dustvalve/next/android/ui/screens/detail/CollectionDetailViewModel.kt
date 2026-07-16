@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.screens.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
@@ -17,6 +18,7 @@ import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -36,13 +38,15 @@ data class CollectionDetailUiState(
     val isLoading: Boolean = true,
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = false,
-    val error: String? = null,
+    val error: UiText? = null,
     val isFavorite: Boolean = false,
     val isImported: Boolean = false,
     val isImporting: Boolean = false,
     val importedPlaylistId: String? = null,
     val isDownloading: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
+    val snackbarMessage: UiText? = null,
+    val isSnackbarError: Boolean = false,
 )
 
 /**
@@ -68,6 +72,10 @@ class CollectionDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CollectionDetailUiState())
     val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
+
+    /** Invoked when the user taps the snackbar's Retry action. */
+    var retryAction: (() -> Unit)? = null
+        private set
 
     private var loadedKey: String? = null
     private var paginationCursor: Any? = null
@@ -100,11 +108,13 @@ class CollectionDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val source = sources[sourceId]
             if (source == null) {
-                _uiState.update { it.copy(isLoading = false, error = "Unknown source: $sourceId") }
+                _uiState.update {
+                    it.copy(isLoading = false, error = UiText.StringResource(R.string.error_unknown_source, listOf(sourceId)))
+                }
                 return@launch
             }
             if (SourceConcept.COLLECTION !in source.capabilities) {
-                _uiState.update { it.copy(isLoading = false, error = "Source '$sourceId' does not expose collections") }
+                _uiState.update { it.copy(isLoading = false, error = UiText.StringResource(R.string.error_source_no_collections)) }
                 return@launch
             }
             try {
@@ -128,7 +138,7 @@ class CollectionDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load collection")
+                    it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_collection))
                 }
             }
         }
@@ -185,7 +195,7 @@ class CollectionDetailViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(isImporting = false, error = "Failed to import: ${e.message}") }
+                _uiState.update { it.copy(isImporting = false, error = failedImport(e)) }
             }
         }
     }
@@ -232,10 +242,26 @@ class CollectionDetailViewModel @Inject constructor(
                     label = _uiState.value.name.ifEmpty { "playlist" },
                     tracks = pending,
                 )
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(it.name)),
+                        isSnackbarError = false,
+                    )
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                retryAction = { downloadAll() }
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage =
+                        e.message?.let { m -> UiText.DynamicString(m) }
+                            ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        isSnackbarError = true,
+                    )
+                }
             }
-            _uiState.update { it.copy(isDownloading = false) }
         }
     }
 
@@ -248,6 +274,22 @@ class CollectionDetailViewModel @Inject constructor(
                     if (e is CancellationException) throw e
                 }
             }
+            _uiState.update {
+                it.copy(
+                    snackbarMessage = UiText.StringResource(R.string.snackbar_deleted_downloads_for, listOf(it.name)),
+                    isSnackbarError = false,
+                )
+            }
         }
     }
+
+    fun clearSnackbar() {
+        retryAction = null
+        _uiState.update { it.copy(snackbarMessage = null, isSnackbarError = false) }
+    }
+
+    private fun failedImport(e: Exception): UiText = UiText.StringResource(
+        R.string.error_import_playlist,
+        listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
+    )
 }

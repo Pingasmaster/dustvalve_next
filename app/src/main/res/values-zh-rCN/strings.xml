@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Machine-translated (Claude). Corrections welcome via PR. -->
+    <string name="playback_notification_channel">正在播放</string>
+    <string name="notification_channel_downloads">下载</string>
+    <string name="notification_channel_downloads_desc">歌曲下载时的实时进度</string>
+    <string name="notification_downloading_single">正在下载<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_album">正在下载专辑 · <xliff:g id="album" example="Night Drive">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_artist">正在下载艺人 · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_playlist">正在下载播放列表 · <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress">第<xliff:g id="current" example="3">%1$d</xliff:g>/<xliff:g id="total" example="12">%2$d</xliff:g>首 — <xliff:g id="track" example="Cosmic Dust">%3$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress_idle">第<xliff:g id="current" example="3">%1$d</xliff:g>/<xliff:g id="total" example="12">%2$d</xliff:g>首</string>
+    <string name="notification_download_preparing">正在准备下载…</string>
+    <string name="notification_download_paused">下载已暂停</string>
+    <string name="notification_download_paused_chip">已暂停</string>
+    <string name="notification_download_pause">暂停</string>
+    <string name="notification_download_resume">继续</string>
+    <string name="notification_download_cancel">取消</string>
+    <string name="common_action_cancel">取消</string>
+    <string name="common_action_enable">启用</string>
+    <string name="common_action_delete">删除</string>
+    <string name="common_action_retry">重试</string>
+    <string name="common_action_save">保存</string>
+    <string name="common_action_create">创建</string>
+    <string name="common_action_remove">移除</string>
+    <string name="common_action_disconnect">断开连接</string>
+    <string name="common_play_all">播放全部</string>
+    <string name="link_open_video">打开<xliff:g id="brand">YouTube</xliff:g>视频</string>
+    <string name="link_open_song">打开<xliff:g id="brand">YouTube Music</xliff:g>歌曲</string>
+    <string name="link_open_playlist">打开<xliff:g id="brand">YouTube</xliff:g>播放列表</string>
+    <string name="link_open_album">打开<xliff:g id="brand">Bandcamp</xliff:g>专辑</string>
+    <string name="link_open_artist">打开艺人</string>
+    <string name="link_open_track">打开<xliff:g id="brand">Bandcamp</xliff:g>曲目</string>
+    <string name="link_kind_video">视频</string>
+    <string name="link_kind_song">歌曲</string>
+    <string name="link_kind_playlist">播放列表</string>
+    <string name="link_kind_album">专辑</string>
+    <string name="link_kind_artist">艺人</string>
+    <string name="link_kind_track">曲目</string>
+    <string name="provider_enable_title">要启用<xliff:g id="provider" example="Bandcamp">%1$s</xliff:g>吗？</string>
+    <string name="provider_enable_text"><xliff:g id="provider" example="Bandcamp">%1$s</xliff:g>已关闭。要启用它以打开这个<xliff:g id="kind" example="album">%2$s</xliff:g>吗？</string>
+    <string name="snackbar_unsupported_source">此链接不是来自受支持的来源。</string>
+    <string name="library_new_playlist">新建播放列表</string>
+    <string name="library_import_playlist">导入播放列表</string>
+    <string name="library_export_playlist">导出播放列表</string>
+    <string name="library_export_title">导出播放列表</string>
+    <string name="library_export_text">要导出可离线播放的副本吗？离线版会下载每首歌曲和封面，无需网络即可播放。在线版文件更小，导入后重新在线播放。</string>
+    <string name="library_export_offline">离线</string>
+    <string name="library_export_lightweight">在线</string>
+    <string name="library_exporting">正在导出播放列表</string>
+    <string name="library_importing">正在导入播放列表</string>
+    <string name="library_transfer_progress"><xliff:g id="done" example="3">%1$d</xliff:g> / <xliff:g id="total" example="12">%2$d</xliff:g></string>
+    <string name="library_exported">已导出“<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>”</string>
+    <string name="library_imported">已导入“<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>”</string>
+    <string name="library_error_export">导出失败</string>
+    <string name="library_error_import">导入失败</string>
+    <string name="library_error_open_export_destination">无法打开导出目标位置</string>
+    <string name="library_error_open_import_file">无法打开播放列表文件</string>
+    <string name="library_error_update_playlist">更新播放列表失败</string>
+    <string name="library_error_delete_playlist">删除播放列表失败</string>
+    <string name="library_error_update_pin">更新置顶状态失败</string>
+    <string name="library_error_remove">从音乐库移除失败</string>
+    <string name="library_error_update_shape">更新形状失败</string>
+    <string name="library_error_load">加载音乐库失败</string>
+    <string name="bandcamp_add_custom_genre">添加自定义流派</string>
+    <string name="bandcamp_add_genre_title">添加自定义流派</string>
+    <string name="bandcamp_add_genre_hint">输入一个<xliff:g id="brand">Bandcamp</xliff:g>流派</string>
+    <string name="bandcamp_add_genre_validating">正在检查<xliff:g id="brand">Bandcamp</xliff:g>…</string>
+    <string name="bandcamp_add_genre_exists">流派已添加</string>
+    <string name="bandcamp_add_genre_not_found">在<xliff:g id="brand">Bandcamp</xliff:g>上未找到该流派的作品</string>
+    <string name="bandcamp_add_genre_network">无法连接<xliff:g id="brand">Bandcamp</xliff:g>，请重试。</string>
+    <string name="bandcamp_remove_genre_title">要移除流派吗？</string>
+    <string name="bandcamp_remove_genre_text">要从你的流派中移除“<xliff:g id="genre" example="shoegaze">%1$s</xliff:g>”吗？</string>
+    <string name="common_action_add">添加</string>
+    <string name="common_play_mix">播放混音</string>
+    <string name="common_loading">加载中…</string>
+    <string name="common_connected">已连接</string>
+    <string name="common_selected_folder">已选择的文件夹</string>
+    <string name="common_failed_to_play">播放失败</string>
+    <string name="common_playlist_imported">已导入播放列表：<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="common_add_to_playlist">添加到播放列表</string>
+    <string name="common_play_next">下一首播放</string>
+    <string name="common_add_to_queue">添加到队列</string>
+    <string name="common_enqueue_all">全部加入队列</string>
+    <string name="common_share">分享</string>
+    <string name="common_open_in_browser">在浏览器中打开</string>
+    <string name="common_loading_track">正在加载曲目…</string>
+    <string name="common_loading_album">正在加载专辑…</string>
+    <string name="common_loading_playlist">正在加载播放列表…</string>
+    <string name="snackbar_failed_load">加载失败</string>
+    <string name="common_cd_back">返回</string>
+    <string name="common_cd_search">搜索</string>
+    <string name="common_cd_clear">清除</string>
+    <string name="common_cd_shuffle_play">随机播放</string>
+    <string name="common_cd_now_playing">正在播放</string>
+    <string name="common_cd_create_playlist">创建播放列表</string>
+    <string name="common_cd_more_options">更多选项</string>
+    <string name="common_cd_selected">已选择</string>
+    <string name="common_cd_reorder">调整顺序</string>
+    <string name="common_cd_delete">删除</string>
+    <string name="common_cd_downloaded">已下载</string>
+    <string name="common_cd_import_playlist">导入播放列表</string>
+    <string name="nav_label_local">本地</string>
+    <string name="nav_label_library">音乐库</string>
+    <string name="nav_label_settings">设置</string>
+    <string name="player_volume">音量</string>
+    <string name="player_output">输出</string>
+    <string name="player_automatic">自动</string>
+    <string name="player_no_track">当前没有播放曲目</string>
+    <string name="player_queue_count">队列（<xliff:g id="count" example="7">%1$d</xliff:g>）</string>
+    <string name="player_up_next_count">即将播放（<xliff:g id="count" example="7">%1$d</xliff:g>）</string>
+    <string name="player_cd_previous">上一首</string>
+    <string name="player_cd_next">下一首</string>
+    <string name="player_cd_pause">暂停</string>
+    <string name="player_cd_play">播放</string>
+    <string name="player_cd_shuffle">随机播放</string>
+    <string name="player_cd_add_to_playlist">添加到播放列表</string>
+    <string name="player_cd_repeat">循环播放</string>
+    <string name="player_cd_collapse">收起</string>
+    <string name="player_cd_volume">音量</string>
+    <string name="player_cd_local_file">本地文件</string>
+    <string name="player_cd_delete_download">删除下载</string>
+    <string name="player_cd_download_track">下载曲目</string>
+    <string name="player_cd_remove_from_favorites">从收藏中移除</string>
+    <string name="player_cd_add_to_favorites">添加到收藏</string>
+    <string name="player_cd_album_art">专辑封面</string>
+    <string name="player_delete_download_title">删除下载</string>
+    <string name="player_delete_download_text">要移除“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”的已下载文件吗？</string>
+    <string name="player_playback_info">播放信息</string>
+    <string name="player_debug_audio_format">音频格式</string>
+    <string name="player_debug_source">来源</string>
+    <string name="player_debug_download_status">下载状态</string>
+    <string name="player_debug_file_path">文件路径</string>
+    <string name="player_debug_track_id">曲目 ID</string>
+    <string name="player_debug_album_id">专辑 ID</string>
+    <string name="player_debug_local_file">本地文件</string>
+    <string name="player_debug_downloading">下载中…</string>
+    <string name="player_debug_downloaded">已下载</string>
+    <string name="player_debug_cached">已缓存</string>
+    <string name="player_debug_not_downloaded">未下载</string>
+    <string name="player_debug_local">本地</string>
+    <string name="player_debug_streaming">流媒体</string>
+    <string name="player_debug_unknown">未知</string>
+    <string name="player_debug_none">无</string>
+    <string name="player_no_playlists">还没有播放列表</string>
+    <string name="player_create_to_start">创建一个开始使用吧</string>
+    <string name="player_remove_from_favorites">从收藏中移除</string>
+    <string name="player_add_to_favorites">添加到收藏</string>
+    <string name="player_remove_from_queue">从队列中移除</string>
+    <string name="player_audio_device_speaker">扬声器</string>
+    <string name="player_audio_device_earpiece">听筒</string>
+    <string name="player_audio_device_wired_headset">有线耳麦</string>
+    <string name="player_audio_device_wired_headphones">有线耳机</string>
+    <string name="player_audio_device_usb">USB 音频</string>
+    <string name="player_audio_device_usb_accessory">USB 配件</string>
+    <string name="player_audio_device_usb_headset">USB 耳机</string>
+    <string name="player_audio_device_dock">底座</string>
+    <string name="player_audio_device_aux">Aux</string>
+    <string name="player_audio_device_ble_headset">BLE 耳机</string>
+    <string name="player_audio_device_ble_speaker">BLE 音箱</string>
+    <string name="player_audio_device_unknown">音频设备</string>
+    <string name="settings_title">设置</string>
+    <string name="settings_section_sources">来源</string>
+    <string name="settings_section_connections">连接</string>
+    <string name="settings_section_storage">存储</string>
+    <string name="settings_section_audio_quality">音质</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_section_player">播放器</string>
+    <string name="settings_section_search">搜索</string>
+    <string name="settings_section_about">关于</string>
+    <string name="settings_section_debug">调试</string>
+    <string name="settings_source_local">本地</string>
+    <string name="settings_use_individual_folders">使用单独的文件夹</string>
+    <string name="settings_use_individual_folders_desc">选择特定文件夹，而不是扫描所有音频</string>
+    <string name="settings_remove_downloads_title">删除所有下载</string>
+    <string name="settings_remove_downloads_text">这会清空整个下载池：手动下载、自动缓存的音频、专辑封面和艺人图片。</string>
+    <string name="settings_download_format">下载格式</string>
+    <string name="settings_download_format_desc">已购<xliff:g id="brand">Bandcamp</xliff:g>内容的下载格式</string>
+    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g>已断开连接</string>
+    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g>已断开连接</string>
+    <string name="settings_add_folder">添加文件夹</string>
+    <string name="settings_rescan">重新扫描</string>
+    <string name="settings_cd_remove_folder">移除文件夹</string>
+    <string name="settings_cd_avatar">头像</string>
+    <string name="settings_connect_bandcamp">连接<xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_connect_bandcamp_desc">连接后可访问你在<xliff:g id="brand">Bandcamp</xliff:g>购买的内容</string>
+    <string name="settings_connect_youtube">连接<xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="settings_connect_youtube_desc">连接后可访问你的<xliff:g id="brand">YouTube Music</xliff:g>媒体库</string>
+    <string name="settings_youtube_default_source_title">默认视图</string>
+    <string name="settings_youtube_default_source_desc">点按<xliff:g id="brand">YouTube</xliff:g>标签页时打开哪个视图</string>
+    <string name="common_play">播放</string>
+    <string name="ytm_artist_spotlight">艺人聚焦</string>
+    <string name="settings_remove_all_downloads">删除所有下载</string>
+    <string name="settings_dedicated_folder_title">将所有内容存储在专用文件夹中</string>
+    <string name="settings_dedicated_folder_desc">播放列表、收藏、下载、历史记录和设置都存储在你选择的文件夹中。每次启动应用时都需要该文件夹。</string>
+    <string name="settings_dedicated_folder_change">更换文件夹</string>
+    <string name="settings_dedicated_folder_image_cache">同时将图片缓存存储到文件夹</string>
+    <string name="settings_dedicated_folder_image_cache_desc">专辑封面会镜像到该文件夹，重装应用后依然保留。</string>
+    <string name="settings_dedicated_folder_metadata_cache">同时将元数据缓存存储到文件夹</string>
+    <string name="settings_dedicated_folder_metadata_cache_desc"><xliff:g id="brand">YouTube</xliff:g>和<xliff:g id="brand_2">Bandcamp</xliff:g>的查询缓存会镜像到该文件夹。</string>
+    <string name="settings_dedicated_folder_disable_title">要将数据移回应用存储吗？</string>
+    <string name="settings_dedicated_folder_disable_text">当前专用文件夹中的所有内容将被复制回应用内，之后文件夹中的内容会被移除。</string>
+    <string name="settings_dedicated_folder_disable_confirm">移回</string>
+    <string name="settings_dedicated_folder_migrating">正在移动你的数据…</string>
+    <string name="settings_dedicated_folder_migration_success">专用文件夹已就绪</string>
+    <string name="settings_dedicated_folder_migration_reverted">数据已移回应用存储</string>
+    <string name="settings_dedicated_folder_migration_failed">迁移失败：<xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
+    <string name="settings_dedicated_folder_unreachable_title">专用文件夹不可用</string>
+    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g>无法访问存放你数据的文件夹。请重新定位该文件夹，或关闭此功能以回退到应用存储。</string>
+    <string name="settings_dedicated_folder_locate">定位文件夹</string>
+    <string name="settings_dedicated_folder_turn_off">关闭并使用应用存储</string>
+    <string name="settings_auto_download_purchases">自动下载已购内容</string>
+    <string name="settings_auto_download_purchases_desc">自动下载你在<xliff:g id="brand">Dustvalve</xliff:g>购买的内容</string>
+    <string name="settings_auto_download_future">自动下载新内容</string>
+    <string name="settings_auto_download_future_desc">为已下载的播放列表、专辑和艺人自动下载新内容</string>
+    <string name="settings_mp3_on_metered">按流量计费时仅用<xliff:g id="format">MP3</xliff:g></string>
+    <string name="settings_mp3_on_metered_desc">使用移动数据时下载<xliff:g id="format">MP3</xliff:g>而非无损格式</string>
+    <string name="settings_progressive_download">渐进式下载</string>
+    <string name="settings_progressive_download_desc">先以预览音质播放，再无缝升级到完整音质</string>
+    <string name="settings_seamless_upgrade">无缝音质升级</string>
+    <string name="settings_seamless_upgrade_desc">先流式播放，在后台下载完成后切换。切换的瞬间可能出现一次短暂卡顿。</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_dynamic_color">动态取色</string>
+    <string name="settings_dynamic_color_desc">使用来自壁纸的颜色</string>
+    <string name="settings_album_art_colors">专辑封面配色</string>
+    <string name="settings_album_art_colors_desc">根据当前播放曲目的专辑封面为应用配色</string>
+    <string name="settings_oled_black"><xliff:g id="tech">OLED</xliff:g>纯黑</string>
+    <string name="settings_oled_black_desc">为<xliff:g id="tech">OLED</xliff:g>屏幕使用纯黑背景</string>
+    <string name="settings_progress_bar_style">播放器进度条</string>
+    <string name="settings_progress_bar_style_wavy">波浪</string>
+    <string name="settings_progress_bar_style_linear">直线</string>
+    <string name="settings_progress_bar_size">进度条粗细：<xliff:g id="size" example="4">%1$d</xliff:g> dp</string>
+    <string name="settings_auto_download_favorites">自动下载收藏</string>
+    <string name="settings_auto_download_favorites_desc">同时在后台下载每首已收藏的曲目</string>
+    <string name="settings_download_notifications">下载通知</string>
+    <string name="settings_download_notifications_desc">歌曲下载时显示带进度的实时通知</string>
+    <string name="settings_live_updates_title">实时更新已关闭</string>
+    <string name="settings_live_updates_desc">在通知设置中允许实时更新，即可在状态栏以芯片形式查看下载进度</string>
+    <string name="settings_live_updates_action">打开设置</string>
+    <string name="player_cd_open_artist">打开艺人页面</string>
+    <string name="player_cd_open_album">打开专辑页面</string>
+    <string name="snackbar_no_album_for_track">此曲目没有所属专辑</string>
+    <string name="settings_volume_slider">音量滑块</string>
+    <string name="settings_volume_slider_desc">在播放器的专辑封面旁显示音量滑块</string>
+    <string name="settings_volume_button">音量按钮</string>
+    <string name="settings_volume_button_desc">显示一个可打开全屏音量控制的音量按钮</string>
+    <string name="settings_show_debug_info">显示调试信息</string>
+    <string name="settings_show_debug_info_desc">用调试浮层替换播放器的封面轮播</string>
+    <string name="settings_keep_screen_open">应用打开时保持屏幕常亮</string>
+    <string name="settings_keep_screen_open_desc">应用打开时防止屏幕锁定</string>
+    <string name="settings_keep_screen_only_playing">仅在播放时</string>
+    <string name="settings_keep_screen_only_playing_desc">仅在音乐正在播放时保持屏幕唤醒</string>
+    <string name="settings_search_history">搜索历史</string>
+    <string name="settings_search_history_desc">保存最近的搜索以便快速访问</string>
+    <string name="settings_search_history_per_source">按来源分别开关</string>
+    <string name="settings_search_history_clear_all">清除搜索历史</string>
+    <string name="settings_search_history_cleared">已清除所有搜索历史</string>
+    <string name="settings_search_history_source_local">本地</string>
+    <string name="settings_version">版本</string>
+    <string name="settings_license">基于<xliff:g id="license">GPLv3</xliff:g>许可证发布</string>
+    <string name="settings_open_repository">打开代码仓库</string>
+    <string name="settings_check_for_updates">检查更新</string>
+    <string name="settings_report_issue">报告问题</string>
+    <string name="settings_update_no_update">已是最新版本</string>
+    <string name="settings_update_check_failed">无法检查更新</string>
+    <string name="settings_update_available_title">有可用更新</string>
+    <string name="settings_update_available_text">版本<xliff:g id="version" example="0.4.71">%1$s</xliff:g>已发布。现在下载并安装吗？</string>
+    <string name="settings_update_whats_new">更新内容</string>
+    <string name="settings_update_download_action">下载并安装</string>
+    <string name="settings_update_downloading">正在下载<xliff:g id="version" example="0.4.71">%1$s</xliff:g>…</string>
+    <string name="settings_update_install_failed">无法打开安装程序</string>
+    <string name="settings_update_download_failed">下载失败</string>
+    <string name="settings_auto_update_title">自动检查更新</string>
+    <string name="settings_auto_update_desc">启动时检查是否有新版本并提示安装。本应用正处于高强度开发中，有时一天会发布多个更新，强烈建议保持开启。你也可以随时在上方手动检查。</string>
+    <string name="settings_storage_limit_unlimited">存储上限：不限</string>
+    <string name="settings_storage_limit_mb">存储上限：<xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
+    <string name="settings_storage_limit_gb">存储上限：<xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
+    <string name="settings_sign_in_bandcamp">登录<xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_sign_in_youtube">登录<xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="local_search_placeholder">搜索本地音乐…</string>
+    <string name="local_scan_title">扫描你的音乐</string>
+    <string name="local_scan_subtitle">查找并播放存储在设备上的音乐</string>
+    <string name="local_enable">启用本地音乐</string>
+    <string name="local_scanning">正在扫描你的音乐…</string>
+    <string name="local_cd_mix">混音</string>
+    <string name="local_tab_favorites">收藏</string>
+    <string name="local_tab_all">全部</string>
+    <string name="local_tab_artists">艺人</string>
+    <string name="local_tab_albums">专辑</string>
+    <string name="local_tab_tracks">曲目</string>
+    <string name="local_play_next">下一首播放</string>
+    <string name="local_delete_song_title">删除歌曲</string>
+    <string name="local_delete_song_text">要删除“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”吗？此操作无法撤销。</string>
+    <string name="local_reverse_order">倒序排列</string>
+    <string name="local_no_local_music">没有本地音乐</string>
+    <string name="local_no_local_music_subtitle">在设置中选择一个文件夹以扫描你的音乐文件</string>
+    <string name="local_sort_by">排序方式</string>
+    <string name="local_filter_by_artist">按艺人筛选</string>
+    <string name="local_filter_by_album">按专辑筛选</string>
+    <string name="local_filter_by_folder">按文件夹筛选</string>
+    <string name="local_filter_artist">艺人</string>
+    <string name="local_filter_artist_count">艺人（<xliff:g id="count" example="3">%1$d</xliff:g>）</string>
+    <string name="local_filter_album">专辑</string>
+    <string name="local_filter_album_count">专辑（<xliff:g id="count" example="3">%1$d</xliff:g>）</string>
+    <string name="local_filter_folder">文件夹</string>
+    <string name="local_filter_folder_count">文件夹（<xliff:g id="count" example="3">%1$d</xliff:g>）</string>
+    <string name="local_filter_unknown_artist">未知艺人</string>
+    <string name="local_filter_unknown_album">未知专辑</string>
+    <string name="local_add_to_playlist">添加到播放列表</string>
+    <string name="settings_local_keep_sort">在启动之间保留排序</string>
+    <string name="settings_local_keep_sort_desc">重新打开应用时恢复本地标签页的排序选择（含倒序）</string>
+    <string name="settings_local_keep_filters">在启动之间保留筛选</string>
+    <string name="settings_local_keep_filters_desc">重新打开应用时恢复本地标签页的艺人、专辑、文件夹、时长和仅收藏筛选</string>
+    <string name="common_search_failed">搜索失败</string>
+    <string name="common_no_results_title">未找到结果</string>
+    <string name="common_no_results_subtitle">试试其他搜索词</string>
+    <string name="bandcamp_search_placeholder">搜索<xliff:g id="brand">Bandcamp</xliff:g>…</string>
+    <string name="bandcamp_tab_all">全部</string>
+    <string name="bandcamp_tab_artists">艺人</string>
+    <string name="bandcamp_tab_albums">专辑</string>
+    <string name="bandcamp_tab_tracks">曲目</string>
+    <string name="bandcamp_discover">发现</string>
+    <string name="bandcamp_more">更多</string>
+    <string name="bandcamp_something_went_wrong">出错了</string>
+    <string name="bandcamp_type_artist">艺人</string>
+    <string name="bandcamp_type_local">本地</string>
+    <string name="youtube_search_placeholder">搜索<xliff:g id="brand">YouTube</xliff:g>…</string>
+    <string name="youtube_tab_all">全部</string>
+    <string name="youtube_tab_artists">艺人</string>
+    <string name="youtube_tab_playlists">播放列表</string>
+    <string name="youtube_tab_tracks">曲目</string>
+    <string name="ytm_section_trending">时下流行</string>
+    <string name="ytm_section_discover">发现：<xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
+    <string name="ytm_section_recommended">为你推荐</string>
+    <string name="ytm_section_because_listened">因为你听过<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g></string>
+    <string name="error_import_playlist">无法导入播放列表：<xliff:g id="reason" example="network error">%1$s</xliff:g></string>
+    <string name="mood_chill">放松</string>
+    <string name="mood_energize">活力</string>
+    <string name="mood_focus">专注</string>
+    <string name="mood_feel_good">好心情</string>
+    <string name="mood_party">派对</string>
+    <string name="mood_sad">伤感</string>
+    <string name="mood_workout">健身</string>
+    <string name="mood_sleep">助眠</string>
+    <string name="mood_romance">浪漫</string>
+    <string name="mood_commute">通勤</string>
+    <string name="mood_gaming">游戏</string>
+    <string name="genre_pop">流行</string>
+    <string name="genre_rock">摇滚</string>
+    <string name="genre_hiphop">嘻哈</string>
+    <string name="genre_rnb_soul">R&amp;B与灵魂乐</string>
+    <string name="genre_jazz">爵士</string>
+    <string name="genre_electronic">电子</string>
+    <string name="genre_classical">古典</string>
+    <string name="genre_country">乡村</string>
+    <string name="genre_metal">金属</string>
+    <string name="genre_blues">布鲁斯</string>
+    <string name="genre_indie">独立</string>
+    <string name="genre_folk">民谣</string>
+    <string name="genre_reggae">雷鬼</string>
+    <string name="genre_funk">放克</string>
+    <string name="genre_punk">朋克</string>
+    <string name="genre_lofi">Lo-fi</string>
+    <string name="genre_latin">拉丁</string>
+    <string name="genre_kpop">K-Pop</string>
+    <string name="genre_jpop">J-Pop</string>
+    <string name="genre_afrobeats">非洲节拍</string>
+    <string name="genre_bollywood">宝莱坞</string>
+    <string name="genre_arabic">阿拉伯音乐</string>
+    <string name="genre_french_pop">法语流行</string>
+    <string name="genre_ambient">氛围</string>
+    <string name="genre_phonk">Phonk</string>
+    <string name="genre_drill">Drill</string>
+    <string name="genre_trap">Trap</string>
+    <string name="genre_dnb">鼓打贝斯</string>
+    <string name="genre_house">浩室</string>
+    <string name="genre_techno">Techno</string>
+    <string name="genre_trance">Trance</string>
+    <string name="genre_shoegaze">自赏</string>
+    <string name="genre_post_punk">后朋克</string>
+    <string name="genre_grunge">垃圾摇滚</string>
+    <string name="genre_ska">Ska</string>
+    <string name="genre_gospel">福音</string>
+    <string name="genre_amapiano">Amapiano</string>
+    <string name="genre_bossa_nova">波萨诺瓦</string>
+    <string name="genre_cumbia">昆比亚</string>
+    <string name="genre_salsa">萨尔萨</string>
+    <string name="genre_80s">80年代金曲</string>
+    <string name="genre_90s">90年代金曲</string>
+    <string name="genre_2000s">2000年代金曲</string>
+    <string name="genre_soundtracks">原声带</string>
+    <string name="genre_musical_theater">音乐剧</string>
+    <string name="genre_vgm">游戏原声</string>
+    <string name="library_title">音乐库</string>
+    <string name="library_pin">置顶</string>
+    <string name="library_unpin">取消置顶</string>
+    <string name="library_modify">修改</string>
+    <string name="library_change_shape">更改形状</string>
+    <string name="library_remove_from_library">从音乐库移除</string>
+    <string name="library_album_label">专辑 · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="library_artist_label">艺人</string>
+    <string name="library_empty_title">你的音乐库是空的</string>
+    <string name="library_empty_subtitle">你的播放列表和收藏将显示在这里</string>
+    <string name="library_delete_playlist_title">删除播放列表</string>
+    <string name="library_delete_playlist_text">要删除“<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>”吗？此操作无法撤销。</string>
+    <string name="library_remove_title">从音乐库移除</string>
+    <string name="library_remove_text">要从音乐库中移除“<xliff:g id="item" example="Night Drive">%1$s</xliff:g>”吗？这也会取消收藏。</string>
+    <string name="playlist_new">新建播放列表</string>
+    <string name="playlist_edit">编辑播放列表</string>
+    <string name="playlist_name_label">名称</string>
+    <string name="playlist_shape">形状</string>
+    <string name="playlist_cover">封面</string>
+    <string name="playlist_cd_no_cover">无封面</string>
+    <string name="playlist_cd_album_art">专辑封面</string>
+    <string name="playlist_auto">自动播放列表</string>
+    <string name="playlist_cd_pinned">已置顶</string>
+    <string name="playlist_cd_all_downloaded">所有曲目已下载</string>
+    <string name="playlist_cd_play_all">播放全部</string>
+    <string name="playlist_cd_download_all">下载全部</string>
+    <string name="playlist_default_title">播放列表</string>
+    <string name="playlist_fallback_name">播放列表</string>
+    <string name="playlist_error_load">加载播放列表失败</string>
+    <string name="playlist_error_remove_track">移除曲目失败</string>
+    <string name="playlist_error_move_track">移动曲目失败</string>
+    <string name="playlist_empty_system_title">还没有曲目</string>
+    <string name="playlist_empty_custom_title">空播放列表</string>
+    <string name="playlist_empty_system_subtitle">曲目会自动显示在这里</string>
+    <string name="playlist_empty_custom_subtitle">添加歌曲开始使用吧</string>
+    <string name="detail_tracks_label">曲目</string>
+    <string name="label_count_duration"><xliff:g id="count" example="5 tracks">%1$s</xliff:g>  ·  <xliff:g id="duration" example="23 min">%2$s</xliff:g></string>
+    <string name="metadata_separator">"  ·  "</string>
+    <string name="metadata_separator_compact">" · "</string>
+    <string name="detail_duration_minutes"><xliff:g id="minutes" example="23">%1$d</xliff:g>分钟</string>
+    <string name="detail_duration_hours_only"><xliff:g id="hours" example="2">%1$d</xliff:g>小时</string>
+    <string name="detail_duration_hours_minutes"><xliff:g id="hours" example="2">%1$d</xliff:g>小时<xliff:g id="minutes" example="5">%2$d</xliff:g>分钟</string>
+    <string name="detail_buy_full_discography">购买全部作品集</string>
+    <string name="detail_buy_full_discography_priced">购买全部作品集（<xliff:g id="price" example="$8.00">%1$s</xliff:g>）</string>
+    <string name="detail_buy_this_album_priced">购买这张专辑（<xliff:g id="price" example="$8.00">%1$s</xliff:g>）</string>
+    <string name="detail_buy_single_track_priced">购买单曲（<xliff:g id="price" example="$1.00">%1$s</xliff:g>）</string>
+    <string name="detail_delete_downloads_title">删除下载</string>
+    <string name="detail_delete_download_title">删除下载</string>
+    <string name="detail_error_load_album">加载专辑失败</string>
+    <string name="detail_error_load_artist">加载艺人失败</string>
+    <string name="detail_error_load_playlist">加载播放列表失败</string>
+    <string name="detail_error_load_collection">加载收藏集失败</string>
+    <string name="detail_delete_album_downloads_text">要移除“<xliff:g id="album" example="Night Drive">%1$s</xliff:g>”的所有已下载曲目吗？</string>
+    <string name="detail_delete_track_download_text">要移除“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”的已下载文件吗？</string>
+    <string name="detail_delete_artist_downloads_text">要移除<xliff:g id="artist" example="The Valves">%1$s</xliff:g>的所有已下载曲目吗？</string>
+    <string name="detail_delete_playlist_downloads_text">要删除此播放列表中的所有已下载曲目吗？</string>
+    <string name="detail_cd_remove_favorites">从收藏中移除</string>
+    <string name="detail_cd_add_favorites">添加到收藏</string>
+    <string name="detail_cd_delete_album_downloads">删除专辑下载</string>
+    <string name="detail_cd_download_album">下载专辑</string>
+    <string name="detail_cd_delete_all_downloads">删除所有下载</string>
+    <string name="detail_cd_download_all">下载全部</string>
+    <string name="detail_cd_delete_downloads">删除下载</string>
+    <string name="detail_show_more">展开</string>
+    <string name="detail_show_less">收起</string>
+    <string name="detail_buy_on_bandcamp">在<xliff:g id="brand">Bandcamp</xliff:g>上购买</string>
+    <string name="detail_buy_more_options">更多购买选项</string>
+    <string name="detail_send_as_gift">作为礼物赠送</string>
+    <string name="detail_cd_open_artist">打开艺人页面</string>
+    <string name="detail_tags">标签</string>
+    <string name="detail_discography">作品集</string>
+    <string name="detail_no_releases">暂无作品</string>
+    <string name="search_recent">最近搜索</string>
+    <string name="search_clear_all">全部清除</string>
+    <string name="search_cd_remove">移除</string>
+    <string name="shape_choose">选择形状</string>
+    <string name="shape_clover">四叶草</string>
+    <string name="shape_heart">爱心</string>
+    <string name="shape_cookie">曲奇</string>
+    <string name="shape_burst">爆裂</string>
+    <string name="shape_pentagon">五边形</string>
+    <string name="shape_gem">宝石</string>
+    <string name="shape_flower">花朵</string>
+    <string name="shape_pill">胶囊</string>
+    <string name="shape_ghost">幽灵</string>
+    <string name="shape_slanted">斜切</string>
+    <string name="shape_circle">圆形</string>
+    <string name="shape_triangle">三角形</string>
+    <string name="shape_sunny">太阳</string>
+    <string name="shape_arch">拱形</string>
+    <string name="audio_format_flac">FLAC（无损）</string>
+    <string name="sort_title_az">标题 A–Z</string>
+    <string name="sort_artist_az">艺人 A–Z</string>
+    <string name="sort_album_az">专辑 A–Z</string>
+    <string name="sort_shortest">最短优先</string>
+    <string name="sort_longest">最长优先</string>
+    <string name="sort_date_added">添加日期</string>
+    <string name="sort_release_year">发行年份</string>
+    <string name="duration_under_3">3分钟以内</string>
+    <string name="duration_3_to_5">3–5分钟</string>
+    <string name="duration_over_5">5分钟以上</string>
+    <string name="storage_info">下载：<xliff:g id="downloads" example="1.2 GB">%1$s</xliff:g>，缓存：<xliff:g id="cache" example="300 MB">%2$s</xliff:g>，可用：<xliff:g id="free" example="12 GB">%3$s</xliff:g></string>
+    <string name="error_unknown">未知错误</string>
+    <string name="error_unknown_source">未知来源：<xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
+    <string name="error_source_no_collections">此来源无法显示收藏集</string>
+    <string name="error_load_page">加载页面失败</string>
+    <string name="snackbar_downloaded">已下载“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”</string>
+    <string name="snackbar_deleted">已删除“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”</string>
+    <string name="snackbar_deleted_downloads_for">已删除“<xliff:g id="item" example="Night Drive">%1$s</xliff:g>”的下载</string>
+    <string name="snackbar_downloaded_all_in">已下载<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>中的所有曲目</string>
+    <string name="snackbar_download_failed">下载失败</string>
+    <string name="snackbar_delete_failed">删除失败</string>
+    <string name="snackbar_added_to_playlist">已添加到<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="snackbar_add_to_playlist_failed">添加到播放列表失败</string>
+    <string name="snackbar_create_playlist_failed">创建播放列表失败</string>
+    <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”将在下一首播放</string>
+    <string name="snackbar_audio_stream_failed">无法加载音频流</string>
+    <string name="snackbar_scan_failed">扫描失败：<xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+</resources>

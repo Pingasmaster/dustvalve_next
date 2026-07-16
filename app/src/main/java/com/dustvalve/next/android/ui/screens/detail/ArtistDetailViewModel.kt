@@ -2,6 +2,7 @@ package com.dustvalve.next.android.ui.screens.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
@@ -18,6 +19,7 @@ import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +35,7 @@ data class ArtistDetailUiState(
     val artistUrl: String = "",
     /** Present as soon as headers / cache resolve. */
     val artist: Artist? = null,
-    /** Paginated flat track feed (YouTube only — Bandcamp populates `artist.albums`). */
+    /** Paginated flat track feed (YouTube only - Bandcamp populates `artist.albums`). */
     val tracks: List<Track> = emptyList(),
     val isLoading: Boolean = true,
     val isLoadingMore: Boolean = false,
@@ -43,7 +45,9 @@ data class ArtistDetailUiState(
     val isLoadingMix: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
     val downloadedAlbumIds: Set<String> = emptySet(),
-    val error: String? = null,
+    val error: UiText? = null,
+    val snackbarMessage: UiText? = null,
+    val isSnackbarError: Boolean = false,
 )
 
 /**
@@ -74,6 +78,10 @@ class ArtistDetailViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ArtistDetailUiState())
     val uiState: StateFlow<ArtistDetailUiState> = _uiState.asStateFlow()
 
+    /** Invoked when the user taps the snackbar's Retry action. */
+    var retryAction: (() -> Unit)? = null
+        private set
+
     private var loadedKey: String? = null
     private var nextPage: Any? = null
 
@@ -100,7 +108,7 @@ class ArtistDetailViewModel @Inject constructor(
 
     /**
      * Start (or re-start) loading an artist. [name] and [imageUrl] are
-     * shown immediately while the real load is in flight — useful for
+     * shown immediately while the real load is in flight - useful for
      * YouTube channels whose browse endpoint doesn't return the channel
      * image, so the caller passes the thumbnail it already has from the
      * SearchResult.
@@ -140,7 +148,9 @@ class ArtistDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val source = sources[sourceId]
             if (source == null) {
-                _uiState.update { it.copy(isLoading = false, error = "Unknown source: $sourceId") }
+                _uiState.update {
+                    it.copy(isLoading = false, error = UiText.StringResource(R.string.error_unknown_source, listOf(sourceId)))
+                }
                 return@launch
             }
 
@@ -178,7 +188,7 @@ class ArtistDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
-                    it.copy(isLoading = false, error = e.message ?: "Failed to load artist")
+                    it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_artist))
                 }
             }
         }
@@ -225,7 +235,7 @@ class ArtistDetailViewModel @Inject constructor(
                     val artistId = state.artist?.id ?: return@launch
                     artistRepository.toggleFavorite(artistId)
                 } else {
-                    // YT path — the Artist id IS the URL; persist the entity
+                    // YT path - the Artist id IS the URL; persist the entity
                     // so library INNER JOINs on artist_id resolve.
                     if (prev) {
                         favoriteDao.delete(url)
@@ -264,10 +274,29 @@ class ArtistDetailViewModel @Inject constructor(
                         }
                     }
                 }
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage = UiText.StringResource(
+                            R.string.snackbar_downloaded,
+                            listOf(state.artist?.name.orEmpty()),
+                        ),
+                        isSnackbarError = false,
+                    )
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                retryAction = { downloadAll() }
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage =
+                        e.message?.let { m -> UiText.DynamicString(m) }
+                            ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        isSnackbarError = true,
+                    )
+                }
             }
-            _uiState.update { it.copy(isDownloading = false) }
         }
     }
 
@@ -286,7 +315,21 @@ class ArtistDetailViewModel @Inject constructor(
                     if (e is CancellationException) throw e
                 }
             }
+            _uiState.update {
+                it.copy(
+                    snackbarMessage = UiText.StringResource(
+                        R.string.snackbar_deleted_downloads_for,
+                        listOf(state.artist?.name.orEmpty()),
+                    ),
+                    isSnackbarError = false,
+                )
+            }
         }
+    }
+
+    fun clearSnackbar() {
+        retryAction = null
+        _uiState.update { it.copy(snackbarMessage = null, isSnackbarError = false) }
     }
 
     /** Bandcamp-only: load the artist mix (one track per album, interleaved). */

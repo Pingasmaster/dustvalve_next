@@ -60,7 +60,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -74,7 +73,6 @@ import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.components.ShapePickerSheet
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
-import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -90,8 +88,9 @@ fun LibraryScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(state.error) {
-        state.error?.let { error ->
+    val errorText = state.error?.asString()
+    LaunchedEffect(errorText) {
+        errorText?.let { error ->
             try {
                 snackbarHostState.showSnackbar(error)
             } finally {
@@ -100,8 +99,9 @@ fun LibraryScreen(
         }
     }
 
-    LaunchedEffect(state.message) {
-        state.message?.let { msg ->
+    val messageText = state.message?.asString()
+    LaunchedEffect(messageText) {
+        messageText?.let { msg ->
             try {
                 snackbarHostState.showSnackbar(msg)
             } finally {
@@ -335,7 +335,7 @@ fun LibraryScreen(
                 if (progress.importing) R.string.library_importing else R.string.library_exporting,
             ),
             progress = fraction,
-            message = if (total > 0) "${progress.done} / $total" else null,
+            message = if (total > 0) stringResource(R.string.library_transfer_progress, progress.done, total) else null,
         )
     }
 }
@@ -433,11 +433,8 @@ private fun LibraryList(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
 
-            // Pin/Unpin — available for all types
+            // Pin/Unpin - available for all types
             ListItem(
-                headlineContent = {
-                    Text(if (item.isPinned) stringResource(R.string.library_unpin) else stringResource(R.string.library_pin))
-                },
                 leadingContent = {
                     Icon(
                         painter = painterResource(R.drawable.ic_push_pin),
@@ -452,14 +449,15 @@ private fun LibraryList(
                     }
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            )
+            ) {
+                Text(if (item.isPinned) stringResource(R.string.library_unpin) else stringResource(R.string.library_pin))
+            }
 
             when (item) {
                 is LibraryItem.PlaylistItem -> {
                     val playlist = item.playlist
                     if (playlist.isEditable) {
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.library_modify)) },
                             leadingContent = {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_edit),
@@ -471,10 +469,11 @@ private fun LibraryList(
                                 onRenameClick(playlist)
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(stringResource(R.string.library_modify))
+                        }
                     }
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.library_export_playlist)) },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_cloud_download),
@@ -486,15 +485,11 @@ private fun LibraryList(
                             onExportClick(playlist)
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                    ) {
+                        Text(stringResource(R.string.library_export_playlist))
+                    }
                     if (playlist.isDeletable) {
                         ListItem(
-                            headlineContent = {
-                                Text(
-                                    text = stringResource(R.string.common_action_delete),
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            },
                             leadingContent = {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_delete),
@@ -507,13 +502,17 @@ private fun LibraryList(
                                 onDeleteClick(item)
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        )
+                        ) {
+                            Text(
+                                text = stringResource(R.string.common_action_delete),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
 
                 is LibraryItem.AlbumItem, is LibraryItem.ArtistItem -> {
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.library_change_shape)) },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_palette),
@@ -525,14 +524,10 @@ private fun LibraryList(
                             onChangeShapeClick(item)
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                    ) {
+                        Text(stringResource(R.string.library_change_shape))
+                    }
                     ListItem(
-                        headlineContent = {
-                            Text(
-                                text = stringResource(R.string.library_remove_from_library),
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        },
                         leadingContent = {
                             Icon(
                                 painter = painterResource(R.drawable.ic_delete),
@@ -545,7 +540,12 @@ private fun LibraryList(
                             onDeleteClick(item)
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    )
+                    ) {
+                        Text(
+                            text = stringResource(R.string.library_remove_from_library),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(28.dp))
@@ -599,14 +599,6 @@ private fun LibraryAlbumListItem(item: LibraryItem.AlbumItem, onClick: () -> Uni
                 )
             }
         },
-        headlineContent = {
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (item.isPinned) {
@@ -643,7 +635,14 @@ private fun LibraryAlbumListItem(item: LibraryItem.AlbumItem, onClick: () -> Uni
                 )
             }
         },
-    )
+    ) {
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -701,14 +700,6 @@ private fun LibraryArtistListItem(item: LibraryItem.ArtistItem, onClick: () -> U
                 }
             }
         },
-        headlineContent = {
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        },
         supportingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (item.isPinned) {
@@ -744,7 +735,14 @@ private fun LibraryArtistListItem(item: LibraryItem.ArtistItem, onClick: () -> U
                 )
             }
         },
-    )
+    ) {
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -777,38 +775,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        com.dustvalve.next.android.ui.components.EmptyState(
+            icon = R.drawable.ic_music_note,
+            title = stringResource(R.string.library_empty_title),
+            subtitle = stringResource(R.string.library_empty_subtitle),
             modifier = Modifier.padding(horizontal = 32.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(AppShapes.EmptyStateIcon)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_music_note),
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.library_empty_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.library_empty_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-            )
-        }
+        )
     }
 }

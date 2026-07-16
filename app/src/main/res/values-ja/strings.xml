@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Machine-translated (Claude). Corrections welcome via PR. -->
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="playback_notification_channel">再生中</string>
+    <string name="notification_channel_downloads">ダウンロード</string>
+    <string name="notification_channel_downloads_desc">曲のダウンロード中に進行状況をリアルタイムで表示</string>
+    <string name="notification_downloading_single"><xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>をダウンロード中</string>
+    <string name="notification_downloading_batch_album">アルバムをダウンロード中 · <xliff:g id="album" example="Night Drive">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_artist">アーティストをダウンロード中 · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_playlist">プレイリストをダウンロード中 · <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress">トラック <xliff:g id="current" example="3">%1$d</xliff:g>/<xliff:g id="total" example="12">%2$d</xliff:g> — <xliff:g id="track" example="Cosmic Dust">%3$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress_idle">トラック <xliff:g id="current" example="3">%1$d</xliff:g>/<xliff:g id="total" example="12">%2$d</xliff:g></string>
+    <string name="notification_download_preparing">ダウンロードを準備中…</string>
+    <string name="notification_download_paused">ダウンロードを一時停止中</string>
+    <string name="notification_download_paused_chip">一時停止中</string>
+    <string name="notification_download_pause">一時停止</string>
+    <string name="notification_download_resume">再開</string>
+    <string name="notification_download_cancel">キャンセル</string>
+    <string name="common_action_cancel">キャンセル</string>
+    <string name="common_action_enable">有効にする</string>
+    <string name="common_action_delete">削除</string>
+    <string name="common_action_retry">再試行</string>
+    <string name="common_action_save">保存</string>
+    <string name="common_action_create">作成</string>
+    <string name="common_action_remove">削除</string>
+    <string name="common_action_disconnect">接続を解除</string>
+    <string name="common_play_all">すべて再生</string>
+    <string name="link_open_video"><xliff:g id="brand">YouTube</xliff:g>の動画を開く</string>
+    <string name="link_open_song"><xliff:g id="brand">YouTube Music</xliff:g>の曲を開く</string>
+    <string name="link_open_playlist"><xliff:g id="brand">YouTube</xliff:g>のプレイリストを開く</string>
+    <string name="link_open_album"><xliff:g id="brand">Bandcamp</xliff:g>のアルバムを開く</string>
+    <string name="link_open_artist">アーティストを開く</string>
+    <string name="link_open_track"><xliff:g id="brand">Bandcamp</xliff:g>のトラックを開く</string>
+    <string name="link_kind_video">動画</string>
+    <string name="link_kind_song">曲</string>
+    <string name="link_kind_playlist">プレイリスト</string>
+    <string name="link_kind_album">アルバム</string>
+    <string name="link_kind_artist">アーティスト</string>
+    <string name="link_kind_track">トラック</string>
+    <string name="provider_enable_title"><xliff:g id="provider" example="Bandcamp">%1$s</xliff:g>を有効にしますか？</string>
+    <string name="provider_enable_text"><xliff:g id="provider" example="Bandcamp">%1$s</xliff:g>はオフになっています。有効にしてこの<xliff:g id="kind" example="album">%2$s</xliff:g>を開きますか？</string>
+    <string name="snackbar_unsupported_source">このリンクは対応していないソースのものです。</string>
+    <string name="library_new_playlist">新しいプレイリスト</string>
+    <string name="library_import_playlist">プレイリストをインポート</string>
+    <string name="library_export_playlist">プレイリストをエクスポート</string>
+    <string name="library_export_title">プレイリストをエクスポート</string>
+    <string name="library_export_text">オフラインで再生できるコピーをエクスポートしますか？「オフライン」はすべての曲とカバーをダウンロードし、インターネットなしで再生できます。「オンライン」はファイルを小さく保ち、インポート時に再ストリーミングします。</string>
+    <string name="library_export_offline">オフライン</string>
+    <string name="library_export_lightweight">オンライン</string>
+    <string name="library_exporting">プレイリストをエクスポート中</string>
+    <string name="library_importing">プレイリストをインポート中</string>
+    <string name="library_transfer_progress"><xliff:g id="done" example="3">%1$d</xliff:g> / <xliff:g id="total" example="12">%2$d</xliff:g></string>
+    <string name="library_exported">「<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>」をエクスポートしました</string>
+    <string name="library_imported">「<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>」をインポートしました</string>
+    <string name="library_error_export">エクスポートに失敗しました</string>
+    <string name="library_error_import">インポートに失敗しました</string>
+    <string name="library_error_open_export_destination">エクスポート先を開けませんでした</string>
+    <string name="library_error_open_import_file">プレイリストファイルを開けませんでした</string>
+    <string name="library_error_update_playlist">プレイリストの更新に失敗しました</string>
+    <string name="library_error_delete_playlist">プレイリストの削除に失敗しました</string>
+    <string name="library_error_update_pin">ピン留めの更新に失敗しました</string>
+    <string name="library_error_remove">ライブラリからの削除に失敗しました</string>
+    <string name="library_error_update_shape">シェイプの更新に失敗しました</string>
+    <string name="library_error_load">ライブラリの読み込みに失敗しました</string>
+    <string name="bandcamp_add_custom_genre">カスタムジャンルを追加</string>
+    <string name="bandcamp_add_genre_title">カスタムジャンルを追加</string>
+    <string name="bandcamp_add_genre_hint"><xliff:g id="brand">Bandcamp</xliff:g>のジャンルを入力</string>
+    <string name="bandcamp_add_genre_validating"><xliff:g id="brand">Bandcamp</xliff:g>で確認中…</string>
+    <string name="bandcamp_add_genre_exists">このジャンルは追加済みです</string>
+    <string name="bandcamp_add_genre_not_found">そのジャンルのリリースは<xliff:g id="brand">Bandcamp</xliff:g>で見つかりませんでした</string>
+    <string name="bandcamp_add_genre_network"><xliff:g id="brand">Bandcamp</xliff:g>に接続できませんでした。もう一度お試しください。</string>
+    <string name="bandcamp_remove_genre_title">ジャンルを削除しますか？</string>
+    <string name="bandcamp_remove_genre_text">「<xliff:g id="genre" example="shoegaze">%1$s</xliff:g>」をジャンルから削除しますか？</string>
+    <string name="common_action_add">追加</string>
+    <string name="common_play_mix">ミックスを再生</string>
+    <string name="common_loading">読み込み中…</string>
+    <string name="common_connected">接続済み</string>
+    <string name="common_selected_folder">選択したフォルダ</string>
+    <string name="common_failed_to_play">再生に失敗しました</string>
+    <string name="common_playlist_imported">プレイリストをインポートしました：<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="common_add_to_playlist">プレイリストに追加</string>
+    <string name="common_play_next">次に再生</string>
+    <string name="common_add_to_queue">キューに追加</string>
+    <string name="common_enqueue_all">すべてキューに追加</string>
+    <string name="common_share">共有</string>
+    <string name="common_open_in_browser">ブラウザで開く</string>
+    <string name="common_loading_track">トラックを読み込み中…</string>
+    <string name="common_loading_album">アルバムを読み込み中…</string>
+    <string name="common_loading_playlist">プレイリストを読み込み中…</string>
+    <string name="snackbar_failed_load">読み込みに失敗しました</string>
+    <string name="common_cd_back">戻る</string>
+    <string name="common_cd_search">検索</string>
+    <string name="common_cd_clear">クリア</string>
+    <string name="common_cd_shuffle_play">シャッフル再生</string>
+    <string name="common_cd_now_playing">再生中</string>
+    <string name="common_cd_create_playlist">プレイリストを作成</string>
+    <string name="common_cd_more_options">その他のオプション</string>
+    <string name="common_cd_selected">選択済み</string>
+    <string name="common_cd_reorder">並べ替え</string>
+    <string name="common_cd_delete">削除</string>
+    <string name="common_cd_downloaded">ダウンロード済み</string>
+    <string name="common_cd_import_playlist">プレイリストをインポート</string>
+    <string name="nav_label_local">ローカル</string>
+    <string name="nav_label_library">ライブラリ</string>
+    <string name="nav_label_settings">設定</string>
+    <string name="player_volume">音量</string>
+    <string name="player_output">出力</string>
+    <string name="player_automatic">自動</string>
+    <string name="player_no_track">再生中のトラックはありません</string>
+    <string name="player_queue_count">キュー（<xliff:g id="count" example="7">%1$d</xliff:g>）</string>
+    <string name="player_up_next_count">次に再生（<xliff:g id="count" example="7">%1$d</xliff:g>）</string>
+    <string name="player_cd_previous">前へ</string>
+    <string name="player_cd_next">次へ</string>
+    <string name="player_cd_pause">一時停止</string>
+    <string name="player_cd_play">再生</string>
+    <string name="player_cd_shuffle">シャッフル</string>
+    <string name="player_cd_add_to_playlist">プレイリストに追加</string>
+    <string name="player_cd_repeat">リピート</string>
+    <string name="player_cd_collapse">折りたたむ</string>
+    <string name="player_cd_volume">音量</string>
+    <string name="player_cd_local_file">ローカルファイル</string>
+    <string name="player_cd_delete_download">ダウンロードを削除</string>
+    <string name="player_cd_download_track">トラックをダウンロード</string>
+    <string name="player_cd_remove_from_favorites">お気に入りから削除</string>
+    <string name="player_cd_add_to_favorites">お気に入りに追加</string>
+    <string name="player_cd_album_art">アルバムアート</string>
+    <string name="player_delete_download_title">ダウンロードを削除</string>
+    <string name="player_delete_download_text">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」のダウンロード済みファイルを削除しますか？</string>
+    <string name="player_playback_info">再生情報</string>
+    <string name="player_debug_audio_format">オーディオ形式</string>
+    <string name="player_debug_source">ソース</string>
+    <string name="player_debug_download_status">ダウンロード状態</string>
+    <string name="player_debug_file_path">ファイルパス</string>
+    <string name="player_debug_track_id">トラックID</string>
+    <string name="player_debug_album_id">アルバムID</string>
+    <string name="player_debug_local_file">ローカルファイル</string>
+    <string name="player_debug_downloading">ダウンロード中…</string>
+    <string name="player_debug_downloaded">ダウンロード済み</string>
+    <string name="player_debug_cached">キャッシュ済み</string>
+    <string name="player_debug_not_downloaded">未ダウンロード</string>
+    <string name="player_debug_local">ローカル</string>
+    <string name="player_debug_streaming">ストリーミング</string>
+    <string name="player_debug_unknown">不明</string>
+    <string name="player_debug_none">なし</string>
+    <string name="player_no_playlists">プレイリストはまだありません</string>
+    <string name="player_create_to_start">作成して始めましょう</string>
+    <string name="player_remove_from_favorites">お気に入りから削除</string>
+    <string name="player_add_to_favorites">お気に入りに追加</string>
+    <string name="player_remove_from_queue">キューから削除</string>
+    <string name="player_audio_device_speaker">スピーカー</string>
+    <string name="player_audio_device_earpiece">受話口</string>
+    <string name="player_audio_device_wired_headset">有線ヘッドセット</string>
+    <string name="player_audio_device_wired_headphones">有線ヘッドホン</string>
+    <string name="player_audio_device_usb">USBオーディオ</string>
+    <string name="player_audio_device_usb_accessory">USBアクセサリ</string>
+    <string name="player_audio_device_usb_headset">USBヘッドセット</string>
+    <string name="player_audio_device_dock">ドック</string>
+    <string name="player_audio_device_aux">AUX</string>
+    <string name="player_audio_device_ble_headset">BLEヘッドセット</string>
+    <string name="player_audio_device_ble_speaker">BLEスピーカー</string>
+    <string name="player_audio_device_unknown">オーディオデバイス</string>
+    <string name="settings_title">設定</string>
+    <string name="settings_section_sources">ソース</string>
+    <string name="settings_section_connections">接続</string>
+    <string name="settings_section_storage">ストレージ</string>
+    <string name="settings_section_audio_quality">音質</string>
+    <string name="settings_section_appearance">外観</string>
+    <string name="settings_section_player">プレーヤー</string>
+    <string name="settings_section_search">検索</string>
+    <string name="settings_section_about">このアプリについて</string>
+    <string name="settings_section_debug">デバッグ</string>
+    <string name="settings_source_local">ローカル</string>
+    <string name="settings_use_individual_folders">個別のフォルダを使用</string>
+    <string name="settings_use_individual_folders_desc">すべてのオーディオをスキャンする代わりに特定のフォルダを選択</string>
+    <string name="settings_remove_downloads_title">すべてのダウンロードを削除</string>
+    <string name="settings_remove_downloads_text">ダウンロードプール全体（明示的なダウンロード、自動キャッシュされたオーディオ、アルバムカバー、アーティスト画像）が消去されます。</string>
+    <string name="settings_download_format">ダウンロード形式</string>
+    <string name="settings_download_format_desc">ダウンロードする<xliff:g id="brand">Bandcamp</xliff:g>購入品の形式</string>
+    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g>の接続を解除しました</string>
+    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g>の接続を解除しました</string>
+    <string name="settings_add_folder">フォルダを追加</string>
+    <string name="settings_rescan">再スキャン</string>
+    <string name="settings_cd_remove_folder">フォルダを削除</string>
+    <string name="settings_cd_avatar">アバター</string>
+    <string name="settings_connect_bandcamp"><xliff:g id="brand">Bandcamp</xliff:g>に接続</string>
+    <string name="settings_connect_bandcamp_desc">接続すると<xliff:g id="brand">Bandcamp</xliff:g>の購入品にアクセスできます</string>
+    <string name="settings_connect_youtube"><xliff:g id="brand">YouTube Music</xliff:g>に接続</string>
+    <string name="settings_connect_youtube_desc">接続すると<xliff:g id="brand">YouTube Music</xliff:g>のライブラリにアクセスできます</string>
+    <string name="settings_youtube_default_source_title">デフォルト表示</string>
+    <string name="settings_youtube_default_source_desc"><xliff:g id="brand">YouTube</xliff:g>タブをタップしたときに開く表示</string>
+    <string name="common_play">再生</string>
+    <string name="ytm_artist_spotlight">アーティストスポットライト</string>
+    <string name="settings_remove_all_downloads">すべてのダウンロードを削除</string>
+    <string name="settings_dedicated_folder_title">すべてを専用フォルダに保存</string>
+    <string name="settings_dedicated_folder_desc">プレイリスト、お気に入り、ダウンロード、履歴、設定を選択したフォルダに保存します。アプリの起動ごとに必要です。</string>
+    <string name="settings_dedicated_folder_change">フォルダを変更</string>
+    <string name="settings_dedicated_folder_image_cache">画像キャッシュもフォルダに保存</string>
+    <string name="settings_dedicated_folder_image_cache_desc">アルバムアートワークをフォルダにミラーリングし、再インストール後も保持されます。</string>
+    <string name="settings_dedicated_folder_metadata_cache">メタデータキャッシュもフォルダに保存</string>
+    <string name="settings_dedicated_folder_metadata_cache_desc"><xliff:g id="brand">YouTube</xliff:g>と<xliff:g id="brand_2">Bandcamp</xliff:g>のルックアップキャッシュをフォルダにミラーリングします。</string>
+    <string name="settings_dedicated_folder_disable_title">データをアプリのストレージに戻しますか？</string>
+    <string name="settings_dedicated_folder_disable_text">現在専用フォルダにあるすべてのデータがアプリ内にコピーされます。その後、フォルダの内容は削除されます。</string>
+    <string name="settings_dedicated_folder_disable_confirm">戻す</string>
+    <string name="settings_dedicated_folder_migrating">データを移動中…</string>
+    <string name="settings_dedicated_folder_migration_success">専用フォルダの準備ができました</string>
+    <string name="settings_dedicated_folder_migration_reverted">データをアプリのストレージに戻しました</string>
+    <string name="settings_dedicated_folder_migration_failed">移行に失敗しました：<xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
+    <string name="settings_dedicated_folder_unreachable_title">専用フォルダにアクセスできません</string>
+    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g>はデータのあるフォルダにアクセスできません。フォルダをもう一度指定するか、この機能をオフにしてアプリのストレージに戻してください。</string>
+    <string name="settings_dedicated_folder_locate">フォルダを指定</string>
+    <string name="settings_dedicated_folder_turn_off">オフにしてアプリのストレージを使用</string>
+    <string name="settings_auto_download_purchases">購入品を自動ダウンロード</string>
+    <string name="settings_auto_download_purchases_desc"><xliff:g id="brand">Dustvalve</xliff:g>の購入品を自動的にダウンロード</string>
+    <string name="settings_auto_download_future">今後のコンテンツを自動ダウンロード</string>
+    <string name="settings_auto_download_future_desc">ダウンロード済みのプレイリスト、アルバム、アーティストの新しいコンテンツを自動的にダウンロード</string>
+    <string name="settings_mp3_on_metered">従量制接続では<xliff:g id="format">MP3</xliff:g>のみ</string>
+    <string name="settings_mp3_on_metered_desc">モバイルデータではロスレスの代わりに<xliff:g id="format">MP3</xliff:g>をダウンロード</string>
+    <string name="settings_progressive_download">プログレッシブダウンロード</string>
+    <string name="settings_progressive_download_desc">プレビュー品質でストリーミングし、シームレスにフル品質へ切り替え</string>
+    <string name="settings_seamless_upgrade">シームレスな品質アップグレード</string>
+    <string name="settings_seamless_upgrade_desc">まずストリーミングし、バックグラウンドでダウンロードしてから差し替えます。差し替えの瞬間に一度だけ短い途切れが生じることがあります。</string>
+    <string name="settings_theme">テーマ</string>
+    <string name="settings_theme_light">ライト</string>
+    <string name="settings_theme_dark">ダーク</string>
+    <string name="settings_theme_system">システム</string>
+    <string name="settings_dynamic_color">ダイナミックカラー</string>
+    <string name="settings_dynamic_color_desc">壁紙の色を使用</string>
+    <string name="settings_album_art_colors">アルバムアートの色</string>
+    <string name="settings_album_art_colors_desc">再生中のトラックのアルバムアートの色をアプリのテーマに使用</string>
+    <string name="settings_oled_black"><xliff:g id="tech">OLED</xliff:g>ブラック</string>
+    <string name="settings_oled_black_desc"><xliff:g id="tech">OLED</xliff:g>画面向けに純粋な黒の背景を使用</string>
+    <string name="settings_progress_bar_style">プレーヤーのプログレスバー</string>
+    <string name="settings_progress_bar_style_wavy">ウェーブ</string>
+    <string name="settings_progress_bar_style_linear">リニア</string>
+    <string name="settings_progress_bar_size">バーのサイズ：<xliff:g id="size" example="4">%1$d</xliff:g> dp</string>
+    <string name="settings_auto_download_favorites">お気に入りを自動ダウンロード</string>
+    <string name="settings_auto_download_favorites_desc">お気に入りに追加したすべてのトラックもバックグラウンドでダウンロード</string>
+    <string name="settings_download_notifications">ダウンロード通知</string>
+    <string name="settings_download_notifications_desc">曲のダウンロード中に進行状況をリアルタイム通知で表示</string>
+    <string name="settings_live_updates_title">ライブアップデートがオフです</string>
+    <string name="settings_live_updates_desc">通知設定でライブアップデートを許可すると、ダウンロードの進行状況をステータスバーのチップで確認できます</string>
+    <string name="settings_live_updates_action">設定を開く</string>
+    <string name="player_cd_open_artist">アーティストページを開く</string>
+    <string name="player_cd_open_album">アルバムページを開く</string>
+    <string name="snackbar_no_album_for_track">このトラックのアルバムはありません</string>
+    <string name="settings_volume_slider">音量スライダー</string>
+    <string name="settings_volume_slider_desc">ミュージックプレーヤーのアルバムアートの横に音量スライダーを表示</string>
+    <string name="settings_volume_button">音量ボタン</string>
+    <string name="settings_volume_button_desc">全画面の音量コントロールを開く音量ボタンを表示</string>
+    <string name="settings_show_debug_info">デバッグ情報を表示</string>
+    <string name="settings_show_debug_info_desc">プレーヤーのカバーカルーセルをデバッグオーバーレイに置き換え</string>
+    <string name="settings_keep_screen_open">起動中は画面をオンのままにする</string>
+    <string name="settings_keep_screen_open_desc">アプリを開いている間、画面がロックされないようにします</string>
+    <string name="settings_keep_screen_only_playing">再生中のみ</string>
+    <string name="settings_keep_screen_only_playing_desc">音楽が実際に再生されている間だけウェイクロックを有効にします</string>
+    <string name="settings_search_history">検索履歴</string>
+    <string name="settings_search_history_desc">最近の検索を保存してすばやくアクセス</string>
+    <string name="settings_search_history_per_source">ソースごとの切り替え</string>
+    <string name="settings_search_history_clear_all">検索履歴を消去</string>
+    <string name="settings_search_history_cleared">すべての検索履歴を消去しました</string>
+    <string name="settings_search_history_source_local">ローカル</string>
+    <string name="settings_version">バージョン</string>
+    <string name="settings_license"><xliff:g id="license">GPLv3</xliff:g>ライセンスの下で提供</string>
+    <string name="settings_open_repository">リポジトリを開く</string>
+    <string name="settings_check_for_updates">アップデートを確認</string>
+    <string name="settings_report_issue">問題を報告</string>
+    <string name="settings_update_no_update">最新バージョンです</string>
+    <string name="settings_update_check_failed">アップデートを確認できませんでした</string>
+    <string name="settings_update_available_title">アップデートがあります</string>
+    <string name="settings_update_available_text">バージョン<xliff:g id="version" example="0.4.71">%1$s</xliff:g>が利用可能です。今すぐダウンロードしてインストールしますか？</string>
+    <string name="settings_update_whats_new">新機能</string>
+    <string name="settings_update_download_action">ダウンロードしてインストール</string>
+    <string name="settings_update_downloading"><xliff:g id="version" example="0.4.71">%1$s</xliff:g>をダウンロード中…</string>
+    <string name="settings_update_install_failed">インストーラーを開けませんでした</string>
+    <string name="settings_update_download_failed">ダウンロードに失敗しました</string>
+    <string name="settings_auto_update_title">自動アップデート確認</string>
+    <string name="settings_auto_update_desc">起動時に新しいビルドを確認し、インストールを促します。このアプリは非常に活発に開発されており、1日に数回更新されることもあるため、オンのままにしておくことを強くおすすめします。上のボタンからいつでも手動で確認できます。</string>
+    <string name="settings_storage_limit_unlimited">ストレージ上限：無制限</string>
+    <string name="settings_storage_limit_mb">ストレージ上限：<xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
+    <string name="settings_storage_limit_gb">ストレージ上限：<xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
+    <string name="settings_sign_in_bandcamp"><xliff:g id="brand">Bandcamp</xliff:g>にログイン</string>
+    <string name="settings_sign_in_youtube"><xliff:g id="brand">YouTube Music</xliff:g>にログイン</string>
+    <string name="local_search_placeholder">ローカルの音楽を検索…</string>
+    <string name="local_scan_title">音楽をスキャン</string>
+    <string name="local_scan_subtitle">デバイスに保存された音楽を見つけて再生</string>
+    <string name="local_enable">ローカル音楽を有効にする</string>
+    <string name="local_scanning">音楽をスキャン中…</string>
+    <string name="local_cd_mix">ミックス</string>
+    <string name="local_tab_favorites">お気に入り</string>
+    <string name="local_tab_all">すべて</string>
+    <string name="local_tab_artists">アーティスト</string>
+    <string name="local_tab_albums">アルバム</string>
+    <string name="local_tab_tracks">トラック</string>
+    <string name="local_play_next">次に再生</string>
+    <string name="local_delete_song_title">曲を削除</string>
+    <string name="local_delete_song_text">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」を削除しますか？この操作は元に戻せません。</string>
+    <string name="local_reverse_order">逆順</string>
+    <string name="local_no_local_music">ローカルの音楽がありません</string>
+    <string name="local_no_local_music_subtitle">設定でフォルダを選択して音楽ファイルをスキャンしてください</string>
+    <string name="local_sort_by">並べ替え</string>
+    <string name="local_filter_by_artist">アーティストで絞り込み</string>
+    <string name="local_filter_by_album">アルバムで絞り込み</string>
+    <string name="local_filter_by_folder">フォルダで絞り込み</string>
+    <string name="local_filter_artist">アーティスト</string>
+    <string name="local_filter_artist_count">アーティスト（<xliff:g id="count" example="3">%1$d</xliff:g>）</string>
+    <string name="local_filter_album">アルバム</string>
+    <string name="local_filter_album_count">アルバム（<xliff:g id="count" example="3">%1$d</xliff:g>）</string>
+    <string name="local_filter_folder">フォルダ</string>
+    <string name="local_filter_folder_count">フォルダ（<xliff:g id="count" example="3">%1$d</xliff:g>）</string>
+    <string name="local_filter_unknown_artist">不明なアーティスト</string>
+    <string name="local_filter_unknown_album">不明なアルバム</string>
+    <string name="local_add_to_playlist">プレイリストに追加</string>
+    <string name="settings_local_keep_sort">並べ替え順を起動後も保持</string>
+    <string name="settings_local_keep_sort_desc">アプリを再度開いたときにローカルタブの並べ替え設定（と逆順）を復元します</string>
+    <string name="settings_local_keep_filters">フィルターを起動後も保持</string>
+    <string name="settings_local_keep_filters_desc">アプリを再度開いたときにローカルタブのアーティスト、アルバム、フォルダ、再生時間、お気に入りのみのチップを復元します</string>
+    <string name="common_search_failed">検索に失敗しました</string>
+    <string name="common_no_results_title">結果が見つかりませんでした</string>
+    <string name="common_no_results_subtitle">別の検索キーワードをお試しください</string>
+    <string name="bandcamp_search_placeholder"><xliff:g id="brand">Bandcamp</xliff:g>を検索…</string>
+    <string name="bandcamp_tab_all">すべて</string>
+    <string name="bandcamp_tab_artists">アーティスト</string>
+    <string name="bandcamp_tab_albums">アルバム</string>
+    <string name="bandcamp_tab_tracks">トラック</string>
+    <string name="bandcamp_discover">見つける</string>
+    <string name="bandcamp_more">もっと見る</string>
+    <string name="bandcamp_something_went_wrong">問題が発生しました</string>
+    <string name="bandcamp_type_artist">アーティスト</string>
+    <string name="bandcamp_type_local">ローカル</string>
+    <string name="youtube_search_placeholder"><xliff:g id="brand">YouTube</xliff:g>を検索…</string>
+    <string name="youtube_tab_all">すべて</string>
+    <string name="youtube_tab_artists">アーティスト</string>
+    <string name="youtube_tab_playlists">プレイリスト</string>
+    <string name="youtube_tab_tracks">トラック</string>
+    <string name="ytm_section_trending">急上昇</string>
+    <string name="ytm_section_discover">見つける：<xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
+    <string name="ytm_section_recommended">あなたへのおすすめ</string>
+    <string name="ytm_section_because_listened"><xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>を聴いたあなたへ</string>
+    <string name="error_import_playlist">プレイリストをインポートできませんでした：<xliff:g id="reason" example="network error">%1$s</xliff:g></string>
+    <string name="mood_chill">チル</string>
+    <string name="mood_energize">エナジー</string>
+    <string name="mood_focus">フォーカス</string>
+    <string name="mood_feel_good">ハッピー</string>
+    <string name="mood_party">パーティー</string>
+    <string name="mood_sad">悲しい</string>
+    <string name="mood_workout">ワークアウト</string>
+    <string name="mood_sleep">睡眠</string>
+    <string name="mood_romance">ロマンス</string>
+    <string name="mood_commute">通勤・通学</string>
+    <string name="mood_gaming">ゲーム</string>
+    <string name="genre_pop">ポップ</string>
+    <string name="genre_rock">ロック</string>
+    <string name="genre_hiphop">ヒップホップ</string>
+    <string name="genre_rnb_soul">R&amp;B・ソウル</string>
+    <string name="genre_jazz">ジャズ</string>
+    <string name="genre_electronic">エレクトロニック</string>
+    <string name="genre_classical">クラシック</string>
+    <string name="genre_country">カントリー</string>
+    <string name="genre_metal">メタル</string>
+    <string name="genre_blues">ブルース</string>
+    <string name="genre_indie">インディー</string>
+    <string name="genre_folk">フォーク</string>
+    <string name="genre_reggae">レゲエ</string>
+    <string name="genre_funk">ファンク</string>
+    <string name="genre_punk">パンク</string>
+    <string name="genre_lofi">ローファイ</string>
+    <string name="genre_latin">ラテン</string>
+    <string name="genre_kpop">K-POP</string>
+    <string name="genre_jpop">J-POP</string>
+    <string name="genre_afrobeats">アフロビーツ</string>
+    <string name="genre_bollywood">ボリウッド</string>
+    <string name="genre_arabic">アラブ</string>
+    <string name="genre_french_pop">フレンチポップ</string>
+    <string name="genre_ambient">アンビエント</string>
+    <string name="genre_phonk">フォンク</string>
+    <string name="genre_drill">ドリル</string>
+    <string name="genre_trap">トラップ</string>
+    <string name="genre_dnb">ドラムンベース</string>
+    <string name="genre_house">ハウス</string>
+    <string name="genre_techno">テクノ</string>
+    <string name="genre_trance">トランス</string>
+    <string name="genre_shoegaze">シューゲイザー</string>
+    <string name="genre_post_punk">ポストパンク</string>
+    <string name="genre_grunge">グランジ</string>
+    <string name="genre_ska">スカ</string>
+    <string name="genre_gospel">ゴスペル</string>
+    <string name="genre_amapiano">アマピアノ</string>
+    <string name="genre_bossa_nova">ボサノヴァ</string>
+    <string name="genre_cumbia">クンビア</string>
+    <string name="genre_salsa">サルサ</string>
+    <string name="genre_80s">80年代ヒッツ</string>
+    <string name="genre_90s">90年代ヒッツ</string>
+    <string name="genre_2000s">2000年代ヒッツ</string>
+    <string name="genre_soundtracks">サウンドトラック</string>
+    <string name="genre_musical_theater">ミュージカル</string>
+    <string name="genre_vgm">ゲーム音楽</string>
+    <string name="library_title">ライブラリ</string>
+    <string name="library_pin">ピン留め</string>
+    <string name="library_unpin">ピン留めを解除</string>
+    <string name="library_modify">編集</string>
+    <string name="library_change_shape">シェイプを変更</string>
+    <string name="library_remove_from_library">ライブラリから削除</string>
+    <string name="library_album_label">アルバム · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="library_artist_label">アーティスト</string>
+    <string name="library_empty_title">ライブラリは空です</string>
+    <string name="library_empty_subtitle">プレイリストとお気に入りがここに表示されます</string>
+    <string name="library_delete_playlist_title">プレイリストを削除</string>
+    <string name="library_delete_playlist_text">「<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>」を削除しますか？この操作は元に戻せません。</string>
+    <string name="library_remove_title">ライブラリから削除</string>
+    <string name="library_remove_text">「<xliff:g id="item" example="Night Drive">%1$s</xliff:g>」をライブラリから削除しますか？お気に入りからも解除されます。</string>
+    <string name="playlist_new">新しいプレイリスト</string>
+    <string name="playlist_edit">プレイリストを編集</string>
+    <string name="playlist_name_label">名前</string>
+    <string name="playlist_shape">シェイプ</string>
+    <string name="playlist_cover">カバー</string>
+    <string name="playlist_cd_no_cover">カバーなし</string>
+    <string name="playlist_cd_album_art">アルバムアート</string>
+    <string name="playlist_auto">自動プレイリスト</string>
+    <string name="playlist_cd_pinned">ピン留め済み</string>
+    <string name="playlist_cd_all_downloaded">すべてのトラックをダウンロード済み</string>
+    <string name="playlist_cd_play_all">すべて再生</string>
+    <string name="playlist_cd_download_all">すべてダウンロード</string>
+    <string name="playlist_default_title">プレイリスト</string>
+    <string name="playlist_fallback_name">プレイリスト</string>
+    <string name="playlist_error_load">プレイリストの読み込みに失敗しました</string>
+    <string name="playlist_error_remove_track">トラックの削除に失敗しました</string>
+    <string name="playlist_error_move_track">トラックの移動に失敗しました</string>
+    <string name="playlist_empty_system_title">トラックはまだありません</string>
+    <string name="playlist_empty_custom_title">空のプレイリスト</string>
+    <string name="playlist_empty_system_subtitle">トラックは自動的にここに表示されます</string>
+    <string name="playlist_empty_custom_subtitle">曲を追加して始めましょう</string>
+    <string name="detail_tracks_label">トラック</string>
+    <string name="label_count_duration"><xliff:g id="count" example="5 tracks">%1$s</xliff:g>  ·  <xliff:g id="duration" example="23 min">%2$s</xliff:g></string>
+    <string name="metadata_separator">"  ·  "</string>
+    <string name="metadata_separator_compact">" · "</string>
+    <string name="detail_duration_minutes"><xliff:g id="minutes" example="23">%1$d</xliff:g>分</string>
+    <string name="detail_duration_hours_only"><xliff:g id="hours" example="2">%1$d</xliff:g>時間</string>
+    <string name="detail_duration_hours_minutes"><xliff:g id="hours" example="2">%1$d</xliff:g>時間<xliff:g id="minutes" example="5">%2$d</xliff:g>分</string>
+    <string name="detail_buy_full_discography">全ディスコグラフィーを購入</string>
+    <string name="detail_buy_full_discography_priced">全ディスコグラフィーを購入（<xliff:g id="price" example="$8.00">%1$s</xliff:g>）</string>
+    <string name="detail_buy_this_album_priced">このアルバムを購入（<xliff:g id="price" example="$8.00">%1$s</xliff:g>）</string>
+    <string name="detail_buy_single_track_priced">1曲ずつ購入（<xliff:g id="price" example="$1.00">%1$s</xliff:g>）</string>
+    <string name="detail_delete_downloads_title">ダウンロードを削除</string>
+    <string name="detail_delete_download_title">ダウンロードを削除</string>
+    <string name="detail_error_load_album">アルバムの読み込みに失敗しました</string>
+    <string name="detail_error_load_artist">アーティストの読み込みに失敗しました</string>
+    <string name="detail_error_load_playlist">プレイリストの読み込みに失敗しました</string>
+    <string name="detail_error_load_collection">コレクションの読み込みに失敗しました</string>
+    <string name="detail_delete_album_downloads_text">「<xliff:g id="album" example="Night Drive">%1$s</xliff:g>」のダウンロード済みトラックをすべて削除しますか？</string>
+    <string name="detail_delete_track_download_text">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」のダウンロード済みファイルを削除しますか？</string>
+    <string name="detail_delete_artist_downloads_text"><xliff:g id="artist" example="The Valves">%1$s</xliff:g>のダウンロード済みトラックをすべて削除しますか？</string>
+    <string name="detail_delete_playlist_downloads_text">このプレイリストのダウンロード済みトラックをすべて削除しますか？</string>
+    <string name="detail_cd_remove_favorites">お気に入りから削除</string>
+    <string name="detail_cd_add_favorites">お気に入りに追加</string>
+    <string name="detail_cd_delete_album_downloads">アルバムのダウンロードを削除</string>
+    <string name="detail_cd_download_album">アルバムをダウンロード</string>
+    <string name="detail_cd_delete_all_downloads">すべてのダウンロードを削除</string>
+    <string name="detail_cd_download_all">すべてダウンロード</string>
+    <string name="detail_cd_delete_downloads">ダウンロードを削除</string>
+    <string name="detail_show_more">もっと見る</string>
+    <string name="detail_show_less">折りたたむ</string>
+    <string name="detail_buy_on_bandcamp"><xliff:g id="brand">Bandcamp</xliff:g>で購入</string>
+    <string name="detail_buy_more_options">その他の購入オプション</string>
+    <string name="detail_send_as_gift">ギフトとして贈る</string>
+    <string name="detail_cd_open_artist">アーティストページを開く</string>
+    <string name="detail_tags">タグ</string>
+    <string name="detail_discography">ディスコグラフィー</string>
+    <string name="detail_no_releases">リリースはまだありません</string>
+    <string name="search_recent">最近の検索</string>
+    <string name="search_clear_all">すべてクリア</string>
+    <string name="search_cd_remove">削除</string>
+    <string name="shape_choose">シェイプを選択</string>
+    <string name="shape_clover">クローバー</string>
+    <string name="shape_heart">ハート</string>
+    <string name="shape_cookie">クッキー</string>
+    <string name="shape_burst">バースト</string>
+    <string name="shape_pentagon">ペンタゴン</string>
+    <string name="shape_gem">ジェム</string>
+    <string name="shape_flower">フラワー</string>
+    <string name="shape_pill">ピル</string>
+    <string name="shape_ghost">ゴースト</string>
+    <string name="shape_slanted">スラント</string>
+    <string name="shape_circle">サークル</string>
+    <string name="shape_triangle">トライアングル</string>
+    <string name="shape_sunny">サニー</string>
+    <string name="shape_arch">アーチ</string>
+    <string name="audio_format_flac">FLAC（ロスレス）</string>
+    <string name="sort_title_az">タイトル順</string>
+    <string name="sort_artist_az">アーティスト順</string>
+    <string name="sort_album_az">アルバム順</string>
+    <string name="sort_shortest">短い順</string>
+    <string name="sort_longest">長い順</string>
+    <string name="sort_date_added">追加日</string>
+    <string name="sort_release_year">リリース年</string>
+    <string name="duration_under_3">3分未満</string>
+    <string name="duration_3_to_5">3〜5分</string>
+    <string name="duration_over_5">5分以上</string>
+    <string name="storage_info">ダウンロード：<xliff:g id="downloads" example="1.2 GB">%1$s</xliff:g>、キャッシュ：<xliff:g id="cache" example="300 MB">%2$s</xliff:g>、空き容量：<xliff:g id="free" example="12 GB">%3$s</xliff:g></string>
+    <string name="error_unknown">不明なエラー</string>
+    <string name="error_unknown_source">不明なソース：<xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
+    <string name="error_source_no_collections">このソースはコレクションを表示できません</string>
+    <string name="error_load_page">ページの読み込みに失敗しました</string>
+    <string name="snackbar_downloaded">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」をダウンロードしました</string>
+    <string name="snackbar_deleted">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」を削除しました</string>
+    <string name="snackbar_deleted_downloads_for">「<xliff:g id="item" example="Night Drive">%1$s</xliff:g>」のダウンロードを削除しました</string>
+    <string name="snackbar_downloaded_all_in"><xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>のすべてのトラックをダウンロードしました</string>
+    <string name="snackbar_download_failed">ダウンロードに失敗しました</string>
+    <string name="snackbar_delete_failed">削除に失敗しました</string>
+    <string name="snackbar_added_to_playlist"><xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>に追加しました</string>
+    <string name="snackbar_add_to_playlist_failed">プレイリストへの追加に失敗しました</string>
+    <string name="snackbar_create_playlist_failed">プレイリストの作成に失敗しました</string>
+    <string name="snackbar_playing_next">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」を次に再生します</string>
+    <string name="snackbar_audio_stream_failed">オーディオストリームを読み込めませんでした</string>
+    <string name="snackbar_scan_failed">スキャンに失敗しました：<xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+</resources>

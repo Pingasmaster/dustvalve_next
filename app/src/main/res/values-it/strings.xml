@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Machine-translated (Claude). Corrections welcome via PR. -->
+    <string name="playback_notification_channel">In riproduzione</string>
+    <string name="notification_channel_downloads">Download</string>
+    <string name="notification_channel_downloads_desc">Avanzamento in tempo reale durante il download dei brani</string>
+    <string name="notification_downloading_single">Download di <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_album">Download album · <xliff:g id="album" example="Night Drive">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_artist">Download artista · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_playlist">Download playlist · <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress">Traccia <xliff:g id="current" example="3">%1$d</xliff:g> di <xliff:g id="total" example="12">%2$d</xliff:g> — <xliff:g id="track" example="Cosmic Dust">%3$s</xliff:g></string>
+    <string name="notification_downloading_batch_progress_idle">Traccia <xliff:g id="current" example="3">%1$d</xliff:g> di <xliff:g id="total" example="12">%2$d</xliff:g></string>
+    <string name="notification_download_preparing">Preparazione dei download…</string>
+    <string name="notification_download_paused">Download in pausa</string>
+    <string name="notification_download_paused_chip">In pausa</string>
+    <string name="notification_download_pause">Pausa</string>
+    <string name="notification_download_resume">Riprendi</string>
+    <string name="notification_download_cancel">Annulla</string>
+    <string name="common_action_cancel">Annulla</string>
+    <string name="common_action_enable">Attiva</string>
+    <string name="common_action_delete">Elimina</string>
+    <string name="common_action_retry">Riprova</string>
+    <string name="common_action_save">Salva</string>
+    <string name="common_action_create">Crea</string>
+    <string name="common_action_remove">Rimuovi</string>
+    <string name="common_action_disconnect">Disconnetti</string>
+    <string name="common_play_all">Riproduci tutto</string>
+    <string name="link_open_video">Apri video <xliff:g id="brand">YouTube</xliff:g></string>
+    <string name="link_open_song">Apri brano <xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="link_open_playlist">Apri playlist <xliff:g id="brand">YouTube</xliff:g></string>
+    <string name="link_open_album">Apri album <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="link_open_artist">Apri artista</string>
+    <string name="link_open_track">Apri traccia <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="link_kind_video">il video</string>
+    <string name="link_kind_song">il brano</string>
+    <string name="link_kind_playlist">la playlist</string>
+    <string name="link_kind_album">l’album</string>
+    <string name="link_kind_artist">l’artista</string>
+    <string name="link_kind_track">la traccia</string>
+    <string name="provider_enable_title">Attivare <xliff:g id="provider" example="Bandcamp">%1$s</xliff:g>?</string>
+    <string name="provider_enable_text"><xliff:g id="provider" example="Bandcamp">%1$s</xliff:g> è disattivato. Vuoi attivarlo per aprire <xliff:g id="kind" example="album">%2$s</xliff:g>?</string>
+    <string name="snackbar_unsupported_source">Questo link non proviene da una fonte supportata.</string>
+    <string name="library_new_playlist">Nuova playlist</string>
+    <string name="library_import_playlist">Importa playlist</string>
+    <string name="library_export_playlist">Esporta playlist</string>
+    <string name="library_export_title">Esporta playlist</string>
+    <string name="library_export_text">Esportare una copia leggibile offline? Offline scarica ogni brano e copertina, così la riproduci senza internet. Online mantiene il file leggero e ritrasmette in streaming all’importazione.</string>
+    <string name="library_export_offline">Offline</string>
+    <string name="library_export_lightweight">Online</string>
+    <string name="library_exporting">Esportazione playlist</string>
+    <string name="library_importing">Importazione playlist</string>
+    <string name="library_transfer_progress"><xliff:g id="done" example="3">%1$d</xliff:g> / <xliff:g id="total" example="12">%2$d</xliff:g></string>
+    <string name="library_exported">“<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>” esportata</string>
+    <string name="library_imported">“<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>” importata</string>
+    <string name="library_error_export">Esportazione non riuscita</string>
+    <string name="library_error_import">Importazione non riuscita</string>
+    <string name="library_error_open_export_destination">Impossibile aprire la destinazione di esportazione</string>
+    <string name="library_error_open_import_file">Impossibile aprire il file della playlist</string>
+    <string name="library_error_update_playlist">Impossibile aggiornare la playlist</string>
+    <string name="library_error_delete_playlist">Impossibile eliminare la playlist</string>
+    <string name="library_error_update_pin">Impossibile aggiornare il pin</string>
+    <string name="library_error_remove">Impossibile rimuovere dalla libreria</string>
+    <string name="library_error_update_shape">Impossibile aggiornare la forma</string>
+    <string name="library_error_load">Impossibile caricare la libreria</string>
+    <string name="bandcamp_add_custom_genre">Aggiungi genere personalizzato</string>
+    <string name="bandcamp_add_genre_title">Aggiungi genere personalizzato</string>
+    <string name="bandcamp_add_genre_hint">Inserisci un genere <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="bandcamp_add_genre_validating">Verifica su <xliff:g id="brand">Bandcamp</xliff:g>…</string>
+    <string name="bandcamp_add_genre_exists">Genere già aggiunto</string>
+    <string name="bandcamp_add_genre_not_found">Nessuna uscita trovata per quel genere su <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="bandcamp_add_genre_network">Impossibile raggiungere <xliff:g id="brand">Bandcamp</xliff:g>. Riprova.</string>
+    <string name="bandcamp_remove_genre_title">Rimuovere il genere?</string>
+    <string name="bandcamp_remove_genre_text">Rimuovere “<xliff:g id="genre" example="shoegaze">%1$s</xliff:g>” dai tuoi generi?</string>
+    <string name="common_action_add">Aggiungi</string>
+    <string name="common_play_mix">Riproduci mix</string>
+    <string name="common_loading">Caricamento…</string>
+    <string name="common_connected">Connesso</string>
+    <string name="common_selected_folder">Cartella selezionata</string>
+    <string name="common_failed_to_play">Riproduzione non riuscita</string>
+    <string name="common_playlist_imported">Playlist importata: <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="common_add_to_playlist">Aggiungi a playlist</string>
+    <string name="common_play_next">Riproduci dopo</string>
+    <string name="common_add_to_queue">Aggiungi alla coda</string>
+    <string name="common_enqueue_all">Aggiungi tutto alla coda</string>
+    <string name="common_share">Condividi</string>
+    <string name="common_open_in_browser">Apri nel browser</string>
+    <string name="common_loading_track">Caricamento traccia…</string>
+    <string name="common_loading_album">Caricamento album…</string>
+    <string name="common_loading_playlist">Caricamento playlist…</string>
+    <string name="snackbar_failed_load">Caricamento non riuscito</string>
+    <string name="common_cd_back">Indietro</string>
+    <string name="common_cd_search">Cerca</string>
+    <string name="common_cd_clear">Cancella</string>
+    <string name="common_cd_shuffle_play">Riproduzione casuale</string>
+    <string name="common_cd_now_playing">In riproduzione</string>
+    <string name="common_cd_create_playlist">Crea playlist</string>
+    <string name="common_cd_more_options">Altre opzioni</string>
+    <string name="common_cd_selected">Selezionato</string>
+    <string name="common_cd_reorder">Riordina</string>
+    <string name="common_cd_delete">Elimina</string>
+    <string name="common_cd_downloaded">Scaricato</string>
+    <string name="common_cd_import_playlist">Importa playlist</string>
+    <string name="nav_label_local">Locale</string>
+    <string name="nav_label_library">Libreria</string>
+    <string name="nav_label_settings">Impostazioni</string>
+    <string name="player_volume">Volume</string>
+    <string name="player_output">Uscita</string>
+    <string name="player_automatic">Automatico</string>
+    <string name="player_no_track">Nessun brano in riproduzione</string>
+    <string name="player_queue_count">Coda (<xliff:g id="count" example="7">%1$d</xliff:g>)</string>
+    <string name="player_up_next_count">A seguire (<xliff:g id="count" example="7">%1$d</xliff:g>)</string>
+    <string name="player_cd_previous">Precedente</string>
+    <string name="player_cd_next">Successivo</string>
+    <string name="player_cd_pause">Pausa</string>
+    <string name="player_cd_play">Riproduci</string>
+    <string name="player_cd_shuffle">Riproduzione casuale</string>
+    <string name="player_cd_add_to_playlist">Aggiungi a playlist</string>
+    <string name="player_cd_repeat">Ripeti</string>
+    <string name="player_cd_collapse">Comprimi</string>
+    <string name="player_cd_volume">Volume</string>
+    <string name="player_cd_local_file">File locale</string>
+    <string name="player_cd_delete_download">Elimina download</string>
+    <string name="player_cd_download_track">Scarica traccia</string>
+    <string name="player_cd_remove_from_favorites">Rimuovi dai preferiti</string>
+    <string name="player_cd_add_to_favorites">Aggiungi ai preferiti</string>
+    <string name="player_cd_album_art">Copertina dell’album</string>
+    <string name="player_delete_download_title">Elimina download</string>
+    <string name="player_delete_download_text">Rimuovere il file scaricato di “<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”?</string>
+    <string name="player_playback_info">Info riproduzione</string>
+    <string name="player_debug_audio_format">Formato audio</string>
+    <string name="player_debug_source">Sorgente</string>
+    <string name="player_debug_download_status">Stato download</string>
+    <string name="player_debug_file_path">Percorso file</string>
+    <string name="player_debug_track_id">ID traccia</string>
+    <string name="player_debug_album_id">ID album</string>
+    <string name="player_debug_local_file">File locale</string>
+    <string name="player_debug_downloading">Download in corso…</string>
+    <string name="player_debug_downloaded">Scaricato</string>
+    <string name="player_debug_cached">In cache</string>
+    <string name="player_debug_not_downloaded">Non scaricato</string>
+    <string name="player_debug_local">Locale</string>
+    <string name="player_debug_streaming">Streaming</string>
+    <string name="player_debug_unknown">Sconosciuto</string>
+    <string name="player_debug_none">Nessuno</string>
+    <string name="player_no_playlists">Ancora nessuna playlist</string>
+    <string name="player_create_to_start">Creane una per iniziare</string>
+    <string name="player_remove_from_favorites">Rimuovi dai preferiti</string>
+    <string name="player_add_to_favorites">Aggiungi ai preferiti</string>
+    <string name="player_remove_from_queue">Rimuovi dalla coda</string>
+    <string name="player_audio_device_speaker">Altoparlante</string>
+    <string name="player_audio_device_earpiece">Auricolare del telefono</string>
+    <string name="player_audio_device_wired_headset">Auricolari con cavo</string>
+    <string name="player_audio_device_wired_headphones">Cuffie con cavo</string>
+    <string name="player_audio_device_usb">Audio USB</string>
+    <string name="player_audio_device_usb_accessory">Accessorio USB</string>
+    <string name="player_audio_device_usb_headset">Cuffie USB</string>
+    <string name="player_audio_device_dock">Dock</string>
+    <string name="player_audio_device_aux">Aux</string>
+    <string name="player_audio_device_ble_headset">Cuffie BLE</string>
+    <string name="player_audio_device_ble_speaker">Altoparlante BLE</string>
+    <string name="player_audio_device_unknown">Dispositivo audio</string>
+    <string name="settings_title">Impostazioni</string>
+    <string name="settings_section_sources">Sorgenti</string>
+    <string name="settings_section_connections">Connessioni</string>
+    <string name="settings_section_storage">Archiviazione</string>
+    <string name="settings_section_audio_quality">Qualità audio</string>
+    <string name="settings_section_appearance">Aspetto</string>
+    <string name="settings_section_player">Player</string>
+    <string name="settings_section_search">Ricerca</string>
+    <string name="settings_section_about">Informazioni</string>
+    <string name="settings_section_debug">Debug</string>
+    <string name="settings_source_local">Locale</string>
+    <string name="settings_use_individual_folders">Usa cartelle specifiche</string>
+    <string name="settings_use_individual_folders_desc">Scegli cartelle specifiche invece di scansionare tutto l’audio</string>
+    <string name="settings_remove_downloads_title">Rimuovi tutti i download</string>
+    <string name="settings_remove_downloads_text">Verrà svuotato l’intero archivio dei download: download espliciti, audio in cache automatica, copertine degli album e immagini degli artisti.</string>
+    <string name="settings_download_format">Formato di download</string>
+    <string name="settings_download_format_desc">Formato per gli acquisti <xliff:g id="brand">Bandcamp</xliff:g> scaricati</string>
+    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g> disconnesso</string>
+    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g> disconnesso</string>
+    <string name="settings_add_folder">Aggiungi cartella</string>
+    <string name="settings_rescan">Nuova scansione</string>
+    <string name="settings_cd_remove_folder">Rimuovi cartella</string>
+    <string name="settings_cd_avatar">Avatar</string>
+    <string name="settings_connect_bandcamp">Connetti <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_connect_bandcamp_desc">Connettiti per accedere ai tuoi acquisti <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_connect_youtube">Connetti <xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="settings_connect_youtube_desc">Connettiti per accedere alla tua libreria <xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="settings_youtube_default_source_title">Vista predefinita</string>
+    <string name="settings_youtube_default_source_desc">La vista che si apre quando tocchi la scheda <xliff:g id="brand">YouTube</xliff:g></string>
+    <string name="common_play">Riproduci</string>
+    <string name="ytm_artist_spotlight">Artista in evidenza</string>
+    <string name="settings_remove_all_downloads">Rimuovi tutti i download</string>
+    <string name="settings_dedicated_folder_title">Salva tutto in una cartella dedicata</string>
+    <string name="settings_dedicated_folder_desc">Playlist, preferiti, download, cronologia e impostazioni vengono salvati in una cartella a tua scelta. Richiesta a ogni avvio dell’app.</string>
+    <string name="settings_dedicated_folder_change">Cambia cartella</string>
+    <string name="settings_dedicated_folder_image_cache">Salva nella cartella anche la cache immagini</string>
+    <string name="settings_dedicated_folder_image_cache_desc">Copertine degli album replicate nella cartella; sopravvivono alle reinstallazioni.</string>
+    <string name="settings_dedicated_folder_metadata_cache">Salva nella cartella anche la cache metadati</string>
+    <string name="settings_dedicated_folder_metadata_cache_desc">Cache delle ricerche di <xliff:g id="brand">YouTube</xliff:g> e <xliff:g id="brand_2">Bandcamp</xliff:g> replicate nella cartella.</string>
+    <string name="settings_dedicated_folder_disable_title">Riportare i dati nell’archivio dell’app?</string>
+    <string name="settings_dedicated_folder_disable_text">Tutto ciò che si trova nella cartella dedicata verrà ricopiato nell’app. Il contenuto della cartella verrà poi rimosso.</string>
+    <string name="settings_dedicated_folder_disable_confirm">Riporta indietro</string>
+    <string name="settings_dedicated_folder_migrating">Spostamento dei dati…</string>
+    <string name="settings_dedicated_folder_migration_success">Cartella dedicata pronta</string>
+    <string name="settings_dedicated_folder_migration_reverted">Dati di nuovo nell’archivio dell’app</string>
+    <string name="settings_dedicated_folder_migration_failed">Migrazione non riuscita: <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
+    <string name="settings_dedicated_folder_unreachable_title">Cartella dedicata non disponibile</string>
+    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g> non riesce a raggiungere la cartella con i tuoi dati. Individuala di nuovo, oppure disattiva la funzione per tornare all’archivio dell’app.</string>
+    <string name="settings_dedicated_folder_locate">Individua cartella</string>
+    <string name="settings_dedicated_folder_turn_off">Disattiva e usa l’archivio dell’app</string>
+    <string name="settings_auto_download_purchases">Scarica automaticamente gli acquisti</string>
+    <string name="settings_auto_download_purchases_desc">Scarica automaticamente i tuoi acquisti <xliff:g id="brand">Dustvalve</xliff:g></string>
+    <string name="settings_auto_download_future">Scarica automaticamente i contenuti futuri</string>
+    <string name="settings_auto_download_future_desc">Scarica automaticamente i nuovi contenuti di playlist, album e artisti scaricati</string>
+    <string name="settings_mp3_on_metered">Solo <xliff:g id="format">MP3</xliff:g> su rete a consumo</string>
+    <string name="settings_mp3_on_metered_desc">Scarica <xliff:g id="format">MP3</xliff:g> invece del lossless sui dati mobili</string>
+    <string name="settings_progressive_download">Download progressivo</string>
+    <string name="settings_progressive_download_desc">Riproduci in streaming la qualità di anteprima, poi passa senza interruzioni alla qualità piena</string>
+    <string name="settings_seamless_upgrade">Passaggio di qualità senza interruzioni</string>
+    <string name="settings_seamless_upgrade_desc">Prima streaming, poi download in background e infine lo scambio. Può causare un singolo breve scatto nel momento in cui avviene lo scambio.</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_light">Chiaro</string>
+    <string name="settings_theme_dark">Scuro</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_dynamic_color">Colori dinamici</string>
+    <string name="settings_dynamic_color_desc">Usa i colori del tuo sfondo</string>
+    <string name="settings_album_art_colors">Colori dalla copertina</string>
+    <string name="settings_album_art_colors_desc">Applica all’app i colori della copertina del brano in riproduzione</string>
+    <string name="settings_oled_black">Nero <xliff:g id="tech">OLED</xliff:g></string>
+    <string name="settings_oled_black_desc">Usa sfondi nero puro per gli schermi <xliff:g id="tech">OLED</xliff:g></string>
+    <string name="settings_progress_bar_style">Barra di avanzamento del player</string>
+    <string name="settings_progress_bar_style_wavy">Ondulata</string>
+    <string name="settings_progress_bar_style_linear">Lineare</string>
+    <string name="settings_progress_bar_size">Dimensione barra: <xliff:g id="size" example="4">%1$d</xliff:g> dp</string>
+    <string name="settings_auto_download_favorites">Scarica automaticamente i preferiti</string>
+    <string name="settings_auto_download_favorites_desc">Scarica in background anche ogni brano aggiunto ai preferiti</string>
+    <string name="settings_download_notifications">Notifiche di download</string>
+    <string name="settings_download_notifications_desc">Mostra una notifica in tempo reale con l’avanzamento durante il download dei brani</string>
+    <string name="settings_live_updates_title">Gli aggiornamenti live sono disattivati</string>
+    <string name="settings_live_updates_desc">Consenti gli aggiornamenti live nelle impostazioni delle notifiche per vedere l’avanzamento dei download come chip nella barra di stato</string>
+    <string name="settings_live_updates_action">Apri impostazioni</string>
+    <string name="player_cd_open_artist">Apri la pagina dell’artista</string>
+    <string name="player_cd_open_album">Apri la pagina dell’album</string>
+    <string name="snackbar_no_album_for_track">Nessun album per questa traccia</string>
+    <string name="settings_volume_slider">Cursore del volume</string>
+    <string name="settings_volume_slider_desc">Mostra un cursore del volume accanto alla copertina nel player</string>
+    <string name="settings_volume_button">Pulsante del volume</string>
+    <string name="settings_volume_button_desc">Mostra un pulsante del volume che apre un controllo a schermo intero</string>
+    <string name="settings_show_debug_info">Mostra info di debug</string>
+    <string name="settings_show_debug_info_desc">Sostituisce il carosello delle copertine del player con un overlay di debug</string>
+    <string name="settings_keep_screen_open">Schermo attivo mentre l’app è aperta</string>
+    <string name="settings_keep_screen_open_desc">Impedisce il blocco dello schermo mentre l’app è aperta</string>
+    <string name="settings_keep_screen_only_playing">Solo durante la riproduzione</string>
+    <string name="settings_keep_screen_only_playing_desc">Limita il wake-lock ai momenti in cui la musica è effettivamente in riproduzione</string>
+    <string name="settings_search_history">Cronologia di ricerca</string>
+    <string name="settings_search_history_desc">Salva le ricerche recenti per un accesso rapido</string>
+    <string name="settings_search_history_per_source">Interruttori per sorgente</string>
+    <string name="settings_search_history_clear_all">Cancella la cronologia di ricerca</string>
+    <string name="settings_search_history_cleared">Tutte le cronologie di ricerca cancellate</string>
+    <string name="settings_search_history_source_local">Locale</string>
+    <string name="settings_version">Versione</string>
+    <string name="settings_license">Rilasciata con licenza <xliff:g id="license">GPLv3</xliff:g></string>
+    <string name="settings_open_repository">Apri il repository</string>
+    <string name="settings_check_for_updates">Cerca aggiornamenti</string>
+    <string name="settings_report_issue">Segnala un problema</string>
+    <string name="settings_update_no_update">Hai già l’ultima versione</string>
+    <string name="settings_update_check_failed">Impossibile verificare gli aggiornamenti</string>
+    <string name="settings_update_available_title">Aggiornamento disponibile</string>
+    <string name="settings_update_available_text">È disponibile la versione <xliff:g id="version" example="0.4.71">%1$s</xliff:g>. Scaricarla e installarla ora?</string>
+    <string name="settings_update_whats_new">Novità</string>
+    <string name="settings_update_download_action">Scarica e installa</string>
+    <string name="settings_update_downloading">Download di <xliff:g id="version" example="0.4.71">%1$s</xliff:g>…</string>
+    <string name="settings_update_install_failed">Impossibile aprire il programma di installazione</string>
+    <string name="settings_update_download_failed">Download non riuscito</string>
+    <string name="settings_auto_update_title">Controllo automatico degli aggiornamenti</string>
+    <string name="settings_auto_update_desc">Controlla all’avvio se c’è una build più recente e propone di installarla. L’app è in sviluppo molto intenso, a volte con più aggiornamenti al giorno, quindi è fortemente consigliato lasciarlo attivo. Puoi sempre controllare manualmente qui sopra.</string>
+    <string name="settings_storage_limit_unlimited">Limite di archiviazione: illimitato</string>
+    <string name="settings_storage_limit_mb">Limite di archiviazione: <xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
+    <string name="settings_storage_limit_gb">Limite di archiviazione: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
+    <string name="settings_sign_in_bandcamp">Accedi a <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="settings_sign_in_youtube">Accedi a <xliff:g id="brand">YouTube Music</xliff:g></string>
+    <string name="local_search_placeholder">Cerca nella musica locale…</string>
+    <string name="local_scan_title">Scansiona la tua musica</string>
+    <string name="local_scan_subtitle">Trova e riproduci la musica salvata sul tuo dispositivo</string>
+    <string name="local_enable">Attiva la musica locale</string>
+    <string name="local_scanning">Scansione della tua musica…</string>
+    <string name="local_cd_mix">Mix</string>
+    <string name="local_tab_favorites">Preferiti</string>
+    <string name="local_tab_all">Tutti</string>
+    <string name="local_tab_artists">Artisti</string>
+    <string name="local_tab_albums">Album</string>
+    <string name="local_tab_tracks">Brani</string>
+    <string name="local_play_next">Riproduci dopo</string>
+    <string name="local_delete_song_title">Elimina brano</string>
+    <string name="local_delete_song_text">Eliminare “<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”? L’operazione non può essere annullata.</string>
+    <string name="local_reverse_order">Inverti ordine</string>
+    <string name="local_no_local_music">Nessuna musica locale</string>
+    <string name="local_no_local_music_subtitle">Scegli una cartella nelle Impostazioni per scansionare i tuoi file musicali</string>
+    <string name="local_sort_by">Ordina per</string>
+    <string name="local_filter_by_artist">Filtra per artista</string>
+    <string name="local_filter_by_album">Filtra per album</string>
+    <string name="local_filter_by_folder">Filtra per cartella</string>
+    <string name="local_filter_artist">Artista</string>
+    <string name="local_filter_artist_count">Artista (<xliff:g id="count" example="3">%1$d</xliff:g>)</string>
+    <string name="local_filter_album">Album</string>
+    <string name="local_filter_album_count">Album (<xliff:g id="count" example="3">%1$d</xliff:g>)</string>
+    <string name="local_filter_folder">Cartella</string>
+    <string name="local_filter_folder_count">Cartella (<xliff:g id="count" example="3">%1$d</xliff:g>)</string>
+    <string name="local_filter_unknown_artist">Artista sconosciuto</string>
+    <string name="local_filter_unknown_album">Album sconosciuto</string>
+    <string name="local_add_to_playlist">Aggiungi a playlist</string>
+    <string name="settings_local_keep_sort">Mantieni l’ordinamento tra un avvio e l’altro</string>
+    <string name="settings_local_keep_sort_desc">Ripristina l’ordinamento della scheda Locale (e l’inversione) alla riapertura dell’app</string>
+    <string name="settings_local_keep_filters">Mantieni i filtri tra un avvio e l’altro</string>
+    <string name="settings_local_keep_filters_desc">Ripristina i chip di artista, album, cartella, durata e solo preferiti della scheda Locale alla riapertura dell’app</string>
+    <string name="common_search_failed">Ricerca non riuscita</string>
+    <string name="common_no_results_title">Nessun risultato</string>
+    <string name="common_no_results_subtitle">Prova con un altro termine di ricerca</string>
+    <string name="bandcamp_search_placeholder">Cerca su <xliff:g id="brand">Bandcamp</xliff:g>…</string>
+    <string name="bandcamp_tab_all">Tutti</string>
+    <string name="bandcamp_tab_artists">Artisti</string>
+    <string name="bandcamp_tab_albums">Album</string>
+    <string name="bandcamp_tab_tracks">Brani</string>
+    <string name="bandcamp_discover">Scopri</string>
+    <string name="bandcamp_more">Altro</string>
+    <string name="bandcamp_something_went_wrong">Qualcosa è andato storto</string>
+    <string name="bandcamp_type_artist">Artista</string>
+    <string name="bandcamp_type_local">Locale</string>
+    <string name="youtube_search_placeholder">Cerca su <xliff:g id="brand">YouTube</xliff:g>…</string>
+    <string name="youtube_tab_all">Tutti</string>
+    <string name="youtube_tab_artists">Artisti</string>
+    <string name="youtube_tab_playlists">Playlist</string>
+    <string name="youtube_tab_tracks">Brani</string>
+    <string name="ytm_section_trending">Tendenze del momento</string>
+    <string name="ytm_section_discover">Scopri: <xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
+    <string name="ytm_section_recommended">Consigliati per te</string>
+    <string name="ytm_section_because_listened">Perché hai ascoltato <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g></string>
+    <string name="error_import_playlist">Impossibile importare la playlist: <xliff:g id="reason" example="network error">%1$s</xliff:g></string>
+    <string name="mood_chill">Relax</string>
+    <string name="mood_energize">Energia</string>
+    <string name="mood_focus">Focus</string>
+    <string name="mood_feel_good">Buonumore</string>
+    <string name="mood_party">Festa</string>
+    <string name="mood_sad">Malinconia</string>
+    <string name="mood_workout">Allenamento</string>
+    <string name="mood_sleep">Sonno</string>
+    <string name="mood_romance">Romantica</string>
+    <string name="mood_commute">Viaggio</string>
+    <string name="mood_gaming">Gaming</string>
+    <string name="genre_pop">Pop</string>
+    <string name="genre_rock">Rock</string>
+    <string name="genre_hiphop">Hip-hop</string>
+    <string name="genre_rnb_soul">R&amp;B e Soul</string>
+    <string name="genre_jazz">Jazz</string>
+    <string name="genre_electronic">Elettronica</string>
+    <string name="genre_classical">Classica</string>
+    <string name="genre_country">Country</string>
+    <string name="genre_metal">Metal</string>
+    <string name="genre_blues">Blues</string>
+    <string name="genre_indie">Indie</string>
+    <string name="genre_folk">Folk</string>
+    <string name="genre_reggae">Reggae</string>
+    <string name="genre_funk">Funk</string>
+    <string name="genre_punk">Punk</string>
+    <string name="genre_lofi">Lo-fi</string>
+    <string name="genre_latin">Latina</string>
+    <string name="genre_kpop">K-Pop</string>
+    <string name="genre_jpop">J-Pop</string>
+    <string name="genre_afrobeats">Afrobeats</string>
+    <string name="genre_bollywood">Bollywood</string>
+    <string name="genre_arabic">Araba</string>
+    <string name="genre_french_pop">Pop francese</string>
+    <string name="genre_ambient">Ambient</string>
+    <string name="genre_phonk">Phonk</string>
+    <string name="genre_drill">Drill</string>
+    <string name="genre_trap">Trap</string>
+    <string name="genre_dnb">Drum &amp; Bass</string>
+    <string name="genre_house">House</string>
+    <string name="genre_techno">Techno</string>
+    <string name="genre_trance">Trance</string>
+    <string name="genre_shoegaze">Shoegaze</string>
+    <string name="genre_post_punk">Post-punk</string>
+    <string name="genre_grunge">Grunge</string>
+    <string name="genre_ska">Ska</string>
+    <string name="genre_gospel">Gospel</string>
+    <string name="genre_amapiano">Amapiano</string>
+    <string name="genre_bossa_nova">Bossa nova</string>
+    <string name="genre_cumbia">Cumbia</string>
+    <string name="genre_salsa">Salsa</string>
+    <string name="genre_80s">Hit anni 80</string>
+    <string name="genre_90s">Hit anni 90</string>
+    <string name="genre_2000s">Hit anni 2000</string>
+    <string name="genre_soundtracks">Colonne sonore</string>
+    <string name="genre_musical_theater">Musical</string>
+    <string name="genre_vgm">OST videogiochi</string>
+    <string name="library_title">Libreria</string>
+    <string name="library_pin">Fissa</string>
+    <string name="library_unpin">Sblocca</string>
+    <string name="library_modify">Modifica</string>
+    <string name="library_change_shape">Cambia forma</string>
+    <string name="library_remove_from_library">Rimuovi dalla libreria</string>
+    <string name="library_album_label">Album · <xliff:g id="artist" example="The Valves">%1$s</xliff:g></string>
+    <string name="library_artist_label">Artista</string>
+    <string name="library_empty_title">La tua libreria è vuota</string>
+    <string name="library_empty_subtitle">Le tue playlist e i tuoi preferiti appariranno qui</string>
+    <string name="library_delete_playlist_title">Elimina playlist</string>
+    <string name="library_delete_playlist_text">Eliminare “<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>”? L’operazione non può essere annullata.</string>
+    <string name="library_remove_title">Rimuovi dalla libreria</string>
+    <string name="library_remove_text">Rimuovere “<xliff:g id="item" example="Night Drive">%1$s</xliff:g>” dalla libreria? Verrà rimosso anche dai preferiti.</string>
+    <string name="playlist_new">Nuova playlist</string>
+    <string name="playlist_edit">Modifica playlist</string>
+    <string name="playlist_name_label">Nome</string>
+    <string name="playlist_shape">Forma</string>
+    <string name="playlist_cover">Copertina</string>
+    <string name="playlist_cd_no_cover">Nessuna copertina</string>
+    <string name="playlist_cd_album_art">Copertina dell’album</string>
+    <string name="playlist_auto">Playlist automatica</string>
+    <string name="playlist_cd_pinned">Fissata</string>
+    <string name="playlist_cd_all_downloaded">Tutti i brani scaricati</string>
+    <string name="playlist_cd_play_all">Riproduci tutto</string>
+    <string name="playlist_cd_download_all">Scarica tutto</string>
+    <string name="playlist_default_title">Playlist</string>
+    <string name="playlist_fallback_name">playlist</string>
+    <string name="playlist_error_load">Impossibile caricare la playlist</string>
+    <string name="playlist_error_remove_track">Impossibile rimuovere la traccia</string>
+    <string name="playlist_error_move_track">Impossibile spostare la traccia</string>
+    <string name="playlist_empty_system_title">Ancora nessun brano</string>
+    <string name="playlist_empty_custom_title">Playlist vuota</string>
+    <string name="playlist_empty_system_subtitle">I brani appariranno qui automaticamente</string>
+    <string name="playlist_empty_custom_subtitle">Aggiungi brani per iniziare</string>
+    <string name="detail_tracks_label">Brani</string>
+    <string name="label_count_duration"><xliff:g id="count" example="5 tracks">%1$s</xliff:g>  ·  <xliff:g id="duration" example="23 min">%2$s</xliff:g></string>
+    <string name="metadata_separator">"  ·  "</string>
+    <string name="metadata_separator_compact">" · "</string>
+    <string name="detail_duration_minutes"><xliff:g id="minutes" example="23">%1$d</xliff:g> min</string>
+    <string name="detail_duration_hours_only"><xliff:g id="hours" example="2">%1$d</xliff:g> h</string>
+    <string name="detail_duration_hours_minutes"><xliff:g id="hours" example="2">%1$d</xliff:g> h <xliff:g id="minutes" example="5">%2$d</xliff:g> min</string>
+    <string name="detail_buy_full_discography">Acquista la discografia completa</string>
+    <string name="detail_buy_full_discography_priced">Acquista la discografia completa (<xliff:g id="price" example="$8.00">%1$s</xliff:g>)</string>
+    <string name="detail_buy_this_album_priced">Acquista questo album (<xliff:g id="price" example="$8.00">%1$s</xliff:g>)</string>
+    <string name="detail_buy_single_track_priced">Acquista una singola traccia (<xliff:g id="price" example="$1.00">%1$s</xliff:g>)</string>
+    <string name="detail_delete_downloads_title">Elimina download</string>
+    <string name="detail_delete_download_title">Elimina download</string>
+    <string name="detail_error_load_album">Impossibile caricare l’album</string>
+    <string name="detail_error_load_artist">Impossibile caricare l’artista</string>
+    <string name="detail_error_load_playlist">Impossibile caricare la playlist</string>
+    <string name="detail_error_load_collection">Impossibile caricare la raccolta</string>
+    <string name="detail_delete_album_downloads_text">Rimuovere tutte le tracce scaricate di “<xliff:g id="album" example="Night Drive">%1$s</xliff:g>”?</string>
+    <string name="detail_delete_track_download_text">Rimuovere il file scaricato di “<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”?</string>
+    <string name="detail_delete_artist_downloads_text">Rimuovere tutte le tracce scaricate di <xliff:g id="artist" example="The Valves">%1$s</xliff:g>?</string>
+    <string name="detail_delete_playlist_downloads_text">Eliminare tutte le tracce scaricate di questa playlist?</string>
+    <string name="detail_cd_remove_favorites">Rimuovi dai preferiti</string>
+    <string name="detail_cd_add_favorites">Aggiungi ai preferiti</string>
+    <string name="detail_cd_delete_album_downloads">Elimina i download dell’album</string>
+    <string name="detail_cd_download_album">Scarica album</string>
+    <string name="detail_cd_delete_all_downloads">Elimina tutti i download</string>
+    <string name="detail_cd_download_all">Scarica tutto</string>
+    <string name="detail_cd_delete_downloads">Elimina download</string>
+    <string name="detail_show_more">Mostra altro</string>
+    <string name="detail_show_less">Mostra meno</string>
+    <string name="detail_buy_on_bandcamp">Acquista su <xliff:g id="brand">Bandcamp</xliff:g></string>
+    <string name="detail_buy_more_options">Altre opzioni di acquisto</string>
+    <string name="detail_send_as_gift">Invia come regalo</string>
+    <string name="detail_cd_open_artist">Apri la pagina dell’artista</string>
+    <string name="detail_tags">Tag</string>
+    <string name="detail_discography">Discografia</string>
+    <string name="detail_no_releases">Ancora nessuna uscita</string>
+    <string name="search_recent">Ricerche recenti</string>
+    <string name="search_clear_all">Cancella tutto</string>
+    <string name="search_cd_remove">Rimuovi</string>
+    <string name="shape_choose">Scegli forma</string>
+    <string name="shape_clover">Quadrifoglio</string>
+    <string name="shape_heart">Cuore</string>
+    <string name="shape_cookie">Biscotto</string>
+    <string name="shape_burst">Esplosione</string>
+    <string name="shape_pentagon">Pentagono</string>
+    <string name="shape_gem">Gemma</string>
+    <string name="shape_flower">Fiore</string>
+    <string name="shape_pill">Pillola</string>
+    <string name="shape_ghost">Fantasma</string>
+    <string name="shape_slanted">Inclinata</string>
+    <string name="shape_circle">Cerchio</string>
+    <string name="shape_triangle">Triangolo</string>
+    <string name="shape_sunny">Sole</string>
+    <string name="shape_arch">Arco</string>
+    <string name="audio_format_flac">FLAC (lossless)</string>
+    <string name="sort_title_az">Titolo A–Z</string>
+    <string name="sort_artist_az">Artista A–Z</string>
+    <string name="sort_album_az">Album A–Z</string>
+    <string name="sort_shortest">Prima i più corti</string>
+    <string name="sort_longest">Prima i più lunghi</string>
+    <string name="sort_date_added">Data di aggiunta</string>
+    <string name="sort_release_year">Anno di uscita</string>
+    <string name="duration_under_3">Meno di 3 min</string>
+    <string name="duration_3_to_5">3–5 min</string>
+    <string name="duration_over_5">Più di 5 min</string>
+    <string name="storage_info">Download: <xliff:g id="downloads" example="1.2 GB">%1$s</xliff:g>, Cache: <xliff:g id="cache" example="300 MB">%2$s</xliff:g>, Liberi: <xliff:g id="free" example="12 GB">%3$s</xliff:g></string>
+    <string name="error_unknown">Errore sconosciuto</string>
+    <string name="error_unknown_source">Sorgente sconosciuta: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
+    <string name="error_source_no_collections">Questa sorgente non può mostrare raccolte</string>
+    <string name="error_load_page">Impossibile caricare la pagina</string>
+    <string name="snackbar_downloaded">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” scaricato</string>
+    <string name="snackbar_deleted">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” eliminato</string>
+    <string name="snackbar_deleted_downloads_for">Download di “<xliff:g id="item" example="Night Drive">%1$s</xliff:g>” eliminati</string>
+    <string name="snackbar_downloaded_all_in">Scaricate tutte le tracce di <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="snackbar_download_failed">Download non riuscito</string>
+    <string name="snackbar_delete_failed">Eliminazione non riuscita</string>
+    <string name="snackbar_added_to_playlist">Aggiunto a <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
+    <string name="snackbar_add_to_playlist_failed">Impossibile aggiungere alla playlist</string>
+    <string name="snackbar_create_playlist_failed">Impossibile creare la playlist</string>
+    <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” verrà riprodotto dopo</string>
+    <string name="snackbar_audio_stream_failed">Impossibile caricare lo stream audio</string>
+    <string name="snackbar_scan_failed">Scansione non riuscita: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+</resources>

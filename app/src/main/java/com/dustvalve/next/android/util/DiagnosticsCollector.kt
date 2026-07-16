@@ -20,7 +20,7 @@ import javax.inject.Singleton
  * surface (and the helpers are annotated @RequiresApi(R) to keep lint happy
  * after the early-return guard).
  *
- * Pure logging + on-disk dump. No UI, no telemetry — the diagnostics file
+ * Pure logging + on-disk dump. No UI, no telemetry - the diagnostics file
  * lives under filesDir/diagnostics/exit-info-<timestamp>.txt and can be
  * pulled with `adb pull` for offline review.
  *
@@ -37,7 +37,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
      * Bounded to 5 entries so we don't spam logcat after a long uptime.
      * No-op on pre-API 30.
      */
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
     fun collectOnColdStart() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
         try {
@@ -52,7 +52,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "collectOnColdStart: invalid package/pid", iae)
         } catch (t: Throwable) {
-            // Robolectric throws NPE here too — never crash the app for
+            // Robolectric throws NPE here too - never crash the app for
             // best-effort diagnostics that the host JVM can't deliver.
             Log.w(TAG, "collectOnColdStart: platform unavailable", t)
         }

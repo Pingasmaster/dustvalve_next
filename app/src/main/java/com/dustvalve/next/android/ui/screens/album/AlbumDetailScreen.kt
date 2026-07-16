@@ -1,8 +1,3 @@
-// slack-lints DeprecatedCall flags FlowRow by name (only the overflow-param
-// overload is @Deprecated). Our call uses the non-deprecated overload;
-// kotlinc emits no warning. Suppress at file level.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.screens.album
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -11,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,6 +70,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
@@ -103,12 +98,13 @@ fun AlbumDetailScreen(
     }
 
     val snackbarText = state.snackbarMessage?.asString()
+    val retryLabel = stringResource(R.string.common_action_retry)
     LaunchedEffect(snackbarText) {
         snackbarText?.let { message ->
             try {
                 val result = snackbarHostState.showSnackbar(
                     message = message,
-                    actionLabel = if (state.isSnackbarError) "Retry" else null,
+                    actionLabel = if (state.isSnackbarError) retryLabel else null,
                 )
                 if (result == SnackbarResult.ActionPerformed) {
                     viewModel.retryAction?.invoke()
@@ -205,7 +201,7 @@ fun AlbumDetailScreen(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
         // Pull the property into a local val so the `album != null` smart-cast
-        // works inside the matching branch — Kotlin can't smart-cast through a
+        // works inside the matching branch - Kotlin can't smart-cast through a
         // property access in a `when` clause.
         val album = state.album
         when {
@@ -229,7 +225,7 @@ fun AlbumDetailScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = state.error ?: stringResource(R.string.detail_error_load_album),
+                            text = state.error?.asString() ?: stringResource(R.string.detail_error_load_album),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -265,7 +261,7 @@ fun AlbumDetailScreen(
                         }
                     }
 
-                    // Optional release date — name + artist live in the
+                    // Optional release date - name + artist live in the
                     // LargeFlexibleTopAppBar above, so we drop the overlay
                     // text and the artist link here. The "Artist" icon button
                     // in the action group below handles navigation to the
@@ -284,7 +280,7 @@ fun AlbumDetailScreen(
                         }
                     }
 
-                    // Action bar — connected M3E button group, offset so its
+                    // Action bar - connected M3E button group, offset so its
                     // vertical centre lands on the cover's bottom edge.
                     item(key = "actions") {
                         val allTracksDownloaded = album.tracks.isNotEmpty() &&
@@ -294,6 +290,7 @@ fun AlbumDetailScreen(
                             isDownloading = state.isDownloading,
                             allTracksDownloaded = allTracksDownloaded,
                             artistEnabled = album.artistUrl.isNotBlank(),
+                            hasTracks = album.tracks.isNotEmpty(),
                             onPlayAll = {
                                 if (album.tracks.isNotEmpty()) {
                                     playerViewModel.playAlbum(album.tracks, 0)
@@ -395,7 +392,7 @@ fun AlbumDetailScreen(
                         }
                     }
 
-                    // Bandcamp-only "Buy" split CTA — opens the album page in
+                    // Bandcamp-only "Buy" split CTA - opens the album page in
                     // the default browser. Trailing chevron exposes "Send as
                     // a gift" and, when the artist offers a buy-full-
                     // discography bundle, an "Buy full discography (price)"
@@ -434,7 +431,7 @@ fun AlbumDetailScreen(
                                         style = MaterialTheme.typography.titleMediumEmphasized,
                                         modifier = Modifier.padding(bottom = 12.dp),
                                     )
-                                    FlowRow(
+                                    AppFlowRow(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
                                     ) {
@@ -470,8 +467,8 @@ private fun ExpandableAbout(about: String) {
 
 /**
  * Connected M3E button-group action bar for album detail. Layout:
- * [Play all (weighted, primary filled)] · [Shuffle] · [Favorite (toggle)]
- *  · [Artist] · [Download].
+ * [Play all (weighted, primary filled)] / [Shuffle] / [Favorite (toggle)]
+ *  / [Artist] / [Download].
  * Items are spaced by 8dp (wider than the default 2dp) so each button's
  * connected shape morphs are clearly distinct visually; first + last carry
  * the connected leading/trailing shapes, middles share the middle shape.
@@ -483,6 +480,7 @@ private fun AlbumActionBar(
     isDownloading: Boolean,
     allTracksDownloaded: Boolean,
     artistEnabled: Boolean,
+    hasTracks: Boolean,
     onPlayAll: () -> Unit,
     onShuffle: () -> Unit,
     onToggleFavorite: () -> Unit,
@@ -498,12 +496,13 @@ private fun AlbumActionBar(
     ) {
         Button(
             onClick = onPlayAll,
+            enabled = hasTracks,
             shape = ButtonGroupDefaults.connectedLeadingButtonShapes().shape,
             modifier = Modifier
                 .weight(1f)
                 .heightIn(min = 56.dp),
         ) {
-            // 24 dp icon (default) — the legacy `ButtonDefaults.IconSize` (18 dp)
+            // 24 dp icon (default) - the legacy `ButtonDefaults.IconSize` (18 dp)
             // sized this smaller than every other action-bar icon, breaking
             // visual parity with the icon-only siblings.
             Icon(
@@ -524,7 +523,7 @@ private fun AlbumActionBar(
             )
         }
 
-        // Artist navigation — between Shuffle and Favorite, icon-only.
+        // Artist navigation - between Shuffle and Favorite, icon-only.
         FilledTonalButton(
             onClick = onOpenArtist,
             enabled = artistEnabled,
@@ -559,7 +558,7 @@ private fun AlbumActionBar(
         }
 
         // Download is a toggle (not a one-shot button) so it picks up the
-        // M3E shape morph + tonal-on-checked container styling — matches the
+        // M3E shape morph + tonal-on-checked container styling - matches the
         // Favorite button's interaction language. While the download is in
         // flight, swap the icon for a circular wavy progress indicator.
         ToggleButton(
@@ -607,12 +606,12 @@ private val ActionBarSpacing = 8.dp
  * Leading button shows the active offer's formatted price + shopping-bag
  * icon; tapping opens that offer's URL in the user's browser. Trailing
  * chevron opens a DropdownMenu with:
- *   - "Send as a gift" — opens the same URL (Bandcamp's gift flow lives
+ *   - "Send as a gift" - opens the same URL (Bandcamp's gift flow lives
  *     inside the page itself).
- *   - "Buy full discography (price)" — present only when the album's
+ *   - "Buy full discography (price)" - present only when the album's
  *     [discographyOffer] is non-null. Selecting it switches the leading
  *     button's price + URL to the bundle.
- *   - "Buy this album (price)" — only visible when discography is
+ *   - "Buy this album (price)" - only visible when discography is
  *     currently selected, lets the user revert to the per-album offer.
  *
  * The DropdownMenu lives inside the trailing-button slot so the popup
@@ -701,12 +700,12 @@ private fun BuyOnBandcampSplitButton(
                                 onOpen(activeUrl)
                             },
                         )
-                        // Switch-to options — only show the modes we're not
+                        // Switch-to options - only show the modes we're not
                         // already on and that are actually available.
                         if (activeMode != "album" && albumPrice != null) {
                             androidx.compose.material3.DropdownMenuItem(
                                 text = {
-                                    Text("${stringResource(R.string.detail_buy_this_album)} (${formatPrice(albumPrice)})")
+                                    Text(stringResource(R.string.detail_buy_this_album_priced, formatPrice(albumPrice)))
                                 },
                                 onClick = {
                                     menuOpen = false
@@ -717,7 +716,7 @@ private fun BuyOnBandcampSplitButton(
                         if (activeMode != "track" && singleTrackPrice != null) {
                             androidx.compose.material3.DropdownMenuItem(
                                 text = {
-                                    Text("${stringResource(R.string.detail_buy_single_track)} (${formatPrice(singleTrackPrice)})")
+                                    Text(stringResource(R.string.detail_buy_single_track_priced, formatPrice(singleTrackPrice)))
                                 },
                                 onClick = {
                                     menuOpen = false
@@ -751,10 +750,10 @@ private fun BuyOnBandcampSplitButton(
 /**
  * Formats an [com.dustvalve.next.android.domain.model.AlbumPrice] using the
  * platform's `NumberFormat.getCurrencyInstance(Locale.ENGLISH)` with the
- * supplied ISO currency code, yielding "$8.00", "£9.99", "CA$11.11", etc.
+ * supplied ISO currency code, yielding "$8.00", "GBP 9.99", "CA$11.11", etc.
  *
  * Falls back to "<symbol> <amount>" if the currency code isn't recognized
- * by the JVM's `java.util.Currency` (defensive — bandcamp ships ISO codes).
+ * by the JVM's `java.util.Currency` (defensive - bandcamp ships ISO codes).
  */
 private fun formatPrice(price: com.dustvalve.next.android.domain.model.AlbumPrice): String = try {
     val nf = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.ENGLISH)

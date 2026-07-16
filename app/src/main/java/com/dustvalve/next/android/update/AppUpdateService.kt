@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
 import com.dustvalve.next.android.BuildConfig
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -31,15 +33,19 @@ import kotlin.coroutines.coroutineContext
  * WorkManager job). It runs on a silent cold-start check fired from
  * [com.dustvalve.next.android.DustvalveNextApplication.onCreate] via
  * [AppUpdateController.checkSilently], and on the manual "Search for updates"
- * button in Settings → About. The cold-start check can be turned off with the
- * "Automatic update checks" toggle (Settings → About); the manual button never.
+ * button in Settings -> About. The cold-start check can be turned off with the
+ * "Automatic update checks" toggle (Settings -> About); the manual button never.
  */
 @Singleton
-open class AppUpdateService @Inject constructor(private val client: OkHttpClient, @param:ApplicationContext private val context: Context) {
+open class AppUpdateService @Inject constructor(
+    private val client: OkHttpClient,
+    @param:ApplicationContext private val context: Context,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
 
     /**
      * Overridable in tests so MockWebServer can answer the releases GET.
-     * Production is the GitHub Releases listing — returned in reverse
+     * Production is the GitHub Releases listing - returned in reverse
      * chronological order (newest first) by the API.
      */
     protected open val releasesUrl: String =
@@ -86,7 +92,7 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
      *         GitHub is the same or older than the installed build.
      * @throws IOException on network or parse failure.
      */
-    open suspend fun checkForUpdate(): AvailableUpdate? = withContext(Dispatchers.IO) {
+    open suspend fun checkForUpdate(): AvailableUpdate? = withContext(ioDispatcher) {
         val request = Request.Builder()
             .url(releasesUrl)
             .header("Accept", "application/vnd.github.v3+json")
@@ -101,19 +107,21 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
 
         // Pre-alpha: every CI build ships as a GitHub prerelease, so we
         // MUST include them here. Drafts (unpublished) are still skipped.
-        // Each release ships TWO apks: dustvalve_next.apk (legacy-android8,
-        // Android 8-16) and dustvalve_next-future.apk (this modern build,
-        // Android 17). Match ONLY the future asset so Android 17 installs
-        // never download the legacy APK. Releases without the future asset
-        // are skipped: nothing to install.
+        // Each release ships TWO apks:
+        //   dustvalve_next.apk         -> this legacy build (Android 8-16)
+        //   dustvalve_next-future.apk  -> the master/Android 17 build
+        // Match ONLY the legacy asset so legacy installs never download the
+        // Android 17 APK (minSdk 37 - uninstallable on the devices this
+        // branch exists for). Releases without the legacy asset are skipped:
+        // nothing to install.
         val latest = releases.firstOrNull { release ->
-            !release.draft && release.assets.any { it.name == FUTURE_APK_ASSET }
+            !release.draft && release.assets.any { it.name == LEGACY_APK_ASSET }
         } ?: return@withContext null
 
         val latestVersion = latest.tagName.removePrefix("v")
         if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
-        val apkAsset = latest.assets.first { it.name == FUTURE_APK_ASSET }
+        val apkAsset = latest.assets.first { it.name == LEGACY_APK_ASSET }
         AvailableUpdate(
             versionName = latestVersion,
             apkDownloadUrl = apkAsset.browserDownloadUrl,
@@ -160,7 +168,7 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
             tempFile.copyTo(targetFile, overwrite = true)
             tempFile.delete()
         }
-    }.flowOn(Dispatchers.IO)
+    }.flowOn(ioDispatcher)
 
     /**
      * Hands the downloaded APK to the system installer via FileProvider.
@@ -184,8 +192,8 @@ open class AppUpdateService @Inject constructor(private val client: OkHttpClient
     companion object {
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
 
-        /** GitHub-release asset name produced by the `build-modern` workflow job (master → Android 17 build). */
-        const val FUTURE_APK_ASSET = "dustvalve_next-future.apk"
+        /** GitHub-release asset name produced by the `build-legacy` workflow job (legacy-android8 -> Android 8-16 build). */
+        const val LEGACY_APK_ASSET = "dustvalve_next.apk"
 
         /** True when [remote] is a strictly higher dotted-int version than [local]. */
         fun isNewer(remote: String, local: String): Boolean {

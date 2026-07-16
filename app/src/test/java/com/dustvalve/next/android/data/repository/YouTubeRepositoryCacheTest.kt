@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.repository
 
 import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
@@ -18,6 +20,7 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonObject
 import org.junit.Before
@@ -64,6 +67,7 @@ class YouTubeRepositoryCacheTest {
         repo = YouTubeRepositoryImpl(
             client, playerParser, searchParser, playlistParser, channelParser, nextParser,
             videoCache, playlistCache, ytmRepo,
+            ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
 
@@ -75,7 +79,7 @@ class YouTubeRepositoryCacheTest {
             artistUrl = "https://www.youtube.com/channel/UCx",
             durationSec = 233f,
             artUrl = "https://i.ytimg.com/vi/abc12345678/hqdefault.jpg",
-            albumLookupDone = true, // Already-resolved row — fully complete cache hit.
+            albumLookupDone = true, // Already-resolved row - fully complete cache hit.
         )
 
         val track = repo.getTrackInfo("https://www.youtube.com/watch?v=abc12345678")
@@ -119,7 +123,7 @@ class YouTubeRepositoryCacheTest {
         coEvery { videoCache.getById(any()) } returns null
         coEvery { client.player(any()) } returns JsonObject(emptyMap())
         every { playerParser.parseTrack(any(), any()) } returns sampleTrack("yt_okvideo123")
-        // Persist throws — the user-facing getTrackInfo must not propagate.
+        // Persist throws - the user-facing getTrackInfo must not propagate.
         coEvery { videoCache.insert(any()) } throws RuntimeException("disk full")
 
         val track = repo.getTrackInfo("https://www.youtube.com/watch?v=okvideo1234")
@@ -132,7 +136,7 @@ class YouTubeRepositoryCacheTest {
             playlistId = playlistId,
             title = "My Playlist",
             videoIdsJson = "[\"vid00000001\",\"vid00000002\"]",
-            cachedAt = System.currentTimeMillis(), // Fresh — no background revalidate.
+            cachedAt = System.currentTimeMillis(), // Fresh - no background revalidate.
         )
         coEvery { videoCache.getByIds(listOf("vid00000001", "vid00000002")) } returns listOf(
             YouTubeVideoCacheEntity(
@@ -162,7 +166,7 @@ class YouTubeRepositoryCacheTest {
 
     @Test fun `getPlaylistTracks falls through to network when cache is incomplete`() = runTest {
         val playlistId = "PLincomplete"
-        // Snapshot says 2 videos, but only 1 is in the video cache → fall through.
+        // Snapshot says 2 videos, but only 1 is in the video cache -> fall through.
         coEvery { playlistCache.getById(playlistId) } returns YouTubePlaylistCacheEntity(
             playlistId = playlistId,
             title = "Stale",

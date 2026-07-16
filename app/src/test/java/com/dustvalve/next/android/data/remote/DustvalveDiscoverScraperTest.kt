@@ -1,6 +1,9 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote
 
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
@@ -15,7 +18,7 @@ class DustvalveDiscoverScraperTest {
 
     @Before fun setUp() {
         setup = TlsTestServer.start()
-        scraper = DustvalveDiscoverScraper(setup.client)
+        scraper = DustvalveDiscoverScraper(setup.client, UnconfinedTestDispatcher())
     }
 
     @After fun tearDown() {

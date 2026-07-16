@@ -62,6 +62,9 @@ fi
 # Default: full build (always starts with clean, includes test if available)
 acquire_lock
 
+# ASCII-only source policy: warn locally, CI enforces (see CLAUDE.md)
+./scripts/check_ascii.sh --warn
+
 GRADLE_APK="app/build/outputs/apk/release/app-release.apk"
 BUILD_GRADLE="app/build.gradle.kts"
 

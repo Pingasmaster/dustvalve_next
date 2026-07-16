@@ -1,12 +1,13 @@
-// slack-lints DeprecatedCall flags ButtonGroup by function name (other
-// overloads are @Deprecated). Our call resolves to the non-deprecated
-// overload; kotlinc agrees. Suppress at file level.
-@file:Suppress("DeprecatedCall")
-
 package com.dustvalve.next.android.ui.screens.youtube
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -35,12 +37,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroup
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,7 +59,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
@@ -90,8 +92,10 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
+import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -159,8 +163,9 @@ fun YouTubeScreen(
         }
     }
 
-    LaunchedEffect(state.error) {
-        val error = state.error ?: return@LaunchedEffect
+    val errorText = state.error?.asString()
+    LaunchedEffect(errorText) {
+        val error = errorText ?: return@LaunchedEffect
         if (state.results.isNotEmpty()) {
             try {
                 snackbarHostState.showSnackbar(error)
@@ -261,7 +266,7 @@ fun YouTubeScreen(
                     stringResource(R.string.youtube_tab_source_yt),
                     stringResource(R.string.youtube_tab_source_ytm),
                 )
-                ButtonGroup(
+                AppButtonGroup(
                     overflowIndicator = { _ -> },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -301,9 +306,11 @@ fun YouTubeScreen(
                             onChipSelected = viewModel::onYtmChipSelected,
                             onPlaySong = { song -> onPlayVideoId(song.videoId) },
                             onPlayHero = { hero ->
+                                val videoId = hero.videoId
+                                val playlistId = hero.playlistId
                                 when {
-                                    hero.videoId != null -> onPlayVideoId(hero.videoId)
-                                    hero.playlistId != null -> openPlaylistById(hero.playlistId, hero.title)
+                                    videoId != null -> onPlayVideoId(videoId)
+                                    playlistId != null -> openPlaylistById(playlistId, hero.title)
                                     else -> scope.launch { snackbarHostState.showSnackbar(failedLoadMsg) }
                                 }
                             },
@@ -332,7 +339,7 @@ fun YouTubeScreen(
 
                         YouTubeSource.YouTube -> YouTubeSourceContent(
                             state = state,
-                            onMoodSelected = viewModel::onMoodSelected,
+                            onMoodSelect = viewModel::onMoodSelected,
                             onPlayItem = onPlayItem,
                             onRetrySection = viewModel::retrySection,
                             onLoadMoreGenres = { viewModel.loadMoreGenres() },
@@ -416,7 +423,7 @@ fun YouTubeScreen(
                                     .padding(horizontal = 32.dp),
                             ) {
                                 Text(
-                                    text = state.error ?: stringResource(R.string.common_search_failed),
+                                    text = state.error?.asString() ?: stringResource(R.string.common_search_failed),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     textAlign = TextAlign.Center,
@@ -468,12 +475,7 @@ fun YouTubeScreen(
                                         shape = segmentedItemShape(index, state.results.size),
                                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                                         modifier = Modifier
-                                            .padding(
-                                                start = 16.dp,
-                                                end = 16.dp,
-                                                top = if (index == 0) 8.dp else 1.dp,
-                                                bottom = if (index == state.results.lastIndex) 0.dp else 1.dp,
-                                            )
+                                            .padding(segmentedItemPadding(index, state.results.size))
                                             .animateItem(
                                                 fadeInSpec = null,
                                                 fadeOutSpec = null,
@@ -523,13 +525,6 @@ fun YouTubeScreen(
                                             ),
                                     ) {
                                         ListItem(
-                                            headlineContent = {
-                                                Text(
-                                                    text = result.name,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                )
-                                            },
                                             supportingContent = {
                                                 result.artist?.let {
                                                     Text(
@@ -598,7 +593,13 @@ fun YouTubeScreen(
                                                 }
                                             },
                                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                        )
+                                        ) {
+                                            Text(
+                                                text = result.name,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        }
                                     }
                                 }
 
@@ -721,91 +722,125 @@ fun YouTubeScreen(
     }
 }
 
-// ── Reusable composables ────────────────────────────────────────────────
+// -- YouTube discover feed (Material 3 Expressive) -----------------------
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun YouTubeSourceContent(
     state: YouTubeUiState,
-    onMoodSelected: (String?) -> Unit,
+    onMoodSelect: (MoodChip?) -> Unit,
     onPlayItem: (SearchResult) -> Unit,
     onRetrySection: (String) -> Unit,
     onLoadMoreGenres: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
-        MoodChipRow(
-            selectedMood = state.selectedMood,
-            onMoodSelected = onMoodSelected,
-        )
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 16.dp),
+    ) {
+        item(key = "yt_moods") {
+            MoodToggleRow(
+                selectedMood = state.selectedMood,
+                onMoodSelect = onMoodSelect,
+            )
+        }
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 10.dp),
-        ) {
-            if (state.selectedMood != null) {
-                item(key = "mood_section") {
-                    val moodSection = DiscoverSection(
-                        title = "${state.selectedMood} music",
-                        items = state.moodResults,
-                        isLoading = state.isMoodLoading,
-                        error = state.moodError,
-                    )
-                    DiscoverCarouselSection(
-                        section = moodSection,
-                        onItemClick = onPlayItem,
-                        onRetry = { onMoodSelected(state.selectedMood) },
+        if (state.selectedMood != null) {
+            item(key = "yt_mood_header") {
+                Text(
+                    text = stringResource(state.selectedMood.labelRes),
+                    style = MaterialTheme.typography.displaySmallEmphasized,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 8.dp)
+                        .animateItem(),
+                )
+            }
+            when {
+                state.isMoodLoading -> item(key = "yt_mood_loading") {
+                    FeedSkeletonRow(modifier = Modifier.animateItem())
+                }
+
+                state.moodError != null -> item(key = "yt_mood_error") {
+                    FeedErrorCard(
+                        message = state.moodError.asString(),
+                        onRetry = { onMoodSelect(state.selectedMood) },
                         modifier = Modifier.animateItem(),
                     )
                 }
-            } else {
-                val recoSection = state.recommendationsSection
-                if (recoSection.isLoading || recoSection.items.isNotEmpty()) {
-                    item(key = "reco_section") {
-                        DiscoverCarouselSection(
-                            section = recoSection,
-                            onItemClick = onPlayItem,
-                            onRetry = { onRetrySection("recommendations") },
-                            modifier = Modifier.animateItem(),
-                        )
+
+                else -> itemsIndexed(
+                    items = state.moodResults.chunked(2),
+                    key = { index, _ -> "yt_mood_row_$index" },
+                ) { _, pair ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .animateItem(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        pair.forEach { item ->
+                            VideoGridCard(
+                                item = item,
+                                onClick = { onPlayItem(item) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (pair.size == 1) {
+                            Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
-
-                item(key = "trending_section") {
-                    DiscoverCarouselSection(
-                        section = state.trendingSection,
+            }
+        } else {
+            val reco = state.recommendationsSection
+            if (reco.isLoading || reco.items.isNotEmpty()) {
+                item(key = "yt_reco") {
+                    DiscoverShelf(
+                        section = reco,
                         onItemClick = onPlayItem,
-                        onRetry = { onRetrySection("trending") },
+                        onRetry = { onRetrySection("recommendations") },
                         modifier = Modifier.animateItem(),
                     )
                 }
+            }
 
-                itemsIndexed(
-                    items = state.genreSections,
-                    key = { index, _ -> "genre_$index" },
-                ) { index, section ->
-                    DiscoverCarouselSection(
-                        section = section,
-                        onItemClick = onPlayItem,
-                        onRetry = { onRetrySection("genre_$index") },
-                        modifier = Modifier.animateItem(),
-                    )
-                }
+            item(key = "yt_trending") {
+                DiscoverShelf(
+                    section = state.trendingSection,
+                    onItemClick = onPlayItem,
+                    onRetry = { onRetrySection("trending") },
+                    showHero = true,
+                    modifier = Modifier.animateItem(),
+                )
+            }
 
-                if (!state.genresExhausted) {
-                    item(key = "genre_loader") {
-                        LaunchedEffect(state.genreSections.size) {
-                            onLoadMoreGenres()
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp)
-                                .animateItem(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            ContainedLoadingIndicator()
-                        }
+            itemsIndexed(
+                items = state.genreSections,
+                key = { index, _ -> "yt_genre_$index" },
+            ) { index, section ->
+                DiscoverShelf(
+                    section = section,
+                    onItemClick = onPlayItem,
+                    onRetry = { onRetrySection("genre_$index") },
+                    modifier = Modifier.animateItem(),
+                )
+            }
+
+            if (!state.genresExhausted) {
+                item(key = "yt_genre_loader") {
+                    LaunchedEffect(state.genreSections.size) {
+                        onLoadMoreGenres()
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp)
+                            .animateItem(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        ContainedLoadingIndicator()
                     }
                 }
             }
@@ -813,156 +848,307 @@ private fun YouTubeSourceContent(
     }
 }
 
+// -- Mood filter row -----------------------------------------------------
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun MoodChipRow(selectedMood: String?, onMoodSelected: (String?) -> Unit, modifier: Modifier = Modifier) {
+private fun MoodToggleRow(selectedMood: MoodChip?, onMoodSelect: (MoodChip?) -> Unit, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         moodChips.forEach { chip ->
-            val isSelected = selectedMood == chip.label
-            FilterChip(
-                selected = isSelected,
-                onClick = { onMoodSelected(if (isSelected) null else chip.label) },
-                label = { Text(chip.label) },
+            val isSelected = selectedMood == chip
+            ToggleButton(
+                checked = isSelected,
+                onCheckedChange = { onMoodSelect(if (isSelected) null else chip) },
+            ) {
+                Text(stringResource(chip.labelRes), maxLines = 1)
+            }
+        }
+    }
+}
+
+// -- Discover shelf: header + hero/carousel with load & error states ----
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun DiscoverShelf(
+    section: DiscoverSection,
+    onItemClick: (SearchResult) -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+    showHero: Boolean = false,
+) {
+    Column(modifier = modifier) {
+        section.title?.let { title ->
+            Text(
+                text = title.asString(),
+                style = MaterialTheme.typography.titleLargeEmphasized,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
+        }
+
+        when {
+            section.isLoading -> FeedSkeletonRow()
+
+            section.error != null -> FeedErrorCard(message = section.error, onRetry = onRetry)
+
+            section.items.isNotEmpty() -> {
+                if (showHero) {
+                    VideoHeroCard(
+                        item = section.items.first(),
+                        onClick = { onItemClick(section.items.first()) },
+                    )
+                    if (section.items.size > 1) {
+                        Spacer(Modifier.height(12.dp))
+                        VideoCarousel(items = section.items.drop(1), onItemClick = onItemClick)
+                    }
+                } else {
+                    VideoCarousel(items = section.items, onItemClick = onItemClick)
+                }
+            }
+        }
+    }
+}
+
+// -- Video cards ---------------------------------------------------------
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun VideoHeroCard(item: SearchResult, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .aspectRatio(16f / 9f)
+            .clip(MaterialTheme.shapes.extraLarge)
+            .clickable(onClick = onClick),
+    ) {
+        AsyncImage(
+            model = item.imageUrl,
+            contentDescription = item.name,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0.35f to Color.Transparent,
+                        1f to Color.Black.copy(alpha = 0.8f),
+                    ),
+                ),
+        )
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                item.artist?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            Spacer(Modifier.width(16.dp))
+            FilledTonalIconButton(
+                onClick = onClick,
+                shapes = IconButtonDefaults.shapes(),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_play_arrow),
+                    contentDescription = stringResource(R.string.common_play),
+                )
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun DiscoverCarouselSection(
-    section: DiscoverSection,
-    onItemClick: (SearchResult) -> Unit,
-    modifier: Modifier = Modifier,
-    onRetry: (() -> Unit)? = null,
-) {
-    Column(modifier = modifier) {
-        if (section.title.isNotBlank()) {
+private fun VideoCarousel(items: List<SearchResult>, onItemClick: (SearchResult) -> Unit) {
+    val carouselState = rememberCarouselState { items.size }
+    HorizontalMultiBrowseCarousel(
+        state = carouselState,
+        preferredItemWidth = 240.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        itemSpacing = 8.dp,
+    ) { index ->
+        val item = items[index]
+        Box(
+            modifier = Modifier
+                .aspectRatio(16f / 9f)
+                .maskClip(MaterialTheme.shapes.large)
+                .clickable { onItemClick(item) },
+        ) {
+            AsyncImage(
+                model = item.imageUrl,
+                contentDescription = item.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0.5f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = 0.75f),
+                        ),
+                    ),
+            )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp),
+            ) {
+                Text(
+                    text = item.name,
+                    style = MaterialTheme.typography.titleSmallEmphasized,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                item.artist?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun VideoGridCard(item: SearchResult, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.clickable(onClick = onClick)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        ) {
+            AsyncImage(
+                model = item.imageUrl,
+                contentDescription = item.name,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = item.name,
+            style = MaterialTheme.typography.titleSmallEmphasized,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        item.artist?.let {
             Text(
-                text = section.title,
-                style = MaterialTheme.typography.headlineMediumEmphasized,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
 
-        when {
-            section.isLoading -> {
-                ShimmerCarouselPlaceholder()
-            }
+// -- Loading & error states ----------------------------------------------
 
-            section.error != null -> {
-                SectionErrorState(
-                    message = section.error,
-                    onRetry = onRetry,
-                )
-            }
-
-            section.items.isNotEmpty() -> {
-                val carouselState = rememberCarouselState { section.items.size }
-                HorizontalMultiBrowseCarousel(
-                    state = carouselState,
-                    preferredItemWidth = 240.dp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    itemSpacing = 8.dp,
-                ) { index ->
-                    val item = section.items[index]
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(16f / 9f)
-                            .maskClip(AppShapes.SearchResultTrack)
-                            .clickable { onItemClick(item) },
-                    ) {
-                        AsyncImage(
-                            model = item.imageUrl,
-                            contentDescription = item.name,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                        )
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(64.dp)
-                                .align(Alignment.BottomCenter)
-                                .background(
-                                    Brush.verticalGradient(
-                                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)),
-                                    ),
-                                ),
-                        )
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
-                        ) {
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.titleSmall,
-                                color = Color.White,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            item.artist?.let {
-                                Text(
-                                    text = it,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+@Composable
+private fun FeedSkeletonRow(modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "yt_skeleton")
+    val alpha by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.75f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "skeleton_alpha",
+    )
+    val bone = MaterialTheme.colorScheme.surfaceContainerHigh
+    Row(
+        modifier = modifier.padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        repeat(2) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(16f / 9f)
+                    .graphicsLayer { this.alpha = alpha }
+                    .background(bone, MaterialTheme.shapes.large),
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ShimmerCarouselPlaceholder(modifier: Modifier = Modifier) {
-    Box(
+private fun FeedErrorCard(message: String, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.extraLarge,
         modifier = modifier
             .fillMaxWidth()
-            .height(135.dp)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        ContainedLoadingIndicator()
-    }
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SectionErrorState(message: String, onRetry: (() -> Unit)?, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(120.dp)
             .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
-            if (onRetry != null) {
-                Spacer(modifier = Modifier.height(8.dp))
-                TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
-                    Text(stringResource(R.string.common_action_retry))
-                }
+            Spacer(Modifier.width(16.dp))
+            FilledTonalButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_refresh),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.common_action_retry))
             }
         }
     }

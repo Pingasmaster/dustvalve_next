@@ -1,7 +1,10 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote
 
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
@@ -15,7 +18,7 @@ class DustvalveCollectionScraperTest {
 
     @Before fun setUp() {
         setup = TlsTestServer.start()
-        scraper = DustvalveCollectionScraper(setup.client)
+        scraper = DustvalveCollectionScraper(setup.client, UnconfinedTestDispatcher())
     }
 
     @After fun tearDown() {
@@ -39,7 +42,7 @@ class DustvalveCollectionScraperTest {
         setup.server.enqueue(MockResponse().setBody(body))
 
         val result = scraper.getCollection(fanId = 42L)
-        // merch, non-https, and empty url filtered out → 2 left
+        // merch, non-https, and empty url filtered out -> 2 left
         assertThat(result.albums).hasSize(2)
         assertThat(result.albums.map { it.title }).containsExactly("Album 1", "Track 1").inOrder()
         assertThat(result.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a11_10.jpg")

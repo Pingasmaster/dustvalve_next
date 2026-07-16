@@ -12,5 +12,5 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 fun HapticFeedback.toggle(turningOn: Boolean) =
     performHapticFeedback(if (turningOn) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
 
-/** A light segment tick — for skipping tracks and per-step scrub/volume drag feedback. */
+/** A light segment tick - for skipping tracks and per-step scrub/volume drag feedback. */
 fun HapticFeedback.tick() = performHapticFeedback(HapticFeedbackType.SegmentTick)

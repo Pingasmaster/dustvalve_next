@@ -1,9 +1,11 @@
 package com.dustvalve.next.android.util
 
 import android.content.Context
+import android.os.Build
 import android.os.ProfilingManager
 import android.os.ProfilingResult
 import android.util.Log
+import androidx.annotation.RequiresApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.concurrent.Executors
@@ -21,16 +23,19 @@ import javax.inject.Singleton
  * also drains any results that arrived while the process was dead, which is the
  * common case for TRIGGER_TYPE_ANOMALY.
  *
- * minSdk=37 on this app so the ProfilingManager + ProfilingTrigger + ANOMALY
- * trigger API surface is always available.
+ * Legacy branch: minSdk=26, so the ProfilingManager + ProfilingTrigger +
+ * ANOMALY trigger surface (API 35/36) is gated behind a SDK_INT check and
+ * start() is a no-op on older devices.
  */
 @Singleton
 class ProfilingCaptureController @Inject constructor(@param:ApplicationContext private val context: Context) {
 
     private val executor = Executors.newSingleThreadExecutor()
 
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
     fun start() {
+        // ProfilingManager is API 35+, ProfilingTrigger + ANOMALY is API 37+.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN) return
         try {
             val pm = context.getSystemService(ProfilingManager::class.java) ?: return
             // Drain anything captured while we were dead.
@@ -57,12 +62,13 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     private fun onResult(result: ProfilingResult) {
         if (result.errorCode != ProfilingResult.ERROR_NONE) {
             Log.w(TAG, "capture failed errorCode=${result.errorCode} message=${result.errorMessage}")
             return
         }
-        // ProfilingResult exposes a path, not a File handle — the platform
+        // ProfilingResult exposes a path, not a File handle - the platform
         // owns the file lifetime; we only re-stamp it under filesDir/profiles
         // for easier adb pull. The original is deleted when this consumer
         // returns; if the user wants the artifact they must pull now.

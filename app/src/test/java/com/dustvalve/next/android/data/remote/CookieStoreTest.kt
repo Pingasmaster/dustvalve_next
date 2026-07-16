@@ -1,3 +1,5 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote
 
 import androidx.test.core.app.ApplicationProvider
@@ -8,6 +10,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import io.mockk.unmockkAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import okhttp3.Cookie
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.After
@@ -39,7 +42,7 @@ class CookieStoreTest {
         // a clean cache whether or not the on-disk file was already gone.
         kotlinx.coroutines.runBlocking { settings.setAuthCookies(null) }
 
-        store = CookieStore(settings)
+        store = CookieStore(settings, UnconfinedTestDispatcher())
         // Allow the async init load to complete before any test runs so loadForRequest
         // (with its 500ms latch) doesn't see an uninitialized store.
         awaitInit()

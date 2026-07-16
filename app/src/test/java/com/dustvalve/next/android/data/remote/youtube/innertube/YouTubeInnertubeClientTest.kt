@@ -1,8 +1,12 @@
+@file:OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -35,6 +39,7 @@ class YouTubeInnertubeClientTest {
             sharedOkHttpClient = OkHttpClient(),
             visitorDataFetcher = visitor,
             mockBaseUrl = server.url("/").toString(),
+            dispatcher = UnconfinedTestDispatcher(),
         )
     }
 
@@ -224,7 +229,8 @@ class YouTubeInnertubeClientTest {
         sharedOkHttpClient: OkHttpClient,
         visitorDataFetcher: YouTubeVisitorDataFetcher,
         private val mockBaseUrl: String,
-    ) : YouTubeInnertubeClient(sharedOkHttpClient, visitorDataFetcher) {
+        dispatcher: CoroutineDispatcher,
+    ) : YouTubeInnertubeClient(sharedOkHttpClient, visitorDataFetcher, dispatcher) {
         override val baseUrlWww: String get() = mockBaseUrl.trimEnd('/')
         override val baseUrlM: String get() = mockBaseUrl.trimEnd('/')
     }

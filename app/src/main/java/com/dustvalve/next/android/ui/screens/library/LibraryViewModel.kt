@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
@@ -18,6 +19,7 @@ import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -36,7 +38,7 @@ data class LibraryUiState(
     val libraryItems: List<LibraryItem> = emptyList(),
     val fullyDownloadedPlaylistIds: Set<String> = emptySet(),
     val isLoading: Boolean = true,
-    val error: String? = null,
+    val error: UiText? = null,
     val showCreateDialog: Boolean = false,
     val renameTarget: Playlist? = null,
     val renameTargetTracks: List<Track> = emptyList(),
@@ -47,7 +49,7 @@ data class LibraryUiState(
     /** Non-null while an export/import is running (drives the progress overlay). */
     val transfer: TransferProgress? = null,
     /** One-shot success message for the snackbar. */
-    val message: String? = null,
+    val message: UiText? = null,
 )
 
 data class TransferProgress(val importing: Boolean, val done: Int, val total: Int)
@@ -142,16 +144,23 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(transfer = TransferProgress(importing = false, done = 0, total = playlist.trackCount)) }
             try {
                 val out = context.contentResolver.openOutputStream(uri)
-                    ?: throw IllegalStateException("Cannot open destination")
+                if (out == null) {
+                    _uiState.update {
+                        it.copy(transfer = null, error = UiText.StringResource(R.string.library_error_open_export_destination))
+                    }
+                    return@launch
+                }
                 out.use { stream ->
                     playlistTransferRepository.export(playlist.id, offline, stream) { done, total ->
                         _uiState.update { it.copy(transfer = TransferProgress(false, done, total)) }
                     }
                 }
-                _uiState.update { it.copy(transfer = null, message = "Exported \"${playlist.name}\"") }
+                _uiState.update {
+                    it.copy(transfer = null, message = UiText.StringResource(R.string.library_exported, listOf(playlist.name)))
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(transfer = null, error = e.message ?: "Export failed") }
+                _uiState.update { it.copy(transfer = null, error = UiText.orResource(e.message, R.string.library_error_export)) }
             }
         }
     }
@@ -162,16 +171,21 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(transfer = TransferProgress(importing = true, done = 0, total = 0)) }
             try {
                 val inp = context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalStateException("Cannot open file")
+                if (inp == null) {
+                    _uiState.update { it.copy(transfer = null, error = UiText.StringResource(R.string.library_error_open_import_file)) }
+                    return@launch
+                }
                 val playlist = inp.use { stream ->
                     playlistTransferRepository.import(stream) { done, total ->
                         _uiState.update { it.copy(transfer = TransferProgress(true, done, total)) }
                     }
                 }
-                _uiState.update { it.copy(transfer = null, message = "Imported \"${playlist.name}\"") }
+                _uiState.update {
+                    it.copy(transfer = null, message = UiText.StringResource(R.string.library_imported, listOf(playlist.name)))
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(transfer = null, error = e.message ?: "Import failed") }
+                _uiState.update { it.copy(transfer = null, error = UiText.orResource(e.message, R.string.library_error_import)) }
             }
         }
     }
@@ -183,7 +197,7 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(showCreateDialog = false) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = e.message ?: "Failed to create playlist") }
+                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.snackbar_create_playlist_failed)) }
             }
         }
     }
@@ -195,7 +209,7 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(renameTarget = null, renameTargetTracks = emptyList()) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = e.message ?: "Failed to update playlist") }
+                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.library_error_update_playlist)) }
             }
         }
     }
@@ -207,7 +221,7 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(deleteTarget = null) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = e.message ?: "Failed to delete playlist") }
+                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.library_error_delete_playlist)) }
             }
         }
     }
@@ -218,7 +232,7 @@ class LibraryViewModel @Inject constructor(
                 playlistRepository.pinPlaylist(playlistId, isPinned)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = e.message ?: "Failed to update playlist") }
+                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.library_error_update_playlist)) }
             }
         }
     }
@@ -229,7 +243,7 @@ class LibraryViewModel @Inject constructor(
                 favoriteDao.setPinned(favoriteId, isPinned)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = "Failed to update pin") }
+                _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_pin)) }
             }
         }
     }
@@ -241,7 +255,7 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(deleteTarget = null) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = "Failed to remove from library") }
+                _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_remove)) }
             }
         }
     }
@@ -253,7 +267,7 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(shapeTarget = null) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = "Failed to update shape") }
+                _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_shape)) }
             }
         }
     }
@@ -323,7 +337,7 @@ class LibraryViewModel @Inject constructor(
                 .catch { e ->
                     _uiState.update {
                         it.copy(
-                            error = e.message ?: "Failed to load library",
+                            error = UiText.orResource(e.message, R.string.library_error_load),
                             isLoading = false,
                         )
                     }

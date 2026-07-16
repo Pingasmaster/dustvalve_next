@@ -3,6 +3,7 @@ package com.dustvalve.next.android.download
 import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.os.Build
 import android.os.IBinder
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
@@ -18,7 +19,7 @@ import javax.inject.Inject
 /**
  * Foreground shell that keeps the process alive while [DownloadController] has
  * work, and hosts the shared download notification ([DownloadNotificationCenter.NOTIFICATION_ID])
- * as its foreground notification. It owns no download logic — the controller
+ * as its foreground notification. It owns no download logic - the controller
  * runs the transfers on its own scope; this service exists purely so downloads
  * survive the UI being backgrounded/closed.
  *
@@ -46,11 +47,20 @@ class DownloadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         notificationCenter.setForegroundOwned(true)
-        startForeground(
-            DownloadNotificationCenter.NOTIFICATION_ID,
-            notificationCenter.currentForegroundNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-        )
+        // Legacy branch: the typed startForeground overload + dataSync FGS
+        // type are API 29+; below that the 2-arg form is the only option.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                DownloadNotificationCenter.NOTIFICATION_ID,
+                notificationCenter.currentForegroundNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+            )
+        } else {
+            startForeground(
+                DownloadNotificationCenter.NOTIFICATION_ID,
+                notificationCenter.currentForegroundNotification(),
+            )
+        }
         if (!observing) {
             observing = true
             scope.launch {

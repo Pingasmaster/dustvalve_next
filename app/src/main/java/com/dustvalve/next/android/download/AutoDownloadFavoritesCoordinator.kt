@@ -5,10 +5,12 @@ import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.getByIds
 import com.dustvalve.next.android.data.mapper.toDomain
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -37,7 +39,7 @@ import javax.inject.Singleton
  * driving `downloadAlbum` / per-album scrape + downloadAlbum respectively
  * (TODO once the UI surfaces a download-progress sink for those flows).
  *
- * Errors are swallowed by design — auto-download must never crash the app
+ * Errors are swallowed by design - auto-download must never crash the app
  * or block the UI. Failed tracks just stay non-downloaded; the next favorite
  * change re-evaluates and retries them.
  */
@@ -48,9 +50,10 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
     private val trackDao: TrackDao,
     private val downloadRepository: DownloadRepository,
     private val downloadController: DownloadController,
+    @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) {
     private val scope = CoroutineScope(
-        SupervisorJob() + Dispatchers.IO +
+        SupervisorJob() + ioDispatcher +
             CoroutineExceptionHandler { _, throwable ->
                 android.util.Log.e("AutoDownloadFavorites", "Auto-download coordinator failed", throwable)
             },
@@ -73,7 +76,7 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
                     // We're iterating favorites, so isFavorite = true.
                     val tracks = trackDao.getByIds(missing).map { it.toDomain(isFavorite = true) }
                     // Hand off to the controller (foreground service + serial
-                    // queue, de-duped by track id). Fire-and-forget — failures
+                    // queue, de-duped by track id). Fire-and-forget - failures
                     // just leave the track non-downloaded and a later emission
                     // re-enqueues it.
                     for (track in tracks) {

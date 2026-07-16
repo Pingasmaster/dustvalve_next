@@ -1,0 +1,214 @@
+package com.dustvalve.next.android.data.repository
+
+import androidx.room.withTransaction
+import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
+import com.dustvalve.next.android.data.local.db.dao.AlbumDao
+import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
+import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
+import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
+import com.dustvalve.next.android.data.mapper.toDomain
+import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.data.remote.DustvalveAlbumScraper
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import com.dustvalve.next.android.domain.model.Album
+import com.dustvalve.next.android.domain.model.AlbumPrice
+import com.dustvalve.next.android.domain.model.PurchaseInfo
+import com.dustvalve.next.android.domain.repository.AlbumRepository
+import com.dustvalve.next.android.domain.repository.DownloadRepository
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class AlbumRepositoryImpl @Inject constructor(
+    private val database: DustvalveNextDatabase,
+    private val albumDao: AlbumDao,
+    private val trackDao: TrackDao,
+    private val favoriteDao: FavoriteDao,
+    private val albumScraper: DustvalveAlbumScraper,
+    private val downloadRepository: DownloadRepository,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) : AlbumRepository {
+
+    companion object {
+        // Albums are immutable once released - title, artist, tracks, art and
+        // tags don't change. We deliberately treat any cached row that has at
+        // least one persisted track as the source of truth and never refetch
+        // it, in line with the unified "never re-fetch a resource we've
+        // already gotten" caching policy. Stub rows (no tracks) and bare
+        // cache misses still trigger a foreground scrape.
+        private const val REVALIDATE_THRESHOLD_MS = Long.MAX_VALUE
+    }
+
+    override suspend fun getAlbumDetail(url: String): Album {
+        val cleanUrl = url.substringBefore('?').substringBefore('#').trimEnd('/')
+
+        val cachedAlbum = findCachedAlbum(cleanUrl, url)
+        if (cachedAlbum != null) {
+            val trackEntities = trackDao.getByAlbumId(cachedAlbum.id)
+            val age = System.currentTimeMillis() - cachedAlbum.cachedAt
+            // Return cache if fresh and not a stub (has tracks)
+            if (age < REVALIDATE_THRESHOLD_MS && trackEntities.isNotEmpty()) {
+                return buildCachedAlbum(cachedAlbum, trackEntities)
+            }
+            // Stale but has tracks: try revalidate, fall back to stale cache offline
+            if (trackEntities.isNotEmpty()) {
+                return try {
+                    scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                    buildCachedAlbum(cachedAlbum, trackEntities)
+                }
+            }
+        }
+
+        // Cache miss or stub (no tracks): scrape and persist
+        return scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
+    }
+
+    override fun getAlbumDetailFlow(url: String): Flow<Album> = flow {
+        val cleanUrl = url.substringBefore('?').substringBefore('#').trimEnd('/')
+
+        val cachedAlbum = findCachedAlbum(cleanUrl, url)
+        if (cachedAlbum != null) {
+            val trackEntities = trackDao.getByAlbumId(cachedAlbum.id)
+            // Emit cached data immediately if it's not a stub
+            if (trackEntities.isNotEmpty()) {
+                val cached = buildCachedAlbum(cachedAlbum, trackEntities)
+                emit(cached)
+
+                val age = System.currentTimeMillis() - cachedAlbum.cachedAt
+                if (age < REVALIDATE_THRESHOLD_MS) return@flow // Fresh enough
+            }
+        }
+
+        // No cache, stub, or stale: scrape and emit
+        try {
+            val fresh = scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
+            // Always emit fresh data after a scrape - metadata (title, art, tags)
+            // may have changed even if track IDs are identical
+            emit(fresh)
+        } catch (e: Exception) {
+            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            if (cachedAlbum == null || trackDao.getByAlbumId(cachedAlbum.id).isEmpty()) throw e
+            // Stale cache already emitted - swallow network error for offline use
+        }
+    }.flowOn(ioDispatcher)
+
+    private suspend fun findCachedAlbum(
+        cleanUrl: String,
+        originalUrl: String,
+    ): com.dustvalve.next.android.data.local.db.entity.AlbumEntity? = albumDao.getByUrl(cleanUrl)
+        ?: albumDao.getByUrl(cleanUrl.lowercase())
+        ?: albumDao.getByUrl(originalUrl)
+        ?: albumDao.getByUrl(originalUrl.trimEnd('/'))
+
+    private suspend fun buildCachedAlbum(
+        cachedAlbum: com.dustvalve.next.android.data.local.db.entity.AlbumEntity,
+        trackEntities: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>,
+    ): Album {
+        val allIds = listOf(cachedAlbum.id) + trackEntities.map { it.id }
+        val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
+        val tracks = trackEntities.map { it.toDomain(it.id in favoriteIds) }
+        return cachedAlbum.toDomain(tracks, cachedAlbum.id in favoriteIds)
+    }
+
+    private suspend fun scrapeAndPersistAlbum(
+        cleanUrl: String,
+        cachedAlbum: com.dustvalve.next.android.data.local.db.entity.AlbumEntity?,
+    ): Album {
+        val album = albumScraper.scrapeAlbum(cleanUrl)
+
+        val previousAutoDownload = cachedAlbum?.autoDownload ?: false
+        val previousSaleItemId = cachedAlbum?.saleItemId
+        val previousSaleItemType = cachedAlbum?.saleItemType
+        val cachedTrackIds = if (cachedAlbum != null) {
+            trackDao.getByAlbumId(cachedAlbum.id).map { it.id }.toSet()
+        } else {
+            emptySet()
+        }
+        val scrapedTrackIds = album.tracks.map { it.id }.toSet()
+        val contentChanged = cachedTrackIds.isEmpty() || cachedTrackIds != scrapedTrackIds
+
+        val result = if (contentChanged) {
+            database.withTransaction {
+                albumDao.insert(album.toEntity())
+                trackDao.deleteByAlbumId(album.id)
+                trackDao.insertAll(album.tracks.map { it.toEntity() })
+
+                if (previousAutoDownload) {
+                    albumDao.setAutoDownload(album.id, true)
+                }
+                if (previousSaleItemId != null && previousSaleItemType != null) {
+                    albumDao.updatePurchaseInfo(album.id, previousSaleItemId, previousSaleItemType)
+                }
+
+                val allIds = listOf(album.id) + album.tracks.map { it.id }
+                val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
+                val tracksWithFavorites = album.tracks.map { track ->
+                    track.copy(isFavorite = track.id in favoriteIds)
+                }
+                album.copy(
+                    isFavorite = album.id in favoriteIds,
+                    tracks = tracksWithFavorites,
+                    autoDownload = previousAutoDownload,
+                )
+            }
+        } else {
+            // Content unchanged - just touch the timestamp
+            albumDao.updateCachedAt(cachedAlbum?.id ?: album.id)
+            val allIds = listOf(album.id) + album.tracks.map { it.id }
+            val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
+            val tracksWithFavorites = album.tracks.map { track ->
+                track.copy(isFavorite = track.id in favoriteIds)
+            }
+            album.copy(
+                isFavorite = album.id in favoriteIds,
+                tracks = tracksWithFavorites,
+                autoDownload = previousAutoDownload,
+            )
+        }
+
+        // Auto-download new tracks if auto-download is enabled
+        if (previousAutoDownload && cachedTrackIds.isNotEmpty()) {
+            val newTracks = result.tracks.filter { it.id !in cachedTrackIds }
+            for (track in newTracks) {
+                try {
+                    downloadRepository.downloadTrack(track)
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                    // Best-effort auto-download
+                }
+            }
+        }
+
+        return result
+    }
+
+    override suspend fun setAutoDownload(albumId: String, autoDownload: Boolean) {
+        albumDao.setAutoDownload(albumId, autoDownload)
+    }
+
+    override suspend fun updatePurchaseInfo(albumId: String, purchaseInfo: PurchaseInfo) {
+        albumDao.updatePurchaseInfo(albumId, purchaseInfo.saleItemId, purchaseInfo.saleItemType)
+    }
+
+    override suspend fun fetchBandcampTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? =
+        albumScraper.fetchTrackPrice(trackUrl, fallbackCurrency)
+
+    override suspend fun toggleFavorite(albumId: String) {
+        database.withTransaction {
+            val isFavorite = favoriteDao.isFavorite(albumId)
+            if (isFavorite) {
+                favoriteDao.delete(albumId)
+            } else {
+                favoriteDao.insert(FavoriteEntity(id = albumId, type = "album"))
+            }
+        }
+    }
+}
