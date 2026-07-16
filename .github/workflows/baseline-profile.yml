@@ -53,6 +53,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.2.0
         with:
           cache-provider: basic
+          # Read-only: check.yml's check job is the repo's sole cache writer.
+          cache-read-only: true
 
       - name: Setup GMD (Pixel 6, API 33, AOSP)
         run: >-

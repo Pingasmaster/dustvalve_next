@@ -31,6 +31,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.2.0
         with:
           cache-provider: basic
+          # Read-only: check.yml's check job is the repo's sole cache writer.
+          cache-read-only: true
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
@@ -85,6 +87,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.2.0
         with:
           cache-provider: basic
+          # Read-only: check.yml's check job is the repo's sole cache writer.
+          cache-read-only: true
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release-keystore.jks
