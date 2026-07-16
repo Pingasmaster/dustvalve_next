@@ -23,9 +23,12 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 278
-        versionName = "0.5.0"
+        versionCode = 279
+        versionName = "0.5.1"
         versionNameSuffix = "-legacy"
+        // Instrumentation (smoke + E2E) runs against the REAL app object
+        // graph - no HiltTestApplication on device by design.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -165,6 +168,16 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
+        // Gradle Managed Device for the smoke + E2E instrumentation suites.
+        // Legacy branch (minSdk 26): API 33 AOSP, same image the
+        // baselineprofile module already uses.
+        managedDevices {
+            localDevices.register("pixel6Api33") {
+                device = "Pixel 6"
+                apiLevel = 33
+                systemImageSource = "aosp"
+            }
+        }
         // Robolectric 4.17 pokes JDK internals (FileDescriptor, reflection)
         // that modern JDKs seal by default; open them for the test JVM only.
         unitTests.all { test ->
@@ -365,7 +378,27 @@ dependencies {
     testImplementation(libs.okhttp.tls)
     testImplementation(libs.turbine)
     testImplementation(libs.compose.ui.test.junit4)
+    // Real ExoPlayer decoding under Robolectric (TestPlayerRunHelper etc.)
+    // for the workflow tests in com.dustvalve.next.android.workflow.
+    testImplementation(libs.media3.test.utils)
+    testImplementation(libs.media3.test.utils.robolectric)
+    testImplementation(libs.hilt.android)
+    // Processes @EntryPoint/@HiltAndroidTest defined in unit-test sources
+    // (workflow tests reach into the real app graph under Robolectric).
+    kspTest(libs.hilt.android.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    // --- Instrumentation (smoke + E2E) dependencies ---
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.uiautomator)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.coroutines.test)
+    androidTestImplementation(libs.media3.session)
 
     // Static analysis plugins / lint checks
     detektPlugins(libs.detekt.compose)

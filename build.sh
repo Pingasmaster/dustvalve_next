@@ -5,6 +5,16 @@
 #   ./build.sh --clean            # gradle clean + remove APK + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
+#   ./build.sh --workflow-tests   # Tier 1 JVM workflow tests only (fast) + exit
+#   ./build.sh --smoke            # Tier 2 on-device smoke on GMD pixel6Api33 + exit
+#   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel6Api33 + exit
+#   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
+#   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
+#
+# The emulator tiers (--smoke/--e2e/--e2e-live) boot a Gradle Managed Device;
+# budget ~2 GB of RAM beyond the Gradle daemon. If the host QEMU cannot boot
+# modern system images (some bleeding-edge distros), run these tiers in CI
+# (check.yml: emulator-smoke / emulator-e2e) instead.
 #
 # IMPORTANT: Do NOT manually remove .build.lock unless you have user approval
 # and have confirmed no process is currently using it (check with `fuser
@@ -20,6 +30,11 @@ cd "$SCRIPT_DIR"
 DO_CLEAN_ONLY=0
 DO_FORMAT=0
 DO_BUILD_HEALTH=0
+DO_WORKFLOW_TESTS=0
+DO_SMOKE=0
+DO_E2E=0
+DO_E2E_LIVE=0
+DO_LIVE_NET=0
 
 ROOT_APK="dustvalve_next.apk"
 for arg in "$@"; do
@@ -27,7 +42,12 @@ for arg in "$@"; do
         --clean)        DO_CLEAN_ONLY=1 ;;
         --format)       DO_FORMAT=1 ;;
         --build-health) DO_BUILD_HEALTH=1 ;;
-        *) echo "Unknown arg: $arg (accepted: --clean, --format, --build-health)" >&2; exit 2 ;;
+        --workflow-tests) DO_WORKFLOW_TESTS=1 ;;
+        --smoke)        DO_SMOKE=1 ;;
+        --e2e)          DO_E2E=1 ;;
+        --e2e-live)     DO_E2E_LIVE=1 ;;
+        --live-net)     DO_LIVE_NET=1 ;;
+        *) echo "Unknown arg: $arg (accepted: --clean, --format, --build-health, --workflow-tests, --smoke, --e2e, --e2e-live, --live-net)" >&2; exit 2 ;;
     esac
 done
 
@@ -56,6 +76,55 @@ if [[ "$DO_FORMAT" -eq 1 ]]; then
     acquire_lock
     ./gradlew ktlintFormat
     echo "ktlintFormat complete. Re-run ./build.sh without --format to verify."
+    exit 0
+fi
+
+GMD_GPU="-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect"
+
+# --workflow-tests: Tier 1 JVM workflow suite only (the fast regression net)
+if [[ "$DO_WORKFLOW_TESTS" -eq 1 ]]; then
+    acquire_lock
+    ./gradlew :app:testDebugUnitTest --tests 'com.dustvalve.next.android.workflow.*'
+    echo "Workflow tests complete."
+    exit 0
+fi
+
+# --live-net: opt-in JVM tests that hit the real services
+if [[ "$DO_LIVE_NET" -eq 1 ]]; then
+    acquire_lock
+    DUSTVALVE_LIVE_NET=1 ./gradlew :app:testDebugUnitTest --tests '*Live*'
+    echo "Live-network JVM smokes complete."
+    exit 0
+fi
+
+# --smoke: Tier 2 on-device smoke (GMD)
+if [[ "$DO_SMOKE" -eq 1 ]]; then
+    acquire_lock
+    ./gradlew :app:pixel6Api33Setup "$GMD_GPU"
+    ./gradlew :app:pixel6Api33DebugAndroidTest "$GMD_GPU" \
+        -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
+    echo "Smoke suite complete."
+    exit 0
+fi
+
+# --e2e: Tier 3 hermetic E2E (GMD, no live network tests)
+if [[ "$DO_E2E" -eq 1 ]]; then
+    acquire_lock
+    ./gradlew :app:pixel6Api33Setup "$GMD_GPU"
+    ./gradlew :app:pixel6Api33DebugAndroidTest "$GMD_GPU" \
+        -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.dustvalve.next.android.testing.LiveNetwork
+    echo "Hermetic E2E suite complete."
+    exit 0
+fi
+
+# --e2e-live: Tier 3 live E2E against real Bandcamp/YouTube
+if [[ "$DO_E2E_LIVE" -eq 1 ]]; then
+    acquire_lock
+    echo "WARNING: this suite hits the real Bandcamp and YouTube services." >&2
+    ./gradlew :app:pixel6Api33Setup "$GMD_GPU"
+    ./gradlew :app:pixel6Api33DebugAndroidTest "$GMD_GPU" \
+        -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
+    echo "Live E2E suite complete."
     exit 0
 fi
 

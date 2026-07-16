@@ -37,7 +37,7 @@ is_exempt() {
         data/src/main/java/com/dustvalve/next/android/data/remote/youtubemusic/YouTubeMusicSearchParser.kt) return 0 ;;
         data/src/main/java/com/dustvalve/next/android/data/remote/GenreSubTags.kt) return 0 ;;
         # Binaries
-        *.png|*.webp|*.jpg|*.jks|*.jar|*.apk|*.ico|*.gif) return 0 ;;
+        *.png|*.webp|*.jpg|*.jks|*.jar|*.apk|*.ico|*.gif|*.mp3|*.wav) return 0 ;;
     esac
     return 1
 }

@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -491,7 +493,13 @@ private fun MainContent(
             .onSizeChanged { containerHeightPx = it.height.toFloat() },
     ) {
         val sts = this
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // Expose compose testTags as resource-ids so UiAutomator
+                // (macrobenchmark, E2E helpers) can address them via By.res().
+                .semantics { testTagsAsResourceId = true },
+        ) {
             if (useNavRail) {
                 // Tablet / large screen layout: NavigationRail on the left
                 Row(modifier = Modifier.fillMaxSize()) {

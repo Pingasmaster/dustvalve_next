@@ -1,5 +1,17 @@
 # Dustvalve Next - agent guidelines
 
+## Workflow tests - run before shipping behavior changes
+
+Three automated tiers (see docs/testing/README.md):
+- `./build.sh --workflow-tests` - fast JVM regression net (real ExoPlayer +
+  real MainActivity under Robolectric). Run this after ANY change touching
+  playback, navigation, or the provider screens.
+- `./build.sh --smoke` / `--e2e` / `--e2e-live` - Gradle Managed Device
+  suites (`pixel6Api33`). If the host QEMU cannot boot modern images, rely
+  on the check.yml emulator-smoke / emulator-e2e CI jobs instead.
+- Scenario backlog lives in docs/testing/catalog-*.md; new E2E tests must
+  reference their catalog id.
+
 ## Protected branches - DO NOT DELETE OR FORCE-PUSH
 
 When asked to clean up "dangling" branches, worktrees, or any other git

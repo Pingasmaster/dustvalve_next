@@ -1,0 +1,3 @@
+# Quarantined instrumentation tests - one ClassName#method per line.
+# Every entry REQUIRES a filed issue; review this list before each release.
+# Format: ClassName#method  # issue-URL date
