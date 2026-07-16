@@ -15,11 +15,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7.0.0
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v5.5.0
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.2.0
@@ -69,11 +69,11 @@ jobs:
         with:
           ref: legacy-android8
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v5.5.0
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6.2.0

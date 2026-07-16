@@ -31,11 +31,11 @@ jobs:
           sudo udevadm trigger --name-match=kvm
           ls -la /dev/kvm
 
-      - name: Set up JDK 21
+      - name: Set up JDK 25
         uses: actions/setup-java@v5.5.0
         with:
           distribution: 'zulu'
-          java-version: 21
+          java-version: 25
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4.0.1
