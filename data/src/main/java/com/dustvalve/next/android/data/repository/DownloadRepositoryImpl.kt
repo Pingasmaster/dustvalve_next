@@ -61,7 +61,7 @@ class DownloadRepositoryImpl @Inject constructor(
 
     override suspend fun downloadAlbum(album: Album) {
         if (album.tracks.isEmpty()) {
-            throw IOException("No tracks to download — album has an empty track list")
+            throw IOException("No tracks to download - album has an empty track list")
         }
         notificationCenter.withBatch(
             label = album.title,
@@ -93,7 +93,7 @@ class DownloadRepositoryImpl @Inject constructor(
             }
         }
         if (skipped == album.tracks.size) {
-            throw IOException("No tracks available for download — all ${album.tracks.size} tracks lack stream URLs")
+            throw IOException("No tracks available for download - all ${album.tracks.size} tracks lack stream URLs")
         }
         if (errors.isNotEmpty()) {
             val skippedMsg = if (skipped > 0) " ($skipped tracks unavailable for streaming)" else ""
@@ -129,14 +129,14 @@ class DownloadRepositoryImpl @Inject constructor(
         val preferredFormat = formatOverride ?: AudioFormat.fromKey(preferredFormatKey) ?: AudioFormat.FLAC
 
         // Three sources, in order: HQ for purchased content (with mp3-128
-        // fallback), YouTube watch-page → resolved audio stream, otherwise
+        // fallback), YouTube watch-page -> resolved audio stream, otherwise
         // the raw streamUrl as mp3-128.
         val (downloadUrl, format) = if (purchaseInfo != null) {
             resolveHqDownloadUrl(purchaseInfo, preferredFormat)
                 ?: (track.streamUrl to AudioFormat.MP3_128)
         } else if (track.source == TrackSource.YOUTUBE) {
             // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream.
-            // Queue tracks may have resolved googlevideo.com URLs — reconstruct the watch URL.
+            // Queue tracks may have resolved googlevideo.com URLs - reconstruct the watch URL.
             val streamUrl = track.streamUrl
                 ?: throw IOException("Track '${track.title}' has no video URL")
             val videoUrl = if (streamUrl.contains("youtube.com") || streamUrl.contains("youtu.be")) {
@@ -221,7 +221,7 @@ class DownloadRepositoryImpl @Inject constructor(
         val targetFile = File(downloadDir, fileName)
         val tempFile = File(downloadDir, "$fileName.tmp")
 
-        // A leftover .tmp means a prior transfer was paused — resume from its
+        // A leftover .tmp means a prior transfer was paused - resume from its
         // current length via an HTTP Range request (append mode) instead of
         // restarting from 0.
         val resumeFrom = if (tempFile.exists()) tempFile.length() else 0L
@@ -430,7 +430,7 @@ class DownloadRepositoryImpl @Inject constructor(
     override suspend fun clearAll() = withContext(ioDispatcher) {
         // Drop every DB row + every file under downloads/ (including the
         // images subdir managed by Coil). ExoPlayer's media_cache lives in
-        // cacheDir/media_cache and is wiped here too — Media3's SimpleCache
+        // cacheDir/media_cache and is wiped here too - Media3's SimpleCache
         // tolerates a directory wipe between sessions because we don't
         // delete it while the cache is open.
         val all = downloadDao.getAllSync()

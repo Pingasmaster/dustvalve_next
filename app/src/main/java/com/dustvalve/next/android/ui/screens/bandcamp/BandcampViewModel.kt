@@ -81,7 +81,7 @@ class BandcampViewModel @Inject constructor(
         _uiState.update { it.copy(newGenreText = text, genreError = null) }
     }
 
-    /** Validate a typed genre against Bandcamp (must return ≥1 release) before persisting. */
+    /** Validate a typed genre against Bandcamp (must return >=1 release) before persisting. */
     fun addCustomGenre() {
         val name = _uiState.value.newGenreText.trim()
         if (name.isBlank()) return

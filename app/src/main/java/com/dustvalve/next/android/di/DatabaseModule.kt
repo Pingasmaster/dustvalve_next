@@ -39,7 +39,7 @@ object DatabaseModule {
         // rows from a different dispatcher than UI queries. Default is
         // TRUNCATE on Room 2.7+ which serialises everything.
         //
-        // We deliberately do NOT call enableMultiInstanceInvalidation() — it
+        // We deliberately do NOT call enableMultiInstanceInvalidation() - it
         // binds a ServiceConnection that Robolectric can't satisfy, breaking
         // the Compose-test harness (TracksHeaderLabelTest et al.), and the
         // app is single-process anyway (one Application, no :remote Process

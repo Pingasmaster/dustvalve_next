@@ -192,7 +192,7 @@
     <string name="settings_section_sources">Sources</string>
     <string name="settings_section_connections">Connections</string>
     <string name="settings_section_storage">Storage</string>
-    <string name="settings_section_audio_quality">Audio Quality</string>
+    <string name="settings_section_audio_quality">Audio quality</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_player">Player</string>
     <string name="settings_section_search">Search</string>
@@ -214,14 +214,13 @@
     <string name="settings_cd_remove_folder">Remove folder</string>
     <string name="settings_cd_avatar">Avatar</string>
     <string name="settings_connect_bandcamp">Connect <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Connect to access your <xliff:g id="brand">Bandcamp</xliff:g> purchases.</string>
+    <string name="settings_connect_bandcamp_desc">Connect to access your <xliff:g id="brand">Bandcamp</xliff:g> purchases</string>
     <string name="settings_connect_youtube">Connect <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Connect to access your <xliff:g id="brand">YouTube Music</xliff:g> library.</string>
+    <string name="settings_connect_youtube_desc">Connect to access your <xliff:g id="brand">YouTube Music</xliff:g> library</string>
     <string name="settings_youtube_music" translatable="false">YouTube Music</string>
     <string name="settings_youtube_default_source_title">Default view</string>
     <string name="settings_youtube_default_source_desc">Which view opens when you tap the <xliff:g id="brand">YouTube</xliff:g> tab</string>
     <string name="common_play">Play</string>
-    <string name="common_retry">Retry</string>
     <string name="ytm_artist_spotlight">Artist spotlight</string>
     <string name="youtube_tab_source_yt" translatable="false">YouTube</string>
     <string name="youtube_tab_source_ytm" translatable="false">YouTube Music</string>
@@ -292,7 +291,7 @@
     <string name="settings_search_history_desc">Save recent searches for quick access</string>
     <string name="settings_search_history_per_source">Per-source toggles</string>
     <string name="settings_search_history_clear_all">Erase search history</string>
-    <string name="settings_search_history_cleared">Cleared all search histories</string>
+    <string name="settings_search_history_cleared">Erased all search history</string>
     <string name="settings_search_history_source_bandcamp" translatable="false">Bandcamp</string>
     <string name="settings_search_history_source_youtube" translatable="false">YouTube</string>
     <string name="settings_search_history_source_local">Local</string>
@@ -350,9 +349,9 @@
     <string name="local_filter_unknown_album">Unknown album</string>
     <string name="local_add_to_playlist">Add to playlist</string>
     <string name="settings_local_keep_sort">Keep sort order between launches</string>
-    <string name="settings_local_keep_sort_desc">Restore the Local tab’s sort selection (and reverse) when reopening the app.</string>
+    <string name="settings_local_keep_sort_desc">Restore the Local tab’s sort selection (and reverse) when reopening the app</string>
     <string name="settings_local_keep_filters">Keep filters between launches</string>
-    <string name="settings_local_keep_filters_desc">Restore the Local tab’s artist, album, folder, duration and favorites-only chips when reopening the app.</string>
+    <string name="settings_local_keep_filters_desc">Restore the Local tab’s artist, album, folder, duration and favorites-only chips when reopening the app</string>
 
     <!-- Common search strings -->
     <string name="common_search_failed">Search failed</string>

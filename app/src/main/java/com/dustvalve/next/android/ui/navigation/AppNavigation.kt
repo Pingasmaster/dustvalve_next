@@ -186,7 +186,7 @@ fun AppNavigation(
                             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                                 throw e
                             } catch (_: Exception) {
-                                // Cookie save failed — still navigate back
+                                // Cookie save failed - still navigate back
                             }
                             navViewModel.navigateBack()
                         }
@@ -202,7 +202,7 @@ fun AppNavigation(
                             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                                 throw e
                             } catch (_: Exception) {
-                                // Cookie save failed — still navigate back
+                                // Cookie save failed - still navigate back
                             }
                             navViewModel.navigateBack()
                         }

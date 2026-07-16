@@ -29,7 +29,7 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
 
     private val executor = Executors.newSingleThreadExecutor()
 
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
     fun start() {
         try {
             val pm = context.getSystemService(ProfilingManager::class.java) ?: return
@@ -62,7 +62,7 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
             Log.w(TAG, "capture failed errorCode=${result.errorCode} message=${result.errorMessage}")
             return
         }
-        // ProfilingResult exposes a path, not a File handle — the platform
+        // ProfilingResult exposes a path, not a File handle - the platform
         // owns the file lifetime; we only re-stamp it under filesDir/profiles
         // for easier adb pull. The original is deleted when this consumer
         // returns; if the user wants the artifact they must pull now.

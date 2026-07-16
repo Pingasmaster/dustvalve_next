@@ -145,7 +145,7 @@ class MediaStoreScanner @Inject constructor(
         val removedIds = if (scannedIds.isEmpty() && existingIds.isNotEmpty()) {
             android.util.Log.w(
                 "MediaStoreScanner",
-                "Scan returned 0 files but DB has ${existingIds.size} tracks — skipping deletion (possible permission issue)",
+                "Scan returned 0 files but DB has ${existingIds.size} tracks - skipping deletion (possible permission issue)",
             )
             emptySet()
         } else {

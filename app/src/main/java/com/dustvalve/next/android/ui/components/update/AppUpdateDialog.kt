@@ -23,7 +23,7 @@ import com.dustvalve.next.android.update.UpdateUiState
 /**
  * Shared dialog for the self-update flow. Rendered both by:
  *
- *  - Settings → About (when the user hits "Search for updates"), and
+ *  - Settings -> About (when the user hits "Search for updates"), and
  *  - MainActivity's cold-start host (once [state] transitions to Available
  *    from the silent check fired by `AppUpdateController.checkSilently()`).
  *

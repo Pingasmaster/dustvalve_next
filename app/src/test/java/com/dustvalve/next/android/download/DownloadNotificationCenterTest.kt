@@ -156,7 +156,7 @@ class DownloadNotificationCenterTest {
 
             center.withBatch("Album 1", 10, DownloadProgressReporter.BatchKind.ALBUM) {
                 assertThat(center.currentState.batchStack).hasSize(2)
-                // Outer (artist) is still first — the "outer wins" invariant for chip rendering.
+                // Outer (artist) is still first - the "outer wins" invariant for chip rendering.
                 assertThat(center.currentState.batchStack.first().kind)
                     .isEqualTo(DownloadProgressReporter.BatchKind.ARTIST)
                 assertThat(center.currentState.batchStack.last().kind)
@@ -182,10 +182,10 @@ class DownloadNotificationCenterTest {
                 center.trackFinished("t3", true)
             }
 
-            // 3 tracks finished in total while outer was active → counter is 3.
+            // 3 tracks finished in total while outer was active -> counter is 3.
             assertThat(center.currentState.completedInBatch).isEqualTo(3)
         }
-        // Outer popped → counter reset.
+        // Outer popped -> counter reset.
         assertThat(center.currentState.completedInBatch).isEqualTo(0)
     }
 

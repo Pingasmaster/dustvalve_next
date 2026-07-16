@@ -41,7 +41,7 @@ class TimeUtilsTest {
     }
 
     @Test fun `formatDuration never groups long minute counts`() {
-        // 100_000 s = 1666:40 — grouping separators (1,666 / 1.666) would
+        // 100_000 s = 1666:40 - grouping separators (1,666 / 1.666) would
         // break the timer format in locales that group thousands.
         val original = java.util.Locale.getDefault()
         try {

@@ -11,7 +11,7 @@ import javax.inject.Singleton
 /**
  * LRU eviction over the unified downloads pool. Only operates on unpinned
  * (auto-cached) entries; pinned entries (explicit user downloads) are never
- * evicted — exceeding the storage budget surfaces in the UI but does not
+ * evicted - exceeding the storage budget surfaces in the UI but does not
  * silently delete user content.
  *
  * Coil's image disk cache and ExoPlayer's SimpleCache manage their own

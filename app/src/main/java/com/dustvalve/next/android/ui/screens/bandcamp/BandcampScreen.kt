@@ -46,6 +46,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -95,6 +96,7 @@ import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
+import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -370,14 +372,14 @@ fun BandcampScreen(
                 // Discover category rows
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 8.dp),
                 ) {
                     item(key = "discover_header") {
                         StaggeredAnimatedItem(index = 0) {
                             Text(
                                 text = stringResource(R.string.bandcamp_discover),
                                 style = MaterialTheme.typography.headlineMediumEmphasized,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                // Page-header rhythm shared with Library/Settings.
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
                             )
                         }
                     }
@@ -481,8 +483,8 @@ fun BandcampScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(56.dp),
-                                color = Color.Black,
-                                contentColor = Color.White,
+                                color = MaterialTheme.colorScheme.inverseSurface,
+                                contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                             ) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     Text(
@@ -575,12 +577,19 @@ fun BandcampScreen(
                         }
 
                         searchState.error != null && searchState.results.isEmpty() -> {
-                            Text(
-                                text = searchState.error?.asString() ?: stringResource(R.string.common_search_failed),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.align(Alignment.Center),
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(horizontal = 32.dp),
+                            ) {
+                                Text(
+                                    text = searchState.error?.asString() ?: stringResource(R.string.common_search_failed),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
                         }
 
                         searchState.results.isEmpty() && searchState.query.isNotBlank() && !searchState.isLoading -> {
@@ -627,12 +636,7 @@ fun BandcampScreen(
                                         shape = segmentedItemShape(index, searchState.results.size),
                                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                                         modifier = Modifier
-                                            .padding(
-                                                start = 16.dp,
-                                                end = 16.dp,
-                                                top = if (index == 0) 8.dp else 1.dp,
-                                                bottom = if (index == searchState.results.lastIndex) 0.dp else 1.dp,
-                                            )
+                                            .padding(segmentedItemPadding(index, searchState.results.size))
                                             .animateItem(
                                                 fadeInSpec = null,
                                                 fadeOutSpec = null,
@@ -680,18 +684,16 @@ fun BandcampScreen(
                                     }
                                 }
 
-                                // Loading indicator at bottom
+                                // Pagination footer (M3E wavy linear indicator) -
+                                // matches the YouTube search overlay.
                                 if (searchState.isLoading && searchState.results.isNotEmpty()) {
                                     item {
-                                        Box(
+                                        LinearWavyProgressIndicator(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(16.dp)
+                                                .padding(horizontal = 16.dp, vertical = 12.dp)
                                                 .animateItem(),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            ContainedLoadingIndicator()
-                                        }
+                                        )
                                     }
                                 }
                             }
@@ -804,7 +806,7 @@ fun BandcampScreen(
         )
     }
 
-    // Add custom genre — validated against Bandcamp before it's added.
+    // Add custom genre - validated against Bandcamp before it's added.
     if (state.showAddGenreDialog) {
         AlertDialog(
             onDismissRequest = { if (!state.genreValidating) viewModel.setShowAddGenreDialog(false) },

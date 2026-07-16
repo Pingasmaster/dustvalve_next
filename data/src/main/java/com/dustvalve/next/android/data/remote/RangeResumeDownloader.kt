@@ -25,7 +25,7 @@ import kotlin.coroutines.coroutineContext
  *
  * The server MAY answer with 200 (ignoring Range) on the first attempt; the
  * helper accepts that and streams from 0. Only a 206 Partial Content response
- * enables resume-on-retry — if the server ignored Range mid-flight, appending
+ * enables resume-on-retry - if the server ignored Range mid-flight, appending
  * would corrupt the file, so the helper surfaces the failure instead.
  */
 object RangeResumeDownloader {
@@ -104,7 +104,7 @@ object RangeResumeDownloader {
                         val cr = response.header("Content-Range")
                             ?.substringAfterLast('/')?.toLongOrNull()
                         val cl = response.header("Content-Length")?.toLongOrNull()
-                        // On a 206, Content-Length is the *remaining* length —
+                        // On a 206, Content-Length is the *remaining* length -
                         // prefer the total from Content-Range. On a from-zero
                         // 200, Content-Length is the total. When resuming
                         // without a Content-Range header we can't trust

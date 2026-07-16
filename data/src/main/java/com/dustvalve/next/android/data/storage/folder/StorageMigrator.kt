@@ -26,7 +26,7 @@ import kotlin.coroutines.coroutineContext
  * (progressFraction, statusMessage) pairs so the UI can render a
  * blocking loading overlay.
  *
- * `migrateToFolder`: serialize Room tables → JSON in the tree, copy every
+ * `migrateToFolder`: serialize Room tables -> JSON in the tree, copy every
  * audio file from `filesDir/downloads/` to `<tree>/dustvalve/downloads/`
  * via ContentResolver streams, repoint `DownloadEntity.filePath` to the new
  * `content://` URI, and delete the app-internal originals. Also writes
@@ -57,7 +57,7 @@ class StorageMigrator @Inject constructor(
             onProgress(Progress(0.05f, "Saving playlists"))
             writeSnapshotsToFolder(treeUri, includeMetadata)
 
-            // 2) Copy audio files app-internal → tree and repoint DownloadEntity rows.
+            // 2) Copy audio files app-internal -> tree and repoint DownloadEntity rows.
             val downloads = downloadDao.getAllSync()
             val total = downloads.size.coerceAtLeast(1)
             for ((idx, d) in downloads.withIndex()) {
@@ -109,7 +109,7 @@ class StorageMigrator @Inject constructor(
         val treeUriStr = settingsDataStore.getDedicatedFolderTreeUriSync()
         val treeUri = treeUriStr?.toUri()
 
-        // 1) Copy audio files tree → app-internal and repoint DownloadEntity rows.
+        // 1) Copy audio files tree -> app-internal and repoint DownloadEntity rows.
         val downloads = downloadDao.getAllSync()
         val total = downloads.size.coerceAtLeast(1)
         for ((idx, d) in downloads.withIndex()) {

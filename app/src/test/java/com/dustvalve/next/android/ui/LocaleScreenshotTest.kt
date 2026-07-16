@@ -79,7 +79,7 @@ private fun LocaleShowcase() {
         Text(pluralStringResource(R.plurals.track_count, 3, 3))
         Text(pluralStringResource(R.plurals.track_count, 21, 21))
         Text(pluralStringResource(R.plurals.scan_found_detailed, 5, 5, 2, 1))
-        // Multi-placeholder line + duration patterns + count·duration combo
+        // Multi-placeholder line + duration patterns + count/duration combo
         Text(stringResource(R.string.storage_info, "1.2 GB", "300 MB", "12 GB"))
         Text(stringResource(R.string.detail_duration_hours_minutes, 2, 5))
         Text(tracksHeaderLabel(trackCount = 5, totalDurationSec = 23 * 60L))

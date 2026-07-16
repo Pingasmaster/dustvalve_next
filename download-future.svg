@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 96" width="560" height="96" role="img" aria-label="Download future APK — Android 17 only, bleeding-edge build">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 96" width="560" height="96" role="img" aria-label="Download future APK - Android 17 only, bleeding-edge build">
   <defs>
     <linearGradient id="bgf" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#E4D3FF"/>
@@ -43,5 +43,5 @@
 
   <!-- labels -->
   <text x="104" y="46" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="800" letter-spacing="0.5" fill="#1D0F3B">DOWNLOAD FUTURE APK</text>
-  <text x="104" y="73" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="16.5" font-weight="600" fill="#33205C">Android 17 only&#160;&#160;·&#160;&#160;bleeding-edge build</text>
+  <text x="104" y="73" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="16.5" font-weight="600" fill="#33205C">Android 17 only&#160;&#160;/&#160;&#160;bleeding-edge build</text>
 </svg>

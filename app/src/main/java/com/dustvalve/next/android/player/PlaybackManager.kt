@@ -419,7 +419,7 @@ class PlaybackManager @Inject constructor(
     fun setRepeatMode(mode: RepeatMode) {
         if (released) return
         _repeatMode.value = mode
-        // Always keep ExoPlayer repeat off — our custom handlePlaybackEnded handles all repeat logic
+        // Always keep ExoPlayer repeat off - our custom handlePlaybackEnded handles all repeat logic
         player.repeatMode = Player.REPEAT_MODE_OFF
     }
 

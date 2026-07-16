@@ -2,8 +2,8 @@ package com.dustvalve.next.android.ui.navigation
 
 /**
  * Navigation keys for every screen in the app. Lives in :core:model (with
- * its historical package name kept for source stability) so lower layers —
- * deep-link routing, the Bandcamp domain sniffer — can produce destinations
+ * its historical package name kept for source stability) so lower layers -
+ * deep-link routing, the Bandcamp domain sniffer - can produce destinations
  * without depending on the UI module.
  */
 sealed interface NavDestination {
@@ -16,7 +16,7 @@ sealed interface NavDestination {
 
     /**
      * Source-agnostic artist detail. [sourceId] matches
-     * [com.dustvalve.next.android.domain.repository.MusicSource.id] — e.g.
+     * [com.dustvalve.next.android.domain.repository.MusicSource.id] - e.g.
      * "bandcamp", "youtube". [name] and [imageUrl] are optional hints the
      * caller already knows (YouTube channels browse doesn't return those, so
      * plumbing them through the nav arg avoids a flash of empty header).

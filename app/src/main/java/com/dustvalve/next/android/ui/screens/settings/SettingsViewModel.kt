@@ -923,7 +923,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(searchHistoryClearedMessage = null) }
     }
 
-    // ─── App update ────────────────────────────────────────────────────────
+    // --- App update --------------------------------------------------------
     //
     // Thin delegates over [AppUpdateController] so the cold-start dialog and
     // the Settings row share one source of truth for state + an in-flight

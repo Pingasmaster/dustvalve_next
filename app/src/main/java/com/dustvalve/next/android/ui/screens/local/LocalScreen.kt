@@ -7,7 +7,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -69,7 +68,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -87,6 +85,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.components.EmptyState
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.PlaylistListItem
@@ -95,7 +94,6 @@ import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.util.DeepLinkRouter
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
@@ -238,36 +236,12 @@ fun LocalScreen(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (!localMusicEnabled) {
-                            // Not enabled — show CTA to enable
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(96.dp)
-                                        .clip(AppShapes.EmptyStateIcon)
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_phone_android),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = stringResource(R.string.local_scan_title),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    textAlign = TextAlign.Center,
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = stringResource(R.string.local_scan_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                )
-                                Spacer(modifier = Modifier.height(24.dp))
+                            // Not enabled - show CTA to enable
+                            EmptyState(
+                                icon = R.drawable.ic_phone_android,
+                                title = stringResource(R.string.local_scan_title),
+                                subtitle = stringResource(R.string.local_scan_subtitle),
+                            ) {
                                 Button(
                                     onClick = {
                                         viewModel.enableLocalMusic()
@@ -300,35 +274,11 @@ fun LocalScreen(
                             }
                         } else {
                             // Enabled but no tracks found
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(96.dp)
-                                        .clip(AppShapes.EmptyStateIcon)
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_phone_android),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = stringResource(R.string.local_no_local_music),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    textAlign = TextAlign.Center,
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = stringResource(R.string.local_no_local_music_subtitle),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
+                            EmptyState(
+                                icon = R.drawable.ic_phone_android,
+                                title = stringResource(R.string.local_no_local_music),
+                                subtitle = stringResource(R.string.local_no_local_music_subtitle),
+                            )
                         }
                     }
                 } else {
@@ -466,7 +416,9 @@ fun LocalScreen(
                         LazyColumn(
                             state = localListState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 10.dp),
+                            // Clear the shuffle FAB (56dp + 16dp margin) so the last
+                            // row's overflow affordance stays reachable.
+                            contentPadding = PaddingValues(bottom = 88.dp),
                         ) {
                             itemsIndexed(
                                 items = filteredTracks,
@@ -747,7 +699,7 @@ fun LocalScreen(
         }
     }
 
-    // Local song — add to playlist sheet
+    // Local song - add to playlist sheet
     if (showLocalPlaylistSheet) {
         AddToPlaylistSheet(
             playlists = playerState.playlists,

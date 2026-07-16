@@ -33,8 +33,8 @@ import kotlin.coroutines.coroutineContext
  * WorkManager job). It runs on a silent cold-start check fired from
  * [com.dustvalve.next.android.DustvalveNextApplication.onCreate] via
  * [AppUpdateController.checkSilently], and on the manual "Search for updates"
- * button in Settings → About. The cold-start check can be turned off with the
- * "Automatic update checks" toggle (Settings → About); the manual button never.
+ * button in Settings -> About. The cold-start check can be turned off with the
+ * "Automatic update checks" toggle (Settings -> About); the manual button never.
  */
 @Singleton
 open class AppUpdateService @Inject constructor(
@@ -45,7 +45,7 @@ open class AppUpdateService @Inject constructor(
 
     /**
      * Overridable in tests so MockWebServer can answer the releases GET.
-     * Production is the GitHub Releases listing — returned in reverse
+     * Production is the GitHub Releases listing - returned in reverse
      * chronological order (newest first) by the API.
      */
     protected open val releasesUrl: String =
@@ -190,7 +190,7 @@ open class AppUpdateService @Inject constructor(
     companion object {
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
 
-        /** GitHub-release asset name produced by the `build-modern` workflow job (master → Android 17 build). */
+        /** GitHub-release asset name produced by the `build-modern` workflow job (master -> Android 17 build). */
         const val FUTURE_APK_ASSET = "dustvalve_next-future.apk"
 
         /** True when [remote] is a strictly higher dotted-int version than [local]. */

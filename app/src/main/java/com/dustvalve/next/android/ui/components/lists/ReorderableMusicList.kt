@@ -31,7 +31,7 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
  * modifier supplied to [itemContent].
  *
  * Callers receive `isDragging` (true while this row is the one being dragged) and
- * `dragHandleModifier` — attach it to whichever child should grab-scroll (typically
+ * `dragHandleModifier` - attach it to whichever child should grab-scroll (typically
  * the trailing drag handle icon).
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

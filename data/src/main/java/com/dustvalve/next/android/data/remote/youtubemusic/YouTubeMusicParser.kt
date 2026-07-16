@@ -65,7 +65,7 @@ class YouTubeMusicParser @Inject constructor() {
                     ?: mr.path("subtext")?.runsText("text")
                 val combined = listOfNotNull(text, sub)
                     .filter { it.isNotBlank() }
-                    .joinToString(" — ")
+                    .joinToString(" - ")
                 if (combined.isNotBlank()) return combined
             }
         }
@@ -76,7 +76,7 @@ class YouTubeMusicParser @Inject constructor() {
      * itemSectionRenderer is a transparent wrapper YT uses to nest real
      * shelves; expose its contents as if they were top-level shelves.
      * musicTastebuilderShelfRenderer / musicNotifierShelfRenderer are
-     * "tell us what you like" / promo banners — skip silently.
+     * "tell us what you like" / promo banners - skip silently.
      */
     private fun flattenShelf(section: JsonElement): List<JsonElement> {
         val obj = section as? kotlinx.serialization.json.JsonObject ?: return listOf(section)

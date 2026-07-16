@@ -28,7 +28,7 @@ internal fun JsonElement.runsText(key: String): String? {
 
 /**
  * First `browseEndpoint.browseId` found inside the `runs` array at [key]. YT
- * bylines (shortBylineText, longBylineText) carry the channel's UC… id here.
+ * bylines (shortBylineText, longBylineText) carry the channel's UC... id here.
  */
 internal fun JsonElement.runsBrowseId(key: String): String? {
     val runs = path(key)?.path("runs")?.arr() ?: return null
@@ -42,7 +42,7 @@ internal fun JsonElement.runsBrowseId(key: String): String? {
 /**
  * YouTube (non-Music) thumbnail extraction. Picks the largest by width and
  * then rewrites the URL to request a higher-resolution variant when the URL
- * shape supports it — see [bumpYtThumbnailResolution].
+ * shape supports it - see [bumpYtThumbnailResolution].
  */
 internal fun JsonElement.extractThumbnail(): String? {
     val thumbnails = path("thumbnail")?.path("thumbnails")?.arr()
@@ -59,14 +59,14 @@ internal fun JsonElement.extractThumbnail(): String? {
  * URL shape advertises a size. Safe to call on any YouTube thumbnail string:
  * unrecognised shapes are returned unchanged.
  *
- * - `i.ytimg.com/vi/<id>/hqdefault.jpg` (480×360) → `hq720.jpg` (1280×720)
- * - `i.ytimg.com/vi/<id>/hq1.jpg .. hq3.jpg` (first-frame thumbs, 120×90) →
- *   `hqdefault.jpg` (480×360)
+ * - `i.ytimg.com/vi/<id>/hqdefault.jpg` (480x360) -> `hq720.jpg` (1280x720)
+ * - `i.ytimg.com/vi/<id>/hq1.jpg .. hq3.jpg` (first-frame thumbs, 120x90) ->
+ *   `hqdefault.jpg` (480x360)
  * - Google avatar CDNs (`yt3.googleusercontent.com`, `lh3.googleusercontent.com`,
- *   `yt4.ggpht.com`, etc.) using `=sN-...` or `=wN-hM-...` params →
+ *   `yt4.ggpht.com`, etc.) using `=sN-...` or `=wN-hM-...` params ->
  *   bump to 720. Other segments (crop, rounding, no-rj) are preserved.
  *
- * We deliberately do NOT promote `hqdefault.jpg` → `maxresdefault.jpg` because
+ * We deliberately do NOT promote `hqdefault.jpg` -> `maxresdefault.jpg` because
  * `maxresdefault` 404s for older / lower-tier uploads (`hq720` is always
  * present when the source is HD).
  */

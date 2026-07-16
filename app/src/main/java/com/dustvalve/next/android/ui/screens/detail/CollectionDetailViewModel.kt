@@ -45,6 +45,8 @@ data class CollectionDetailUiState(
     val importedPlaylistId: String? = null,
     val isDownloading: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
+    val snackbarMessage: UiText? = null,
+    val isSnackbarError: Boolean = false,
 )
 
 /**
@@ -70,6 +72,10 @@ class CollectionDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CollectionDetailUiState())
     val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
+
+    /** Invoked when the user taps the snackbar's Retry action. */
+    var retryAction: (() -> Unit)? = null
+        private set
 
     private var loadedKey: String? = null
     private var paginationCursor: Any? = null
@@ -236,10 +242,26 @@ class CollectionDetailViewModel @Inject constructor(
                     label = _uiState.value.name.ifEmpty { "playlist" },
                     tracks = pending,
                 )
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(it.name)),
+                        isSnackbarError = false,
+                    )
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                retryAction = { downloadAll() }
+                _uiState.update {
+                    it.copy(
+                        isDownloading = false,
+                        snackbarMessage =
+                        e.message?.let { m -> UiText.DynamicString(m) }
+                            ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        isSnackbarError = true,
+                    )
+                }
             }
-            _uiState.update { it.copy(isDownloading = false) }
         }
     }
 
@@ -252,7 +274,18 @@ class CollectionDetailViewModel @Inject constructor(
                     if (e is CancellationException) throw e
                 }
             }
+            _uiState.update {
+                it.copy(
+                    snackbarMessage = UiText.StringResource(R.string.snackbar_deleted_downloads_for, listOf(it.name)),
+                    isSnackbarError = false,
+                )
+            }
         }
+    }
+
+    fun clearSnackbar() {
+        retryAction = null
+        _uiState.update { it.copy(snackbarMessage = null, isSnackbarError = false) }
     }
 
     private fun failedImport(e: Exception): UiText = UiText.StringResource(

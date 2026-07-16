@@ -44,6 +44,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SplitButtonDefaults
 import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
@@ -61,14 +62,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -80,15 +79,14 @@ import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.theme.AppShapes
 
 /**
  * Source-agnostic artist detail screen.
  *
  * Renders two shapes based on what the source returns:
- *  - Bandcamp-style: `artist.albums` populated → album grid with "Buy full
+ *  - Bandcamp-style: `artist.albums` populated -> album grid with "Buy full
  *    discography" split-button when the artist has that offer.
- *  - YouTube-style: `albums` empty, `tracks` populated → flat segmented track
+ *  - YouTube-style: `albums` empty, `tracks` populated -> flat segmented track
  *    list with "Load more" pagination. No buy button.
  *
  * Replaces `ui/screens/artist/ArtistDetailScreen.kt` (Bandcamp) and
@@ -118,6 +116,24 @@ fun ArtistDetailScreen(
             name = artistNameHint,
             imageUrl = artistImageHint,
         )
+    }
+
+    val snackbarText = state.snackbarMessage?.asString()
+    val retryLabel = stringResource(R.string.common_action_retry)
+    LaunchedEffect(snackbarText) {
+        snackbarText?.let { message ->
+            try {
+                val result = snackbarHostState.showSnackbar(
+                    message = message,
+                    actionLabel = if (state.isSnackbarError) retryLabel else null,
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.retryAction?.invoke()
+                }
+            } finally {
+                viewModel.clearSnackbar()
+            }
+        }
     }
 
     if (showDeleteDialog) {
@@ -299,7 +315,7 @@ private fun AlbumGridLayout(
         }
         if (!artist.bio.isNullOrBlank()) {
             item(key = "artist_bio", span = { GridItemSpan(2) }) {
-                ExpandableText(text = artist.bio.orEmpty(), collapsedMaxLines = 3)
+                ExpandableText(text = artist.bio.orEmpty(), collapsedMaxLines = 4)
             }
         }
         if (artist.hasDiscographyOffer) {
@@ -315,8 +331,9 @@ private fun AlbumGridLayout(
             item(key = "discography_header", span = { GridItemSpan(2) }) {
                 Text(
                     text = stringResource(R.string.detail_discography),
-                    style = MaterialTheme.typography.titleLargeEmphasized,
-                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp),
+                    // Matches the tracks header on album/collection detail.
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp),
                 )
             }
             items(items = artist.albums, key = { "album_${it.id}" }, contentType = { "album" }) { album ->
@@ -398,7 +415,7 @@ private fun FlatTracksLayout(
         }
         if (!artist.bio.isNullOrBlank()) {
             item(key = "artist_bio") {
-                ExpandableText(text = artist.bio.orEmpty(), collapsedMaxLines = 3)
+                ExpandableText(text = artist.bio.orEmpty(), collapsedMaxLines = 4)
             }
         }
         if (state.tracks.isEmpty() && !state.hasMore && !state.isLoading) {
@@ -460,34 +477,13 @@ private fun ArtistHero(imageUrl: String?, name: String) {
 
 @Composable
 private fun EmptyState(message: String) {
-    Column(
+    com.dustvalve.next.android.ui.components.EmptyState(
+        icon = R.drawable.ic_album,
+        title = message,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp, vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .clip(AppShapes.EmptyStateIcon)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_album),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            )
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-    }
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -508,7 +504,7 @@ private fun ActionBar(
 ) {
     Row(
         modifier = modifier.heightIn(min = 56.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(ActionBarSpacing),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Button(
@@ -522,10 +518,11 @@ private fun ActionBar(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(stringResource(R.string.common_loading))
             } else {
+                // 24 dp icon (default) to match the action-bar icons on the
+                // album/collection/playlist sibling screens.
                 Icon(
                     painter = painterResource(playPrimaryIconRes),
                     contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(playPrimaryLabel)
@@ -581,7 +578,7 @@ private fun ActionBar(
 @Composable
 private fun BuyDiscographySplitButton(artistUrl: String, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
     // Sizing mirrors the album-page Buy split-button (min 80.dp height,
-    // 32×18 content padding, 28 dp icon, titleLarge) so the artist CTA
+    // 32x18 content padding, 28 dp icon, titleLarge) so the artist CTA
     // matches in visual weight.
     var menuOpen by remember { mutableStateOf(false) }
     Box(
@@ -643,3 +640,5 @@ private fun BuyDiscographySplitButton(artistUrl: String, onOpen: (String) -> Uni
         )
     }
 }
+
+private val ActionBarSpacing = 8.dp

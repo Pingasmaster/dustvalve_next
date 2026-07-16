@@ -18,7 +18,7 @@ import javax.inject.Singleton
  * [getAlbum] throws.
  *
  * Pagination cursors are the same opaque [Any] tokens the underlying
- * [YouTubeRepository] returns in its `page` parameter — passed through
+ * [YouTubeRepository] returns in its `page` parameter - passed through
  * verbatim.
  */
 @Singleton
@@ -79,7 +79,7 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
     override suspend fun getCollection(url: String, continuation: Any?): MusicCollection {
         // Mixes (auto-generated radio playlists, IDs starting with `RD`) are
         // effectively infinite and don't live under the static /browse
-        // endpoint — they paginate via /next, one page at a time. Regular
+        // endpoint - they paginate via /next, one page at a time. Regular
         // playlists keep the synchronous "load to end" behaviour because they
         // are bounded.
         val playlistId = extractPlaylistId(url)
@@ -101,7 +101,7 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
             )
         }
         // YouTubeRepository.getPlaylistTracks internally paginates to the end,
-        // so we ignore the [continuation] arg — the returned collection is
+        // so we ignore the [continuation] arg - the returned collection is
         // always complete.
         val (tracks, title) = youtubeRepository.getPlaylistTracks(url)
         return MusicCollection(

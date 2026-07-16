@@ -119,7 +119,7 @@ class DustvalveAlbumScraper @Inject constructor(
 
         val albumId = stableId(tralbumData.url.ifEmpty { albumUrl })
         // Wire-level fallback persisted with the record; not localized on purpose
-        // (metadata, not UI copy — the UI has its own localized "unknown" labels).
+        // (metadata, not UI copy - the UI has its own localized "unknown" labels).
         val artistName = tralbumData.current.artist ?: extractArtistFromHtml(html) ?: "Unknown Artist"
 
         val tags = extractTags(html)
@@ -227,7 +227,7 @@ class DustvalveAlbumScraper @Inject constructor(
      *   - free albums (offer present but missing price)
      *   - "name your price" with no minimum (price = 0 OR missing)
      *   - non-Bandcamp / non-MusicAlbum pages
-     *   - parse failures (defensive — bad HTML never crashes the scraper)
+     *   - parse failures (defensive - bad HTML never crashes the scraper)
      *
      * Public + open so unit tests can drive it from the captured fixtures
      * under `app/src/test/resources/fixtures/bandcamp/` without spinning
@@ -341,7 +341,7 @@ class DustvalveAlbumScraper @Inject constructor(
     }
 
     private fun extractArtistFromHtml(html: String): String? {
-        // 1. Schema.org itemprop="byArtist" — most structured
+        // 1. Schema.org itemprop="byArtist" - most structured
         val byArtist = Regex("""<span[^>]*\bitemprop="byArtist"[^>]*>[^<]*<a[^>]*>([^<]+)</a>""")
             .find(html)?.groupValues?.get(1)?.trim()
         if (!byArtist.isNullOrBlank()) return HtmlUtils.decodeHtmlEntities(byArtist)
@@ -351,7 +351,7 @@ class DustvalveAlbumScraper @Inject constructor(
             .find(html)?.groupValues?.get(1)?.trim()
         if (!bandName.isNullOrBlank()) return HtmlUtils.decodeHtmlEntities(bandName)
 
-        // 3. og:site_name meta tag — Dustvalve sets this to the band name
+        // 3. og:site_name meta tag - Dustvalve sets this to the band name
         val ogSiteName = HtmlUtils.extractMetaContent(html, "og:site_name")?.trim()
         if (!ogSiteName.isNullOrBlank()) return ogSiteName
 

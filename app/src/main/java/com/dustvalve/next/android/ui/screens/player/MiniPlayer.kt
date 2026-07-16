@@ -114,7 +114,7 @@ fun MiniPlayer(
         label = "miniPlayerMorph",
     )
 
-    // Continuous rotation when playing — accumulates smoothly, freezes on pause
+    // Continuous rotation when playing - accumulates smoothly, freezes on pause
     var rotationDegrees by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(state.isPlaying) {
         if (!state.isPlaying) return@LaunchedEffect
@@ -346,7 +346,7 @@ fun MiniPlayer(
             }
 
             // Mini-player uses the same wavy/linear style preference as the full
-            // player but stays slim — the user-configurable height applies only
+            // player but stays slim - the user-configurable height applies only
             // to the seek bar in the full player.
             val miniIsWavy = state.progressBarStyle == "wavy"
             val miniMod = Modifier.fillMaxWidth().height(2.dp)

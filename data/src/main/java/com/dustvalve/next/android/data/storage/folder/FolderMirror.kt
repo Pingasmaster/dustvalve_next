@@ -39,7 +39,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * has an independent 500 ms debounce so bursty writes flush once.
  *
  * The mirror is started lazily from `DustvalveNextApplication.onCreate` once,
- * and internally watches the main enabled flag — when off, every per-table
+ * and internally watches the main enabled flag - when off, every per-table
  * collector is cancelled; when on, they start fresh. The first emission
  * after a (re)start is dropped so we don't immediately re-flush data that
  * was just rehydrated from the folder.
@@ -196,7 +196,7 @@ class FolderMirror @Inject constructor(
             )
         }
 
-        // Settings mirror — the raw preferences Flow.
+        // Settings mirror - the raw preferences Flow.
         jobs += mirrorFlow(settingsDataStore.rawPreferencesFlow) { _, uri ->
             FolderIo.writeJson(
                 context,
@@ -208,7 +208,7 @@ class FolderMirror @Inject constructor(
             )
         }
 
-        // Metadata cache — observed only when the sub-toggle is on.
+        // Metadata cache - observed only when the sub-toggle is on.
         jobs += scope.launch {
             settingsDataStore.dedicatedFolderIncludeMetadataCache
                 .distinctUntilChanged()

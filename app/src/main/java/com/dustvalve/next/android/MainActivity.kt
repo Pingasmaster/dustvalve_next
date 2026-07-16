@@ -130,7 +130,7 @@ class MainActivity : ComponentActivity() {
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { /* Result not needed — media session works without it, just no notification */ }
+    ) { /* Result not needed - media session works without it, just no notification */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -312,7 +312,7 @@ private val MINI_BAR_HEIGHT = 66.dp
 // own `hiltViewModel()` default param. Because MainActivity is the
 // ViewModelStoreOwner, every hiltViewModel<PlayerViewModel>() /
 // hiltViewModel<NavigationViewModel>() call from this composition returns
-// the SAME activity-scoped instance — no VM is passed as a parameter and
+// the SAME activity-scoped instance - no VM is passed as a parameter and
 // the lint rule no longer fires.
 //
 // CyclomaticComplexMethod: the complexity is intrinsic to this orchestration
@@ -344,9 +344,9 @@ private fun MainContent(
     }.collectAsStateWithLifecycle(initialValue = false)
 
     // keepScreenOnWhilePlaying is a sub-toggle of keepScreenOnInApp:
-    // - parent off            → never keep screen on
-    // - parent on, sub off    → screen on whenever the app is open
-    // - parent on, sub on     → screen on only while the app is open AND playing
+    // - parent off            -> never keep screen on
+    // - parent on, sub off    -> screen on whenever the app is open
+    // - parent on, sub on     -> screen on only while the app is open AND playing
     val shouldKeepScreenOn = keepScreenOnInApp && (!keepScreenOnWhilePlaying || isPlaying)
 
     DisposableEffect(shouldKeepScreenOn) {
@@ -361,8 +361,8 @@ private fun MainContent(
     }
 
     // The self-update flow has two entry points: a silent cold-start check
-    // (DustvalveNextApplication.onCreate → AppUpdateController.checkSilently,
-    // gated by the "Automatic update checks" toggle in Settings → About) and
+    // (DustvalveNextApplication.onCreate -> AppUpdateController.checkSilently,
+    // gated by the "Automatic update checks" toggle in Settings -> About) and
     // the manual "Search for updates" button. Both feed the dialog hosted above.
 
     // Deep link handling

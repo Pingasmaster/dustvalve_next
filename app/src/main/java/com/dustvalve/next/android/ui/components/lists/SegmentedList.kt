@@ -25,7 +25,7 @@ import com.dustvalve.next.android.ui.theme.segmentedItemShape
  * lifts from `surfaceContainerLow` to `surfaceContainer`, using `motionScheme` springs.
  *
  * Use this for content/collection lists (tracks, playlists, albums). Do not use for
- * utility lists (search history, bottom-sheet menus, overflow popovers) — those use
+ * utility lists (search history, bottom-sheet menus, overflow popovers) - those use
  * the flat standard variant (`ListItem` directly).
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -108,9 +108,17 @@ fun SegmentedListItem(
     }
 }
 
-private fun defaultSegmentedPadding(index: Int, count: Int): PaddingValues = PaddingValues(
+/**
+ * Default outer padding for a segmented row at [index] of [count]: 16dp side
+ * margins, 8dp lead-in above the first row, and a 1dp share of the standard
+ * 2dp inter-row gap. Public so hand-rolled segmented surfaces (e.g. rows that
+ * need their own clickable/swipe wiring) stay in sync with [SegmentedListItem].
+ */
+fun segmentedItemPadding(index: Int, count: Int): PaddingValues = PaddingValues(
     start = 16.dp,
     end = 16.dp,
     top = if (index == 0) 8.dp else 1.dp,
     bottom = if (index == count - 1) 0.dp else 1.dp,
 )
+
+private fun defaultSegmentedPadding(index: Int, count: Int): PaddingValues = segmentedItemPadding(index, count)

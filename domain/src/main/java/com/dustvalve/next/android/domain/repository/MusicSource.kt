@@ -11,26 +11,26 @@ import com.dustvalve.next.android.domain.model.SearchResult
  * source.
  *
  * Each [MusicSource] reports which concepts it supports via [capabilities].
- * Calling an unsupported concept throws [UnsupportedSourceOperation] — callers
+ * Calling an unsupported concept throws [UnsupportedSourceOperation] - callers
  * should check capabilities first, or only route to a source that supports
  * the concept they need.
  *
  * Implementations live under `data/repository/` and wrap the existing
  * per-source repositories (`BandcampSearchRepository`, `YouTubeRepository`,
- * `YouTubeMusicRepository`). No new network code — this is a pure adapter
+ * `YouTubeMusicRepository`). No new network code - this is a pure adapter
  * layer.
  */
 interface MusicSource {
 
     /**
      * Stable per-source identifier. Two sources can share a provider but
-     * have distinct ids — e.g. the standard YouTube source and the YT Music
+     * have distinct ids - e.g. the standard YouTube source and the YT Music
      * source are both YouTube-backed but `id` is "youtube" vs
      * "youtube_music". Use for navigation routing and registry lookup.
      */
     val id: String
 
-    /** Concepts this source supports — see [SourceConcept]. */
+    /** Concepts this source supports - see [SourceConcept]. */
     val capabilities: Set<SourceConcept>
 
     /**
@@ -41,7 +41,7 @@ interface MusicSource {
     suspend fun search(query: String, filter: String? = null): List<SearchResult>
 
     /**
-     * Load artist detail — name, bio, cover, and (for sources with an album
+     * Load artist detail - name, bio, cover, and (for sources with an album
      * concept) the discography in `Artist.albums`. For sources that expose
      * flat track lists rather than albums (YouTube channels), `albums` is
      * empty and callers should use [getArtistTracks] for the track feed.
@@ -53,7 +53,7 @@ interface MusicSource {
      * [MusicCollection] (owner = artist name). Use the returned
      * [MusicCollection.continuation] as the [continuation] arg for the next
      * page. Throws [UnsupportedSourceOperation] for sources that don't expose
-     * a per-artist flat track feed (Bandcamp — all Bandcamp tracks live under
+     * a per-artist flat track feed (Bandcamp - all Bandcamp tracks live under
      * an album, not directly under the artist).
      */
     suspend fun getArtistTracks(url: String, continuation: Any? = null): MusicCollection
@@ -73,7 +73,7 @@ enum class SourceConcept {
     SEARCH,
     ARTIST,
 
-    /** Per-artist flat track feed — distinct from ARTIST because Bandcamp supports the artist concept but not a flat track list. */
+    /** Per-artist flat track feed - distinct from ARTIST because Bandcamp supports the artist concept but not a flat track list. */
     ARTIST_TRACKS,
     ALBUM,
     COLLECTION,

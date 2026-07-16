@@ -183,13 +183,12 @@
     <string name="settings_cd_remove_folder">Rimuovi cartella</string>
     <string name="settings_cd_avatar">Avatar</string>
     <string name="settings_connect_bandcamp">Connetti <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Connettiti per accedere ai tuoi acquisti <xliff:g id="brand">Bandcamp</xliff:g>.</string>
+    <string name="settings_connect_bandcamp_desc">Connettiti per accedere ai tuoi acquisti <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_connect_youtube">Connetti <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Connettiti per accedere alla tua libreria <xliff:g id="brand">YouTube Music</xliff:g>.</string>
+    <string name="settings_connect_youtube_desc">Connettiti per accedere alla tua libreria <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="settings_youtube_default_source_title">Vista predefinita</string>
     <string name="settings_youtube_default_source_desc">La vista che si apre quando tocchi la scheda <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="common_play">Riproduci</string>
-    <string name="common_retry">Riprova</string>
     <string name="ytm_artist_spotlight">Artista in evidenza</string>
     <string name="settings_remove_all_downloads">Rimuovi tutti i download</string>
     <string name="settings_dedicated_folder_title">Salva tutto in una cartella dedicata</string>
@@ -312,9 +311,9 @@
     <string name="local_filter_unknown_album">Album sconosciuto</string>
     <string name="local_add_to_playlist">Aggiungi a playlist</string>
     <string name="settings_local_keep_sort">Mantieni l’ordinamento tra un avvio e l’altro</string>
-    <string name="settings_local_keep_sort_desc">Ripristina l’ordinamento della scheda Locale (e l’inversione) alla riapertura dell’app.</string>
+    <string name="settings_local_keep_sort_desc">Ripristina l’ordinamento della scheda Locale (e l’inversione) alla riapertura dell’app</string>
     <string name="settings_local_keep_filters">Mantieni i filtri tra un avvio e l’altro</string>
-    <string name="settings_local_keep_filters_desc">Ripristina i chip di artista, album, cartella, durata e solo preferiti della scheda Locale alla riapertura dell’app.</string>
+    <string name="settings_local_keep_filters_desc">Ripristina i chip di artista, album, cartella, durata e solo preferiti della scheda Locale alla riapertura dell’app</string>
     <string name="common_search_failed">Ricerca non riuscita</string>
     <string name="common_no_results_title">Nessun risultato</string>
     <string name="common_no_results_subtitle">Prova con un altro termine di ricerca</string>

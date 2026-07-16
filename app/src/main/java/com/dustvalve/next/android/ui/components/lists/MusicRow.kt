@@ -48,7 +48,7 @@ import com.dustvalve.next.android.util.TimeUtils
  * Unified music row for the whole app.
  *
  * Fixed visuals so every list looks the same: 48 dp square art
- * (`AppShapes.SearchResultTrack`), the now-playing overlay, 0.97× press scale via
+ * (`AppShapes.SearchResultTrack`), the now-playing overlay, 0.97x press scale via
  * `motionScheme.fastSpatialSpec`, and `combinedClickable` + `interactionSource` for
  * M3E ripple + long-press haptics. Trailing actions are opt-in and render in this
  * order when present: favorite ; download ; dragHandle.
@@ -243,10 +243,12 @@ private fun trailingContentOrNull(
                 }
             }
             if (hasDownload) {
+                // No explicit size: the default 40dp tonal container keeps its
+                // visual weight while minimumInteractiveComponentSize restores
+                // the 48dp touch target to match the favorite button.
                 FilledTonalIconButton(
                     onClick = onDownloadClick,
                     enabled = !isDownloading,
-                    modifier = Modifier.size(40.dp),
                     shapes = IconButtonDefaults.shapes(),
                 ) {
                     if (isDownloading) {
@@ -267,7 +269,7 @@ private fun trailingContentOrNull(
                                     R.string.player_cd_download_track
                                 },
                             ),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }

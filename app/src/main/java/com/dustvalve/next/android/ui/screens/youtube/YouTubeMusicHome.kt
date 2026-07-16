@@ -114,7 +114,7 @@ fun YouTubeMusicHome(
     }
 }
 
-// ── Feed scaffold ───────────────────────────────────────────────────────
+// -- Feed scaffold -------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -230,7 +230,7 @@ private fun YtmFeed(
     }
 }
 
-// ── Hero ────────────────────────────────────────────────────────────────
+// -- Hero ----------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -313,7 +313,7 @@ private fun YtmHero(hero: HeroItem, scrollOffset: Int, onPlay: (HeroItem) -> Uni
     }
 }
 
-// ── Mood filter row ─────────────────────────────────────────────────────
+// -- Mood filter row -----------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -339,7 +339,7 @@ private fun MoodToggleRow(chips: List<MoodChip>, selectedParams: String?, isRefr
     }
 }
 
-// ── Section headers ─────────────────────────────────────────────────────
+// -- Section headers -----------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -350,7 +350,8 @@ private fun ShelfDisplayHeader(title: String) {
         color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp),
+            // Page-header vertical rhythm shared with Library/Settings/Bandcamp.
+            .padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 12.dp),
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
     )
@@ -365,13 +366,14 @@ private fun ShelfHeader(title: String) {
         color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 12.dp),
+            // Matches the YT sub-tab's DiscoverShelf header spacing.
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 12.dp),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
 }
 
-// ── Quick picks: horizontally paged 4-row grid ──────────────────────────
+// -- Quick picks: horizontally paged 4-row grid --------------------------
 
 @Composable
 private fun QuickPicksPager(items: List<SongItem>, onPlay: (SongItem) -> Unit) {
@@ -437,10 +439,11 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
+        // No explicit size: the default 40dp tonal container plus the
+        // enforced 48dp minimum touch target (was a 36dp tap area).
         FilledTonalIconButton(
             onClick = onPlay,
             shapes = IconButtonDefaults.shapes(),
-            modifier = Modifier.size(36.dp),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_play_arrow),
@@ -451,7 +454,7 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
     }
 }
 
-// ── Tile shelves ────────────────────────────────────────────────────────
+// -- Tile shelves --------------------------------------------------------
 
 @Composable
 private fun ImmersiveTileCarousel(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
@@ -614,7 +617,7 @@ private fun HeroTileRow(items: List<HeroItem>, onOpen: (HeroItem) -> Unit) {
     }
 }
 
-// ── Artists ─────────────────────────────────────────────────────────────
+// -- Artists -------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -702,7 +705,7 @@ private fun ArtistShapeRow(artists: List<ArtistItem>, onOpen: (ArtistItem) -> Un
     }
 }
 
-// ── Shared bits ─────────────────────────────────────────────────────────
+// -- Shared bits ---------------------------------------------------------
 
 @Composable
 private fun MediaArt(url: String?, contentDescription: String?, shape: Shape, modifier: Modifier = Modifier) {
@@ -729,7 +732,7 @@ private fun MediaArt(url: String?, contentDescription: String?, shape: Shape, mo
     }
 }
 
-// ── Loading skeleton ────────────────────────────────────────────────────
+// -- Loading skeleton ----------------------------------------------------
 
 @Composable
 private fun YtmSkeleton(modifier: Modifier = Modifier) {
@@ -782,7 +785,7 @@ private fun YtmSkeleton(modifier: Modifier = Modifier) {
     }
 }
 
-// ── Error state ─────────────────────────────────────────────────────────
+// -- Error state ---------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -793,30 +796,10 @@ private fun YtmErrorState(message: String, onRetry: () -> Unit, modifier: Modifi
             .padding(32.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .background(
-                        MaterialTheme.colorScheme.secondaryContainer,
-                        MaterialShapes.Flower.toShape(),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_cloud_outlined),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-            }
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(16.dp))
+        com.dustvalve.next.android.ui.components.EmptyState(
+            icon = R.drawable.ic_cloud_outlined,
+            title = message,
+        ) {
             FilledTonalButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
                 Icon(
                     painter = painterResource(R.drawable.ic_refresh),
@@ -824,7 +807,7 @@ private fun YtmErrorState(message: String, onRetry: () -> Unit, modifier: Modifi
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.common_retry))
+                Text(stringResource(R.string.common_action_retry))
             }
         }
     }

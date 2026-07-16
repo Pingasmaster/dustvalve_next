@@ -61,7 +61,7 @@ class LocalMusicScanner @Inject constructor(
         val removedIds = if (scannedIds.isEmpty() && existingIds.isNotEmpty()) {
             android.util.Log.w(
                 "LocalMusicScanner",
-                "Scan returned 0 files but DB has ${existingIds.size} tracks — skipping deletion (possible scan failure)",
+                "Scan returned 0 files but DB has ${existingIds.size} tracks - skipping deletion (possible scan failure)",
             )
             emptySet()
         } else {

@@ -168,7 +168,7 @@ class AppUpdateControllerTest {
         controller.messages.test {
             controller.checkManually()
             advanceUntilIdle()
-            // Some kind of UiText — specific copy tested in SettingsScreen-level tests.
+            // Some kind of UiText - specific copy tested in SettingsScreen-level tests.
             assertThat(awaitItem()).isNotNull()
             cancelAndIgnoreRemainingEvents()
         }

@@ -183,13 +183,12 @@
     <string name="settings_cd_remove_folder">Quitar carpeta</string>
     <string name="settings_cd_avatar">Avatar</string>
     <string name="settings_connect_bandcamp">Conectar <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Conéctate para acceder a tus compras de <xliff:g id="brand">Bandcamp</xliff:g>.</string>
+    <string name="settings_connect_bandcamp_desc">Conéctate para acceder a tus compras de <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_connect_youtube">Conectar <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Conéctate para acceder a tu biblioteca de <xliff:g id="brand">YouTube Music</xliff:g>.</string>
+    <string name="settings_connect_youtube_desc">Conéctate para acceder a tu biblioteca de <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="settings_youtube_default_source_title">Vista predeterminada</string>
     <string name="settings_youtube_default_source_desc">La vista que se abre al tocar la pestaña de <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="common_play">Reproducir</string>
-    <string name="common_retry">Reintentar</string>
     <string name="ytm_artist_spotlight">Artista destacado</string>
     <string name="settings_remove_all_downloads">Eliminar todas las descargas</string>
     <string name="settings_dedicated_folder_title">Guardar todo en una carpeta dedicada</string>
@@ -312,9 +311,9 @@
     <string name="local_filter_unknown_album">Álbum desconocido</string>
     <string name="local_add_to_playlist">Agregar a playlist</string>
     <string name="settings_local_keep_sort">Mantener el orden entre sesiones</string>
-    <string name="settings_local_keep_sort_desc">Restaura el criterio de orden (y la inversión) de la pestaña Local al reabrir la app.</string>
+    <string name="settings_local_keep_sort_desc">Restaura el criterio de orden (y la inversión) de la pestaña Local al reabrir la app</string>
     <string name="settings_local_keep_filters">Mantener los filtros entre sesiones</string>
-    <string name="settings_local_keep_filters_desc">Restaura los chips de artista, álbum, carpeta, duración y solo favoritos de la pestaña Local al reabrir la app.</string>
+    <string name="settings_local_keep_filters_desc">Restaura los chips de artista, álbum, carpeta, duración y solo favoritos de la pestaña Local al reabrir la app</string>
     <string name="common_search_failed">Error en la búsqueda</string>
     <string name="common_no_results_title">No se encontraron resultados</string>
     <string name="common_no_results_subtitle">Prueba con otro término de búsqueda</string>

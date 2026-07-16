@@ -47,7 +47,7 @@ class BaselineProfileGenerator {
         ) {
             // 1. Cold start the main activity (the realistic first-launch flow
             //    triggers AppUpdateController.checkSilently() from
-            //    DustvalveNextApplication.onCreate — do not stub it).
+            //    DustvalveNextApplication.onCreate - do not stub it).
             pressHome()
             startActivityAndWait()
 
@@ -58,7 +58,7 @@ class BaselineProfileGenerator {
                 5_000,
             )
 
-            // 2. Scroll the library tab — the heaviest LazyColumn in the app.
+            // 2. Scroll the library tab - the heaviest LazyColumn in the app.
             val scrollable = By.scrollable(true)
             if (device.hasObject(scrollable)) {
                 val surface = device.findObject(scrollable)
@@ -66,7 +66,7 @@ class BaselineProfileGenerator {
                 repeat(times = 3) { surface.scroll(Direction.UP, 1.0f) }
             }
 
-            // 3. Warm-resume playback — start the PlaybackService via the
+            // 3. Warm-resume playback - start the PlaybackService via the
             //    "play" affordance on the first library row.
             runCatching {
                 val firstRow = By.res("$PACKAGE_NAME:id/playlist_more_options")
@@ -78,7 +78,7 @@ class BaselineProfileGenerator {
                 }
             }
 
-            // 4. Navigate to Settings → About.
+            // 4. Navigate to Settings -> About.
             val settingsEntry = By.text("Settings")
             if (device.hasObject(settingsEntry)) {
                 device.findObject(settingsEntry).click()
@@ -90,7 +90,7 @@ class BaselineProfileGenerator {
                 }
             }
 
-            // 5. Trigger "Search for updates" in Settings → About to exercise
+            // 5. Trigger "Search for updates" in Settings -> About to exercise
             //    the AppUpdateController.checkManually() flow and the
             //    GitHub Releases IO/parsing path.
             runCatching {

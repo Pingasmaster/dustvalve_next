@@ -22,7 +22,7 @@ data class Album(
     /** Bandcamp "buy full discography" bundle offer, when present in the album's JSON-LD. */
     val discographyOffer: DiscographyOffer? = null,
     /**
-     * Bandcamp's per-track default price (`tralbumData.defaultPrice`) — null
+     * Bandcamp's per-track default price (`tralbumData.defaultPrice`) - null
      * unless it differs from the whole-album [price]. Drives the "Buy a
      * single track" split-button option and the per-row price suffix.
      */

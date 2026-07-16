@@ -77,7 +77,7 @@ class PlaylistTransferRepository @Inject constructor(
                     var info = downloadRepository.getDownloadInfo(track.id)
                     if (info == null) {
                         // Safety net: download paths can throw IOException,
-                        // SQLiteException, HttpException, or wrapped variants —
+                        // SQLiteException, HttpException, or wrapped variants -
                         // any failure is logged and the track is exported
                         // without local audio. CancellationException is
                         // rethrown so coroutine cancellation propagates.
@@ -106,7 +106,7 @@ class PlaylistTransferRepository @Inject constructor(
                             val name = "covers/${NetworkUtils.sanitizeFileName(track.albumId)}.jpg"
 
                             // Safety net: network fetches throw IOException,
-                            // SocketTimeout, HttpException, etc. — any failure
+                            // SocketTimeout, HttpException, etc. - any failure
                             // means we export the row without artwork.
                             @Suppress("TooGenericExceptionCaught")
                             val bytes = try {

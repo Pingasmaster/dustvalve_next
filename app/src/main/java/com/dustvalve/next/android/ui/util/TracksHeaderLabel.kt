@@ -6,7 +6,7 @@ import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
 
 /**
- * Builds a header like "5 tracks · 23 min" for an album / playlist screen.
+ * Builds a header like "5 tracks / 23 min" for an album / playlist screen.
  *
  * - Hides the track count if [trackCount] <= 0 (renders just "Tracks").
  * - Hides the duration if [totalDurationSec] <= 0 (some sources don't expose

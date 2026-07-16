@@ -60,7 +60,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -74,7 +73,6 @@ import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.components.ShapePickerSheet
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
-import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -435,7 +433,7 @@ private fun LibraryList(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
 
-            // Pin/Unpin — available for all types
+            // Pin/Unpin - available for all types
             ListItem(
                 leadingContent = {
                     Icon(
@@ -777,38 +775,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
         modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+        com.dustvalve.next.android.ui.components.EmptyState(
+            icon = R.drawable.ic_music_note,
+            title = stringResource(R.string.library_empty_title),
+            subtitle = stringResource(R.string.library_empty_subtitle),
             modifier = Modifier.padding(horizontal = 32.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(96.dp)
-                    .clip(AppShapes.EmptyStateIcon)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_music_note),
-                    contentDescription = null,
-                    modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.library_empty_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.library_empty_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center,
-            )
-        }
+        )
     }
 }

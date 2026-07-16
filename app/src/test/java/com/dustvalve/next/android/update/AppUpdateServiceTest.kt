@@ -19,7 +19,7 @@ import org.junit.Test
  *
  * Specifically locks in the pre-alpha requirement: every CI build ships as a
  * GitHub *pre-release*, so the check MUST NOT filter them out. The pre-fix
- * code did — and the user reported it "never detects newer versions".
+ * code did - and the user reported it "never detects newer versions".
  */
 class AppUpdateServiceTest {
 
@@ -69,7 +69,7 @@ class AppUpdateServiceTest {
     }
 
     @Test fun `picks the first (newest) entry and ignores older ones even if out of version order`() = runTest {
-        // GitHub returns releases newest-first by publish date. Our code relies on that — the version
+        // GitHub returns releases newest-first by publish date. Our code relies on that - the version
         // comparison gate catches the edge case where the first entry is older than the installed
         // build (which happens when we've locally moved past the latest CI release).
         server.enqueue(
@@ -139,7 +139,7 @@ class AppUpdateServiceTest {
 
     @Test fun `isNewer compares dotted-int versions correctly`() {
         with(AppUpdateService) {
-            // Strictly greater — patch bump
+            // Strictly greater - patch bump
             assertThat(isNewer("0.3.47", "0.3.46")).isTrue()
             // Minor bump, not just a patch increment (user raised this explicitly)
             assertThat(isNewer("0.4.0", "0.3.99")).isTrue()
@@ -155,7 +155,7 @@ class AppUpdateServiceTest {
             // Strictly less
             assertThat(isNewer("0.3.45", "0.3.46")).isFalse()
             assertThat(isNewer("0.2.99", "0.3.0")).isFalse()
-            // Mismatched length — shorter implies .0
+            // Mismatched length - shorter implies .0
             assertThat(isNewer("0.4", "0.3.99")).isTrue()
             assertThat(isNewer("0.3", "0.3.0")).isFalse()
             assertThat(isNewer("1", "0.99.99")).isTrue()

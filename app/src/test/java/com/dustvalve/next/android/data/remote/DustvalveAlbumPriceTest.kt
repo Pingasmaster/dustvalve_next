@@ -10,13 +10,13 @@ import org.junit.Test
 
 /**
  * Focused regression suite for [DustvalveAlbumScraper.extractAlbumPrice]. The
- * Bandcamp price hint drives the album-detail "Buy" CTA — silent regressions
+ * Bandcamp price hint drives the album-detail "Buy" CTA - silent regressions
  * here mean every album page would either crash or fall back to the generic
  * "Buy on Bandcamp" label, so we exhaustively cover real captured pages plus
  * synthesized edge-case fixtures (free album, name-your-price, malformed
  * JSON, etc).
  *
- * Pure unit test — no MockWebServer needed because [extractAlbumPrice] is a
+ * Pure unit test - no MockWebServer needed because [extractAlbumPrice] is a
  * pure function on the page HTML.
  */
 class DustvalveAlbumPriceTest {
@@ -29,7 +29,7 @@ class DustvalveAlbumPriceTest {
         ?.use { it.readText() }
         ?: error("missing fixture fixtures/bandcamp/$name")
 
-    // ── Real captured pages ──────────────────────────────────────────────
+    // -- Real captured pages ----------------------------------------------
 
     @Test fun `Angine de Poitrine - Vol II returns 11_11 CAD`() {
         val price = scraper.extractAlbumPrice(load("album_angine_de_poitrine_vol_ii.html"))
@@ -46,7 +46,7 @@ class DustvalveAlbumPriceTest {
         assertThat(price).isEqualTo(AlbumPrice(amount = 8.0, currency = "USD"))
     }
 
-    // ── Synthesized edge cases ───────────────────────────────────────────
+    // -- Synthesized edge cases -------------------------------------------
 
     @Test fun `free album with offer price 0 returns null`() {
         assertThat(scraper.extractAlbumPrice(load("album_price_free_zero.html"))).isNull()
@@ -80,7 +80,7 @@ class DustvalveAlbumPriceTest {
         assertThat(price).isEqualTo(AlbumPrice(amount = 4.20, currency = "AUD"))
     }
 
-    // ── Pathological inputs (defensive — never crash) ────────────────────
+    // -- Pathological inputs (defensive - never crash) --------------------
 
     @Test fun `empty html returns null`() {
         assertThat(scraper.extractAlbumPrice("")).isNull()
@@ -192,7 +192,7 @@ class DustvalveAlbumPriceTest {
             .isEqualTo(AlbumPrice(amount = 3.33, currency = "JPY"))
     }
 
-    // ── /track/ pages (single-track release: no separate /album/ page) ────
+    // -- /track/ pages (single-track release: no separate /album/ page) ----
 
     @Test fun `moeshop - HARDCODED single-track page returns 1_50 USD`() {
         // Real /track/ page where the outer JSON-LD is MusicRecording (not

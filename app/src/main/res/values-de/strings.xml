@@ -183,13 +183,12 @@
     <string name="settings_cd_remove_folder">Ordner entfernen</string>
     <string name="settings_cd_avatar">Avatar</string>
     <string name="settings_connect_bandcamp"><xliff:g id="brand">Bandcamp</xliff:g> verbinden</string>
-    <string name="settings_connect_bandcamp_desc">Verbinde dich, um auf deine <xliff:g id="brand">Bandcamp</xliff:g>-Käufe zuzugreifen.</string>
+    <string name="settings_connect_bandcamp_desc">Verbinde dich, um auf deine <xliff:g id="brand">Bandcamp</xliff:g>-Käufe zuzugreifen</string>
     <string name="settings_connect_youtube"><xliff:g id="brand">YouTube Music</xliff:g> verbinden</string>
-    <string name="settings_connect_youtube_desc">Verbinde dich, um auf deine <xliff:g id="brand">YouTube Music</xliff:g>-Bibliothek zuzugreifen.</string>
+    <string name="settings_connect_youtube_desc">Verbinde dich, um auf deine <xliff:g id="brand">YouTube Music</xliff:g>-Bibliothek zuzugreifen</string>
     <string name="settings_youtube_default_source_title">Standardansicht</string>
     <string name="settings_youtube_default_source_desc">Welche Ansicht sich öffnet, wenn du auf den <xliff:g id="brand">YouTube</xliff:g>-Tab tippst</string>
     <string name="common_play">Abspielen</string>
-    <string name="common_retry">Erneut versuchen</string>
     <string name="ytm_artist_spotlight">Künstler im Fokus</string>
     <string name="settings_remove_all_downloads">Alle Downloads entfernen</string>
     <string name="settings_dedicated_folder_title">Alles in einem eigenen Ordner speichern</string>
@@ -312,9 +311,9 @@
     <string name="local_filter_unknown_album">Unbekanntes Album</string>
     <string name="local_add_to_playlist">Zur Playlist hinzufügen</string>
     <string name="settings_local_keep_sort">Sortierung zwischen Starts merken</string>
-    <string name="settings_local_keep_sort_desc">Die Sortierauswahl (und Umkehrung) des Lokal-Tabs beim erneuten Öffnen der App wiederherstellen.</string>
+    <string name="settings_local_keep_sort_desc">Die Sortierauswahl (und Umkehrung) des Lokal-Tabs beim erneuten Öffnen der App wiederherstellen</string>
     <string name="settings_local_keep_filters">Filter zwischen Starts merken</string>
-    <string name="settings_local_keep_filters_desc">Die Künstler-, Album-, Ordner-, Dauer- und Nur-Favoriten-Chips des Lokal-Tabs beim erneuten Öffnen der App wiederherstellen.</string>
+    <string name="settings_local_keep_filters_desc">Die Künstler-, Album-, Ordner-, Dauer- und Nur-Favoriten-Chips des Lokal-Tabs beim erneuten Öffnen der App wiederherstellen</string>
     <string name="common_search_failed">Suche fehlgeschlagen</string>
     <string name="common_no_results_title">Keine Ergebnisse gefunden</string>
     <string name="common_no_results_subtitle">Versuch es mit einem anderen Suchbegriff</string>

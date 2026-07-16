@@ -28,7 +28,7 @@ class LocalMusicSyncWorker @AssistedInject constructor(
         // run-attempt breadcrumb + WorkInfo.stopReason before rethrowing so
         // the field log shows when WorkManager bailed us out and why
         // (especially STOP_REASON_TIMEOUT when a scan exceeds the expedited
-        // quota — see Android 16 wake-lock enforcement guidance).
+        // quota - see Android 16 wake-lock enforcement guidance).
         Log.w(TAG, "stopped (attempt=$runAttemptCount)")
         logStopReason()
         throw ce

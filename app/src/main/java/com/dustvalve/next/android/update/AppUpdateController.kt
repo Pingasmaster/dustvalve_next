@@ -48,9 +48,9 @@ sealed interface UpdateUiState {
  * Cold start: [DustvalveNextApplication.onCreate] calls [checkSilently] once.
  * If a newer APK exists, state moves to [UpdateUiState.Available] and the
  * MainActivity dialog host surfaces a prompt. Manual re-checks from
- * Settings → About go through [checkManually] (emits an "up to date" / "check
+ * Settings -> About go through [checkManually] (emits an "up to date" / "check
  * failed" message on the [messages] flow that only the Settings screen
- * listens to — we don't want startup toasts).
+ * listens to - we don't want startup toasts).
  */
 @Singleton
 class AppUpdateController @Inject constructor(
@@ -78,9 +78,9 @@ class AppUpdateController @Inject constructor(
 
     /**
      * Idempotent per process. Fires once from [com.dustvalve.next.android.DustvalveNextApplication.onCreate].
-     * All errors are swallowed — a startup update check must never surface
+     * All errors are swallowed - a startup update check must never surface
      * a toast or block the UI. Skips entirely when the user has turned off the
-     * "Automatic update checks" toggle (Settings → About); the manual
+     * "Automatic update checks" toggle (Settings -> About); the manual
      * [checkManually] path is never gated by that preference.
      */
     fun checkSilently() {
@@ -92,7 +92,7 @@ class AppUpdateController @Inject constructor(
                 if (!autoCheckEnabled) return@launch
                 val available = service.checkForUpdate() ?: return@launch
                 _state.update { current ->
-                    // Respect an in-flight manual flow — the user is already
+                    // Respect an in-flight manual flow - the user is already
                     // looking at a dialog, we don't want to reset their state.
                     when (current) {
                         is UpdateUiState.Downloading, is UpdateUiState.Available -> current
@@ -106,13 +106,13 @@ class AppUpdateController @Inject constructor(
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                // Swallow — silent check.
+                // Swallow - silent check.
             }
         }
     }
 
     /**
-     * User-triggered re-check from Settings → About. Emits an [UiText] on
+     * User-triggered re-check from Settings -> About. Emits an [UiText] on
      * [messages] for the "no update" / "check failed" cases so Settings can
      * snackbar it.
      */

@@ -191,13 +191,12 @@
     <string name="settings_cd_remove_folder">Убрать папку</string>
     <string name="settings_cd_avatar">Аватар</string>
     <string name="settings_connect_bandcamp">Подключить <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Подключи, чтобы получить доступ к своим покупкам <xliff:g id="brand">Bandcamp</xliff:g>.</string>
+    <string name="settings_connect_bandcamp_desc">Подключи, чтобы получить доступ к своим покупкам <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_connect_youtube">Подключить <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Подключи, чтобы получить доступ к своей библиотеке <xliff:g id="brand">YouTube Music</xliff:g>.</string>
+    <string name="settings_connect_youtube_desc">Подключи, чтобы получить доступ к своей библиотеке <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="settings_youtube_default_source_title">Вид по умолчанию</string>
     <string name="settings_youtube_default_source_desc">Что открывается при нажатии на вкладку <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="common_play">Играть</string>
-    <string name="common_retry">Повторить</string>
     <string name="ytm_artist_spotlight">В центре внимания</string>
     <string name="settings_remove_all_downloads">Удалить все загрузки</string>
     <string name="settings_dedicated_folder_title">Хранить все в отдельной папке</string>
@@ -321,9 +320,9 @@
     <string name="local_filter_unknown_album">Неизвестный альбом</string>
     <string name="local_add_to_playlist">Добавить в плейлист</string>
     <string name="settings_local_keep_sort">Помнить сортировку между запусками</string>
-    <string name="settings_local_keep_sort_desc">Восстанавливать сортировку (и обратный порядок) вкладки «Локально» при повторном открытии приложения.</string>
+    <string name="settings_local_keep_sort_desc">Восстанавливать сортировку (и обратный порядок) вкладки «Локально» при повторном открытии приложения</string>
     <string name="settings_local_keep_filters">Помнить фильтры между запусками</string>
-    <string name="settings_local_keep_filters_desc">Восстанавливать фильтры вкладки «Локально» — исполнитель, альбом, папка, длительность и «только избранное» — при повторном открытии приложения.</string>
+    <string name="settings_local_keep_filters_desc">Восстанавливать фильтры вкладки «Локально» — исполнитель, альбом, папка, длительность и «только избранное» — при повторном открытии приложения</string>
 
     <string name="common_search_failed">Поиск не удался</string>
     <string name="common_no_results_title">Ничего не найдено</string>

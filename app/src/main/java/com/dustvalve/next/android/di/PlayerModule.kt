@@ -199,7 +199,7 @@ object PlayerModule {
                         val trackId = queueManager.currentTrack.value?.id ?: return@launch
                         val newIsFavorite = libraryRepository.toggleTrackFavorite(trackId)
                         // Queue state is patched via PlayerViewModel.collectFavoriteTrackIds
-                        // → applyFavoriteIds, which preserves the unshuffle snapshot.
+                        // -> applyFavoriteIds, which preserves the unshuffle snapshot.
                         // setQueue here would null it.
                         updateFavoriteLayout(session, newIsFavorite)
                     }

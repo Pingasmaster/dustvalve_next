@@ -1,6 +1,6 @@
 // slack-lints' DeprecatedCall (slackhq/slack-lints#268) matches call sites by
 // function NAME: when any overload in an overload set carries @Deprecated,
-// every caller is flagged — including calls that resolve to non-deprecated
+// every caller is flagged - including calls that resolve to non-deprecated
 // overloads (kotlinc emits no deprecation warning for them). FlowRow and
 // ButtonGroup both have one deprecated overload, so direct use forced
 // file-wide DeprecatedCall suppressions across feature screens.

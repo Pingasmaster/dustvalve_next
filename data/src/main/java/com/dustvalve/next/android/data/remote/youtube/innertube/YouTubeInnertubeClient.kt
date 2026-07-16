@@ -172,7 +172,7 @@ open class YouTubeInnertubeClient @Inject constructor(
      * Watch-next / related videos. Uses MWEB so we get videoWithContextRenderer.
      *
      * videoId is optional: genre mixes (`RDGMEM*`) accept playlistId alone.
-     * playlistIndex + params are used when paginating through a Mix — pass
+     * playlistIndex + params are used when paginating through a Mix - pass
      * the last track's playlist index and the watchEndpoint.params from the
      * previous page's last item.
      */

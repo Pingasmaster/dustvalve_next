@@ -183,13 +183,12 @@
     <string name="settings_cd_remove_folder">Remover pasta</string>
     <string name="settings_cd_avatar">Avatar</string>
     <string name="settings_connect_bandcamp">Conectar <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Conecte para acessar suas compras do <xliff:g id="brand">Bandcamp</xliff:g>.</string>
+    <string name="settings_connect_bandcamp_desc">Conecte para acessar suas compras do <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_connect_youtube">Conectar <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Conecte para acessar sua biblioteca do <xliff:g id="brand">YouTube Music</xliff:g>.</string>
+    <string name="settings_connect_youtube_desc">Conecte para acessar sua biblioteca do <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="settings_youtube_default_source_title">Visualização padrão</string>
     <string name="settings_youtube_default_source_desc">Qual visualização abre ao tocar na aba do <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="common_play">Tocar</string>
-    <string name="common_retry">Tentar novamente</string>
     <string name="ytm_artist_spotlight">Artista em destaque</string>
     <string name="settings_remove_all_downloads">Remover todos os downloads</string>
     <string name="settings_dedicated_folder_title">Guardar tudo em uma pasta dedicada</string>
@@ -312,9 +311,9 @@
     <string name="local_filter_unknown_album">Álbum desconhecido</string>
     <string name="local_add_to_playlist">Adicionar à playlist</string>
     <string name="settings_local_keep_sort">Manter a ordenação entre aberturas</string>
-    <string name="settings_local_keep_sort_desc">Restaura a ordenação escolhida na aba Local (e a inversão) ao reabrir o app.</string>
+    <string name="settings_local_keep_sort_desc">Restaura a ordenação escolhida na aba Local (e a inversão) ao reabrir o app</string>
     <string name="settings_local_keep_filters">Manter os filtros entre aberturas</string>
-    <string name="settings_local_keep_filters_desc">Restaura os chips de artista, álbum, pasta, duração e só favoritas da aba Local ao reabrir o app.</string>
+    <string name="settings_local_keep_filters_desc">Restaura os chips de artista, álbum, pasta, duração e só favoritas da aba Local ao reabrir o app</string>
     <string name="common_search_failed">Falha na busca</string>
     <string name="common_no_results_title">Nenhum resultado encontrado</string>
     <string name="common_no_results_subtitle">Tente outro termo de busca</string>

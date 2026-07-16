@@ -20,7 +20,7 @@ private data class QueueState(val tracks: List<Track> = emptyList(), val current
 class QueueManager @Inject constructor() {
 
     /**
-     * Permanent scope for derived StateFlows — never cancelled, since QueueManager is a singleton.
+     * Permanent scope for derived StateFlows - never cancelled, since QueueManager is a singleton.
      *
      * The derived flows use [SharingStarted.Eagerly] so their `.value` always reflects
      * the latest [_state]. [PlaybackManager] reads `queue.value` / `currentIndex.value`
@@ -67,7 +67,7 @@ class QueueManager @Inject constructor() {
     /**
      * Patches every queue entry whose id is in [trackFavoriteIds] (or absent)
      * with the new isFavorite value, in-place. Preserves the originalQueue
-     * shuffle snapshot — unlike [setQueue] — so it's safe to call from a
+     * shuffle snapshot - unlike [setQueue] - so it's safe to call from a
      * favorite-state observer without breaking shuffle restore.
      */
     fun applyFavoriteIds(trackFavoriteIds: Set<String>) {
@@ -273,7 +273,7 @@ class QueueManager @Inject constructor() {
     }
 
     fun release() {
-        // flowScope is intentionally NOT cancelled — derived StateFlows must remain
+        // flowScope is intentionally NOT cancelled - derived StateFlows must remain
         // alive so existing collectors (ViewModels, UI) continue receiving updates.
         // Only the queue state is cleared.
         clear()

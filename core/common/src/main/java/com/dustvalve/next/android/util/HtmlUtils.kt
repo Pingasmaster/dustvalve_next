@@ -69,7 +69,7 @@ object HtmlUtils {
                 continue
             }
 
-            // Not in a string — skip JS comments
+            // Not in a string - skip JS comments
             if (c == '/' && i + 1 < html.length) {
                 val next = html[i + 1]
                 if (next == '/') {
@@ -146,7 +146,7 @@ object HtmlUtils {
                 matchResult.value
             }
         }
-        // Named entities — &amp; must be decoded LAST to prevent double-decoding
+        // Named entities - &amp; must be decoded LAST to prevent double-decoding
         result = result
             .replace("&quot;", "\"")
             .replace("&lt;", "<")

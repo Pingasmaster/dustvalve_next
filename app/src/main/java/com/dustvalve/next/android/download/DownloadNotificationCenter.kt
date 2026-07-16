@@ -36,11 +36,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Owns the single user-visible "downloads in progress" notification —
+ * Owns the single user-visible "downloads in progress" notification -
  * always rendered as the Android 16 QPR1+ status-bar **Live Update** chip
  * via `Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
  * `setShortCriticalText(...)`. The app's `minSdk = 36` (Android 16 base);
- * the Live Update APIs technically require API 36.1 (QPR1) — we accept
+ * the Live Update APIs technically require API 36.1 (QPR1) - we accept
  * that residual risk pre-QPR1, see `@SuppressLint("NewApi")` on
  * `buildNotification`. minSdk will rise to 37 (Android 17) once Robolectric
  * supports it for unit tests.
@@ -79,7 +79,7 @@ class DownloadNotificationCenter @Inject constructor(
     /**
      * True while [DownloadService] holds [NOTIFICATION_ID] as its foreground
      * notification. While owned, this center must NOT `cancel()` the id on an
-     * empty/disabled state — the service tears it down via `stopForeground`.
+     * empty/disabled state - the service tears it down via `stopForeground`.
      */
     @Volatile
     private var foregroundOwned = false
@@ -108,7 +108,7 @@ class DownloadNotificationCenter @Inject constructor(
     init {
         scope.launch {
             // Debounce so a flurry of byte-write callbacks coalesces into a
-            // single rebuild — NotificationManager bins ~10 posts/sec/app
+            // single rebuild - NotificationManager bins ~10 posts/sec/app
             // and we don't want to compete with our own updates.
             combine(state, settingsDataStore.downloadNotificationsEnabled) { s, enabled -> s to enabled }
                 .debounce(NOTIFICATION_DEBOUNCE_MS)
@@ -182,7 +182,7 @@ class DownloadNotificationCenter @Inject constructor(
                 snapshot.paused
             if (!enabled || !hasPostPermission() || !hasWork) {
                 // When the service owns the foreground notification it drives
-                // teardown via stopForeground — cancelling here would fight it
+                // teardown via stopForeground - cancelling here would fight it
                 // (and an FGS notification can't be cancelled while foregrounded).
                 if (!foregroundOwned) notificationManager.cancel(NOTIFICATION_ID)
                 return
@@ -216,7 +216,7 @@ class DownloadNotificationCenter @Inject constructor(
     @android.annotation.SuppressLint("NewApi")
     private fun buildNotification(snapshot: State): Notification? {
         // While paused the batch has unwound (its coroutine was cancelled), so
-        // activeTracks/batchStack are empty — show a static "paused" card with a
+        // activeTracks/batchStack are empty - show a static "paused" card with a
         // Resume action instead of falling through to the empty case.
         if (snapshot.paused) return buildPausedNotification()
 
@@ -280,7 +280,7 @@ class DownloadNotificationCenter @Inject constructor(
             } else {
                 progressMax = UNIT_PER_TRACK
                 progressCurrent = 0
-                chipText = "…"
+                chipText = "..."
             }
         }
 

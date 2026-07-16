@@ -73,6 +73,7 @@ import com.dustvalve.next.android.ui.components.getPlaylistIconRes
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
+import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -107,12 +108,13 @@ fun PlaylistDetailScreen(
     }
 
     val snackbarText = state.snackbarMessage?.asString()
+    val retryLabel = stringResource(R.string.common_action_retry)
     LaunchedEffect(snackbarText) {
         snackbarText?.let { message ->
             try {
                 val result = snackbarHostState.showSnackbar(
                     message = message,
-                    actionLabel = if (state.isSnackbarError) "Retry" else null,
+                    actionLabel = if (state.isSnackbarError) retryLabel else null,
                 )
                 if (result == SnackbarResult.ActionPerformed) {
                     viewModel.retryAction?.invoke()
@@ -127,7 +129,6 @@ fun PlaylistDetailScreen(
     val trackCount = state.tracks.size
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             LargeFlexibleTopAppBar(
                 title = {
@@ -251,7 +252,7 @@ private fun PlaylistContent(
     // Hero + connected M3E action bar live in the header block so they scroll
     // with the list. Mirrors AlbumDetailScreen / CollectionDetailScreen.
     // System auto-playlists (Favorites / Recent / Downloads) have no user-set
-    // cover, so fall back to the top track's art when one exists — otherwise
+    // cover, so fall back to the top track's art when one exists - otherwise
     // the tonal icon box.
     val heroUrl = playlist.iconUrl
         ?: tracks.firstOrNull()?.artUrl?.takeIf { playlist.isSystem && it.isNotBlank() }
@@ -382,7 +383,10 @@ private fun PlaylistContent(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 16.dp, vertical = 1.dp)
+                                // Mirror SegmentedListItem's default padding so the
+                                // delete background lines up with the row surface
+                                // on the first/last rows too.
+                                .padding(segmentedItemPadding(index, trackCount))
                                 .clip(segmentedItemShape(index, trackCount))
                                 .background(MaterialTheme.colorScheme.errorContainer)
                                 .padding(horizontal = 20.dp),
@@ -409,7 +413,7 @@ private fun PlaylistContent(
 /**
  * Full-width 1:1 hero. Prefers the user-picked `iconUrl`, else (for system
  * auto-playlists) the top track's art, else a tonal surface with the icon
- * returned by [getPlaylistIconRes] — matches the bandcamp album cover slot.
+ * returned by [getPlaylistIconRes] - matches the bandcamp album cover slot.
  */
 @Composable
 private fun PlaylistHero(playlist: Playlist, heroUrl: String?) {
@@ -612,7 +616,7 @@ private fun ErrorState(message: String, onRetry: () -> Unit, modifier: Modifier 
                 color = MaterialTheme.colorScheme.error,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            TextButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
+            Button(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
                 Text(stringResource(R.string.common_action_retry))
             }
         }

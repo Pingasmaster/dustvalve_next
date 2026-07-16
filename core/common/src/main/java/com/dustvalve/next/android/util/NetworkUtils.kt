@@ -13,7 +13,7 @@ object NetworkUtils {
 
     /**
      * Returns true if the URL is a valid HTTPS URL with a non-empty hostname.
-     * This validates URL structure only — it does NOT verify the URL belongs to Dustvalve.
+     * This validates URL structure only - it does NOT verify the URL belongs to Dustvalve.
      * Use [isDustvalveDomain] for strict Dustvalve domain checks.
      */
     fun isValidHttpsUrl(url: String): Boolean {

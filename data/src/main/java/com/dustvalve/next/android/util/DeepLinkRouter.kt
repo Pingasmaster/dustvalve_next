@@ -13,7 +13,7 @@ sealed interface DeepLinkAction {
     data class PlayYouTubeVideo(val videoUrl: String) : DeepLinkAction
 }
 
-/** The kind of resource a compatible link points at — drives the inline chip label. */
+/** The kind of resource a compatible link points at - drives the inline chip label. */
 enum class LinkResourceType { VIDEO, SONG, PLAYLIST, ALBUM, ARTIST, TRACK }
 
 /** A pasted/opened link that resolved to something the app can open. */
@@ -23,7 +23,7 @@ data class DetectedLink(val provider: MusicProvider, val type: LinkResourceType,
  * Pure, offline URL classifier for the platforms the app supports (YouTube, YouTube Music,
  * Bandcamp on *.bandcamp.com). [detect] is the single entry point used both for the inline
  * "open link" chip and for the first pass of opening a pasted link. Custom Bandcamp domains
- * are NOT handled here (no host signal) — see BandcampDomainSniffer for the on-Enter network path.
+ * are NOT handled here (no host signal) - see BandcampDomainSniffer for the on-Enter network path.
  */
 object DeepLinkRouter {
 
@@ -96,7 +96,7 @@ object DeepLinkRouter {
             if (host == "consent.youtube.com") {
                 queryParam(uri, "continue")?.let { return normalize(it, depth + 1) }
             }
-            // *.google.<tld>/url?q=<encoded> (or url=) — links copied from search results
+            // *.google.<tld>/url?q=<encoded> (or url=) - links copied from search results
             if (GOOGLE_HOST_RE.matches(host) && uri.path == "/url") {
                 (queryParam(uri, "q") ?: queryParam(uri, "url"))?.let { return normalize(it, depth + 1) }
             }
@@ -183,7 +183,7 @@ object DeepLinkRouter {
     }
 
     private fun playlistId(path: String, query: String): String? {
-        // browse/VL<playlistId> (YT Music) — strip the VL wrapper.
+        // browse/VL<playlistId> (YT Music) - strip the VL wrapper.
         BROWSE_VL_RE.find(path)?.groupValues?.getOrNull(1)?.let { return it }
         if (path.startsWith("/playlist") || query.contains("list=")) {
             LIST_PARAM_RE.find(query)?.groupValues?.getOrNull(1)?.let { return it }

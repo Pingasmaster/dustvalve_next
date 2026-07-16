@@ -165,7 +165,7 @@ class SearchViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                // Best-effort — silent fail for track play
+                // Best-effort - silent fail for track play
             }
         }
     }

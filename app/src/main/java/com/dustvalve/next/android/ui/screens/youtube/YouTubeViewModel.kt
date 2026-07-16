@@ -214,7 +214,7 @@ class YouTubeViewModel @Inject constructor(
         }
     }
 
-    // ── Source sub-tab switching ────────────────────────────────────────
+    // -- Source sub-tab switching ----------------------------------------
 
     fun setActiveSource(source: YouTubeSource) {
         if (_uiState.value.activeSource == source) return
@@ -275,7 +275,7 @@ class YouTubeViewModel @Inject constructor(
         loadYtmHome(_uiState.value.ytmSelectedChipParams)
     }
 
-    // ── Discovery feed ──────────────────────────────────────────────────
+    // -- Discovery feed --------------------------------------------------
 
     private fun loadDiscoveryFeed() {
         discoveryJobs.forEach { it.cancel() }
@@ -435,7 +435,7 @@ class YouTubeViewModel @Inject constructor(
         }
     }
 
-    // ── Mood selection ──────────────────────────────────────────────────
+    // -- Mood selection --------------------------------------------------
 
     fun onMoodSelected(mood: MoodChip?) {
         if (mood == null || mood == _uiState.value.selectedMood) {
@@ -493,7 +493,7 @@ class YouTubeViewModel @Inject constructor(
         }
     }
 
-    // ── Search (unchanged) ──────────────────────────────────────────────
+    // -- Search (unchanged) ----------------------------------------------
 
     fun onQueryChange(query: String) {
         _uiState.update { it.copy(query = query) }
@@ -617,7 +617,7 @@ class YouTubeViewModel @Inject constructor(
         }
     }
 
-    // ── Other ───────────────────────────────────────────────────────────
+    // -- Other -----------------------------------------------------------
 
     fun importPlaylist(playlistUrl: String, name: String) {
         viewModelScope.launch {

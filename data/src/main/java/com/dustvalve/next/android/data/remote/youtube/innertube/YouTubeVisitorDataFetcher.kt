@@ -19,7 +19,7 @@ import javax.inject.Singleton
  * Cached in-memory only; rotating across app launches is fine.
  *
  * Twin of [com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicVisitorDataFetcher]
- * — same hardening (navigation headers, dual consent cookies, fallback URL,
+ * - same hardening (navigation headers, dual consent cookies, fallback URL,
  * shared brace-balanced ytcfg extractor). The fallback URL is the same as
  * the primary because plain youtube.com is the most reliable source already;
  * having the second attempt covers transient failures.

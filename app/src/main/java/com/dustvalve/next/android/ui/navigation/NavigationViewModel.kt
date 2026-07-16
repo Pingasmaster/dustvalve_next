@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/** A compatible link whose provider is disabled — drives the "enable provider?" dialog. */
+/** A compatible link whose provider is disabled - drives the "enable provider?" dialog. */
 data class PendingLink(val provider: MusicProvider, val type: LinkResourceType, val action: DeepLinkAction)
 
 @HiltViewModel
@@ -160,7 +160,7 @@ class NavigationViewModel @Inject constructor(
                         _deepLinkTrack.value = track
                     } catch (e: Exception) {
                         if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                        // Track resolution failed — silently ignore
+                        // Track resolution failed - silently ignore
                     }
                 }
             }

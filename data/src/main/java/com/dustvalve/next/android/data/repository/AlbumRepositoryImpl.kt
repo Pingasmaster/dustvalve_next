@@ -36,7 +36,7 @@ class AlbumRepositoryImpl @Inject constructor(
 ) : AlbumRepository {
 
     companion object {
-        // Albums are immutable once released — title, artist, tracks, art and
+        // Albums are immutable once released - title, artist, tracks, art and
         // tags don't change. We deliberately treat any cached row that has at
         // least one persisted track as the source of truth and never refetch
         // it, in line with the unified "never re-fetch a resource we've
@@ -90,13 +90,13 @@ class AlbumRepositoryImpl @Inject constructor(
         // No cache, stub, or stale: scrape and emit
         try {
             val fresh = scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
-            // Always emit fresh data after a scrape — metadata (title, art, tags)
+            // Always emit fresh data after a scrape - metadata (title, art, tags)
             // may have changed even if track IDs are identical
             emit(fresh)
         } catch (e: Exception) {
             if (e is kotlin.coroutines.cancellation.CancellationException) throw e
             if (cachedAlbum == null || trackDao.getByAlbumId(cachedAlbum.id).isEmpty()) throw e
-            // Stale cache already emitted — swallow network error for offline use
+            // Stale cache already emitted - swallow network error for offline use
         }
     }.flowOn(ioDispatcher)
 
@@ -160,7 +160,7 @@ class AlbumRepositoryImpl @Inject constructor(
                 )
             }
         } else {
-            // Content unchanged — just touch the timestamp
+            // Content unchanged - just touch the timestamp
             albumDao.updateCachedAt(cachedAlbum?.id ?: album.id)
             val allIds = listOf(album.id) + album.tracks.map { it.id }
             val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()

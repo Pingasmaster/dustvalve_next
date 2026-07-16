@@ -76,7 +76,7 @@ class PlaybackService : MediaSessionService() {
                 )
                 null
             } else {
-                // Paused → lots of CPU headroom; nudge the OS toward lower clocks.
+                // Paused -> lots of CPU headroom; nudge the OS toward lower clocks.
                 perfHintSession?.reportActualWorkDuration(
                     TimeUnit.MICROSECONDS.toNanos(PERF_HINT_IDLE_US),
                 )

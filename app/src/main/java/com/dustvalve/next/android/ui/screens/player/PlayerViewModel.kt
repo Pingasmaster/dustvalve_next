@@ -158,13 +158,13 @@ class PlayerViewModel @Inject constructor(
 
     /**
      * Resolves the best available stream URL for a track:
-     * 1. If downloaded locally at same-or-higher quality → use local file
-     * 2. Otherwise → use the track's stream URL (mp3-128)
+     * 1. If downloaded locally at same-or-higher quality -> use local file
+     * 2. Otherwise -> use the track's stream URL (mp3-128)
      *
      * Also triggers a progressive background download if enabled.
      */
     private suspend fun resolveTrackForPlayback(track: Track, updateState: Boolean = true): Track {
-        // Local tracks already have a content:// URI — use as-is
+        // Local tracks already have a content:// URI - use as-is
         if (track.isLocal) {
             if (updateState) {
                 _extraState.update {
@@ -217,7 +217,7 @@ class PlayerViewModel @Inject constructor(
         // Check for existing local download
         val downloadInfo = downloadRepository.getDownloadInfo(track.id)
         if (downloadInfo != null && downloadInfo.format.qualityRank >= AudioFormat.MP3_128.qualityRank) {
-            // Already have a same-or-higher quality local file — use it
+            // Already have a same-or-higher quality local file - use it
             if (updateState) {
                 _extraState.update {
                     it.copy(
@@ -229,7 +229,7 @@ class PlayerViewModel @Inject constructor(
             return track.copy(streamUrl = downloadInfo.streamUri)
         }
 
-        // No local download — use original stream URL (mp3-128)
+        // No local download - use original stream URL (mp3-128)
         if (updateState) {
             _extraState.update {
                 it.copy(
@@ -260,7 +260,7 @@ class PlayerViewModel @Inject constructor(
                     return@launch
                 }
 
-                // On metered + save-data enabled → download MP3-320 instead of preferred format
+                // On metered + save-data enabled -> download MP3-320 instead of preferred format
                 // YouTube always gets best available stream, so skip format override
                 val formatOverride = if (track.source != TrackSource.YOUTUBE) {
                     val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
@@ -294,7 +294,7 @@ class PlayerViewModel @Inject constructor(
                     }
                 }
 
-                // Current track download complete — precache next track in queue
+                // Current track download complete - precache next track in queue
                 precacheNextTrack()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -312,11 +312,11 @@ class PlayerViewModel @Inject constructor(
         val currentIndex = queueManager.currentIndex.value
         val nextTrack = queue.getOrNull(currentIndex + 1) ?: return
 
-        // Already downloaded — nothing to do
+        // Already downloaded - nothing to do
         val existing = downloadRepository.getDownloadInfo(nextTrack.id)
         if (existing != null && existing.format.qualityRank >= AudioFormat.MP3_128.qualityRank) return
 
-        // Already being manually downloaded — don't duplicate
+        // Already being manually downloaded - don't duplicate
         if (_extraState.value.downloadingTrackId == nextTrack.id) return
 
         try {
@@ -624,7 +624,7 @@ class PlayerViewModel @Inject constructor(
         favoriteJob = viewModelScope.launch {
             try {
                 libraryRepository.toggleTrackFavorite(track.id)
-                // Queue state is patched via collectFavoriteTrackIds → applyFavoriteIds,
+                // Queue state is patched via collectFavoriteTrackIds -> applyFavoriteIds,
                 // which preserves the unshuffle snapshot. setQueue here would null it.
             } catch (e: Exception) {
                 if (e is CancellationException) throw e

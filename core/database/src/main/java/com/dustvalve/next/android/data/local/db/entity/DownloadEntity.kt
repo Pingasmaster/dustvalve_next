@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
  * One row per persisted asset. There is no separate cache layer; this table
  * is the unified downloads pool.
  *
- * `pinned = true` (default) is an explicit user download — never evicted.
+ * `pinned = true` (default) is an explicit user download - never evicted.
  * `pinned = false` is auto-cached content (e.g. on-play track caching) and
  * is subject to LRU eviction when the storage limit is exceeded.
  */

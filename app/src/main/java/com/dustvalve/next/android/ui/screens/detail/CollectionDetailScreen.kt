@@ -34,6 +34,9 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
@@ -88,9 +91,28 @@ fun CollectionDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(sourceId, collectionUrl, collectionName) {
         viewModel.load(sourceId, collectionUrl, collectionName)
+    }
+
+    val snackbarText = state.snackbarMessage?.asString()
+    val retryLabel = stringResource(R.string.common_action_retry)
+    LaunchedEffect(snackbarText) {
+        snackbarText?.let { message ->
+            try {
+                val result = snackbarHostState.showSnackbar(
+                    message = message,
+                    actionLabel = if (state.isSnackbarError) retryLabel else null,
+                )
+                if (result == SnackbarResult.ActionPerformed) {
+                    viewModel.retryAction?.invoke()
+                }
+            } finally {
+                viewModel.clearSnackbar()
+            }
+        }
     }
 
     if (showDeleteDialog) {
@@ -154,6 +176,7 @@ fun CollectionDetailScreen(
                 windowInsets = WindowInsets(0),
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
     ) { innerPadding ->
@@ -211,7 +234,7 @@ fun CollectionDetailScreen(
                     contentPadding = PaddingValues(bottom = 10.dp),
                 ) {
                     // Hero cover. Name + track count live in the top-bar, so
-                    // the hero is the bare artwork — matches AlbumDetailScreen.
+                    // the hero is the bare artwork - matches AlbumDetailScreen.
                     item(key = "hero") {
                         Box(
                             modifier = Modifier
@@ -331,10 +354,10 @@ fun CollectionDetailScreen(
 
 /**
  * Connected M3E button-group action bar for collection detail. Layout:
- * [Play all (weighted, primary filled)] · [Shuffle] · [Favorite (toggle)]
- *  · [Download (toggle)].
+ * [Play all (weighted, primary filled)] / [Shuffle] / [Favorite (toggle)]
+ *  / [Download (toggle)].
  *
- * Mirrors `AlbumActionBar` minus the Artist-nav button — a playlist doesn't
+ * Mirrors `AlbumActionBar` minus the Artist-nav button - a playlist doesn't
  * have a single artist. Spacing + shape morphing + heights match album
  * detail so the two screens read as one design system.
  */

@@ -90,8 +90,8 @@ fun FastScrollbar(listState: LazyListState, modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .width(4.dp)
                 .padding(start = 8.dp)
+                .width(4.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f)),
         )

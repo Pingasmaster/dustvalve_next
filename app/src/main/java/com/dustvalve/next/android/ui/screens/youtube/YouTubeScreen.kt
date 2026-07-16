@@ -95,6 +95,7 @@ import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
+import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -474,12 +475,7 @@ fun YouTubeScreen(
                                         shape = segmentedItemShape(index, state.results.size),
                                         color = MaterialTheme.colorScheme.surfaceContainerLow,
                                         modifier = Modifier
-                                            .padding(
-                                                start = 16.dp,
-                                                end = 16.dp,
-                                                top = if (index == 0) 8.dp else 1.dp,
-                                                bottom = if (index == state.results.lastIndex) 0.dp else 1.dp,
-                                            )
+                                            .padding(segmentedItemPadding(index, state.results.size))
                                             .animateItem(
                                                 fadeInSpec = null,
                                                 fadeOutSpec = null,
@@ -726,7 +722,7 @@ fun YouTubeScreen(
     }
 }
 
-// ── YouTube discover feed (Material 3 Expressive) ───────────────────────
+// -- YouTube discover feed (Material 3 Expressive) -----------------------
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -852,7 +848,7 @@ private fun YouTubeSourceContent(
     }
 }
 
-// ── Mood filter row ─────────────────────────────────────────────────────
+// -- Mood filter row -----------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -876,7 +872,7 @@ private fun MoodToggleRow(selectedMood: MoodChip?, onMoodSelect: (MoodChip?) -> 
     }
 }
 
-// ── Discover shelf: header + hero/carousel with load & error states ────
+// -- Discover shelf: header + hero/carousel with load & error states ----
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -924,7 +920,7 @@ private fun DiscoverShelf(
     }
 }
 
-// ── Video cards ─────────────────────────────────────────────────────────
+// -- Video cards ---------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -1091,7 +1087,7 @@ private fun VideoGridCard(item: SearchResult, onClick: () -> Unit, modifier: Mod
     }
 }
 
-// ── Loading & error states ──────────────────────────────────────────────
+// -- Loading & error states ----------------------------------------------
 
 @Composable
 private fun FeedSkeletonRow(modifier: Modifier = Modifier) {
@@ -1146,6 +1142,12 @@ private fun FeedErrorCard(message: String, onRetry: () -> Unit, modifier: Modifi
             )
             Spacer(Modifier.width(16.dp))
             FilledTonalButton(onClick = onRetry, shapes = ButtonDefaults.shapes()) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_refresh),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
                 Text(stringResource(R.string.common_action_retry))
             }
         }

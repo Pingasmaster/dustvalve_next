@@ -32,7 +32,7 @@ class DustvalveArtistScraper @Inject constructor(
     /**
      * Bandcamp serves a heavily-stripped HTML when it sees a mobile User-Agent
      * (no `band-name-location`, no `band-photo`, no `signed-out-artists-bio-text`,
-     * no `music-grid` — the artist hero is reduced to a JSON-LD `byArtist.name`
+     * no `music-grid` - the artist hero is reduced to a JSON-LD `byArtist.name`
      * with no photo, no location, no bio). The shared `OkHttpClient` ships a
      * mobile UA via `userAgentInterceptor` (set in NetworkModule), so every
      * scrapeArtist call would produce an "Unknown Artist" with no metadata for
@@ -81,7 +81,7 @@ class DustvalveArtistScraper @Inject constructor(
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             val finalPath = response.request.url.encodedPath
             if (finalPath.contains("/album/") || finalPath.contains("/track/")) {
-                // Main page redirected to an album/track page — mobile layout lacks
+                // Main page redirected to an album/track page - mobile layout lacks
                 // artist metadata, so re-fetch the /music page instead.
                 response.body.string() // consume body to release connection
                 fetchArtistMusicPage(artistUrl)
@@ -92,7 +92,7 @@ class DustvalveArtistScraper @Inject constructor(
         ensureActive()
 
         // Some artists (e.g. aawilliams.bandcamp.com) render the landing page
-        // as a *merch* grid with no `#music-grid` — our album selectors come
+        // as a *merch* grid with no `#music-grid` - our album selectors come
         // up empty. The discography IS there at `/music` under the normal
         // music-grid layout, so retry there once before giving up.
         if (!html.contains("music-grid-item") && html.contains("merch-grid-item")) {
@@ -188,7 +188,7 @@ class DustvalveArtistScraper @Inject constructor(
                         }
                     }
                 } catch (_: Exception) {
-                    // JSON parsing failed — continue with whatever art URLs we have
+                    // JSON parsing failed - continue with whatever art URLs we have
                 }
             }
         }
@@ -244,7 +244,7 @@ class DustvalveArtistScraper @Inject constructor(
      */
     internal fun extractMeetsBuyFullDiscography(html: String): Boolean {
         // The data-band attribute is HTML-entity-encoded; we don't need to
-        // fully decode for a boolean flag — a substring check is sufficient
+        // fully decode for a boolean flag - a substring check is sufficient
         // and dodges the cost of full JSON parsing.
         // True can appear as `true`, `1`, or `&quot;true&quot;` depending on
         // bandcamp's serializer; in practice it's always boolean true / int 1.
@@ -257,7 +257,7 @@ class DustvalveArtistScraper @Inject constructor(
     }
 
     /**
-     * Fetches `<artistUrl>/music` — the canonical discography layout. Split
+     * Fetches `<artistUrl>/music` - the canonical discography layout. Split
      * out so both the "landing redirected to album/track" and the
      * "landing is a merch grid without #music-grid" fallbacks go through the
      * same path.
@@ -282,7 +282,7 @@ class DustvalveArtistScraper @Inject constructor(
     }
 
     companion object {
-        // A current desktop Chrome UA — Bandcamp serves the desktop layout
+        // A current desktop Chrome UA - Bandcamp serves the desktop layout
         // (with band-name-location / band-photo / signed-out-artists-bio-text
         // selectors we depend on) for any non-mobile-flagged UA.
         internal const val DESKTOP_UA =

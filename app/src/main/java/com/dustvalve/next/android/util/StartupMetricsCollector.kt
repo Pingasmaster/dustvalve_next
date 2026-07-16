@@ -26,7 +26,7 @@ import javax.inject.Singleton
 @Singleton
 class StartupMetricsCollector @Inject constructor(@param:ApplicationContext private val context: Context) {
 
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
     fun collectOnColdStart() {
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager

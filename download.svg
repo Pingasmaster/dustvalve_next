@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 96" width="560" height="96" role="img" aria-label="Download APK — Android 8.0 to Android 16 (stable default)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 96" width="560" height="96" role="img" aria-label="Download APK - Android 8.0 to Android 16 (stable default)">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#6BEAFF"/>
@@ -45,5 +45,5 @@
 
   <!-- labels -->
   <text x="104" y="46" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="800" letter-spacing="0.5" fill="#00232B">DOWNLOAD APK</text>
-  <text x="104" y="73" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="16.5" font-weight="600" fill="#003F4D">Android 8.0 – 16&#160;&#160;·&#160;&#160;stable default build</text>
+  <text x="104" y="73" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="16.5" font-weight="600" fill="#003F4D">Android 8.0 - 16&#160;&#160;/&#160;&#160;stable default build</text>
 </svg>

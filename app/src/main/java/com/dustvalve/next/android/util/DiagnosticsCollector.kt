@@ -15,7 +15,7 @@ import javax.inject.Singleton
  * deaths that weren't the user closing the app. minSdk=37 on this app means
  * the ApplicationExitInfo API (added in API 30) is always available.
  *
- * Pure logging + on-disk dump. No UI, no telemetry — the diagnostics file
+ * Pure logging + on-disk dump. No UI, no telemetry - the diagnostics file
  * lives under filesDir/diagnostics/exit-info-<timestamp>.txt and can be
  * pulled with `adb pull` for offline review.
  *
@@ -31,7 +31,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
      * Best-effort: read the last few process exit reasons and dump them.
      * Bounded to 5 entries so we don't spam logcat after a long uptime.
      */
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch — see below.
+    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
     fun collectOnColdStart() {
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -45,7 +45,7 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "collectOnColdStart: invalid package/pid", iae)
         } catch (t: Throwable) {
-            // Robolectric throws NPE here too — never crash the app for
+            // Robolectric throws NPE here too - never crash the app for
             // best-effort diagnostics that the host JVM can't deliver.
             Log.w(TAG, "collectOnColdStart: platform unavailable", t)
         }

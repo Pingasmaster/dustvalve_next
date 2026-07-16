@@ -137,7 +137,7 @@ class FolderRehydrator @Inject constructor(
             }
         }
 
-        // Metadata cache — only if the user opted in to keep it in the folder.
+        // Metadata cache - only if the user opted in to keep it in the folder.
         if (settingsDataStore.getDedicatedFolderIncludeMetadataCacheSync()) {
             val metadata = FolderIo.readJson(
                 context,

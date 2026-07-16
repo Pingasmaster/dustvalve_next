@@ -34,7 +34,7 @@ import javax.inject.Singleton
  *  2. **Dual consent cookies** (`SOCS=CAI` and `CONSENT=YES+1`). The EU
  *     consent gate accepts either form; sending both covers every locale
  *     variant we've seen.
- *  3. **Fallback URL** — if music.youtube.com returns no usable ytcfg, we
+ *  3. **Fallback URL** - if music.youtube.com returns no usable ytcfg, we
  *     fetch https://www.youtube.com/ and take its visitorData. The token is
  *     shared across the `.youtube.com` realm, so YT Music Innertube calls
  *     accept it. We pair that visitorData with our hardcoded
@@ -52,7 +52,7 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
      * login cookie from a prior session (or any SID / HSID / SAPISID) rotates
      * the landing page onto a signed-in variant whose `ytcfg.set(...)` block
      * is served behind additional setup scripts that vary by account, and in
-     * some EU-locale combinations the block is omitted entirely — parsing
+     * some EU-locale combinations the block is omitted entirely - parsing
      * then fails with "missing ytcfg.set block". Reuse the shared connection
      * pool / dispatcher / interceptors via newBuilder() but drop the cookie
      * jar so only the manual consent cookies below are sent.
@@ -125,7 +125,7 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
     private fun fetchLanding(url: String): LandingResponse {
         val request = Request.Builder()
             .url(url)
-            // Explicit UA in addition to the shared interceptor — the
+            // Explicit UA in addition to the shared interceptor - the
             // interceptor IS preserved by newBuilder(), but setting UA here
             // too eliminates any edge case where a custom sharedOkHttpClient
             // (e.g. in tests) is missing the interceptor.

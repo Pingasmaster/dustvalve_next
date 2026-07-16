@@ -50,7 +50,7 @@ android {
                 // release builds decode release-keystore.jks from KEYSTORE_BASE64
                 // via .github/workflows/release.yml.
                 rootProject.logger.warn(
-                    "release-keystore.jks or .password-signing-keys missing — " +
+                    "release-keystore.jks or .password-signing-keys missing - " +
                         "falling back to AGP debug signing for the release variant.",
                 )
                 val debug = signingConfigs.getByName("debug")
@@ -310,7 +310,7 @@ dependencies {
 
     // Hilt 2.60's KSP processor emits @CanIgnoreReturnValue on generated
     // component methods but does NOT declare errorprone-annotations as a
-    // transitive runtime dep — without this the hiltJavaCompile* step fails
+    // transitive runtime dep - without this the hiltJavaCompile* step fails
     // with "cannot find symbol class CanIgnoreReturnValue".
     implementation(libs.errorprone.annotations)
 
@@ -337,7 +337,7 @@ dependencies {
     // Core KTX
     implementation(libs.core.ktx)
 
-    // Profile installer — consumed by androidx.baselineprofile to install
+    // Profile installer - consumed by androidx.baselineprofile to install
     // baseline-prof.txt + startup-prof.txt shipped in the release APK.
     // (Profile files are produced by the :baselineprofile module's
     // `pixel6Api33` managed-device run and copied to
@@ -370,7 +370,7 @@ dependencies {
 
 // lintVital* runs with --fatalOnly during assembleRelease, so the
 // RawDispatchersUse error-severity entries in lint-baseline.xml are never
-// reported and the baseline looks 100% stale to this task — printing
+// reported and the baseline looks 100% stale to this task - printing
 // "N entries not found" on every CI build alongside the warnings we
 // actually want to suppress. AGP 9.x seals the baseline property via
 // disallowChanges() inside the task initialization action, so we can't
@@ -378,6 +378,6 @@ dependencies {
 // lint-baseline.xml as an EMPTY baseline (see app/lint-baseline.xml):
 // nothing for the fatal-only lint to consider stale, so no "N entries not
 // found" diagnostic. lintRelease (run separately via ./build.sh) still
-// runs full lint and reports any new warnings — and now (with
+// runs full lint and reports any new warnings - and now (with
 // warningsAsErrors = true) treats each as a build failure, since the
 // baseline is empty and there's no place left to hide them.

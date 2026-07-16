@@ -39,7 +39,7 @@ import javax.inject.Singleton
  * driving `downloadAlbum` / per-album scrape + downloadAlbum respectively
  * (TODO once the UI surfaces a download-progress sink for those flows).
  *
- * Errors are swallowed by design — auto-download must never crash the app
+ * Errors are swallowed by design - auto-download must never crash the app
  * or block the UI. Failed tracks just stay non-downloaded; the next favorite
  * change re-evaluates and retries them.
  */
@@ -76,7 +76,7 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
                     // We're iterating favorites, so isFavorite = true.
                     val tracks = trackDao.getByIds(missing).map { it.toDomain(isFavorite = true) }
                     // Hand off to the controller (foreground service + serial
-                    // queue, de-duped by track id). Fire-and-forget — failures
+                    // queue, de-duped by track id). Fire-and-forget - failures
                     // just leave the track non-downloaded and a later emission
                     // re-enqueues it.
                     for (track in tracks) {

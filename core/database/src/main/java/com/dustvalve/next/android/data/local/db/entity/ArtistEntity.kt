@@ -18,7 +18,7 @@ data class ArtistEntity(
     val albumIdOrder: String? = null,
     val source: String = "bandcamp",
     /**
-     * Bandcamp "meets_buy_full_discography_criteria" — true for artists who
+     * Bandcamp "meets_buy_full_discography_criteria" - true for artists who
      * surface a "buy full discography" offer. Cached on the entity so the
      * artist viewer can render the button without re-scraping.
      */

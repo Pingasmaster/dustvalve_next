@@ -103,7 +103,7 @@ class PlaylistRepositoryImpl @Inject constructor(
 
     override suspend fun ensureSystemPlaylistsExist() {
         // Sweep any orphaned system playlist whose type no longer exists in
-        // the SystemPlaylistType enum (e.g. the removed LOCAL auto-playlist —
+        // the SystemPlaylistType enum (e.g. the removed LOCAL auto-playlist -
         // local content now lives in its own dedicated tab).
         val validTypeNames = Playlist.SystemPlaylistType.entries.map { it.name }.toSet()
         val existingPlaylists = playlistDao.getAllPlaylists().first()
@@ -146,7 +146,7 @@ class PlaylistRepositoryImpl @Inject constructor(
 
     override fun getTracksInPlaylist(playlistId: String): Flow<List<Track>> {
         // System playlists (Favorites / Downloads) read live from source
-        // tables so new items appear instantly — BUT when the user has
+        // tables so new items appear instantly - BUT when the user has
         // manually reordered the list, playlist_tracks rows carry a custom
         // position override. We merge: apply the playlist_tracks ordering
         // to tracks that have a row, then append any new source-only
@@ -203,7 +203,7 @@ class PlaylistRepositoryImpl @Inject constructor(
      *  - Tracks in source but not in override: append in their source order
      *    (so newly-favorited tracks land at the end of the custom list).
      *  - Tracks in override but not in source: drop (unfavorited / undownloaded).
-     *  - Override empty → return source verbatim.
+     *  - Override empty -> return source verbatim.
      */
     private fun mergeSystemPlaylist(
         source: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>,
@@ -282,7 +282,7 @@ class PlaylistRepositoryImpl @Inject constructor(
 
     override suspend fun moveTrackInPlaylist(playlistId: String, fromPosition: Int, toPosition: Int) {
         // System playlists (Favorites / Downloads) don't normally carry
-        // playlist_track rows — tracks are derived from source tables. The
+        // playlist_track rows - tracks are derived from source tables. The
         // first time the user reorders, seed playlist_tracks with the
         // current source ordering so the override exists + getTracksInPlaylist's
         // merge path takes over. (Recents is intentionally non-reorderable

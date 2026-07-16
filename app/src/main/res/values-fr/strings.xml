@@ -183,13 +183,12 @@
     <string name="settings_cd_remove_folder">Retirer le dossier</string>
     <string name="settings_cd_avatar">Avatar</string>
     <string name="settings_connect_bandcamp">Connecter <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Connecte-toi pour accéder à tes achats <xliff:g id="brand">Bandcamp</xliff:g>.</string>
+    <string name="settings_connect_bandcamp_desc">Connecte-toi pour accéder à tes achats <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_connect_youtube">Connecter <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Connecte-toi pour accéder à ta bibliothèque <xliff:g id="brand">YouTube Music</xliff:g>.</string>
+    <string name="settings_connect_youtube_desc">Connecte-toi pour accéder à ta bibliothèque <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="settings_youtube_default_source_title">Vue par défaut</string>
     <string name="settings_youtube_default_source_desc">Vue ouverte quand tu touches l’onglet <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="common_play">Lecture</string>
-    <string name="common_retry">Réessayer</string>
     <string name="ytm_artist_spotlight">Artiste à la une</string>
     <string name="settings_remove_all_downloads">Supprimer tous les téléchargements</string>
     <string name="settings_dedicated_folder_title">Tout stocker dans un dossier dédié</string>
@@ -312,9 +311,9 @@
     <string name="local_filter_unknown_album">Album inconnu</string>
     <string name="local_add_to_playlist">Ajouter à une playlist</string>
     <string name="settings_local_keep_sort">Conserver le tri entre les sessions</string>
-    <string name="settings_local_keep_sort_desc">Restaure le tri (et l’ordre inversé) de l’onglet Local à la réouverture de l’appli.</string>
+    <string name="settings_local_keep_sort_desc">Restaure le tri (et l’ordre inversé) de l’onglet Local à la réouverture de l’appli</string>
     <string name="settings_local_keep_filters">Conserver les filtres entre les sessions</string>
-    <string name="settings_local_keep_filters_desc">Restaure les filtres artiste, album, dossier, durée et favoris de l’onglet Local à la réouverture de l’appli.</string>
+    <string name="settings_local_keep_filters_desc">Restaure les filtres artiste, album, dossier, durée et favoris de l’onglet Local à la réouverture de l’appli</string>
     <string name="common_search_failed">Échec de la recherche</string>
     <string name="common_no_results_title">Aucun résultat</string>
     <string name="common_no_results_subtitle">Essaie un autre terme de recherche</string>

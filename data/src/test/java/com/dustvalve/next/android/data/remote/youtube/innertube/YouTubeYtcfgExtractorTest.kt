@@ -47,7 +47,7 @@ class YouTubeYtcfgExtractorTest {
     }
 
     @Test fun `accepts missing terminal semicolon`() {
-        // Google emits `ytcfg.set({...}))</script>` in some variants — the
+        // Google emits `ytcfg.set({...}))</script>` in some variants - the
         // old regex required `);`.
         val html = """<script>ytcfg.set({"VISITOR_DATA":"vd_no_semi","INNERTUBE_CLIENT_VERSION":"1.0"})</script>"""
         val cfg = YouTubeYtcfgExtractor.extract(html)

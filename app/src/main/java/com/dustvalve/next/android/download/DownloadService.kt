@@ -18,7 +18,7 @@ import javax.inject.Inject
 /**
  * Foreground shell that keeps the process alive while [DownloadController] has
  * work, and hosts the shared download notification ([DownloadNotificationCenter.NOTIFICATION_ID])
- * as its foreground notification. It owns no download logic — the controller
+ * as its foreground notification. It owns no download logic - the controller
  * runs the transfers on its own scope; this service exists purely so downloads
  * survive the UI being backgrounded/closed.
  *

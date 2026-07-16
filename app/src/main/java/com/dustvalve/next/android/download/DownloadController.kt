@@ -51,7 +51,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * `withBatch` nesting and `CancellationException` rethrow contracts.
  *
  * Queue is in-memory only (pre-alpha; DB schema stays v1). A process death
- * loses pending work — partial `.tmp` files are GC'd on cold start.
+ * loses pending work - partial `.tmp` files are GC'd on cold start.
  */
 @Singleton
 class DownloadController @Inject constructor(
@@ -92,7 +92,7 @@ class DownloadController @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val seq = AtomicLong(0L)
 
-    /** Guards [queue] and [loopRunning]. Plain monitor — all ops are non-suspending. */
+    /** Guards [queue] and [loopRunning]. Plain monitor - all ops are non-suspending. */
     private val lock = Any()
     private val queue = ArrayDeque<DownloadWork>()
     private var loopRunning = false
@@ -259,8 +259,8 @@ class DownloadController @Inject constructor(
     private fun startServiceIfPossible() {
         // Downloads run on the controller scope regardless; the service only
         // keeps the process alive + hosts the foreground notification. A
-        // background start can be refused (Android 12+ FGS limits) — e.g. an
-        // auto-download fired while backgrounded — so degrade gracefully to the
+        // background start can be refused (Android 12+ FGS limits) - e.g. an
+        // auto-download fired while backgrounded - so degrade gracefully to the
         // plain (non-FGS) notification the center already posts.
         try {
             ContextCompat.startForegroundService(context, Intent(context, DownloadService::class.java))

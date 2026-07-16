@@ -3,7 +3,7 @@ package com.dustvalve.next.android.domain.model
 import androidx.compose.runtime.Immutable
 
 /**
- * Generic "collection of tracks" — playlist, radio, mix, curated list.
+ * Generic "collection of tracks" - playlist, radio, mix, curated list.
  *
  * Used by [com.dustvalve.next.android.domain.repository.MusicSource] so UI
  * code can render any source's playlist without knowing whether the content
@@ -27,7 +27,7 @@ data class MusicCollection(
      * or [com.dustvalve.next.android.domain.repository.MusicSource.getArtistTracks]
      * to fetch the next page. `null` means end-of-list. Typed as [Any] so each
      * source can choose its own representation (plain string, JSON blob, data
-     * class) without a cross-source serialization contract — the adapter
+     * class) without a cross-source serialization contract - the adapter
      * always unpacks its own tokens.
      */
     val continuation: Any? = null,

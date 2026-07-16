@@ -31,7 +31,7 @@ object FolderSnapshotSerializer {
     }
 }
 
-// ─── Playlists ────────────────────────────────────────────────────────────
+// --- Playlists ------------------------------------------------------------
 
 @Serializable
 data class PlaylistSnapshot(
@@ -70,7 +70,7 @@ fun PlaylistSnapshot.toEntity() = PlaylistEntity(
 fun PlaylistTrackEntity.toSnapshot() = PlaylistTrackSnapshot(playlistId, trackId, position, addedAt)
 fun PlaylistTrackSnapshot.toEntity() = PlaylistTrackEntity(playlistId, trackId, position, addedAt)
 
-// ─── Favorites ────────────────────────────────────────────────────────────
+// --- Favorites ------------------------------------------------------------
 
 @Serializable
 data class FavoriteSnapshot(
@@ -87,7 +87,7 @@ data class FavoritesFile(val favorites: List<FavoriteSnapshot> = emptyList())
 fun FavoriteEntity.toSnapshot() = FavoriteSnapshot(id, type, addedAt, isPinned, shapeKey)
 fun FavoriteSnapshot.toEntity() = FavoriteEntity(id, type, addedAt, isPinned, shapeKey)
 
-// ─── Tracks ───────────────────────────────────────────────────────────────
+// --- Tracks ---------------------------------------------------------------
 
 @Serializable
 data class TrackSnapshot(
@@ -123,7 +123,7 @@ fun TrackSnapshot.toEntity() = TrackEntity(
     bandcampTrackUrl,
 )
 
-// ─── Albums ───────────────────────────────────────────────────────────────
+// --- Albums ---------------------------------------------------------------
 
 @Serializable
 data class AlbumSnapshot(
@@ -165,7 +165,7 @@ fun AlbumSnapshot.toEntity() = AlbumEntity(
     singleTrackPriceAmount, singleTrackPriceCurrency,
 )
 
-// ─── Artists ──────────────────────────────────────────────────────────────
+// --- Artists --------------------------------------------------------------
 
 @Serializable
 data class ArtistSnapshot(
@@ -194,7 +194,7 @@ fun ArtistSnapshot.toEntity() = ArtistEntity(
     albumIdOrder, source, hasDiscographyOffer,
 )
 
-// ─── Downloads ────────────────────────────────────────────────────────────
+// --- Downloads ------------------------------------------------------------
 
 @Serializable
 data class DownloadSnapshot(
@@ -232,7 +232,7 @@ fun DownloadSnapshot.toEntity() = DownloadEntity(
     lastAccessed,
 )
 
-// ─── History (recent tracks + recent searches) ────────────────────────────
+// --- History (recent tracks + recent searches) ----------------------------
 
 @Serializable
 data class RecentTrackSnapshot(val trackId: String, val playedAt: Long = 0L)
@@ -248,7 +248,7 @@ fun RecentTrackSnapshot.toEntity() = RecentTrackEntity(trackId, playedAt)
 fun RecentSearchEntity.toSnapshot() = RecentSearchSnapshot(query, source, searchedAt)
 fun RecentSearchSnapshot.toEntity() = RecentSearchEntity(query, source, searchedAt)
 
-// ─── Metadata cache (YouTube + YTM home) ──────────────────────────────────
+// --- Metadata cache (YouTube + YTM home) ----------------------------------
 
 @Serializable
 data class YtVideoSnapshot(
@@ -313,7 +313,7 @@ fun YtPlaylistSnapshot.toEntity() = YouTubePlaylistCacheEntity(
 fun YouTubeMusicHomeCacheEntity.toSnapshot() = YtmHomeSnapshot(key, feedJson, cachedAt)
 fun YtmHomeSnapshot.toEntity() = YouTubeMusicHomeCacheEntity(key, feedJson, cachedAt)
 
-// ─── Settings ─────────────────────────────────────────────────────────────
+// --- Settings -------------------------------------------------------------
 //
 // Settings are stored as a map of string keys to primitive values. Every
 // DataStore key is encoded with a type-prefixed value to round-trip through

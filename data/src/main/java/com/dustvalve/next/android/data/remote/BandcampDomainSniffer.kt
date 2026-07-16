@@ -54,7 +54,7 @@ class BandcampDomainSniffer @Inject constructor(
 
         /**
          * Pure marker-parsing: given page [html] and the [requestUrl] it came from, decide if this
-         * is a Bandcamp page and what it points at. Detection order (most→least reliable):
+         * is a Bandcamp page and what it points at. Detection order (most->least reliable):
          *   1. <meta name="generator" content="Bandcamp">
          *   2. a `data-tralbum` / `data-band` attribute (Bandcamp's embedded album/band payload)
          *   3. an og:url whose host is *.bandcamp.com

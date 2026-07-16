@@ -91,7 +91,7 @@ class PlaylistDaoTest : DbTestBase() {
         dao.insertPlaylist(userPlaylist())
         (1..4).forEach { dao.addTrackToPlaylist("p1", "t$it") }
 
-        // Move t1 (pos 0) to position 2 → new order: t2, t3, t1, t4
+        // Move t1 (pos 0) to position 2 -> new order: t2, t3, t1, t4
         dao.reorderTrack("p1", "t1", fromPosition = 0, toPosition = 2)
         val ids = dao.getTracksInPlaylistSync("p1").map { it.id }
         assertThat(ids).containsExactly("t2", "t3", "t1", "t4").inOrder()
@@ -103,7 +103,7 @@ class PlaylistDaoTest : DbTestBase() {
         dao.insertPlaylist(userPlaylist())
         (1..4).forEach { dao.addTrackToPlaylist("p1", "t$it") }
 
-        // Move t4 (pos 3) to position 1 → new order: t1, t4, t2, t3
+        // Move t4 (pos 3) to position 1 -> new order: t1, t4, t2, t3
         dao.reorderTrack("p1", "t4", fromPosition = 3, toPosition = 1)
         val ids = dao.getTracksInPlaylistSync("p1").map { it.id }
         assertThat(ids).containsExactly("t1", "t4", "t2", "t3").inOrder()

@@ -123,14 +123,14 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
 
     /**
      * Two-step YTM album lookup for a track's [videoId]:
-     *   1. POST /next → find the first `browseEndpoint` whose
+     *   1. POST /next -> find the first `browseEndpoint` whose
      *      `browseEndpointContextMusicConfig.pageType == MUSIC_PAGE_TYPE_ALBUM`;
      *      short-circuit to null if the video has no YTM album context.
-     *   2. POST /browse with that `MPREb_…` id → pluck the `audioPlaylistId`
-     *      (the `OLAK5uy_…` playlist the YTM UI uses for the album).
+     *   2. POST /browse with that `MPREb_...` id -> pluck the `audioPlaylistId`
+     *      (the `OLAK5uy_...` playlist the YTM UI uses for the album).
      * Returns a canonical youtube.com/playlist URL so callers can route
      * straight through the shared [com.dustvalve.next.android.data.repository.YouTubeSource]
-     * path. Any network or parse failure yields null — the caller treats that
+     * path. Any network or parse failure yields null - the caller treats that
      * as "no album" and stores it idempotently.
      */
     override suspend fun lookupAlbumPlaylistForVideo(videoId: String): String? {

@@ -17,7 +17,7 @@ import kotlinx.coroutines.SupervisorJob
 @InstallIn(SingletonComponent::class)
 object DispatchersModule {
     // This provider IS the binding for Dispatchers.IO; suppressing the lint
-    // here is the only place the raw reference has to leak — every consumer
+    // here is the only place the raw reference has to leak - every consumer
     // receives a qualified @Dispatcher(AppDispatchers.IO) CoroutineDispatcher.
     @Suppress("RawDispatchersUse")
     @Provides

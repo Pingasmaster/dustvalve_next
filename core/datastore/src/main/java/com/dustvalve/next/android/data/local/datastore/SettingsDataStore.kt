@@ -166,7 +166,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     /**
      * Sub-toggle of [autoDownloadFutureContent]: when on, every favorited
      * track is downloaded in the background and the Favorites playlist
-     * hides its manual Download button (no point — it'd be redundant).
+     * hides its manual Download button (no point - it'd be redundant).
      */
     val autoDownloadFavorites: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.AUTO_DOWNLOAD_FAVORITES] ?: false
@@ -490,7 +490,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     /**
      * Repurposed from "long-press cover for carousel": when on, the player
      * shows a debug overlay instead of the cover carousel. Off by default.
-     * Surfaced as the "Show debug info" toggle in Settings → Debug.
+     * Surfaced as the "Show debug info" toggle in Settings -> Debug.
      */
     val albumCoverLongPressCarousel: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] ?: false
@@ -525,7 +525,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     // Gates the silent cold-start update check fired from
     // DustvalveNextApplication.onCreate. Defaults on: pre-alpha ships several
     // builds a day and we want users on the latest by default. The manual
-    // "Search for updates" button in Settings → About is never gated by this.
+    // "Search for updates" button in Settings -> About is never gated by this.
     val autoUpdateCheckEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
         prefs[Keys.AUTO_UPDATE_CHECK_ENABLED] ?: true
     }

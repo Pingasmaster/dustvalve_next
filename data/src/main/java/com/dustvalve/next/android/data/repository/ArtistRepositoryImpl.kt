@@ -44,7 +44,7 @@ class ArtistRepositoryImpl @Inject constructor(
 
     companion object {
         // Artists may grow new albums over time, so unlike fully-immutable
-        // album metadata we still revalidate periodically — but the cached
+        // album metadata we still revalidate periodically - but the cached
         // copy is always emitted FIRST so the UI never blocks on the network.
         // The artist-photo URL is content-addressed by Bandcamp (the image
         // id changes whenever the artist re-uploads), so a fresh scrape that
@@ -98,7 +98,7 @@ class ArtistRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             if (e is kotlin.coroutines.cancellation.CancellationException) throw e
             if (cachedArtist == null) throw e
-            // Stale cache already emitted — swallow network error for offline use
+            // Stale cache already emitted - swallow network error for offline use
         }
     }.flowOn(ioDispatcher)
 
@@ -167,7 +167,7 @@ class ArtistRepositoryImpl @Inject constructor(
                 favoriteDao.isFavorite(artist.id)
             }
         } else {
-            // Content unchanged — just touch the timestamp
+            // Content unchanged - just touch the timestamp
             val cachedId = cachedArtist.id
             artistDao.updateCachedAt(cachedId)
             favoriteDao.isFavorite(cachedId)

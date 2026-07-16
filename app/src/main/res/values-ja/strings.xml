@@ -183,13 +183,12 @@
     <string name="settings_cd_remove_folder">フォルダを削除</string>
     <string name="settings_cd_avatar">アバター</string>
     <string name="settings_connect_bandcamp"><xliff:g id="brand">Bandcamp</xliff:g>に接続</string>
-    <string name="settings_connect_bandcamp_desc">接続すると<xliff:g id="brand">Bandcamp</xliff:g>の購入品にアクセスできます。</string>
+    <string name="settings_connect_bandcamp_desc">接続すると<xliff:g id="brand">Bandcamp</xliff:g>の購入品にアクセスできます</string>
     <string name="settings_connect_youtube"><xliff:g id="brand">YouTube Music</xliff:g>に接続</string>
-    <string name="settings_connect_youtube_desc">接続すると<xliff:g id="brand">YouTube Music</xliff:g>のライブラリにアクセスできます。</string>
+    <string name="settings_connect_youtube_desc">接続すると<xliff:g id="brand">YouTube Music</xliff:g>のライブラリにアクセスできます</string>
     <string name="settings_youtube_default_source_title">デフォルト表示</string>
     <string name="settings_youtube_default_source_desc"><xliff:g id="brand">YouTube</xliff:g>タブをタップしたときに開く表示</string>
     <string name="common_play">再生</string>
-    <string name="common_retry">再試行</string>
     <string name="ytm_artist_spotlight">アーティストスポットライト</string>
     <string name="settings_remove_all_downloads">すべてのダウンロードを削除</string>
     <string name="settings_dedicated_folder_title">すべてを専用フォルダに保存</string>
@@ -312,9 +311,9 @@
     <string name="local_filter_unknown_album">不明なアルバム</string>
     <string name="local_add_to_playlist">プレイリストに追加</string>
     <string name="settings_local_keep_sort">並べ替え順を起動後も保持</string>
-    <string name="settings_local_keep_sort_desc">アプリを再度開いたときにローカルタブの並べ替え設定（と逆順）を復元します。</string>
+    <string name="settings_local_keep_sort_desc">アプリを再度開いたときにローカルタブの並べ替え設定（と逆順）を復元します</string>
     <string name="settings_local_keep_filters">フィルターを起動後も保持</string>
-    <string name="settings_local_keep_filters_desc">アプリを再度開いたときにローカルタブのアーティスト、アルバム、フォルダ、再生時間、お気に入りのみのチップを復元します。</string>
+    <string name="settings_local_keep_filters_desc">アプリを再度開いたときにローカルタブのアーティスト、アルバム、フォルダ、再生時間、お気に入りのみのチップを復元します</string>
     <string name="common_search_failed">検索に失敗しました</string>
     <string name="common_no_results_title">結果が見つかりませんでした</string>
     <string name="common_no_results_subtitle">別の検索キーワードをお試しください</string>

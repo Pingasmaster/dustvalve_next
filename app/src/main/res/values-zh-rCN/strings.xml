@@ -183,13 +183,12 @@
     <string name="settings_cd_remove_folder">移除文件夹</string>
     <string name="settings_cd_avatar">头像</string>
     <string name="settings_connect_bandcamp">连接<xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">连接后可访问你在<xliff:g id="brand">Bandcamp</xliff:g>购买的内容。</string>
+    <string name="settings_connect_bandcamp_desc">连接后可访问你在<xliff:g id="brand">Bandcamp</xliff:g>购买的内容</string>
     <string name="settings_connect_youtube">连接<xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">连接后可访问你的<xliff:g id="brand">YouTube Music</xliff:g>媒体库。</string>
+    <string name="settings_connect_youtube_desc">连接后可访问你的<xliff:g id="brand">YouTube Music</xliff:g>媒体库</string>
     <string name="settings_youtube_default_source_title">默认视图</string>
     <string name="settings_youtube_default_source_desc">点按<xliff:g id="brand">YouTube</xliff:g>标签页时打开哪个视图</string>
     <string name="common_play">播放</string>
-    <string name="common_retry">重试</string>
     <string name="ytm_artist_spotlight">艺人聚焦</string>
     <string name="settings_remove_all_downloads">删除所有下载</string>
     <string name="settings_dedicated_folder_title">将所有内容存储在专用文件夹中</string>
@@ -312,9 +311,9 @@
     <string name="local_filter_unknown_album">未知专辑</string>
     <string name="local_add_to_playlist">添加到播放列表</string>
     <string name="settings_local_keep_sort">在启动之间保留排序</string>
-    <string name="settings_local_keep_sort_desc">重新打开应用时恢复本地标签页的排序选择（含倒序）。</string>
+    <string name="settings_local_keep_sort_desc">重新打开应用时恢复本地标签页的排序选择（含倒序）</string>
     <string name="settings_local_keep_filters">在启动之间保留筛选</string>
-    <string name="settings_local_keep_filters_desc">重新打开应用时恢复本地标签页的艺人、专辑、文件夹、时长和仅收藏筛选。</string>
+    <string name="settings_local_keep_filters_desc">重新打开应用时恢复本地标签页的艺人、专辑、文件夹、时长和仅收藏筛选</string>
     <string name="common_search_failed">搜索失败</string>
     <string name="common_no_results_title">未找到结果</string>
     <string name="common_no_results_subtitle">试试其他搜索词</string>

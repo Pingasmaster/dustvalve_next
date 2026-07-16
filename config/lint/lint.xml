@@ -3,7 +3,7 @@
     <!--
         The app ships translations (values-de/es/fr/it/pt-rBR/ja/zh-rCN/ru).
         Every new default string must land with all 8 translations in the same
-        change — machine-translate at PR time, native corrections welcome.
+        change - machine-translate at PR time, native corrections welcome.
     -->
     <issue id="MissingTranslation"            severity="error" />
     <issue id="ExtraTranslation"              severity="error" />
@@ -69,7 +69,7 @@
         slack-lints' AvoidUsingNotNullOperator flags every `!!` usage. In test
         code `!!` is the idiomatic "I'm asserting this is non-null in this
         test path; if it isn't, NPE fails the test with a stack trace pointing
-        to the offending line" — equivalent to `requireNotNull(x) { "..." }`
+        to the offending line" - equivalent to `requireNotNull(x) { "..." }`
         but more concise, especially in JSON / assertion chains. Refactoring
         ~90 test sites to requireNotNull adds noise without changing failure
         semantics. Suppressed only under src/test and src/androidTest.

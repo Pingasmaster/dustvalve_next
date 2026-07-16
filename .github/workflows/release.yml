@@ -42,7 +42,7 @@ jobs:
         run: |
           apk=app/build/outputs/apk/release/dustvalve_next-future.apk
           {
-            echo "### APK size — dustvalve_next-future.apk"
+            echo "### APK size - dustvalve_next-future.apk"
             echo
             echo '| Metric | Size |'
             echo '| --- | --- |'

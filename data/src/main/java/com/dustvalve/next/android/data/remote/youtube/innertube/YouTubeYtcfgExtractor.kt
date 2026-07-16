@@ -8,7 +8,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Scrapes `ytcfg.set({...})` blocks from a YouTube / YT Music landing page
  * HTML. Shared by [YouTubeMusicVisitorDataFetcher] and
- * [YouTubeVisitorDataFetcher] — both need the same robust behaviour:
+ * [YouTubeVisitorDataFetcher] - both need the same robust behaviour:
  *
  *  * Walks every `ytcfg.set(` occurrence, not just the first: Google sometimes
  *    emits small side-calls (`CSI_SERVICE_NAME`, `YTMUSIC_INITIAL_DATA`)
@@ -16,10 +16,10 @@ import kotlinx.serialization.json.jsonPrimitive
  *  * Uses a balanced-brace walker (respecting JSON strings) rather than a
  *    lazy regex, so nested `{}` inside the body (e.g. `"TIMING_INFO": {}`)
  *    don't truncate the capture.
- *  * Does not require a terminal `;` — Google emits `ytcfg.set({...}))</script>`
+ *  * Does not require a terminal `;` - Google emits `ytcfg.set({...}))</script>`
  *    in some variants.
  *  * Returns the first body that carries either `INNERTUBE_CONTEXT` or a
- *    top-level `VISITOR_DATA` — we only care about the block with auth context.
+ *    top-level `VISITOR_DATA` - we only care about the block with auth context.
  */
 internal object YouTubeYtcfgExtractor {
 
@@ -70,7 +70,7 @@ internal object YouTubeYtcfgExtractor {
             if (openBrace < 0) return@sequence
             val endBrace = findMatchingBrace(html, openBrace)
             if (endBrace < 0) {
-                // Malformed call — skip past this occurrence and keep looking.
+                // Malformed call - skip past this occurrence and keep looking.
                 searchFrom = call + marker.length
                 continue
             }

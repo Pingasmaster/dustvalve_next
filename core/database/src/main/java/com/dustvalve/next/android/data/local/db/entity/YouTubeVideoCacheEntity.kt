@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 
 /**
  * Persistent cache for YouTube video metadata (the result of
- * `YouTubeRepository.getTrackInfo`). Stream URLs are NOT cached here — they
+ * `YouTubeRepository.getTrackInfo`). Stream URLs are NOT cached here - they
  * expire and must be re-resolved live.
  *
  * Per the unified caching policy, once we've fetched a video's metadata we
@@ -20,7 +20,7 @@ data class YouTubeVideoCacheEntity(
     val durationSec: Float,
     val artUrl: String,
     /**
-     * Resolved YTM album playlist URL (`youtube.com/playlist?list=OLAK5uy_…`),
+     * Resolved YTM album playlist URL (`youtube.com/playlist?list=OLAK5uy_...`),
      * or empty when the video has no YTM album.
      */
     val albumUrl: String = "",

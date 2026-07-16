@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.theme.PlaylistShapeOptions
@@ -75,9 +76,11 @@ fun ShapePickerSheet(
         ) {
             Text(
                 text = stringResource(R.string.shape_choose),
-                style = MaterialTheme.typography.titleLarge,
+                // titleMedium + 4dp - the app-wide sheet header convention.
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = 4.dp),
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
 
             AppFlowRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -99,6 +102,9 @@ fun ShapePickerSheet(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
+                            // Clip before clickable so the ripple follows the
+                            // tile's rounded outline instead of a bare rectangle.
+                            .clip(MaterialTheme.shapes.medium)
                             .clickable { selectedShapeKey = option.key }
                             .padding(4.dp),
                     ) {
@@ -136,6 +142,7 @@ fun ShapePickerSheet(
                             text = stringResource(option.labelRes),
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -158,7 +165,7 @@ fun ShapePickerSheet(
                     Text(stringResource(R.string.common_action_save))
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(28.dp))
         }
     }
 }

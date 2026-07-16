@@ -20,9 +20,9 @@ data class TrackEntity(
     val folderUri: String = "",
     val dateAdded: Long = 0,
     val year: Int = 0,
-    /** Album page URL — see Track.albumUrl. */
+    /** Album page URL - see Track.albumUrl. */
     val albumUrl: String = "",
-    /** Track page URL on Bandcamp — see Track.bandcampTrackUrl. */
+    /** Track page URL on Bandcamp - see Track.bandcampTrackUrl. */
     val bandcampTrackUrl: String? = null,
 ) {
     val isLocal: Boolean get() = source == "local"

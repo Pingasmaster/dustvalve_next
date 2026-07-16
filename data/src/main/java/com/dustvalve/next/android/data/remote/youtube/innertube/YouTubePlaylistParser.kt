@@ -135,7 +135,7 @@ class YouTubePlaylistParser @Inject constructor() {
      * [startIndex] is the 1-based trackNumber for the first parsed row; pass
      * `previouslyLoaded + 1` when paginating. [skipBeforeIndex] is the number
      * of leading items to skip from the response (YT re-returns the last ~24
-     * tracks on each paginated /next — we rely on the response's currentIndex
+     * tracks on each paginated /next - we rely on the response's currentIndex
      * to slice, and also dedupe via [seenVideoIds] as a belt-and-braces guard).
      */
     fun parseMix(root: JsonElement, playlistId: String, startIndex: Int = 1, seenVideoIds: Set<String> = emptySet()): MixPage {
@@ -169,7 +169,7 @@ class YouTubePlaylistParser @Inject constructor() {
             val track = parseMixItem(pvr, playlistId, startIndex + tracks.size) ?: continue
             tracks += track
             lastVideoId = videoId
-            // indexText lives under runs/simpleText, e.g. "5" — best-effort.
+            // indexText lives under runs/simpleText, e.g. "5" - best-effort.
             val idxText = pvr.runsText("indexText") ?: pvr.path("indexText")?.str("simpleText")
             idxText?.toIntOrNull()?.let { lastIndex = it }
             pvr.path("navigationEndpoint")?.path("watchEndpoint")?.str("params")

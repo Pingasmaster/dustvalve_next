@@ -102,9 +102,14 @@ import kotlin.math.roundToInt
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi as M3E
 
 // Shared left-padding for every child toggle that appears under a parent
-// switch in the settings UI. Apply via the canonical pattern:
-// AnimatedVisibility { Row(Modifier.fillMaxWidth().padding(top = 12.dp, start = SUB_TOGGLE_INDENT)) { ... } }.
+// switch in the settings UI. Toggle rows go through SettingsToggleRow
+// (subRow = true for indented children); dependent single toggles use
+// SettingsSubToggle, which adds the canonical AnimatedVisibility reveal.
 private val SUB_TOGGLE_INDENT = 16.dp
+
+// Fixed gap between a toggle row's label column and its switch so
+// descriptions wrap at the same width on every row.
+private val TOGGLE_LABEL_END_GAP = 16.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -218,7 +223,7 @@ fun SettingsScreen(
             Text(
                 text = stringResource(R.string.settings_download_format),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
             AudioFormat.DOWNLOADABLE.forEach { format ->
                 val isSelected = format.key == state.downloadFormat
@@ -317,57 +322,30 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             // Local
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_phone_android),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_source_local),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.localMusicEnabled,
-                                    onCheckedChange = { enabled ->
-                                        viewModel.setLocalMusicEnabled(enabled)
-                                        if (enabled && state.localMusicUseMediaStore) {
-                                            audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
-                                        } else if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
-                                            folderPickerLauncher.launch(null)
-                                        }
-                                    },
-                                )
-                            }
-
-                            if (state.localMusicEnabled) {
-                                // "Scan all audio" toggle
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = SUB_TOGGLE_INDENT),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_use_individual_folders),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_use_individual_folders_desc),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_source_local),
+                                icon = R.drawable.ic_phone_android,
+                                checked = state.localMusicEnabled,
+                                onCheckedChange = { enabled ->
+                                    viewModel.setLocalMusicEnabled(enabled)
+                                    if (enabled && state.localMusicUseMediaStore) {
+                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                                    } else if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
+                                        folderPickerLauncher.launch(null)
                                     }
-                                    Switch(
+                                },
+                            )
+
+                            AnimatedVisibility(
+                                visible = state.localMusicEnabled,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically(),
+                            ) {
+                                Column(modifier = Modifier.padding(top = 12.dp)) {
+                                    // "Scan all audio" toggle
+                                    SettingsToggleRow(
+                                        title = stringResource(R.string.settings_use_individual_folders),
+                                        description = stringResource(R.string.settings_use_individual_folders_desc),
                                         checked = !state.localMusicUseMediaStore,
                                         onCheckedChange = { useIndividualFolders ->
                                             if (useIndividualFolders) {
@@ -376,79 +354,106 @@ fun SettingsScreen(
                                                 audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
                                             }
                                         },
+                                        subRow = true,
                                     )
-                                }
 
-                                if (!state.localMusicUseMediaStore) {
-                                    // SAF folder mode
-                                    if (state.localMusicFolderUris.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        state.localMusicFolderUris.forEach { uri ->
-                                            val selectedFolderFallback = stringResource(R.string.common_selected_folder)
-                                            val folderName = try {
-                                                uri.toUri().lastPathSegment
-                                                    ?.substringAfterLast(':')
-                                                    ?: selectedFolderFallback
-                                            } catch (_: Exception) {
-                                                selectedFolderFallback
-                                            }
-                                            ListItem(
-                                                leadingContent = {
-                                                    Icon(
-                                                        painter = painterResource(R.drawable.ic_folder_open),
-                                                        contentDescription = null,
-                                                        modifier = Modifier.size(20.dp),
-                                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    )
-                                                },
-                                                trailingContent = {
-                                                    IconButton(
-                                                        onClick = { viewModel.removeLocalMusicFolder(uri) },
-                                                        shapes = IconButtonDefaults.shapes(),
-                                                    ) {
+                                    if (!state.localMusicUseMediaStore) {
+                                        // SAF folder mode
+                                        if (state.localMusicFolderUris.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            state.localMusicFolderUris.forEach { uri ->
+                                                val selectedFolderFallback = stringResource(R.string.common_selected_folder)
+                                                val folderName = try {
+                                                    uri.toUri().lastPathSegment
+                                                        ?.substringAfterLast(':')
+                                                        ?: selectedFolderFallback
+                                                } catch (_: Exception) {
+                                                    selectedFolderFallback
+                                                }
+                                                ListItem(
+                                                    leadingContent = {
                                                         Icon(
-                                                            painter = painterResource(R.drawable.ic_close),
-                                                            contentDescription = stringResource(R.string.settings_cd_remove_folder),
+                                                            painter = painterResource(R.drawable.ic_folder_open),
+                                                            contentDescription = null,
                                                             modifier = Modifier.size(20.dp),
                                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         )
-                                                    }
-                                                },
-                                                modifier = Modifier.padding(start = SUB_TOGGLE_INDENT),
-                                                colors = ListItemDefaults.colors(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                                                ),
-                                            ) {
-                                                Text(
-                                                    text = folderName,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                )
+                                                    },
+                                                    trailingContent = {
+                                                        IconButton(
+                                                            onClick = { viewModel.removeLocalMusicFolder(uri) },
+                                                            shapes = IconButtonDefaults.shapes(),
+                                                        ) {
+                                                            Icon(
+                                                                painter = painterResource(R.drawable.ic_close),
+                                                                contentDescription = stringResource(R.string.settings_cd_remove_folder),
+                                                                modifier = Modifier.size(20.dp),
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            )
+                                                        }
+                                                    },
+                                                    modifier = Modifier.padding(start = SUB_TOGGLE_INDENT),
+                                                    colors = ListItemDefaults.colors(
+                                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                                    ),
+                                                ) {
+                                                    Text(
+                                                        text = folderName,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                    )
+                                                }
                                             }
                                         }
-                                    }
 
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = SUB_TOGGLE_INDENT),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        FilledTonalButton(
-                                            onClick = { folderPickerLauncher.launch(null) },
-                                            shapes = ButtonDefaults.shapes(),
-                                            modifier = Modifier.weight(1f),
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = SUB_TOGGLE_INDENT),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_folder_open),
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp),
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(stringResource(R.string.settings_add_folder))
-                                        }
+                                            FilledTonalButton(
+                                                onClick = { folderPickerLauncher.launch(null) },
+                                                shapes = ButtonDefaults.shapes(),
+                                                modifier = Modifier.weight(1f),
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_folder_open),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(18.dp),
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(stringResource(R.string.settings_add_folder))
+                                            }
 
-                                        if (state.localMusicFolderUris.isNotEmpty()) {
+                                            if (state.localMusicFolderUris.isNotEmpty()) {
+                                                FilledTonalButton(
+                                                    onClick = { viewModel.rescanLocalMusic() },
+                                                    shapes = ButtonDefaults.shapes(),
+                                                    enabled = !state.isScanning,
+                                                ) {
+                                                    if (state.isScanning) {
+                                                        CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
+                                                    } else {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.ic_refresh),
+                                                            contentDescription = null,
+                                                            modifier = Modifier.size(18.dp),
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(stringResource(R.string.settings_rescan))
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        // MediaStore mode - just show Rescan button
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(start = SUB_TOGGLE_INDENT),
+                                        ) {
                                             FilledTonalButton(
                                                 onClick = { viewModel.rescanLocalMusic() },
                                                 shapes = ButtonDefaults.shapes(),
@@ -468,81 +473,25 @@ fun SettingsScreen(
                                             }
                                         }
                                     }
-                                } else {
-                                    // MediaStore mode — just show Rescan button
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = SUB_TOGGLE_INDENT),
-                                    ) {
-                                        FilledTonalButton(
-                                            onClick = { viewModel.rescanLocalMusic() },
-                                            shapes = ButtonDefaults.shapes(),
-                                            enabled = !state.isScanning,
-                                        ) {
-                                            if (state.isScanning) {
-                                                CircularWavyProgressIndicator(modifier = Modifier.size(18.dp))
-                                            } else {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.ic_refresh),
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(18.dp),
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(stringResource(R.string.settings_rescan))
-                                        }
-                                    }
-                                }
 
-                                // Persistence sub-toggles for the Local tab's
-                                // sort + filter chip selections. Independent so
-                                // the user can keep one without the other.
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = SUB_TOGGLE_INDENT, end = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_local_keep_sort),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_local_keep_sort_desc),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Switch(
+                                    // Persistence sub-toggles for the Local tab's
+                                    // sort + filter chip selections. Independent so
+                                    // the user can keep one without the other.
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    SettingsToggleRow(
+                                        title = stringResource(R.string.settings_local_keep_sort),
+                                        description = stringResource(R.string.settings_local_keep_sort_desc),
                                         checked = state.keepLocalSort,
                                         onCheckedChange = { viewModel.setKeepLocalSort(it) },
+                                        subRow = true,
                                     )
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = SUB_TOGGLE_INDENT, end = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_local_keep_filters),
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_local_keep_filters_desc),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Switch(
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    SettingsToggleRow(
+                                        title = stringResource(R.string.settings_local_keep_filters),
+                                        description = stringResource(R.string.settings_local_keep_filters_desc),
                                         checked = state.keepLocalFilters,
                                         onCheckedChange = { viewModel.setKeepLocalFilters(it) },
+                                        subRow = true,
                                     )
                                 }
                             }
@@ -550,58 +499,29 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // Bandcamp
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_cloud),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_source_bandcamp),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.bandcampEnabled,
-                                    onCheckedChange = { viewModel.setBandcampEnabled(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_source_bandcamp),
+                                icon = R.drawable.ic_cloud,
+                                checked = state.bandcampEnabled,
+                                onCheckedChange = { viewModel.setBandcampEnabled(it) },
+                            )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
                             // YouTube
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_play_circle),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_source_youtube),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.youtubeEnabled,
-                                    onCheckedChange = { viewModel.setYoutubeEnabled(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_source_youtube),
+                                icon = R.drawable.ic_play_circle,
+                                checked = state.youtubeEnabled,
+                                onCheckedChange = { viewModel.setYoutubeEnabled(it) },
+                            )
 
-                            if (state.youtubeEnabled) {
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Column(modifier = Modifier.padding(start = SUB_TOGGLE_INDENT)) {
+                            AnimatedVisibility(
+                                visible = state.youtubeEnabled,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically(),
+                            ) {
+                                Column(modifier = Modifier.padding(top = 12.dp, start = SUB_TOGGLE_INDENT)) {
                                     Text(
                                         text = stringResource(R.string.settings_youtube_default_source_title),
                                         style = MaterialTheme.typography.titleSmall,
@@ -700,6 +620,9 @@ fun SettingsScreen(
                                         Text(
                                             text = state.accountState.username ?: stringResource(R.string.common_connected),
                                             style = MaterialTheme.typography.bodyMedium,
+                                            // Primary accent - matches the YouTube
+                                            // Music connected state below.
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
@@ -870,40 +793,26 @@ fun SettingsScreen(
 
                             // Dedicated folder: store all user data in a folder of
                             // the user's choice instead of app-internal memory.
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_dedicated_folder_title),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_dedicated_folder_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.dedicatedFolderEnabled,
-                                    enabled = !state.folderMigrationInProgress,
-                                    onCheckedChange = { enable ->
-                                        if (enable) {
-                                            folderPickerForDedicatedFolder.launch(null)
-                                        } else {
-                                            showDisableFolderDialog = true
-                                        }
-                                    },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_dedicated_folder_title),
+                                description = stringResource(R.string.settings_dedicated_folder_desc),
+                                checked = state.dedicatedFolderEnabled,
+                                enabled = !state.folderMigrationInProgress,
+                                onCheckedChange = { enable ->
+                                    if (enable) {
+                                        folderPickerForDedicatedFolder.launch(null)
+                                    } else {
+                                        showDisableFolderDialog = true
+                                    }
+                                },
+                            )
 
                             AnimatedVisibility(
                                 visible = state.dedicatedFolderEnabled,
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically(),
                             ) {
-                                Column(modifier = Modifier.padding(top = 12.dp, start = SUB_TOGGLE_INDENT)) {
+                                Column(modifier = Modifier.padding(top = 12.dp)) {
                                     // Current folder path + change button
                                     val folderLabel = remember(state.dedicatedFolderTreeUri) {
                                         val uriStr = state.dedicatedFolderTreeUri
@@ -921,7 +830,9 @@ fun SettingsScreen(
                                         }
                                     }
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(start = SUB_TOGGLE_INDENT),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Icon(
@@ -947,49 +858,23 @@ fun SettingsScreen(
                                     }
 
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                            Text(
-                                                text = stringResource(R.string.settings_dedicated_folder_image_cache),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.settings_dedicated_folder_image_cache_desc),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        Switch(
-                                            checked = state.dedicatedFolderIncludeImageCache,
-                                            enabled = !state.folderMigrationInProgress,
-                                            onCheckedChange = { viewModel.setDedicatedFolderIncludeImageCache(it) },
-                                        )
-                                    }
+                                    SettingsToggleRow(
+                                        title = stringResource(R.string.settings_dedicated_folder_image_cache),
+                                        description = stringResource(R.string.settings_dedicated_folder_image_cache_desc),
+                                        checked = state.dedicatedFolderIncludeImageCache,
+                                        enabled = !state.folderMigrationInProgress,
+                                        onCheckedChange = { viewModel.setDedicatedFolderIncludeImageCache(it) },
+                                        subRow = true,
+                                    )
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth().padding(end = 16.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                            Text(
-                                                text = stringResource(R.string.settings_dedicated_folder_metadata_cache),
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.settings_dedicated_folder_metadata_cache_desc),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        Switch(
-                                            checked = state.dedicatedFolderIncludeMetadataCache,
-                                            enabled = !state.folderMigrationInProgress,
-                                            onCheckedChange = { viewModel.setDedicatedFolderIncludeMetadataCache(it) },
-                                        )
-                                    }
+                                    SettingsToggleRow(
+                                        title = stringResource(R.string.settings_dedicated_folder_metadata_cache),
+                                        description = stringResource(R.string.settings_dedicated_folder_metadata_cache_desc),
+                                        checked = state.dedicatedFolderIncludeMetadataCache,
+                                        enabled = !state.folderMigrationInProgress,
+                                        onCheckedChange = { viewModel.setDedicatedFolderIncludeMetadataCache(it) },
+                                        subRow = true,
+                                    )
                                 }
                             }
 
@@ -1010,102 +895,39 @@ fun SettingsScreen(
 
                             if (state.accountState.isLoggedIn) {
                                 Spacer(modifier = Modifier.height(16.dp))
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_auto_download_purchases),
-                                            style = MaterialTheme.typography.titleSmall,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_auto_download_purchases_desc),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Switch(
-                                        checked = state.autoDownloadCollection,
-                                        onCheckedChange = { viewModel.setAutoDownloadCollection(it) },
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_auto_download_future),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_auto_download_future_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.autoDownloadFutureContent,
-                                    onCheckedChange = { viewModel.setAutoDownloadFutureContent(it) },
+                                SettingsToggleRow(
+                                    title = stringResource(R.string.settings_auto_download_purchases),
+                                    description = stringResource(R.string.settings_auto_download_purchases_desc),
+                                    checked = state.autoDownloadCollection,
+                                    onCheckedChange = { viewModel.setAutoDownloadCollection(it) },
                                 )
                             }
 
-                            // Sub-toggle: Auto-download favorites — only shown when
+                            Spacer(modifier = Modifier.height(16.dp))
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_auto_download_future),
+                                description = stringResource(R.string.settings_auto_download_future_desc),
+                                checked = state.autoDownloadFutureContent,
+                                onCheckedChange = { viewModel.setAutoDownloadFutureContent(it) },
+                            )
+
+                            // Sub-toggle: Auto-download favorites - only shown when
                             // the parent "future content" toggle is on.
-                            AnimatedVisibility(
+                            SettingsSubToggle(
                                 visible = state.autoDownloadFutureContent,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_auto_download_favorites),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_auto_download_favorites_desc),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Switch(
-                                        checked = state.autoDownloadFavorites,
-                                        onCheckedChange = { viewModel.setAutoDownloadFavorites(it) },
-                                    )
-                                }
-                            }
+                                title = stringResource(R.string.settings_auto_download_favorites),
+                                description = stringResource(R.string.settings_auto_download_favorites_desc),
+                                checked = state.autoDownloadFavorites,
+                                onCheckedChange = { viewModel.setAutoDownloadFavorites(it) },
+                            )
 
                             Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_download_notifications),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_download_notifications_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.downloadNotificationsEnabled,
-                                    onCheckedChange = { viewModel.setDownloadNotificationsEnabled(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_download_notifications),
+                                description = stringResource(R.string.settings_download_notifications_desc),
+                                checked = state.downloadNotificationsEnabled,
+                                onCheckedChange = { viewModel.setDownloadNotificationsEnabled(it) },
+                            )
 
                             // Live Updates (status-bar chip) is a per-app runtime
                             // permission the user must grant; prompt + deep-link when off.
@@ -1149,73 +971,31 @@ fun SettingsScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_mp3_on_metered),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_mp3_on_metered_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.saveDataOnMetered,
-                                    onCheckedChange = { viewModel.setSaveDataOnMetered(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_mp3_on_metered),
+                                description = stringResource(R.string.settings_mp3_on_metered_desc),
+                                checked = state.saveDataOnMetered,
+                                onCheckedChange = { viewModel.setSaveDataOnMetered(it) },
+                            )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_progressive_download),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_progressive_download_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.progressiveDownload,
-                                    onCheckedChange = { viewModel.setProgressiveDownload(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_progressive_download),
+                                description = stringResource(R.string.settings_progressive_download_desc),
+                                checked = state.progressiveDownload,
+                                onCheckedChange = { viewModel.setProgressiveDownload(it) },
+                            )
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_seamless_upgrade),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_seamless_upgrade_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.seamlessQualityUpgrade,
-                                    onCheckedChange = { viewModel.setSeamlessQualityUpgrade(it) },
-                                    enabled = state.progressiveDownload,
-                                )
-                            }
+                            // Dependent on progressive download - indented sub-toggle
+                            // like every other dependent setting.
+                            SettingsSubToggle(
+                                visible = state.progressiveDownload,
+                                title = stringResource(R.string.settings_seamless_upgrade),
+                                description = stringResource(R.string.settings_seamless_upgrade_desc),
+                                checked = state.seamlessQualityUpgrade,
+                                onCheckedChange = { viewModel.setSeamlessQualityUpgrade(it) },
+                            )
                         }
                     }
                 }
@@ -1277,49 +1057,21 @@ fun SettingsScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_dynamic_color),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_dynamic_color_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.dynamicColor,
-                                    onCheckedChange = { viewModel.setDynamicColor(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_dynamic_color),
+                                description = stringResource(R.string.settings_dynamic_color_desc),
+                                checked = state.dynamicColor,
+                                onCheckedChange = { viewModel.setDynamicColor(it) },
+                            )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_album_art_colors),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_album_art_colors_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.albumArtTheme,
-                                    onCheckedChange = { viewModel.setAlbumArtTheme(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_album_art_colors),
+                                description = stringResource(R.string.settings_album_art_colors_desc),
+                                checked = state.albumArtTheme,
+                                onCheckedChange = { viewModel.setAlbumArtTheme(it) },
+                            )
 
                             val isDarkEffective = when (state.themeMode) {
                                 "dark" -> true
@@ -1327,34 +1079,13 @@ fun SettingsScreen(
                                 else -> isSystemInDarkTheme()
                             }
 
-                            AnimatedVisibility(
+                            SettingsSubToggle(
                                 visible = isDarkEffective,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_oled_black),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_oled_black_desc),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Switch(
-                                        checked = state.oledBlack,
-                                        onCheckedChange = { viewModel.setOledBlack(it) },
-                                    )
-                                }
-                            }
+                                title = stringResource(R.string.settings_oled_black),
+                                description = stringResource(R.string.settings_oled_black_desc),
+                                checked = state.oledBlack,
+                                onCheckedChange = { viewModel.setOledBlack(it) },
+                            )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
@@ -1365,7 +1096,7 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                // Connected ButtonGroup [Wavy | Linear] — uses the same
+                                // Connected ButtonGroup [Wavy | Linear] - uses the same
                                 // M3E ButtonGroup component as the theme selector above
                                 // so the inter-button gap matches.
                                 val styleOptions = listOf("wavy", "linear")
@@ -1400,7 +1131,7 @@ fun SettingsScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
-                                // Size slider — discrete 4..32 dp in 4 dp steps.
+                                // Size slider - discrete 4..32 dp in 4 dp steps.
                                 val sizeSteps = listOf(4, 8, 12, 16, 20, 24, 28, 32)
                                 var sizeIndex by remember(state.progressBarSizeDp) {
                                     mutableIntStateOf(
@@ -1445,105 +1176,42 @@ fun SettingsScreen(
                         ),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_volume_slider),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_volume_slider_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.showInlineVolumeSlider,
-                                    onCheckedChange = { viewModel.setShowInlineVolumeSlider(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_volume_slider),
+                                description = stringResource(R.string.settings_volume_slider_desc),
+                                checked = state.showInlineVolumeSlider,
+                                onCheckedChange = { viewModel.setShowInlineVolumeSlider(it) },
+                            )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_volume_button),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_volume_button_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.showVolumeButton,
-                                    onCheckedChange = { viewModel.setShowVolumeButton(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_volume_button),
+                                description = stringResource(R.string.settings_volume_button_desc),
+                                checked = state.showVolumeButton,
+                                onCheckedChange = { viewModel.setShowVolumeButton(it) },
+                            )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_keep_screen_open),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_keep_screen_open_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.keepScreenOnInApp,
-                                    onCheckedChange = { viewModel.setKeepScreenOnInApp(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_keep_screen_open),
+                                description = stringResource(R.string.settings_keep_screen_open_desc),
+                                checked = state.keepScreenOnInApp,
+                                onCheckedChange = { viewModel.setKeepScreenOnInApp(it) },
+                            )
 
                             // Sub-toggle: only shown when the parent is on. When
                             // checked, restricts wake-lock to "app open AND
                             // playing". Defaults to true so the parent's
                             // first-flip yields the lower-impact behaviour.
-                            AnimatedVisibility(
+                            SettingsSubToggle(
                                 visible = state.keepScreenOnInApp,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically(),
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                        Text(
-                                            text = stringResource(R.string.settings_keep_screen_only_playing),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.settings_keep_screen_only_playing_desc),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    Switch(
-                                        checked = state.keepScreenOnWhilePlaying,
-                                        onCheckedChange = { viewModel.setKeepScreenOnWhilePlaying(it) },
-                                    )
-                                }
-                            }
+                                title = stringResource(R.string.settings_keep_screen_only_playing),
+                                description = stringResource(R.string.settings_keep_screen_only_playing_desc),
+                                checked = state.keepScreenOnWhilePlaying,
+                                onCheckedChange = { viewModel.setKeepScreenOnWhilePlaying(it) },
+                            )
                         }
                     }
                 }
@@ -1562,26 +1230,12 @@ fun SettingsScreen(
                         ),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_search_history),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_search_history_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.searchHistoryEnabled,
-                                    onCheckedChange = { viewModel.setSearchHistoryEnabled(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_search_history),
+                                description = stringResource(R.string.settings_search_history_desc),
+                                checked = state.searchHistoryEnabled,
+                                onCheckedChange = { viewModel.setSearchHistoryEnabled(it) },
+                            )
 
                             // Per-source sub-toggles, only when the global toggle is on
                             // and only for sources the user has enabled.
@@ -1727,38 +1381,24 @@ fun SettingsScreen(
                                 Text(stringResource(R.string.settings_report_issue))
                             }
                             Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_auto_update_title),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_auto_update_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.autoUpdateCheckEnabled,
-                                    onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_auto_update_title),
+                                description = stringResource(R.string.settings_auto_update_desc),
+                                checked = state.autoUpdateCheckEnabled,
+                                onCheckedChange = { viewModel.setAutoUpdateCheckEnabled(it) },
+                            )
                         }
                     }
                 }
             }
 
-            // Debug section — hidden behind a single explicit toggle, off by
+            // Debug section - hidden behind a single explicit toggle, off by
             // default. Kept at the very bottom so it doesn't clutter day-to-day
             // settings.
             item {
                 SettingsSection(
                     title = stringResource(R.string.settings_section_debug),
-                    icon = R.drawable.ic_info,
+                    icon = R.drawable.ic_bug_report,
                 ) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -1767,26 +1407,12 @@ fun SettingsScreen(
                         ),
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.settings_show_debug_info),
-                                        style = MaterialTheme.typography.titleSmall,
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.settings_show_debug_info_desc),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                }
-                                Switch(
-                                    checked = state.albumCoverLongPressCarousel,
-                                    onCheckedChange = { viewModel.setAlbumCoverLongPressCarousel(it) },
-                                )
-                            }
+                            SettingsToggleRow(
+                                title = stringResource(R.string.settings_show_debug_info),
+                                description = stringResource(R.string.settings_show_debug_info_desc),
+                                checked = state.albumCoverLongPressCarousel,
+                                onCheckedChange = { viewModel.setAlbumCoverLongPressCarousel(it) },
+                            )
                         }
                     }
                 }
@@ -1845,6 +1471,104 @@ private fun SettingsSection(title: String, icon: Int, content: @Composable () ->
     }
 }
 
+/**
+ * Standard settings toggle row: optional leading icon, label column
+ * (title + optional description), Switch pinned to the card edge.
+ * [subRow] switches to the indented dependent-setting variant with the
+ * smaller type scale. When [enabled] is false the texts dim along with
+ * the switch.
+ */
+@Composable
+private fun SettingsToggleRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    description: String? = null,
+    enabled: Boolean = true,
+    icon: Int? = null,
+    subRow: Boolean = false,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (subRow) Modifier.padding(start = SUB_TOGGLE_INDENT) else Modifier),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+        }
+        val disabledAlpha = 0.38f
+        Column(modifier = Modifier.weight(1f).padding(end = TOGGLE_LABEL_END_GAP)) {
+            Text(
+                text = title,
+                style = if (subRow) {
+                    MaterialTheme.typography.bodyMedium
+                } else {
+                    MaterialTheme.typography.titleSmall
+                },
+                color = if (enabled) {
+                    MaterialTheme.colorScheme.onSurface
+                } else {
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = disabledAlpha)
+                },
+            )
+            if (description != null) {
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (enabled) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = disabledAlpha)
+                    },
+                )
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            enabled = enabled,
+        )
+    }
+}
+
+/**
+ * Canonical dependent setting: an indented toggle row that animates in
+ * below its parent when [visible] flips on.
+ */
+@Composable
+private fun SettingsSubToggle(
+    visible: Boolean,
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    description: String? = null,
+    enabled: Boolean = true,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + expandVertically(),
+        exit = fadeOut() + shrinkVertically(),
+    ) {
+        SettingsToggleRow(
+            title = title,
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            description = description,
+            enabled = enabled,
+            subRow = true,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+    }
+}
+
 @Composable
 private fun SearchHistorySourceRow(labelRes: Int, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
@@ -1893,10 +1617,10 @@ private fun LiveUpdatesPromptRow() {
                 .padding(top = 12.dp, start = SUB_TOGGLE_INDENT),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(modifier = Modifier.weight(1f).padding(end = 16.dp)) {
+            Column(modifier = Modifier.weight(1f).padding(end = TOGGLE_LABEL_END_GAP)) {
                 Text(
                     text = stringResource(R.string.settings_live_updates_title),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
                 Text(
                     text = stringResource(R.string.settings_live_updates_desc),
@@ -1904,7 +1628,10 @@ private fun LiveUpdatesPromptRow() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            FilledTonalButton(onClick = { openLiveUpdatesSettings(context) }) {
+            FilledTonalButton(
+                onClick = { openLiveUpdatesSettings(context) },
+                shapes = ButtonDefaults.shapes(),
+            ) {
                 Text(stringResource(R.string.settings_live_updates_action))
             }
         }
@@ -1916,7 +1643,7 @@ private fun LiveUpdatesPromptRow() {
 private fun canPostPromotedNotifications(context: Context): Boolean = try {
     context.getSystemService(NotificationManager::class.java).canPostPromotedNotifications()
 } catch (e: Throwable) {
-    // API absent (pre-QPR1) — don't nag with a prompt that leads nowhere.
+    // API absent (pre-QPR1) - don't nag with a prompt that leads nowhere.
     true
 }
 
