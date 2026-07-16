@@ -18,3 +18,31 @@ This rule applies regardless of how the cleanup was framed
 ("delete dangling branches", "prune stale refs", "wipe worktrees",
 `git push origin --delete ...`, `git branch -D`, `git worktree remove`,
 etc.).
+
+## ASCII-only sources
+
+Everything committed to this repo must be plain ASCII: no em/en dashes,
+arrows, ellipses, bullets, box-drawing characters, typographic quotes,
+or any other non-ASCII character. Use ASCII equivalents instead:
+`-`, `->`, `...`, `"`, `x`, `>=`, `~`.
+
+Enforced by `scripts/check_ascii.sh`: CI fails on violations (check.yml,
+"ASCII-only source check" step) and `./build.sh` prints a warning.
+
+Documented exceptions (allowlisted in `scripts/check_ascii.sh`; keep the
+two lists in sync):
+
+- `app/src/main/res/values*/` - localization resources, every locale
+  including the default `values/` (user-facing typography is correct there).
+- `*/src/test/resources/fixtures/` - captured real server responses;
+  bytes must stay byte-faithful for parser tests.
+- `TRANSLATIONS.md` - documents typographic punctuation for translators.
+- `gradlew` - Gradle-generated, never hand-edited.
+- Unicode-behavior code and tests, where the non-ASCII IS the tested
+  behavior: `LocaleCollation.kt`, `LocaleCollationTest.kt`,
+  `NetworkUtilsTest.kt` (sanitizes accented filenames), `TracksHeaderLabelTest.kt`
+  (asserts the localized middle-dot separator),
+  `YouTubeMusicSearchParser.kt` + `YouTubeMusicSearchParserTest.kt`
+  (YouTube Music sends a literal bullet separator),
+  `GenreSubTags.kt` (real Bandcamp tag slugs with accents).
+- Binary assets (png/webp/jar/jks/...).
