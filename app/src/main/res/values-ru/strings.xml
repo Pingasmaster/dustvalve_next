@@ -538,4 +538,12 @@
     <string name="snackbar_playing_next">«<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>» будет следующим</string>
     <string name="snackbar_audio_stream_failed">Не удалось загрузить аудиопоток</string>
     <string name="snackbar_scan_failed">Сканирование не удалось: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">В прошлый раз что-то пошло не так</string>
+    <string name="crash_report_body">Dustvalve Next неожиданно завершился во время прошлого сеанса. Вы можете помочь исправить проблему, поделившись журналом сбоя с разработчиком или создав issue на GitHub — и то и другое совершенно необязательно.</string>
+    <string name="crash_report_privacy">Журнал сбоя хранится только на этом устройстве и никогда никуда не отправляется, пока вы сами не решите им поделиться — без аналитики, без сторонних систем отчётов о сбоях, без автоматической загрузки.</string>
+    <string name="crash_report_share_action">Поделиться журналом сбоя</string>
+    <string name="crash_report_github_action">Создать issue на GitHub</string>
+    <string name="crash_report_dismiss_action">Не сейчас</string>
 </resources>

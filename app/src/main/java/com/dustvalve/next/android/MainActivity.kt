@@ -109,6 +109,9 @@ class MainActivity : ComponentActivity() {
     lateinit var appUpdateController: com.dustvalve.next.android.update.AppUpdateController
 
     @Inject
+    lateinit var crashReportManager: com.dustvalve.next.android.crash.CrashReportManager
+
+    @Inject
     @Dispatcher(AppDispatchers.IO)
     lateinit var ioDispatcher: CoroutineDispatcher
 
@@ -215,6 +218,17 @@ class MainActivity : ComponentActivity() {
                     state = updateState,
                     onConfirmDownload = { appUpdateController.confirmDownload() },
                     onDismiss = { appUpdateController.dismiss() },
+                )
+
+                // Post-crash prompt: only appears when the previous process
+                // died from a crash / ANR (never a user force-close). All
+                // sharing is opt-in; dismissing deletes the stored log.
+                val crashPromptState by crashReportManager.state.collectAsStateWithLifecycle()
+                com.dustvalve.next.android.ui.components.crash.CrashReportSheet(
+                    state = crashPromptState,
+                    onShareLog = { crashReportManager.sharePendingLog(this@MainActivity) },
+                    onOpenIssue = { crashReportManager.openGitHubIssue(this@MainActivity) },
+                    onDismiss = { crashReportManager.dismiss() },
                 )
             }
         }

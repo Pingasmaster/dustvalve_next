@@ -512,4 +512,12 @@
     <string name="snackbar_playing_next">« <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g> » sera lu ensuite</string>
     <string name="snackbar_audio_stream_failed">Impossible de charger le flux audio</string>
     <string name="snackbar_scan_failed">Échec du scan : <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">Un problème est survenu la dernière fois</string>
+    <string name="crash_report_body">Dustvalve Next s’est fermé de manière inattendue lors de la dernière session. Vous pouvez aider à corriger le problème en partageant le journal de plantage avec le développeur ou en ouvrant un ticket GitHub — les deux sont entièrement facultatifs.</string>
+    <string name="crash_report_privacy">Le journal de plantage est stocké uniquement sur cet appareil et n’est jamais envoyé nulle part, sauf si vous choisissez de le partager vous-même — pas d’analyse, pas de rapport de plantage tiers, pas d’envoi automatique.</string>
+    <string name="crash_report_share_action">Partager le journal de plantage</string>
+    <string name="crash_report_github_action">Ouvrir un ticket GitHub</string>
+    <string name="crash_report_dismiss_action">Pas maintenant</string>
 </resources>

@@ -512,4 +512,12 @@
     <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” se reproducirá a continuación</string>
     <string name="snackbar_audio_stream_failed">No se pudo cargar la transmisión de audio</string>
     <string name="snackbar_scan_failed">Error al analizar: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">Algo salió mal la última vez</string>
+    <string name="crash_report_body">Dustvalve Next se cerró inesperadamente durante la última sesión. Puedes ayudar a solucionar el problema compartiendo el registro de fallos con el desarrollador o abriendo un issue en GitHub — ambas opciones son totalmente opcionales.</string>
+    <string name="crash_report_privacy">El registro de fallos se guarda solo en este dispositivo y nunca se envía a ninguna parte a menos que tú decidas compartirlo — sin analíticas, sin informes de fallos de terceros, sin subidas automáticas.</string>
+    <string name="crash_report_share_action">Compartir registro de fallos</string>
+    <string name="crash_report_github_action">Abrir un issue en GitHub</string>
+    <string name="crash_report_dismiss_action">Ahora no</string>
 </resources>

@@ -208,12 +208,11 @@ class DownloadNotificationCenter @Inject constructor(
     // shows no download-progress notification at all (downloads themselves
     // are unaffected). This also keeps the API 33 POST_NOTIFICATIONS check
     // behind an SDK gate.
-    private fun hasPostPermission(): Boolean =
-        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA &&
-            ActivityCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS,
-            ) == PackageManager.PERMISSION_GRANTED
+    private fun hasPostPermission(): Boolean = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA &&
+        ActivityCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
 
     // setRequestPromotedOngoing + setShortCriticalText are API 36.1 (Android
     // 16 QPR1) APIs. minSdk is 36 (Android 16 base) until Robolectric 4.17+

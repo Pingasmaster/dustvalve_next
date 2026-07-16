@@ -512,4 +512,12 @@
     <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” wird als Nächstes abgespielt</string>
     <string name="snackbar_audio_stream_failed">Audiostream konnte nicht geladen werden</string>
     <string name="snackbar_scan_failed">Scan fehlgeschlagen: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">Beim letzten Mal ist etwas schiefgelaufen</string>
+    <string name="crash_report_body">Dustvalve Next wurde in der letzten Sitzung unerwartet beendet. Du kannst helfen, das Problem zu beheben, indem du das Absturzprotokoll mit dem Entwickler teilst oder ein GitHub-Issue erstellst — beides ist völlig optional.</string>
+    <string name="crash_report_privacy">Das Absturzprotokoll wird nur auf diesem Gerät gespeichert und niemals gesendet, es sei denn, du teilst es selbst — keine Analysedienste, kein Crash-Reporting von Drittanbietern, keine automatischen Uploads.</string>
+    <string name="crash_report_share_action">Absturzprotokoll teilen</string>
+    <string name="crash_report_github_action">GitHub-Issue erstellen</string>
+    <string name="crash_report_dismiss_action">Jetzt nicht</string>
 </resources>

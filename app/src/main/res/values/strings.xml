@@ -597,4 +597,12 @@
     <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” will play next</string>
     <string name="snackbar_audio_stream_failed">Couldn’t load audio stream</string>
     <string name="snackbar_scan_failed">Scan failed: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">Something went wrong last time</string>
+    <string name="crash_report_body">Dustvalve Next closed unexpectedly during the last session. You can help fix the problem by sharing the crash log with the developer or opening a GitHub issue — both are entirely optional.</string>
+    <string name="crash_report_privacy">The crash log is stored only on this device and is never sent anywhere unless you choose to share it yourself — no analytics, no third-party crash reporting, no automatic uploads.</string>
+    <string name="crash_report_share_action">Share crash log</string>
+    <string name="crash_report_github_action">Open a GitHub issue</string>
+    <string name="crash_report_dismiss_action">Not now</string>
 </resources>

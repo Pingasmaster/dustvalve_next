@@ -512,4 +512,12 @@
     <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”将在下一首播放</string>
     <string name="snackbar_audio_stream_failed">无法加载音频流</string>
     <string name="snackbar_scan_failed">扫描失败：<xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">上次运行时出现了问题</string>
+    <string name="crash_report_body">Dustvalve Next 在上次会话中意外关闭。你可以通过与开发者分享崩溃日志或在 GitHub 上提交 issue 来帮助修复问题——两者完全可选。</string>
+    <string name="crash_report_privacy">崩溃日志仅保存在本设备上，除非你自己选择分享，否则绝不会发送到任何地方——没有分析统计，没有第三方崩溃上报，也没有自动上传。</string>
+    <string name="crash_report_share_action">分享崩溃日志</string>
+    <string name="crash_report_github_action">在 GitHub 上提交 issue</string>
+    <string name="crash_report_dismiss_action">暂不</string>
 </resources>
