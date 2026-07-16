@@ -95,15 +95,26 @@ class AppSmokeTest {
         composeRule.waitForPositionPastZero()
 
         // Independent, UI-free confirmation through the real media session.
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        // MediaController must only be touched from its application thread
+        // (the main looper it was built on).
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
         val token = SessionToken(context, android.content.ComponentName(context, PlaybackService::class.java))
         val controller = MediaController.Builder(context, token).buildAsync().get()
         try {
-            composeRule.waitUntil(10_000) { controller.currentPosition > 0 }
-            assertThat(controller.isPlaying).isTrue()
-            assertThat(controller.currentPosition).isGreaterThan(0L)
+            val position = java.util.concurrent.atomic.AtomicLong(0)
+            val playing = java.util.concurrent.atomic.AtomicBoolean(false)
+            composeRule.waitUntil(10_000) {
+                instrumentation.runOnMainSync {
+                    position.set(controller.currentPosition)
+                    playing.set(controller.isPlaying)
+                }
+                position.get() > 0
+            }
+            assertThat(playing.get()).isTrue()
+            assertThat(position.get()).isGreaterThan(0L)
         } finally {
-            controller.release()
+            instrumentation.runOnMainSync { controller.release() }
         }
     }
 

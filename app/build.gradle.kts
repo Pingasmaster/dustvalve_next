@@ -419,6 +419,11 @@ dependencies {
     // --- Instrumentation (smoke + E2E) dependencies ---
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.compose.ui.test.junit4)
+    // Pin espresso-core explicitly (same reason as the unit-test pin above):
+    // compose ui-test pulls espresso 3.5.0 transitively, whose input
+    // injection reflects on InputManager.getInstance - removed in SDK 37 -
+    // and crashes every on-device test in Espresso.onIdle.
+    androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)
