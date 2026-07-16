@@ -56,9 +56,9 @@ jobs:
           # Read-only: check.yml's check job is the repo's sole cache writer.
           cache-read-only: true
 
-      - name: Setup GMD (Pixel 6, API 33, AOSP)
+      - name: Setup GMD (Pixel 7a, API 33, AOSP)
         run: >-
-          ./gradlew :baselineprofile:pixel6Api33Setup --info
+          ./gradlew :baselineprofile:pixel7aApi33Setup --info
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Generate Baseline + Startup Profile
@@ -72,7 +72,7 @@ jobs:
         with:
           branch: bot/baseline-profile-regen
           title: "chore(baseline-profile): regenerate baseline-prof.txt + startup-prof.txt"
-          commit-message: "chore(baseline-profile): regenerate from API 33 / Pixel 6"
+          commit-message: "chore(baseline-profile): regenerate from API 33 / Pixel 7a"
           body: |
             Automated regeneration via the baseline-profile CI workflow.
             See app/src/release/generated/baselineProfiles/ for the diff.

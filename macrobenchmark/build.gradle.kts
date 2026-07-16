@@ -13,8 +13,8 @@ android {
     targetProjectPath = ":app"
 
     testOptions.managedDevices.localDevices {
-        register("pixel6Api33") {
-            device = "Pixel 6"
+        register("pixel7aApi33") {
+            device = "Pixel 7a"
             apiLevel = 33
             systemImageSource = "aosp"
             // Test the arm64 APK - the ABI every real device runs - via the

@@ -18,8 +18,8 @@ exercised.
    Local run: `./build.sh --workflow-tests`
 
 2. **Tier 2 - emulator smoke** (`app/src/androidTest/.../smoke/`):
-   Gradle Managed Device `pixel6Api33` (API 33 AOSP on this legacy branch;
-   master uses `pixel6Api37`). Installs the real APK, seeds
+   Gradle Managed Device `pixel7aApi33` (Pixel 7a profile, API 33 AOSP on this legacy branch;
+   master uses `pixel7aApi37`). Installs the real APK, seeds
    MediaStore with bundled tones, taps a track, and asserts the elapsed
    label leaves 0:00 AND a real MediaController reports progress; opens
    Bandcamp / YouTube Music without crashing. CI: emulator-smoke job.

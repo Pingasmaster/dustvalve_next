@@ -6,8 +6,8 @@
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
 #   ./build.sh --workflow-tests   # Tier 1 JVM workflow tests only (fast) + exit
-#   ./build.sh --smoke            # Tier 2 on-device smoke on GMD pixel6Api33 + exit
-#   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel6Api33 + exit
+#   ./build.sh --smoke            # Tier 2 on-device smoke on GMD pixel7aApi33 + exit
+#   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel7aApi33 + exit
 #   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
 #
@@ -105,8 +105,8 @@ fi
 # --smoke: Tier 2 on-device smoke (GMD)
 if [[ "$DO_SMOKE" -eq 1 ]]; then
     acquire_lock
-    ./gradlew :app:pixel6Api33Setup "$GMD_GPU"
-    ./gradlew :app:pixel6Api33DebugAndroidTest "$GMD_GPU" \
+    ./gradlew :app:pixel7aApi33Setup "$GMD_GPU"
+    ./gradlew :app:pixel7aApi33DebugAndroidTest "$GMD_GPU" \
         -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
     echo "Smoke suite complete."
     exit 0
@@ -115,8 +115,8 @@ fi
 # --e2e: Tier 3 hermetic E2E (GMD, no live network tests)
 if [[ "$DO_E2E" -eq 1 ]]; then
     acquire_lock
-    ./gradlew :app:pixel6Api33Setup "$GMD_GPU"
-    ./gradlew :app:pixel6Api33DebugAndroidTest "$GMD_GPU" \
+    ./gradlew :app:pixel7aApi33Setup "$GMD_GPU"
+    ./gradlew :app:pixel7aApi33DebugAndroidTest "$GMD_GPU" \
         -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.dustvalve.next.android.testing.LiveNetwork
     echo "Hermetic E2E suite complete."
     exit 0
@@ -126,8 +126,8 @@ fi
 if [[ "$DO_E2E_LIVE" -eq 1 ]]; then
     acquire_lock
     echo "WARNING: this suite hits the real Bandcamp and YouTube services." >&2
-    ./gradlew :app:pixel6Api33Setup "$GMD_GPU"
-    ./gradlew :app:pixel6Api33DebugAndroidTest "$GMD_GPU" \
+    ./gradlew :app:pixel7aApi33Setup "$GMD_GPU"
+    ./gradlew :app:pixel7aApi33DebugAndroidTest "$GMD_GPU" \
         -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
     echo "Live E2E suite complete."
     exit 0

@@ -187,8 +187,8 @@ android {
         // Legacy branch (minSdk 26): API 33 AOSP, same image the
         // baselineprofile module already uses.
         managedDevices {
-            localDevices.register("pixel6Api33") {
-                device = "Pixel 6"
+            localDevices.register("pixel7aApi33") {
+                device = "Pixel 7a"
                 apiLevel = 33
                 systemImageSource = "aosp"
                 // Test the arm64 APK - the ABI every real device runs - via the
@@ -386,7 +386,7 @@ dependencies {
     // Profile installer - consumed by androidx.baselineprofile to install
     // baseline-prof.txt + startup-prof.txt shipped in the release APK.
     // (Profile files are produced by the :baselineprofile module's
-    // `pixel6Api33` managed-device run and copied to
+    // `pixel7aApi33` managed-device run and copied to
     // app/src/release/baseline-prof.txt + startup-prof.txt.)
     implementation(libs.androidx.profileinstaller)
 

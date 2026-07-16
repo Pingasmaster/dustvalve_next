@@ -112,7 +112,7 @@ jobs:
   # v0.5.0 regressions: local playback must advance past 0:00 and the
   # Bandcamp / YouTube Music surfaces must open without crashing.
   emulator-smoke:
-    name: emulator smoke (GMD pixel6Api33)
+    name: emulator smoke (GMD pixel7aApi33)
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -147,14 +147,14 @@ jobs:
           # Read-only: the check job is the sole cache writer (see above).
           cache-read-only: true
 
-      - name: Setup GMD (Pixel 6, API 33, AOSP)
+      - name: Setup GMD (Pixel 7a, API 33, AOSP)
         run: >-
-          ./gradlew :app:pixel6Api33Setup
+          ./gradlew :app:pixel7aApi33Setup
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Smoke suite (debug APK)
         run: >-
-          ./gradlew :app:pixel6Api33DebugAndroidTest
+          ./gradlew :app:pixel7aApi33DebugAndroidTest
           -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
@@ -222,21 +222,21 @@ jobs:
           # Read-only: the check job is the sole cache writer (see above).
           cache-read-only: true
 
-      - name: Setup GMD (Pixel 6, API 33, AOSP)
+      - name: Setup GMD (Pixel 7a, API 33, AOSP)
         run: >-
-          ./gradlew :app:pixel6Api33Setup
+          ./gradlew :app:pixel7aApi33Setup
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: E2E hermetic pass
         run: >-
-          ./gradlew :app:pixel6Api33DebugAndroidTest
+          ./gradlew :app:pixel7aApi33DebugAndroidTest
           -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.dustvalve.next.android.testing.LiveNetwork
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: E2E live pass (real Bandcamp + YouTube)
         continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.live_soft_fail }}
         run: >-
-          ./gradlew :app:pixel6Api33DebugAndroidTest
+          ./gradlew :app:pixel7aApi33DebugAndroidTest
           -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
