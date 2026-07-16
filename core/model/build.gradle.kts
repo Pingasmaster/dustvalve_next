@@ -7,6 +7,10 @@ plugins {
 android {
     namespace = "com.dustvalve.next.core.model"
     compileSdk = 37
+    // Compile against the 37.1 minor SDK release (API additions only; minor
+    // SDKs carry no behavior changes and cannot be targeted - targetSdk
+    // stays at the 37 major).
+    compileSdkMinor = 1
     defaultConfig { minSdk = 37 }
 
     lint {
