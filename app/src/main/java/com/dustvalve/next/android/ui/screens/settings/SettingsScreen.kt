@@ -1,7 +1,6 @@
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -1638,7 +1637,6 @@ private fun LiveUpdatesPromptRow() {
     }
 }
 
-@SuppressLint("NewApi")
 @Suppress("TooGenericExceptionCaught", "SwallowedException")
 private fun canPostPromotedNotifications(context: Context): Boolean = try {
     context.getSystemService(NotificationManager::class.java).canPostPromotedNotifications()
