@@ -1,7 +1,6 @@
 package com.dustvalve.next.android.download
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -39,11 +38,9 @@ import javax.inject.Singleton
  * Owns the single user-visible "downloads in progress" notification -
  * always rendered as the Android 16 QPR1+ status-bar **Live Update** chip
  * via `Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
- * `setShortCriticalText(...)`. The app's `minSdk = 36` (Android 16 base);
- * the Live Update APIs technically require API 36.1 (QPR1) - we accept
- * that residual risk pre-QPR1, see `@SuppressLint("NewApi")` on
- * `buildNotification`. minSdk will rise to 37 (Android 17) once Robolectric
- * supports it for unit tests.
+ * `setShortCriticalText(...)`. The app's `minSdk = 37` (Android 17), which
+ * satisfies the Live Update APIs' formal API 36.1 (QPR1) requirement, so no
+ * lint suppression or runtime gating is needed here.
  *
  * The center supports nested batches (e.g. an artist download internally
  * wraps album downloads); the outer-most batch wins so the chip stays on
@@ -208,12 +205,6 @@ class DownloadNotificationCenter @Inject constructor(
         Manifest.permission.POST_NOTIFICATIONS,
     ) == PackageManager.PERMISSION_GRANTED
 
-    // setRequestPromotedOngoing + setShortCriticalText are API 36.1 (Android
-    // 16 QPR1) APIs. minSdk is 36 (Android 16 base) until Robolectric 4.17+
-    // supports API 37 for tests. We accept the residual risk that devices on
-    // pre-QPR1 Android 16 will hit a NoSuchMethodError; QPR1 ships within the
-    // first ~3 months of the OS release.
-    @android.annotation.SuppressLint("NewApi")
     private fun buildNotification(snapshot: State): Notification? {
         // While paused the batch has unwound (its coroutine was cancelled), so
         // activeTracks/batchStack are empty - show a static "paused" card with a
@@ -303,7 +294,6 @@ class DownloadNotificationCenter @Inject constructor(
     }
 
     /** Static "downloads paused" card with Resume + Cancel actions. */
-    @android.annotation.SuppressLint("NewApi")
     private fun buildPausedNotification(): Notification {
         val style = Notification.ProgressStyle()
             .setProgress(0)
@@ -327,10 +317,8 @@ class DownloadNotificationCenter @Inject constructor(
      * call this before any track has started (state still empty), so fall back
      * to a "preparing" placeholder rather than returning null.
      */
-    @android.annotation.SuppressLint("NewApi")
     fun currentForegroundNotification(): Notification = buildNotification(state.value) ?: buildPlaceholderNotification()
 
-    @android.annotation.SuppressLint("NewApi")
     private fun buildPlaceholderNotification(): Notification {
         val style = Notification.ProgressStyle()
             .setProgress(0)
@@ -357,7 +345,6 @@ class DownloadNotificationCenter @Inject constructor(
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    @SuppressLint("NewApi")
     private fun pauseResumeAction(isPaused: Boolean): Notification.Action {
         val intent = PendingIntent.getBroadcast(
             context,
@@ -373,7 +360,6 @@ class DownloadNotificationCenter @Inject constructor(
         return Notification.Action.Builder(Icon.createWithResource(context, iconRes), label, intent).build()
     }
 
-    @SuppressLint("NewApi")
     private fun cancelAction(): Notification.Action {
         val intent = PendingIntent.getBroadcast(
             context,
@@ -389,7 +375,6 @@ class DownloadNotificationCenter @Inject constructor(
         ).build()
     }
 
-    @SuppressLint("NewApi")
     @Suppress("TooGenericExceptionCaught")
     private fun logPromotionDiagnostics(built: Notification) {
         if (!BuildConfig.DEBUG) return
