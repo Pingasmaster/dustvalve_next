@@ -7,6 +7,13 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      live_soft_fail:
+        description: >-
+          Treat live-network E2E failures as warnings (use during a known
+          Bandcamp/YouTube service incident).
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -60,4 +67,122 @@ jobs:
           path: |
             app/src/test/snapshots/roborazzi/*_compare.png
             app/build/outputs/roborazzi/
+          if-no-files-found: ignore
+
+  # Tier 2: on-device smoke on a Gradle Managed Device. Pinned to the exact
+  # v0.5.0 regressions: local playback must advance past 0:00 and the
+  # Bandcamp / YouTube Music surfaces must open without crashing.
+  emulator-smoke:
+    name: emulator smoke (GMD pixel6Api37)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -la /dev/kvm
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.5.0
+        with:
+          distribution: 'zulu'
+          java-version: 25
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4.0.1
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.2.0
+        with:
+          cache-provider: basic
+
+      - name: Setup GMD (Pixel 6, API 37, 16 KB pages)
+        run: >-
+          ./gradlew :app:pixel6Api37Setup
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Smoke suite (debug APK)
+        run: >-
+          ./gradlew :app:pixel6Api37DebugAndroidTest
+          -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Upload smoke results on failure
+        if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: smoke-results
+          path: app/build/outputs/androidTest-results/managedDevice/
+          if-no-files-found: ignore
+
+  # Tier 3: full E2E. Hermetic and live passes run as SEPARATE invocations so
+  # a Bandcamp/YouTube outage can never mask a hermetic regression.
+  emulator-e2e:
+    name: emulator E2E (hermetic + live)
+    needs: emulator-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -la /dev/kvm
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.5.0
+        with:
+          distribution: 'zulu'
+          java-version: 25
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4.0.1
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.2.0
+        with:
+          cache-provider: basic
+
+      - name: Setup GMD (Pixel 6, API 37, 16 KB pages)
+        run: >-
+          ./gradlew :app:pixel6Api37Setup
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: E2E hermetic pass
+        run: >-
+          ./gradlew :app:pixel6Api37DebugAndroidTest
+          -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.dustvalve.next.android.testing.LiveNetwork
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: E2E live pass (real Bandcamp + YouTube)
+        continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.live_soft_fail }}
+        run: >-
+          ./gradlew :app:pixel6Api37DebugAndroidTest
+          -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Upload E2E results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: e2e-results
+          path: app/build/outputs/androidTest-results/managedDevice/
           if-no-files-found: ignore

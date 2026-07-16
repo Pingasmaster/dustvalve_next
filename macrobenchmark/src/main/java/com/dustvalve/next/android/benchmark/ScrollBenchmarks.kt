@@ -6,7 +6,7 @@
  *
  * Run from the project root with:
  *
- *   ./gradlew :macrobenchmark:pixel6Api33AndroidTest
+ *   ./gradlew :macrobenchmark:pixel6Api37AndroidTest
  */
 package com.dustvalve.next.android.benchmark
 

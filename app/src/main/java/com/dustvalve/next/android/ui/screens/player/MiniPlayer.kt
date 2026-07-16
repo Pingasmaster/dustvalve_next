@@ -51,6 +51,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -172,6 +173,7 @@ fun MiniPlayer(
     Surface(
         tonalElevation = 2.dp,
         modifier = modifier
+            .testTag(com.dustvalve.next.android.ui.TestTags.MINI_PLAYER)
             .then(surfaceModifier)
             .graphicsLayer {
                 translationY = dismissOffset.value

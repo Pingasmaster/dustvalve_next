@@ -50,7 +50,7 @@ jobs:
 
       - name: Setup GMD (Pixel 6, API 33, AOSP)
         run: >-
-          ./gradlew :baselineprofile:pixel6Api33Setup --info
+          ./gradlew :baselineprofile:pixel6Api37Setup --info
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Generate Baseline + Startup Profile

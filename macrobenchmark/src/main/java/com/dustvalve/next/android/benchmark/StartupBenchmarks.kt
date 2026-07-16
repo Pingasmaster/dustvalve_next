@@ -4,7 +4,7 @@
  * Measures the cold-start time of MainActivity, with and without the
  * baseline profile applied. Run from the project root with:
  *
- *   ./gradlew :macrobenchmark:pixel6Api33AndroidTest
+ *   ./gradlew :macrobenchmark:pixel6Api37AndroidTest
  *
  * These benchmarks are NOT executed in the local CI build - they
  * require a managed device (Pixel 6 / API 33 / AOSP). They are intended

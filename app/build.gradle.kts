@@ -23,8 +23,11 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 37
         targetSdk = 37
-        versionCode = 278
-        versionName = "0.5.0"
+        versionCode = 279
+        versionName = "0.5.1"
+        // Instrumentation (smoke + E2E) runs against the REAL app object
+        // graph - no HiltTestApplication on device by design.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -163,6 +166,20 @@ android {
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
+        // Gradle Managed Device for the smoke + E2E instrumentation suites.
+        // apiLevel MUST be >= minSdk (37); API 33 devices cannot install
+        // this APK (INSTALL_FAILED_OLDER_SDK).
+        managedDevices {
+            localDevices.register("pixel6Api37") {
+                device = "Pixel 6"
+                apiLevel = 37
+                // The only published phone images for API 37 are the 16 KB
+                // page-size Google APIs variants; plain "aosp"/"google"
+                // sources stop at API 36.
+                systemImageSource = "google"
+                pageAlignment = com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
+            }
+        }
         // Robolectric 4.17 pokes JDK internals (FileDescriptor, reflection)
         // that modern JDKs seal by default; open them for the test JVM only.
         unitTests.all { test ->
@@ -340,7 +357,7 @@ dependencies {
     // Profile installer - consumed by androidx.baselineprofile to install
     // baseline-prof.txt + startup-prof.txt shipped in the release APK.
     // (Profile files are produced by the :baselineprofile module's
-    // `pixel6Api33` managed-device run and copied to
+    // `pixel6Api37` managed-device run and copied to
     // app/src/release/baseline-prof.txt + startup-prof.txt.)
     implementation(libs.androidx.profileinstaller)
 
@@ -360,7 +377,27 @@ dependencies {
     testImplementation(libs.okhttp.tls)
     testImplementation(libs.turbine)
     testImplementation(libs.compose.ui.test.junit4)
+    // Real ExoPlayer decoding under Robolectric (TestPlayerRunHelper etc.)
+    // for the workflow tests in com.dustvalve.next.android.workflow.
+    testImplementation(libs.media3.test.utils)
+    testImplementation(libs.media3.test.utils.robolectric)
+    testImplementation(libs.hilt.android)
+    // Processes @EntryPoint/@HiltAndroidTest defined in unit-test sources
+    // (workflow tests reach into the real app graph under Robolectric).
+    kspTest(libs.hilt.android.compiler)
     debugImplementation(libs.compose.ui.test.manifest)
+
+    // --- Instrumentation (smoke + E2E) dependencies ---
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.uiautomator)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.coroutines.test)
+    androidTestImplementation(libs.media3.session)
 
     // Static analysis plugins / lint checks
     detektPlugins(libs.detekt.compose)

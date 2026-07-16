@@ -116,6 +116,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -1045,6 +1046,7 @@ fun FullPlayer(
                             text = if (displayPosition != null) formatTime(displayPosition) else "--:--",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_POSITION),
                         )
                         val remaining = if (displayPosition != null) {
                             (state.duration - displayPosition).coerceAtLeast(0L)
@@ -1055,6 +1057,7 @@ fun FullPlayer(
                             text = if (remaining != null) "-${formatTime(remaining)}" else "--:--",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_DURATION),
                         )
                     }
 
@@ -1070,7 +1073,9 @@ fun FullPlayer(
                                 hapticFeedback.tick()
                                 playerViewModel.onPrevious()
                             },
-                            modifier = Modifier.size(56.dp),
+                            modifier = Modifier
+                                .size(56.dp)
+                                .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_PREVIOUS),
                             shapes = ButtonDefaults.shapes(),
                             contentPadding = PaddingValues(0.dp),
                         ) {
@@ -1090,7 +1095,9 @@ fun FullPlayer(
                                 hapticFeedback.toggle(!state.isPlaying)
                                 playerViewModel.onPlayPause()
                             },
-                            modifier = Modifier.size(80.dp),
+                            modifier = Modifier
+                                .size(80.dp)
+                                .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_PLAY_PAUSE),
                             colors = ToggleButtonDefaults.toggleButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1115,7 +1122,9 @@ fun FullPlayer(
                                 hapticFeedback.tick()
                                 playerViewModel.onNext()
                             },
-                            modifier = Modifier.size(56.dp),
+                            modifier = Modifier
+                                .size(56.dp)
+                                .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_NEXT),
                             shapes = ButtonDefaults.shapes(),
                             contentPadding = PaddingValues(0.dp),
                         ) {

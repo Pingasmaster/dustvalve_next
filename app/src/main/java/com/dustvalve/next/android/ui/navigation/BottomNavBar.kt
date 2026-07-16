@@ -10,9 +10,11 @@ import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.TestTags
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -22,10 +24,11 @@ fun BottomNavBar(
     onItemSelected: (NavDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ShortNavigationBar(modifier = modifier) {
+    ShortNavigationBar(modifier = modifier.testTag(TestTags.BOTTOM_NAV)) {
         visibleTabs.forEach { item ->
             val selected = item == currentTab
             ShortNavigationBarItem(
+                modifier = Modifier.testTag(TestTags.bottomNavItem(item.name.lowercase())),
                 selected = selected,
                 onClick = { onItemSelected(item.destination) },
                 icon = {
