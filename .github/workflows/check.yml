@@ -15,6 +15,12 @@ on:
         type: boolean
         default: false
 
+# One run per ref: a newer push supersedes the in-flight run for the same
+# branch, so stale commits stop burning runner minutes.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
