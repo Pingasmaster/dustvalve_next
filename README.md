@@ -11,7 +11,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Android-8%2B-3DDC84?logo=android&logoColor=white" alt="Min SDK 26 (default install)"/>
-  <img src="https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin"/>
+  <img src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin"/>
   <img src="https://img.shields.io/badge/Jetpack_Compose-1.12-4285F4?logo=jetpackcompose&logoColor=white" alt="Compose"/>
   <img src="https://img.shields.io/badge/Material_3-Expressive-E8DEF8" alt="M3 Expressive"/>
   <img src="https://img.shields.io/badge/License-GPLv3-blue" alt="GPLv3"/>
@@ -70,7 +70,7 @@ The latest release can be found [here](https://github.com/Pingasmaster/dustvalve
 
 We provide progressive streaming, automatic caching (never redownloads a song or album cover more than once) and optional downloads for all platforms. Also, the main music player is pretty intuitive and not boring like other apps.
 
-We have no tracking or bullshit, you choose whether you want to allow music access storage permissions or per-folder access which does not require any storage permissions at all. This software is designed to respect you and your privacy. We provide instructions to build the app yourself from this repo in the build section.
+We have no tracking or bullshit, you choose whether you want to allow music access storage permissions or per-folder access which does not require any storage permissions at all. This software is designed to respect you and your privacy. Crash reporting is opt-in and fully on-device: if the app crashes, the next launch offers to share the log or open a pre-filled GitHub issue, and nothing is ever sent without your explicit action. We provide instructions to build the app yourself from this repo in the build section.
 
 We heavily follow all Material you 3 Expressive guidelines and recommendations with a touch of expressiveness on top to make it all as much android-native and intentional as possible, though I'm a dev not a designer so feel free to create some Issues for any suggestions. The APK is ~7MB (classes.dex and resources ship uncompressed for faster install and lower runtime memory on Android 16.1+), takes around 32Mb of storage space once installed, has configurable caching storage limits and most importantly starts up instantly, no splash screen for 5 seconds on slow devices.
 
