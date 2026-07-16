@@ -63,6 +63,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.2.0
         with:
           cache-provider: basic
+          # Cache policy: this job is the single cache writer for the repo;
+          # all other jobs/workflows set cache-read-only (10 GB limit was
+          # being filled by every job saving its own multi-GB entry).
 
       - name: Style (ktlint + detekt)
         run: ./gradlew ktlintCheck detekt
@@ -122,6 +125,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.2.0
         with:
           cache-provider: basic
+          # Read-only: the check job is the sole cache writer (see above).
+          cache-read-only: true
 
       - name: Setup GMD (Pixel 6, API 37, 16 KB pages)
         run: >-
@@ -195,6 +200,8 @@ jobs:
         uses: gradle/actions/setup-gradle@v6.2.0
         with:
           cache-provider: basic
+          # Read-only: the check job is the sole cache writer (see above).
+          cache-read-only: true
 
       - name: Setup GMD (Pixel 6, API 37, 16 KB pages)
         run: >-
