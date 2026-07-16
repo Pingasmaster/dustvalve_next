@@ -26,6 +26,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# JEP 498 opt-in for every forked JVM (ktlint workers, Kotlin daemon):
+# kotlin-compiler-embeddable 2.2.x still uses sun.misc.Unsafe and JDK 25
+# warns otherwise. Remove once ktlint bundles a compiler without it.
+export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }--sun-misc-unsafe-memory-access=allow"
+
 # Argument parsing
 DO_CLEAN_ONLY=0
 DO_FORMAT=0

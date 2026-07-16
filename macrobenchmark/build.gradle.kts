@@ -21,6 +21,9 @@ android {
             apiLevel = 37
             systemImageSource = "google"
             pageAlignment = com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
+            // Test the arm64 APK - the ABI every real device runs - via the
+            // image's built-in translation layer. Matches the AGP 10 default.
+            testedAbi = "arm64-v8a"
         }
     }
 }

@@ -170,7 +170,13 @@ fun LocalScreen(
                     viewModel.onSearch()
                 }
             },
-            placeholder = { Text(stringResource(R.string.local_search_placeholder)) },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.local_search_placeholder),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
             leadingIcon = {
                 Icon(
                     painter = painterResource(R.drawable.ic_search),

@@ -28,6 +28,24 @@ object Flows {
     }
 
     /**
+     * Drives the REAL local-music enable flow: taps the Local tab's
+     * "Enable local music" CTA (permission is pre-granted by the test rule),
+     * which runs the app's own MediaStore scan - the only thing that pulls
+     * the seeded tones into the DB. Merely setting the DataStore flag skips
+     * the scan and leaves the library empty. No-op when the CTA is absent
+     * (already enabled and scanned).
+     */
+    fun AndroidComposeTestRule<*, *>.enableLocalMusicViaCta(enableLabel: String) {
+        clickTab("local")
+        waitForIdle()
+        val cta = onAllNodesWithText(enableLabel).fetchSemanticsNodes()
+        if (cta.isNotEmpty()) {
+            onAllNodesWithText(enableLabel)[0].performClick()
+            waitForIdle()
+        }
+    }
+
+    /**
      * Polls the full player's elapsed-time label until it moves off "0:00".
      * This is the pinned assertion for the v0.5.0 "stuck at 0:00" regression.
      */

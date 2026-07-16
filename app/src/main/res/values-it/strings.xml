@@ -280,7 +280,7 @@
     <string name="settings_storage_limit_gb">Limite di archiviazione: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
     <string name="settings_sign_in_bandcamp">Accedi a <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_sign_in_youtube">Accedi a <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="local_search_placeholder">Cerca nella musica locale…</string>
+    <string name="local_search_placeholder">Cerca in locale…</string>
     <string name="local_scan_title">Scansiona la tua musica</string>
     <string name="local_scan_subtitle">Trova e riproduci la musica salvata sul tuo dispositivo</string>
     <string name="local_enable">Attiva la musica locale</string>

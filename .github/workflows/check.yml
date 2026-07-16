@@ -18,6 +18,17 @@ on:
 permissions:
   contents: read
 
+# JEP 498 opt-in (sun.misc.Unsafe accessors) for forked JVMs that honor the
+# environment (test executors, benchmarks). KNOWN RESIDUAL WARNING: ktlint's
+# worker daemon gets a sanitized environment and exposes no JVM-args hook, and
+# every published kotlin-compiler-embeddable (2.2-2.4) still calls
+# Unsafe.objectFieldOffset - so ktlint tasks print a 4-line JEP 498 warning
+# that cannot currently be fixed on our side. Remove this note when
+# ktlint-gradle grows a worker jvmArgs option or the bundled compiler stops
+# using Unsafe.
+env:
+  JAVA_TOOL_OPTIONS: --sun-misc-unsafe-memory-access=allow
+
 jobs:
   check:
     name: ktlint + detekt + lint + unit tests + locale screenshots
@@ -117,6 +128,24 @@ jobs:
           -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
+      - name: Annotate failing tests (public check-run annotations)
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for f in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              try: root = ET.parse(f).getroot()
+              except Exception: continue
+              for case in root.iter('testcase'):
+                  for kind in ('failure', 'error'):
+                      for node in case.findall(kind):
+                          msg = (node.get('message') or (node.text or '').strip().splitlines()[0:1] or [''])
+                          msg = msg if isinstance(msg, str) else (msg[0] if msg else '')
+                          name = f"{case.get('classname')}#{case.get('name')}"
+                          text = (node.text or '')[:600].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+                          print(f"::error title={name}::{text or msg}")
+          PY
+
       - name: Upload smoke results on failure
         if: failure()
         uses: actions/upload-artifact@v7.0.1
@@ -178,6 +207,24 @@ jobs:
           ./gradlew :app:pixel6Api37DebugAndroidTest
           -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Annotate failing tests (public check-run annotations)
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for f in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              try: root = ET.parse(f).getroot()
+              except Exception: continue
+              for case in root.iter('testcase'):
+                  for kind in ('failure', 'error'):
+                      for node in case.findall(kind):
+                          msg = (node.get('message') or (node.text or '').strip().splitlines()[0:1] or [''])
+                          msg = msg if isinstance(msg, str) else (msg[0] if msg else '')
+                          name = f"{case.get('classname')}#{case.get('name')}"
+                          text = (node.text or '')[:600].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+                          print(f"::error title={name}::{text or msg}")
+          PY
 
       - name: Upload E2E results
         if: always()

@@ -1,7 +1,7 @@
 package com.dustvalve.next.android.smoke
 
 import android.Manifest
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -15,6 +15,7 @@ import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.player.PlaybackService
 import com.dustvalve.next.android.testing.Flows.clickTab
+import com.dustvalve.next.android.testing.Flows.enableLocalMusicViaCta
 import com.dustvalve.next.android.testing.Flows.waitForPositionPastZero
 import com.dustvalve.next.android.testing.Flows.waitForTag
 import com.dustvalve.next.android.testing.Flows.waitForText
@@ -77,10 +78,11 @@ class AppSmokeTest {
 
     @Test
     fun localTrack_playsPastZero() {
-        runBlocking { settings().setLocalMusicEnabled(true) }
-        composeRule.clickTab("local")
+        val enableLabel = InstrumentationRegistry.getInstrumentation()
+            .targetContext.getString(com.dustvalve.next.android.R.string.local_enable)
+        composeRule.enableLocalMusicViaCta(enableLabel)
 
-        // Wait for the scanner to surface the seeded tones, then tap one.
+        // Wait for the app's own scan to surface the seeded tones, then tap one.
         composeRule.waitForText("Dustvalve Test Tone 1", timeoutMs = 30_000)
         composeRule.onAllNodesWithText("Dustvalve Test Tone 1")[0].performClick()
         composeRule.waitForIdle()

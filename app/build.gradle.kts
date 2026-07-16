@@ -56,10 +56,21 @@ android {
                 // The resulting APK is debug-signed and NOT shippable. Production
                 // release builds decode release-keystore.jks from KEYSTORE_BASE64
                 // via .github/workflows/release.yml.
-                rootProject.logger.warn(
-                    "release-keystore.jks or .password-signing-keys missing - " +
-                        "falling back to AGP debug signing for the release variant.",
-                )
+                // Only warn when this build actually produces a release
+                // artifact; on test/lint-only invocations the fallback is
+                // irrelevant and the message is just configuration noise.
+                val wantsReleaseArtifact = gradle.startParameter.taskNames.any { name ->
+                    val task = name.substringAfterLast(':')
+                    task.contains("Release") &&
+                        (task.startsWith("assemble") || task.startsWith("bundle") || task.startsWith("install"))
+                }
+                val fallbackMessage = "release-keystore.jks or .password-signing-keys missing - " +
+                    "falling back to AGP debug signing for the release variant."
+                if (wantsReleaseArtifact) {
+                    rootProject.logger.warn(fallbackMessage)
+                } else {
+                    rootProject.logger.info(fallbackMessage)
+                }
                 val debug = signingConfigs.getByName("debug")
                 val debugStoreFile = debug.storeFile
                 // AGP only auto-creates the debug keystore when assembleDebug
@@ -182,6 +193,10 @@ android {
                 // sources stop at API 36.
                 systemImageSource = "google"
                 pageAlignment = com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
+                // Test the arm64 APK - the ABI every real device runs - via
+                // the image's built-in translation layer. Matches the AGP 10
+                // default.
+                testedAbi = "arm64-v8a"
             }
         }
         // Robolectric 4.17 pokes JDK internals (FileDescriptor, reflection)
@@ -200,6 +215,16 @@ android {
                 // SDK-37 ApplicationSharedMemory shadow reaches SharedSecrets.
                 "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
                 "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
+                // Robolectric loads its native runtime via System::load; JDK 25
+                // warns (and will later block) restricted methods without this.
+                "--enable-native-access=ALL-UNNAMED",
+                // datastore's bundled protobuf still calls sun.misc.Unsafe
+                // memory accessors (JEP 498 deprecation warning otherwise).
+                "--sun-misc-unsafe-memory-access=allow",
+                // The --add-opens set appends to the bootstrap classpath, which
+                // disables CDS anyway; turn it off explicitly to silence the
+                // "Sharing is only supported for boot loader classes" notice.
+                "-Xshare:off",
             )
         }
     }

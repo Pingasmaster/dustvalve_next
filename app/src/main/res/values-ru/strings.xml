@@ -289,7 +289,7 @@
     <string name="settings_sign_in_bandcamp">Войти в <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_sign_in_youtube">Войти в <xliff:g id="brand">YouTube Music</xliff:g></string>
 
-    <string name="local_search_placeholder">Поиск по локальной музыке…</string>
+    <string name="local_search_placeholder">Поиск локальной музыки…</string>
     <string name="local_scan_title">Просканируй свою музыку</string>
     <string name="local_scan_subtitle">Найди и слушай музыку, которая хранится на устройстве</string>
     <string name="local_enable">Включить локальную музыку</string>
