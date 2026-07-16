@@ -22,7 +22,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><img src="./download-future.svg" alt="Download future APK - Android 17 only, bleeding-edge build" width="340"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><img src="./download-future.svg" alt="Download the secret future APK - Android 17 only" width="340"/></a>
 </p>
 
 <p align="center">
