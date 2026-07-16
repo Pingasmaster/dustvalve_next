@@ -4,6 +4,12 @@ on:
   release:
     types: [published]
 
+# One run per ref: a newer push supersedes the in-flight run for the same
+# branch, so stale commits stop burning runner minutes.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
