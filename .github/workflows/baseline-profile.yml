@@ -67,6 +67,33 @@ jobs:
           -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
+      - name: Annotate failures (public check-run annotations)
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for f in glob.glob('**/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              try: root = ET.parse(f).getroot()
+              except Exception: continue
+              for case in root.iter('testcase'):
+                  for kind in ('failure', 'error'):
+                      for node in case.findall(kind):
+                          name = f"{case.get('classname')}#{case.get('name')}"
+                          text = (node.text or node.get('message') or '')[:600]
+                          text = text.replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+                          print(f"::error title={name}::{text}")
+          PY
+
+      - name: Upload device logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: baseline-profile-results
+          path: |
+            baselineprofile/build/outputs/androidTest-results/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+
       - name: Open PR with regenerated profiles
         uses: peter-evans/create-pull-request@v8.1.1
         with:
