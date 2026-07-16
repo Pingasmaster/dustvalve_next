@@ -14,6 +14,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import com.dustvalve.next.android.crash.CrashReportManager
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
@@ -52,8 +53,16 @@ class DustvalveNextApplication :
     @Inject
     lateinit var downloadController: DownloadController
 
+    @Inject
+    lateinit var crashReportManager: CrashReportManager
+
     override fun onCreate() {
         super.onCreate()
+        // Plant the uncaught-exception hook before any other init so a crash
+        // anywhere below is captured. Purely local: the log is written to
+        // filesDir and shown to the user on the next launch; nothing is ever
+        // transmitted unless they explicitly share it (see CrashReportManager).
+        crashReportManager.install()
         // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
         // cursors, and unclosed Closeables via logcat + a small ANR dialog
         // for severe ThreadPolicy violations. Suppressed in release via the
@@ -78,6 +87,11 @@ class DustvalveNextApplication :
         // controller swallows errors + mutates shared state that
         // MainActivity's dialog host observes. See AppUpdateController.
         appUpdateController.checkSilently()
+        // Off-main-thread look for a crash marker / reportable exit records
+        // from the previous run; surfaces the opt-in report sheet hosted by
+        // MainActivity. Force-closes never trigger it (REASON_USER_REQUESTED
+        // is filtered out).
+        crashReportManager.checkOnColdStart()
     }
 
     /**

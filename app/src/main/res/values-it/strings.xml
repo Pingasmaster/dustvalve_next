@@ -512,4 +512,12 @@
     <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” verrà riprodotto dopo</string>
     <string name="snackbar_audio_stream_failed">Impossibile caricare lo stream audio</string>
     <string name="snackbar_scan_failed">Scansione non riuscita: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">Qualcosa è andato storto l’ultima volta</string>
+    <string name="crash_report_body">Dustvalve Next si è chiuso in modo imprevisto durante l’ultima sessione. Puoi aiutare a risolvere il problema condividendo il log dell’arresto con lo sviluppatore o aprendo una issue su GitHub — entrambe le opzioni sono del tutto facoltative.</string>
+    <string name="crash_report_privacy">Il log dell’arresto è salvato solo su questo dispositivo e non viene mai inviato da nessuna parte, a meno che tu non scelga di condividerlo — niente analisi, niente crash reporting di terze parti, niente caricamenti automatici.</string>
+    <string name="crash_report_share_action">Condividi il log dell’arresto</string>
+    <string name="crash_report_github_action">Apri una issue su GitHub</string>
+    <string name="crash_report_dismiss_action">Non ora</string>
 </resources>

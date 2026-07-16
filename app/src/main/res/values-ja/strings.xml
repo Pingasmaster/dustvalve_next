@@ -512,4 +512,12 @@
     <string name="snackbar_playing_next">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」を次に再生します</string>
     <string name="snackbar_audio_stream_failed">オーディオストリームを読み込めませんでした</string>
     <string name="snackbar_scan_failed">スキャンに失敗しました：<xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+
+    <!-- Crash reporting (opt-in, on-device only) -->
+    <string name="crash_report_title">前回、問題が発生しました</string>
+    <string name="crash_report_body">前回のセッションで Dustvalve Next が予期せず終了しました。クラッシュログを開発者と共有するか、GitHub で Issue を作成することで、問題の修正に協力できます。どちらも完全に任意です。</string>
+    <string name="crash_report_privacy">クラッシュログはこの端末にのみ保存され、自分で共有しない限りどこにも送信されません。分析ツールも、サードパーティ製クラッシュレポートも、自動アップロードもありません。</string>
+    <string name="crash_report_share_action">クラッシュログを共有</string>
+    <string name="crash_report_github_action">GitHub で Issue を作成</string>
+    <string name="crash_report_dismiss_action">今はしない</string>
 </resources>
