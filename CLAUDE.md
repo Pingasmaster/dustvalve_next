@@ -7,7 +7,7 @@ Three automated tiers (see docs/testing/README.md):
   real MainActivity under Robolectric). Run this after ANY change touching
   playback, navigation, or the provider screens.
 - `./build.sh --smoke` / `--e2e` / `--e2e-live` - Gradle Managed Device
-  suites (`pixel6Api37`). If the host QEMU cannot boot modern images, rely
+  suites (`pixel7aApi37`). If the host QEMU cannot boot modern images, rely
   on the check.yml emulator-smoke / emulator-e2e CI jobs instead.
 - Scenario backlog lives in docs/testing/catalog-*.md; new E2E tests must
   reference their catalog id.

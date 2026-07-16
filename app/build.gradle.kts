@@ -185,8 +185,8 @@ android {
         // apiLevel MUST be >= minSdk (37); API 33 devices cannot install
         // this APK (INSTALL_FAILED_OLDER_SDK).
         managedDevices {
-            localDevices.register("pixel6Api37") {
-                device = "Pixel 6"
+            localDevices.register("pixel7aApi37") {
+                device = "Pixel 7a"
                 apiLevel = 37
                 // The only published phone images for API 37 are the 16 KB
                 // page-size Google APIs variants; plain "aosp"/"google"
@@ -386,7 +386,7 @@ dependencies {
     // Profile installer - consumed by androidx.baselineprofile to install
     // baseline-prof.txt + startup-prof.txt shipped in the release APK.
     // (Profile files are produced by the :baselineprofile module's
-    // `pixel6Api37` managed-device run and copied to
+    // `pixel7aApi37` managed-device run and copied to
     // app/src/release/baseline-prof.txt + startup-prof.txt.)
     implementation(libs.androidx.profileinstaller)
 

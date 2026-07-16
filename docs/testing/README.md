@@ -18,7 +18,7 @@ exercised.
    Local run: `./build.sh --workflow-tests`
 
 2. **Tier 2 - emulator smoke** (`app/src/androidTest/.../smoke/`):
-   Gradle Managed Device `pixel6Api37` (16 KB page-size Google APIs image -
+   Gradle Managed Device `pixel7aApi37` (16 KB page-size Google APIs image -
    the only published API 37 phone image). Installs the real APK, seeds
    MediaStore with bundled tones, taps a track, and asserts the elapsed
    label leaves 0:00 AND a real MediaController reports progress; opens

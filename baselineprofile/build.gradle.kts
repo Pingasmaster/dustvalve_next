@@ -16,8 +16,8 @@ android {
         // apiLevel must be >= :app's minSdk (37); API 33 cannot install the
         // APK (INSTALL_FAILED_OLDER_SDK). Only 16 KB page-size Google APIs
         // images are published for API 37.
-        register("pixel6Api37") {
-            device = "Pixel 6"
+        register("pixel7aApi37") {
+            device = "Pixel 7a"
             apiLevel = 37
             systemImageSource = "google"
             pageAlignment = com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
