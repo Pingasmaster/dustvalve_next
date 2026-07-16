@@ -323,7 +323,13 @@ fun BandcampScreen(
                     searchViewModel.onSearch()
                 }
             },
-            placeholder = { Text(stringResource(R.string.bandcamp_search_placeholder)) },
+            placeholder = {
+                Text(
+                    text = stringResource(R.string.bandcamp_search_placeholder),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
             leadingIcon = {
                 Icon(
                     painter = painterResource(R.drawable.ic_search),
@@ -818,7 +824,13 @@ fun BandcampScreen(
                         onValueChange = { viewModel.setNewGenreText(it) },
                         singleLine = true,
                         enabled = !state.genreValidating,
-                        placeholder = { Text(stringResource(R.string.bandcamp_add_genre_hint)) },
+                        placeholder = {
+                            Text(
+                                text = stringResource(R.string.bandcamp_add_genre_hint),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     val errRes = when (state.genreError) {

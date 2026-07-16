@@ -2,7 +2,7 @@ package com.dustvalve.next.android.e2e
 
 import android.Manifest
 import androidx.compose.ui.test.hasSetTextAction
-import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -13,12 +13,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.testing.Flows.clickTab
+import com.dustvalve.next.android.testing.Flows.enableLocalMusicViaCta
 import com.dustvalve.next.android.testing.Flows.waitForText
 import com.dustvalve.next.android.testing.LocalMusicSeeder
 import com.dustvalve.next.android.testing.QuarantineRule
-import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -48,11 +47,6 @@ class PlaylistLocalE2eTest {
 
     @Before fun seed() {
         LocalMusicSeeder.seed()
-        runBlocking {
-            SettingsDataStore(
-                InstrumentationRegistry.getInstrumentation().targetContext.applicationContext,
-            ).setLocalMusicEnabled(true)
-        }
     }
 
     @After fun cleanup() {
@@ -63,7 +57,9 @@ class PlaylistLocalE2eTest {
     // create new named playlist -> appears in Library with the track inside.
     @Test
     fun createPlaylistFromLocalTrack_visibleInLibrary() {
-        composeRule.clickTab("local")
+        val enableLabel = InstrumentationRegistry.getInstrumentation()
+            .targetContext.getString(com.dustvalve.next.android.R.string.local_enable)
+        composeRule.enableLocalMusicViaCta(enableLabel)
         composeRule.waitForText("Dustvalve Test Tone 1", timeoutMs = 30_000)
         composeRule.onAllNodesWithText("Dustvalve Test Tone 1")[0]
             .performTouchInput { longClick() }

@@ -17,6 +17,9 @@ android {
             device = "Pixel 6"
             apiLevel = 33
             systemImageSource = "aosp"
+            // Test the arm64 APK - the ABI every real device runs - via the
+            // image's built-in translation layer. Matches the AGP 10 default.
+            testedAbi = "arm64-v8a"
         }
     }
 }

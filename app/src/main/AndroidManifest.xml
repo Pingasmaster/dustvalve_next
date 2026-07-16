@@ -42,10 +42,20 @@
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
             tools:node="merge">
+            <!-- androidx.startup only runs initializers whose value is exactly
+                 "androidx.startup"; overriding the value disables WorkManager's
+                 auto-init (Hilt's HiltWorkerFactory takes over on demand via
+                 Configuration.Provider). Unlike tools:node="remove", this does
+                 not depend on the library declaration being present in the
+                 merge, so unit-test manifest merges stay warning-free. The
+                 RemoveWorkManagerInitializer lint check only recognizes the
+                 literal remove form; WorkManagerInitializerDisabledTest pins
+                 the actual disable contract this relies on. -->
             <meta-data
                 android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup"
-                tools:node="remove" />
+                android:value="disabled"
+                tools:node="replace"
+                tools:ignore="RemoveWorkManagerInitializer" />
             <!-- androidx.startup Initializer chain: runs DiagnosticsInitializer
                  (cold-start ApplicationStartInfo + ApplicationExitInfo +
                  ProfilingManager ANOMALY trigger) before MainActivity so the

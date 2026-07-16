@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.ui.screens.playlist
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -55,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -211,6 +213,7 @@ fun PlaylistDetailScreen(
                     },
                     onDownloadAll = { viewModel.downloadAll() },
                     onRemoveTrack = { trackId -> viewModel.removeTrack(trackId) },
+                    onTogglePin = { viewModel.togglePin() },
                     listState = listState,
                     modifier = Modifier.padding(paddingValues),
                 )
@@ -235,6 +238,7 @@ private fun PlaylistContent(
     onShufflePlay: () -> Unit,
     onDownloadAll: () -> Unit,
     onRemoveTrack: (String) -> Unit,
+    onTogglePin: () -> Unit,
     listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
@@ -258,7 +262,7 @@ private fun PlaylistContent(
         ?: tracks.firstOrNull()?.artUrl?.takeIf { playlist.isSystem && it.isNotBlank() }
     val headerBlock: LazyListScope.() -> Unit = {
         item(key = "hero") {
-            PlaylistHero(playlist = playlist, heroUrl = heroUrl)
+            PlaylistHero(playlist = playlist, heroUrl = heroUrl, onDoubleTap = onTogglePin)
         }
         item(key = "actions") {
             PlaylistActionBar(
@@ -416,7 +420,21 @@ private fun PlaylistContent(
  * returned by [getPlaylistIconRes] - matches the bandcamp album cover slot.
  */
 @Composable
-private fun PlaylistHero(playlist: Playlist, heroUrl: String?) {
+private fun PlaylistHero(playlist: Playlist, heroUrl: String?, onDoubleTap: (() -> Unit)? = null) {
+    val hapticFeedback = LocalHapticFeedback.current
+    // Double-tap the hero to toggle the pin (the playlist "favorite").
+    val doubleTapModifier = if (onDoubleTap != null) {
+        Modifier.pointerInput(playlist.id) {
+            detectTapGestures(
+                onDoubleTap = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onDoubleTap()
+                },
+            )
+        }
+    } else {
+        Modifier
+    }
     val isSystem = playlist.isSystem
     val containerColor = when {
         isSystem -> MaterialTheme.colorScheme.primaryContainer
@@ -430,7 +448,8 @@ private fun PlaylistHero(playlist: Playlist, heroUrl: String?) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
+            .aspectRatio(1f)
+            .then(doubleTapModifier),
         contentAlignment = Alignment.Center,
     ) {
         if (heroUrl != null) {

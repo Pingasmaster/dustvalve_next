@@ -104,6 +104,26 @@ class PlaylistDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Toggles the playlist's pinned state (the playlist equivalent of a
+     * favorite - see PlaylistActionBar's comment). Optimistic update; the
+     * repository flow re-emits the persisted value.
+     */
+    fun togglePin() {
+        val playlist = _uiState.value.playlist ?: return
+        val newPinned = !playlist.isPinned
+        _uiState.update { it.copy(playlist = playlist.copy(isPinned = newPinned)) }
+        viewModelScope.launch {
+            try {
+                playlistRepository.pinPlaylist(playlist.id, newPinned)
+            } catch (e: Exception) {
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                // Roll back the optimistic flip on failure.
+                _uiState.update { it.copy(playlist = playlist) }
+            }
+        }
+    }
+
     fun downloadAll() {
         if (downloadJob?.isActive == true) return
         val tracks = _uiState.value.tracks.filter { !it.isLocal }

@@ -2,6 +2,7 @@ package com.dustvalve.next.android.ui.screens.album
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,8 +60,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -90,6 +94,7 @@ fun AlbumDetailScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val hapticFeedback = LocalHapticFeedback.current
     var showDeleteAlbumDialog by rememberSaveable { mutableStateOf(false) }
     var trackToDelete by remember { mutableStateOf<com.dustvalve.next.android.domain.model.Track?>(null) }
 
@@ -255,7 +260,19 @@ fun AlbumDetailScreen(
                             AsyncImage(
                                 model = album.artUrl,
                                 contentDescription = album.title,
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    // Double-tap the cover to toggle the album
+                                    // favorite (single tap stays a no-op, so
+                                    // no added latency anywhere).
+                                    .pointerInput(album.id) {
+                                        detectTapGestures(
+                                            onDoubleTap = {
+                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                viewModel.toggleFavorite()
+                                            },
+                                        )
+                                    },
                                 contentScale = ContentScale.Crop,
                             )
                         }

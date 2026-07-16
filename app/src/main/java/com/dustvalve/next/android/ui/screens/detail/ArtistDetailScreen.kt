@@ -2,6 +2,7 @@ package com.dustvalve.next.android.ui.screens.detail
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,8 +64,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -292,7 +296,7 @@ private fun AlbumGridLayout(
         contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         item(key = "artist_hero", span = { GridItemSpan(2) }) {
-            ArtistHero(imageUrl = artist.imageUrl, name = artist.name)
+            ArtistHero(imageUrl = artist.imageUrl, name = artist.name, onDoubleTap = onToggleFavorite)
         }
         item(key = "actions", span = { GridItemSpan(2) }) {
             ActionBar(
@@ -392,7 +396,7 @@ private fun FlatTracksLayout(
         contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         item(key = "artist_hero") {
-            ArtistHero(imageUrl = artist.imageUrl, name = artist.name)
+            ArtistHero(imageUrl = artist.imageUrl, name = artist.name, onDoubleTap = onToggleFavorite)
         }
         item(key = "actions") {
             ActionBar(
@@ -456,8 +460,23 @@ private fun FlatTracksLayout(
 }
 
 @Composable
-private fun ArtistHero(imageUrl: String?, name: String) {
-    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f)) {
+private fun ArtistHero(imageUrl: String?, name: String, onDoubleTap: (() -> Unit)? = null) {
+    val hapticFeedback = LocalHapticFeedback.current
+    // Double-tap the hero to toggle the artist favorite; single tap stays a
+    // no-op, so the gesture detector adds no latency to anything else.
+    val doubleTapModifier = if (onDoubleTap != null) {
+        Modifier.pointerInput(imageUrl) {
+            detectTapGestures(
+                onDoubleTap = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onDoubleTap()
+                },
+            )
+        }
+    } else {
+        Modifier
+    }
+    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).then(doubleTapModifier)) {
         if (imageUrl != null) {
             AsyncImage(
                 model = imageUrl,
