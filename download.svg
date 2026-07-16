@@ -1,9 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 68" width="360" height="68" role="img" aria-label="Download for Android 8 to Android 16">
-  <rect width="360" height="68" rx="34" fill="#4DD4F0"/>
-  <g transform="translate(22 22)" fill="none" stroke="#002E38" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M12 3v10.5"/>
-    <path d="M7 9l5 5 5-5"/>
-    <path d="M5 19.5h14"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 96" width="560" height="96" role="img" aria-label="Download APK — Android 8.0 to Android 16 (stable default)">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6BEAFF"/>
+      <stop offset="1" stop-color="#25B4DA"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect x="4" y="4" width="552" height="88" rx="44"/>
+    </clipPath>
+  </defs>
+
+  <!-- pill body -->
+  <rect x="4" y="4" width="552" height="88" rx="44" fill="url(#bg)"/>
+  <rect x="4" y="4" width="552" height="88" rx="44" fill="none" stroke="#00303B" stroke-opacity="0.3" stroke-width="1.5"/>
+
+  <!-- breathing glow ring -->
+  <rect x="4" y="4" width="552" height="88" rx="44" fill="none" stroke="#CFF9FF" stroke-width="2.5">
+    <animate attributeName="stroke-opacity" values="0.1;0.75;0.1" dur="2.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+  </rect>
+
+  <!-- shimmer sweep -->
+  <g clip-path="url(#clip)">
+    <rect x="-140" y="-10" width="120" height="116" fill="url(#sheen)" transform="skewX(-18)">
+      <animateTransform attributeName="transform" type="translate" additive="sum" values="0 0;780 0" keyTimes="0;1" dur="3.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1"/>
+    </rect>
   </g>
-  <text x="54" y="43" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="18" font-weight="600" fill="#002E38">Download for Android 8 to Android 16</text>
+
+  <!-- icon: dark disc, bobbing download arrow -->
+  <g transform="translate(24 20)">
+    <circle cx="28" cy="28" r="28" fill="#00303B"/>
+    <g fill="none" stroke="#6BEAFF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+      <g>
+        <path d="M28 14v18"/>
+        <path d="M19.5 24.5L28 33l8.5-8.5"/>
+        <animateTransform attributeName="transform" type="translate" values="0 -2;0 2.5;0 -2" keyTimes="0;0.5;1" dur="1.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.4 0 0.6 1;0.4 0 0.6 1"/>
+      </g>
+      <path d="M17.5 41.5h21"/>
+    </g>
+  </g>
+
+  <!-- labels -->
+  <text x="104" y="46" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="800" letter-spacing="0.5" fill="#00232B">DOWNLOAD APK</text>
+  <text x="104" y="73" font-family="Roboto, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="16.5" font-weight="600" fill="#003F4D">Android 8.0 – 16&#160;&#160;·&#160;&#160;stable default build</text>
 </svg>

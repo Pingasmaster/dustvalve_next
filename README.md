@@ -18,11 +18,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download for Android 8 to Android 16" width="260"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download APK — Android 8.0 to Android 16 (stable default)" width="340"/></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><img src="./download-future.svg" alt="Android 17 only version" width="260"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><img src="./download-future.svg" alt="Download future APK — Android 17 only, bleeding-edge build" width="340"/></a>
 </p>
 
 <p align="center">
@@ -62,7 +62,7 @@
 Play your music from a single, snappy and emotional interface no matter the source: bandcamp, youtube, youtube music, or just your local music folder.
 See your favorite artists, albums, playlists and songs in a single page and add songs to your playlist without worrying about where they come from, all in a nicely designed, lightweight (~7MB download), extremely fast and no-nonsense GPLv3 Material you 3 Expressive app.
 
-> **Pre-alpha**. Report any bugs. We will add more sources once we get out of alpha and have unified the player features. Spotify is currently broken as is account link for any platforms.
+> **Alpha**. Report any bugs. We will add more sources once we get out of alpha and have unified the player features. Spotify is currently broken as is account link for any platforms.
 
 The latest release can be found [here](https://github.com/Pingasmaster/dustvalve_next/releases). Thank you so much for trying it!
 
