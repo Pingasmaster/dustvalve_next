@@ -35,6 +35,9 @@ object TestTags {
     const val LOCAL_ENABLE_BUTTON = "local_enable_button"
     const val LOCAL_TRACK_LIST = "local_track_list"
 
+    const val PLAYLIST_NAME_FIELD = "playlist_name_field"
+    const val PLAYLIST_EDIT_CONFIRM = "playlist_edit_confirm"
+
     const val SETTINGS_LIST = "settings_list"
     const val LIBRARY_LIST = "library_list"
     fun settingsSwitch(key: String) = "settings_switch_$key"
