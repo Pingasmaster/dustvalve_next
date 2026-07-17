@@ -12,6 +12,7 @@ import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.testing.Flows.clickTab
+import com.dustvalve.next.android.testing.Flows.waitForAnyText
 import com.dustvalve.next.android.testing.Flows.waitForPositionPastZero
 import com.dustvalve.next.android.testing.Flows.waitForTag
 import com.dustvalve.next.android.testing.Flows.waitForText
@@ -67,10 +68,8 @@ class LiveProvidersE2eTest {
         composeRule.waitForText("rock", timeoutMs = 20_000)
         composeRule.onAllNodesWithText("rock")[0].performClick()
         // Albums (or the error+Retry state) must appear; never a crash.
-        composeRule.waitUntil(30_000) {
-            composeRule.onAllNodesWithText("More", substring = true).fetchSemanticsNodes().isNotEmpty() ||
-                composeRule.onAllNodesWithText("Retry", substring = true).fetchSemanticsNodes().isNotEmpty()
-        }
+        // Generous budget: live Bandcamp from CI runner IPs can be slow.
+        composeRule.waitForAnyText("More", "Retry", timeoutMs = 90_000)
         assertThat(composeRule.activityRule.scenario.state.isAtLeast(Lifecycle.State.RESUMED)).isTrue()
     }
 
@@ -83,12 +82,9 @@ class LiveProvidersE2eTest {
         composeRule.waitForText("YouTube Music", timeoutMs = 20_000)
         composeRule.onAllNodesWithText("YouTube Music")[0].performClick()
         // Feed loaded = chips or shelves appear; error state also acceptable
-        // for a live test (bot checks); crash is not.
-        composeRule.waitUntil(45_000) {
-            composeRule.onAllNodesWithText("Retry", substring = true).fetchSemanticsNodes().isNotEmpty() ||
-                composeRule.onAllNodesWithText("Play", substring = true).fetchSemanticsNodes().isNotEmpty() ||
-                composeRule.onAllNodesWithText("Quick picks", substring = true).fetchSemanticsNodes().isNotEmpty()
-        }
+        // for a live test (bot checks); crash is not. 45s was not enough for
+        // throttled CI runner IPs - the run timed out still on the skeleton.
+        composeRule.waitForAnyText("Retry", "Play", "Quick picks", timeoutMs = 120_000)
         assertThat(composeRule.activityRule.scenario.state.isAtLeast(Lifecycle.State.RESUMED)).isTrue()
     }
 
@@ -109,11 +105,9 @@ class LiveProvidersE2eTest {
             )
         }
         composeRule.waitForIdle()
-        // Album loads: a track list + play affordance appears.
-        composeRule.waitUntil(45_000) {
-            composeRule.onAllNodesWithText("Play", substring = true).fetchSemanticsNodes().isNotEmpty() ||
-                composeRule.onAllNodesWithText("Retry", substring = true).fetchSemanticsNodes().isNotEmpty()
-        }
+        // Album loads: a track list + play affordance appears (or the
+        // defined error+Retry state). Generous live budget - see above.
+        composeRule.waitForAnyText("Play", "Retry", timeoutMs = 120_000)
         val playNodes = composeRule.onAllNodesWithText("Play", substring = true).fetchSemanticsNodes()
         if (playNodes.isNotEmpty()) {
             composeRule.onAllNodesWithText("Play", substring = true)[0].performClick()
