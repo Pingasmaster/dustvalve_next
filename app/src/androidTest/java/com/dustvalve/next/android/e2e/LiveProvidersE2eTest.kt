@@ -2,6 +2,7 @@ package com.dustvalve.next.android.e2e
 
 import android.Manifest
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -12,6 +13,7 @@ import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.testing.Flows.clickTab
+import com.dustvalve.next.android.testing.Flows.waitForAnySignal
 import com.dustvalve.next.android.testing.Flows.waitForAnyText
 import com.dustvalve.next.android.testing.Flows.waitForPositionPastZero
 import com.dustvalve.next.android.testing.Flows.waitForTag
@@ -81,10 +83,14 @@ class LiveProvidersE2eTest {
         composeRule.clickTab("youtube")
         composeRule.waitForText("YouTube Music", timeoutMs = 20_000)
         composeRule.onAllNodesWithText("YouTube Music")[0].performClick()
-        // Feed loaded = chips or shelves appear; error state also acceptable
-        // for a live test (bot checks); crash is not. 45s was not enough for
-        // throttled CI runner IPs - the run timed out still on the skeleton.
-        composeRule.waitForAnyText("Retry", "Play", "Quick picks", timeoutMs = 120_000)
+        // Feed loaded = the YTM_FEED LazyColumn composes (shelf titles are
+        // server-dynamic, so no literal string is stable); the error state
+        // also acceptable for a live test (bot checks); crash is not.
+        composeRule.waitForAnySignal(
+            texts = listOf("Retry"),
+            tags = listOf(TestTags.YTM_FEED),
+            timeoutMs = 120_000,
+        )
         assertThat(composeRule.activityRule.scenario.state.isAtLeast(Lifecycle.State.RESUMED)).isTrue()
     }
 
@@ -105,12 +111,17 @@ class LiveProvidersE2eTest {
             )
         }
         composeRule.waitForIdle()
-        // Album loads: a track list + play affordance appears (or the
-        // defined error+Retry state). Generous live budget - see above.
-        composeRule.waitForAnyText("Play", "Retry", timeoutMs = 120_000)
-        val playNodes = composeRule.onAllNodesWithText("Play", substring = true).fetchSemanticsNodes()
+        // Album loads: the play-all affordance is an ICON whose content
+        // description is "Play All" (common_play_all) - there is no literal
+        // "Play" text on the screen. Error+Retry also acceptable.
+        composeRule.waitForAnySignal(
+            texts = listOf("Retry"),
+            contentDescriptions = listOf("Play All"),
+            timeoutMs = 120_000,
+        )
+        val playNodes = composeRule.onAllNodesWithContentDescription("Play All").fetchSemanticsNodes()
         if (playNodes.isNotEmpty()) {
-            composeRule.onAllNodesWithText("Play", substring = true)[0].performClick()
+            composeRule.onAllNodesWithContentDescription("Play All")[0].performClick()
             composeRule.waitForIdle()
             composeRule.waitForTag(TestTags.MINI_PLAYER, timeoutMs = 30_000)
             composeRule.onNodeWithTag(TestTags.MINI_PLAYER).performClick()

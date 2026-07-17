@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -151,7 +152,9 @@ private fun YtmFeed(
 
     LazyColumn(
         state = lazyState,
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(com.dustvalve.next.android.ui.TestTags.YTM_FEED),
         contentPadding = PaddingValues(bottom = 16.dp),
     ) {
         if (hero != null) {

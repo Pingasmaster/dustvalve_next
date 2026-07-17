@@ -32,7 +32,7 @@ android {
         versionNameSuffix = "-legacy"
         // Instrumentation (smoke + E2E) runs against the REAL app object
         // graph - no HiltTestApplication on device by design.
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "com.dustvalve.next.android.testing.DustvalveTestRunner"
     }
 
     signingConfigs {
