@@ -10,10 +10,15 @@
 # android.test.suitebuilder.annotation.Suppress lookup, turning a benign
 # missing-class probe into a fatal NoClassDefFoundError inside
 # TestRequestBuilder - runner init died before discovery ('Starting 0
-# tests'). Never shrink or optimize the harness; obfuscation stays enabled
-# so app-class references keep flowing through the apply-mapping path.
+# tests'). Never shrink, optimize, OR obfuscate the harness: obfuscation
+# broke androidx.test/Espresso's ServiceLoader wiring (META-INF/services
+# entries name original classes) and poisoned Espresso's static init with
+# NoClassDefFoundError. Renaming is safe to drop because every app-provided
+# class the test APK references is kept un-renamed in the app by
+# proguard-test-support.pro, so no apply-mapping translation is needed.
 -dontshrink
 -dontoptimize
+-dontobfuscate
 
 # Keeping the classes is not enough: R8 also strips annotation ATTRIBUTES
 # (RuntimeVisibleAnnotations) unless told otherwise, which made the
