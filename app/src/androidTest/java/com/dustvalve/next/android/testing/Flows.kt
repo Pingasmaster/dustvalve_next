@@ -73,6 +73,32 @@ object Flows {
         }
     }
 
+    /**
+     * Like [waitForAnyText] but each signal can be a text substring, a
+     * content description, or a test tag - live screens often expose their
+     * success state as an icon (content description) or a container (tag)
+     * rather than a literal string.
+     */
+    fun AndroidComposeTestRule<*, *>.waitForAnySignal(
+        texts: List<String> = emptyList(),
+        contentDescriptions: List<String> = emptyList(),
+        tags: List<String> = emptyList(),
+        timeoutMs: Long = 15_000,
+    ) {
+        val wanted = buildList {
+            texts.forEach { add("text \"$it\"") }
+            contentDescriptions.forEach { add("cd \"$it\"") }
+            tags.forEach { add("tag \"$it\"") }
+        }.joinToString()
+        waitOrExplain("any of $wanted", timeoutMs) {
+            texts.any { onAllNodesWithText(it, substring = true).fetchSemanticsNodes().isNotEmpty() } ||
+                contentDescriptions.any {
+                    onAllNodesWithContentDescription(it).fetchSemanticsNodes().isNotEmpty()
+                } ||
+                tags.any { onAllNodesWithTag(it).fetchSemanticsNodes().isNotEmpty() }
+        }
+    }
+
     fun AndroidComposeTestRule<*, *>.waitForContentDescription(cd: String, timeoutMs: Long = 15_000) {
         waitOrExplain("content description \"$cd\"", timeoutMs) {
             onAllNodesWithContentDescription(cd).fetchSemanticsNodes().isNotEmpty()

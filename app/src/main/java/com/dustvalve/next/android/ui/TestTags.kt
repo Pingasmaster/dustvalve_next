@@ -35,6 +35,8 @@ object TestTags {
     const val LOCAL_ENABLE_BUTTON = "local_enable_button"
     const val LOCAL_TRACK_LIST = "local_track_list"
 
+    const val YTM_FEED = "ytm_feed"
+
     const val PLAYLIST_NAME_FIELD = "playlist_name_field"
     const val PLAYLIST_EDIT_CONFIRM = "playlist_edit_confirm"
 
