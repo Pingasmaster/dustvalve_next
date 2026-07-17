@@ -79,6 +79,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
@@ -263,7 +264,8 @@ fun SettingsScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(scaffoldPadding),
+                .padding(scaffoldPadding)
+                .testTag(com.dustvalve.next.android.ui.TestTags.SETTINGS_LIST),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(bottom = 10.dp),
         ) {
@@ -505,6 +507,7 @@ fun SettingsScreen(
                                 icon = R.drawable.ic_cloud,
                                 checked = state.bandcampEnabled,
                                 onCheckedChange = { viewModel.setBandcampEnabled(it) },
+                                switchTag = com.dustvalve.next.android.ui.TestTags.settingsSwitch("bandcamp"),
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
@@ -1489,6 +1492,7 @@ private fun SettingsToggleRow(
     enabled: Boolean = true,
     icon: Int? = null,
     subRow: Boolean = false,
+    switchTag: String? = null,
 ) {
     Row(
         modifier = modifier
@@ -1536,6 +1540,7 @@ private fun SettingsToggleRow(
             checked = checked,
             onCheckedChange = onCheckedChange,
             enabled = enabled,
+            modifier = if (switchTag != null) Modifier.testTag(switchTag) else Modifier,
         )
     }
 }

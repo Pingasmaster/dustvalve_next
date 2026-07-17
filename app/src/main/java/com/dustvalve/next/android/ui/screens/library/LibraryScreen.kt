@@ -58,6 +58,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -359,7 +360,9 @@ private fun LibraryList(
     var menuItem by remember { mutableStateOf<LibraryItem?>(null) }
 
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier
+            .fillMaxSize()
+            .testTag(com.dustvalve.next.android.ui.TestTags.LIBRARY_LIST),
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
