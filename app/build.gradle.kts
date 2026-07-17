@@ -34,6 +34,14 @@ android {
         testInstrumentationRunner = "com.dustvalve.next.android.testing.DustvalveTestRunner"
     }
 
+    // Instrumentation normally tests the debug APK. -PtestReleaseBuild flips
+    // it to the MINIFIED release APK (R8 full mode + resource shrinking) so
+    // CI catches release-only breakage - the v0.5.x 'playback dead in prod
+    // while every debug test is green' class of bug. Release falls back to
+    // debug signing when the keystore is absent (see signingConfigs), so the
+    // test APK (always debug-signed) can install alongside it in CI.
+    testBuildType = if (project.hasProperty("testReleaseBuild")) "release" else "debug"
+
     signingConfigs {
         create("release") {
             val keystoreFile = file("../release-keystore.jks")
@@ -123,6 +131,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            if (project.hasProperty("testReleaseBuild")) {
+                // Instrumentation compiles against unobfuscated names, so the
+                // few app classes tests construct directly must keep theirs.
+                // Applied ONLY for the release-test CI lane; the shipped APK
+                // never carries these keeps.
+                proguardFiles("proguard-test-support.pro")
+            }
             signingConfig = signingConfigs.getByName("release")
         }
     }

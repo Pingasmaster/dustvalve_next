@@ -94,6 +94,41 @@ class LiveProvidersE2eTest {
         assertThat(composeRule.activityRule.scenario.state.isAtLeast(Lifecycle.State.RESUMED)).isTrue()
     }
 
+    // yt-deeplink-watch-url + yt-play-media boundary: a stable watch URL
+    // (YouTube's own first upload, permanent) must resolve a live stream and
+    // the player position must leave 0:00 - full pipeline: link routing ->
+    // innertube client cascade -> ExoPlayer -> position poller.
+    @Test
+    fun youtube_watchLink_playback_positionAdvances() {
+        composeRule.waitForTag(TestTags.BOTTOM_NAV)
+        composeRule.activityRule.scenario.onActivity { activity ->
+            androidx.lifecycle.ViewModelProvider(activity)[
+                com.dustvalve.next.android.ui.navigation.NavigationViewModel::class.java,
+            ].openLink("https://www.youtube.com/watch?v=jNQXAC9IVRw")
+        }
+        composeRule.waitForIdle()
+        composeRule.waitForTag(TestTags.MINI_PLAYER, timeoutMs = 90_000)
+        composeRule.onNodeWithTag(TestTags.MINI_PLAYER).performClick()
+        composeRule.waitForPositionPastZero(timeoutMs = 30_000)
+    }
+
+    // ytm-deeplink-watch-plays: the same video via a music.youtube.com URL -
+    // canonicalizes to www and plays through the shared innertube stack,
+    // covering the YTM link-routing branch end to end.
+    @Test
+    fun youtubeMusic_watchLink_playback_positionAdvances() {
+        composeRule.waitForTag(TestTags.BOTTOM_NAV)
+        composeRule.activityRule.scenario.onActivity { activity ->
+            androidx.lifecycle.ViewModelProvider(activity)[
+                com.dustvalve.next.android.ui.navigation.NavigationViewModel::class.java,
+            ].openLink("https://music.youtube.com/watch?v=jNQXAC9IVRw")
+        }
+        composeRule.waitForIdle()
+        composeRule.waitForTag(TestTags.MINI_PLAYER, timeoutMs = 90_000)
+        composeRule.onNodeWithTag(TestTags.MINI_PLAYER).performClick()
+        composeRule.waitForPositionPastZero(timeoutMs = 30_000)
+    }
+
     // bc-playback-stream-mp3-128 via a long-lived album URL: navigate through
     // a deep link (provider enabled), then Play all and assert position > 0.
     @Test
