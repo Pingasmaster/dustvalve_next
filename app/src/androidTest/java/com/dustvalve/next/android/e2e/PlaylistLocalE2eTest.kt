@@ -2,11 +2,14 @@ package com.dustvalve.next.android.e2e
 
 import android.Manifest
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -15,9 +18,12 @@ import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.testing.Flows.clickTab
 import com.dustvalve.next.android.testing.Flows.enableLocalMusicViaCta
+import com.dustvalve.next.android.testing.Flows.waitForContentDescription
+import com.dustvalve.next.android.testing.Flows.waitForTag
 import com.dustvalve.next.android.testing.Flows.waitForText
 import com.dustvalve.next.android.testing.LocalMusicSeeder
 import com.dustvalve.next.android.testing.QuarantineRule
+import com.dustvalve.next.android.ui.TestTags
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -70,9 +76,7 @@ class PlaylistLocalE2eTest {
         composeRule.waitForIdle()
 
         // AddToPlaylistSheet -> create-new (ic_add with cd "Create playlist").
-        composeRule.waitUntil(10_000) {
-            composeRule.onAllNodesWithContentDescription("Create playlist").fetchSemanticsNodes().isNotEmpty()
-        }
+        composeRule.waitForContentDescription("Create playlist")
         composeRule.onAllNodesWithContentDescription("Create playlist")[0].performClick()
         composeRule.waitForIdle()
 
@@ -83,8 +87,13 @@ class PlaylistLocalE2eTest {
         composeRule.onAllNodesWithText("Create")[0].performClick()
         composeRule.waitForIdle()
 
-        // Library lists the new playlist; opening it shows the track.
+        // Library lists the new playlist; opening it shows the track. The
+        // Library screen is a LazyColumn - scroll the playlist row into
+        // composition before asserting on it.
         composeRule.clickTab("library")
+        composeRule.waitForTag(TestTags.LIBRARY_LIST)
+        composeRule.onNodeWithTag(TestTags.LIBRARY_LIST)
+            .performScrollToNode(hasText("E2E Playlist"))
         composeRule.waitForText("E2E Playlist")
         composeRule.onAllNodesWithText("E2E Playlist")[0].performClick()
         composeRule.waitForText("Dustvalve Test Tone 1")
