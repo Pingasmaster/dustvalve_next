@@ -119,8 +119,7 @@ fi
 if [[ "${DO_SMOKE_RELEASE:-0}" -eq 1 ]]; then
     acquire_lock
     ./gradlew :app:pixel7aApi37Setup -PtestReleaseBuild "$GMD_GPU"
-    ./gradlew :app:pixel7aApi37ReleaseAndroidTest -PtestReleaseBuild "$GMD_GPU" \
-        -Pandroid.testInstrumentationRunnerArguments.class=com.dustvalve.next.android.smoke.AppSmokeTest
+    ./gradlew :app:pixel7aApi37ReleaseAndroidTest -PtestReleaseBuild "$GMD_GPU"
     echo "Release smoke suite complete."
     exit 0
 fi
