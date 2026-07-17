@@ -43,12 +43,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.TestTags
 import com.dustvalve.next.android.ui.theme.PlaylistShapeOptions
 import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
 
@@ -100,7 +102,9 @@ fun PlaylistEditSheet(
                 onValueChange = { name = it },
                 label = { Text(stringResource(R.string.playlist_name_label)) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(TestTags.PLAYLIST_NAME_FIELD),
             )
             Spacer(Modifier.height(20.dp))
 
@@ -259,6 +263,7 @@ fun PlaylistEditSheet(
                     },
                     enabled = name.isNotBlank(),
                     shapes = ButtonDefaults.shapes(),
+                    modifier = Modifier.testTag(TestTags.PLAYLIST_EDIT_CONFIRM),
                 ) {
                     Text(stringResource(if (isCreate) R.string.common_action_create else R.string.common_action_save))
                 }

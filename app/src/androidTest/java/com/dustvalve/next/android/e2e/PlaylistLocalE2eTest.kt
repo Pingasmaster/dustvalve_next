@@ -1,7 +1,7 @@
 package com.dustvalve.next.android.e2e
 
 import android.Manifest
-import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
@@ -80,11 +80,15 @@ class PlaylistLocalE2eTest {
         composeRule.onAllNodesWithContentDescription("Create playlist")[0].performClick()
         composeRule.waitForIdle()
 
-        // PlaylistEditSheet: type the name, confirm with Create.
-        composeRule.waitForText("Name")
-        composeRule.onAllNodes(hasSetTextAction())[0].performTextInput("E2E Playlist")
-        composeRule.waitForText("Create")
-        composeRule.onAllNodesWithText("Create")[0].performClick()
+        // PlaylistEditSheet: type the name into the TAGGED name field (the
+        // Local screen's search field also offers SetText, so index-based
+        // selection could hit the wrong field and leave Create disabled),
+        // then confirm via the tagged Create button once it enables.
+        composeRule.waitForTag(TestTags.PLAYLIST_NAME_FIELD)
+        composeRule.onNodeWithTag(TestTags.PLAYLIST_NAME_FIELD).performTextInput("E2E Playlist")
+        composeRule.waitForTag(TestTags.PLAYLIST_EDIT_CONFIRM)
+        composeRule.onNodeWithTag(TestTags.PLAYLIST_EDIT_CONFIRM).assertIsEnabled()
+        composeRule.onNodeWithTag(TestTags.PLAYLIST_EDIT_CONFIRM).performClick()
         composeRule.waitForIdle()
 
         // Library lists the new playlist; opening it shows the track. The
