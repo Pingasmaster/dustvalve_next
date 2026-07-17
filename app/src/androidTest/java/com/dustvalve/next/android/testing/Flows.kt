@@ -60,6 +60,19 @@ object Flows {
         }
     }
 
+    /**
+     * Waits until ANY of the given substrings appears on screen. For live
+     * tests where both the success state and the defined error state are
+     * acceptable outcomes ("content or Retry - never a crash").
+     */
+    fun AndroidComposeTestRule<*, *>.waitForAnyText(vararg texts: String, timeoutMs: Long = 15_000) {
+        waitOrExplain("any of ${texts.joinToString { "\"$it\"" }}", timeoutMs) {
+            texts.any { t ->
+                onAllNodesWithText(t, substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
+        }
+    }
+
     fun AndroidComposeTestRule<*, *>.waitForContentDescription(cd: String, timeoutMs: Long = 15_000) {
         waitOrExplain("content description \"$cd\"", timeoutMs) {
             onAllNodesWithContentDescription(cd).fetchSemanticsNodes().isNotEmpty()
