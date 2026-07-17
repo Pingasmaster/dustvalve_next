@@ -25,6 +25,11 @@
 # Tests construct SettingsDataStore(context) directly to read/write prefs.
 -keep class com.dustvalve.next.android.data.local.datastore.SettingsDataStore { *; }
 
+# The androidTest Flows helpers call TestTags functions at runtime; R8 full
+# mode had removed the whole object from the app (R8$$REMOVED$$CLASS$$)
+# while the test APK still referenced it by name.
+-keep class com.dustvalve.next.android.ui.TestTags { *; }
+
 # Tests bind a MediaController to the real PlaybackService session.
 -keep class com.dustvalve.next.android.player.PlaybackService { *; }
 

@@ -12,7 +12,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
-import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.testing.Flows.clickTab
 import com.dustvalve.next.android.testing.Flows.waitForTag
@@ -51,8 +50,7 @@ class SettingsPersistenceE2eTest {
     // the app recomposes without crashing.
     @Test
     fun darkTheme_togglePersists() {
-        val dark = InstrumentationRegistry.getInstrumentation()
-            .targetContext.getString(R.string.settings_theme_dark)
+        val dark = com.dustvalve.next.android.testing.Flows.appString("settings_theme_dark")
         composeRule.clickTab("settings")
         composeRule.waitForTag(TestTags.SETTINGS_LIST)
         composeRule.onNodeWithTag(TestTags.SETTINGS_LIST)

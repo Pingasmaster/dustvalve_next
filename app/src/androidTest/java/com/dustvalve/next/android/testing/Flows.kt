@@ -16,6 +16,20 @@ import com.dustvalve.next.android.ui.TestTags
 object Flows {
 
     /**
+     * Resolves an app string resource BY NAME at runtime. Tests must not
+     * reference the app's R class: the release APK inlines resource ids and
+     * ships no R$string class, so a compile-time R reference works against
+     * the debug APK but throws NoClassDefFoundError when instrumenting the
+     * minified release build (-PtestReleaseBuild lane).
+     */
+    fun appString(name: String): String {
+        val context = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        val id = context.resources.getIdentifier(name, "string", context.packageName)
+        check(id != 0) { "App string resource not found: $name" }
+        return context.getString(id)
+    }
+
+    /**
      * Compact snapshot of every text currently in the semantics tree, so a
      * timed-out wait reports WHAT was on screen instead of a bare
      * ComposeTimeoutException. Capped to keep CI annotations readable.
