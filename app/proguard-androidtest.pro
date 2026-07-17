@@ -5,6 +5,16 @@
 # crashing with NoClassDefFoundError: androidx.tracing.Trace in onCreate,
 # aborting the run with 'Starting 0 tests'.
 
+# The test APK needs FIDELITY, not size. R8 full-mode optimization removed
+# the runner's guarded catch around its optional legacy
+# android.test.suitebuilder.annotation.Suppress lookup, turning a benign
+# missing-class probe into a fatal NoClassDefFoundError inside
+# TestRequestBuilder - runner init died before discovery ('Starting 0
+# tests'). Never shrink or optimize the harness; obfuscation stays enabled
+# so app-class references keep flowing through the apply-mapping path.
+-dontshrink
+-dontoptimize
+
 # Keeping the classes is not enough: R8 also strips annotation ATTRIBUTES
 # (RuntimeVisibleAnnotations) unless told otherwise, which made the
 # -Pandroid.testInstrumentationRunnerArguments.annotation=SmokeTest filter
