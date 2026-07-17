@@ -9,6 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.testing.Flows.clickTab
 import com.dustvalve.next.android.testing.Flows.enableLocalMusicViaCta
 import com.dustvalve.next.android.testing.Flows.waitForPositionPastZero
@@ -53,7 +54,7 @@ class PlaybackLocalE2eTest {
 
     private fun playTone(n: Int) {
         val enableLabel = InstrumentationRegistry.getInstrumentation()
-            .targetContext.getString(com.dustvalve.next.android.R.string.local_enable)
+            .targetContext.getString(R.string.local_enable)
         composeRule.enableLocalMusicViaCta(enableLabel)
         composeRule.waitForText("Dustvalve Test Tone $n", timeoutMs = 30_000)
         composeRule.onAllNodesWithText("Dustvalve Test Tone $n")[0].performClick()

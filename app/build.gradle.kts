@@ -251,7 +251,6 @@ android {
         checkReleaseBuilds = true
         explainIssues = true
         showAll = true
-        baseline = file("lint-baseline.xml")
         lintConfig = rootProject.file("config/lint/lint.xml")
     }
 }
@@ -439,16 +438,11 @@ dependencies {
     lintChecks(libs.lint.slack.compose)
 }
 
-// lintVital* runs with --fatalOnly during assembleRelease, so the
-// RawDispatchersUse error-severity entries in lint-baseline.xml are never
-// reported and the baseline looks 100% stale to this task - printing
-// "N entries not found" on every CI build alongside the warnings we
-// actually want to suppress. AGP 9.x seals the baseline property via
-// disallowChanges() inside the task initialization action, so we can't
-// null it out at the task level. The pragmatic fix is to keep
-// lint-baseline.xml as an EMPTY baseline (see app/lint-baseline.xml):
-// nothing for the fatal-only lint to consider stale, so no "N entries not
-// found" diagnostic. lintRelease (run separately via ./build.sh) still
-// runs full lint and reports any new warnings - and now (with
-// warningsAsErrors = true) treats each as a build failure, since the
-// baseline is empty and there's no place left to hide them.
+// No lint baseline: the old app/lint-baseline.xml ended up suppressing
+// ZERO issues, so all it did was emit "The baseline was created using a
+// different target/variant than it was checked against" whenever the AGP
+// version or checked variant differed from the one that wrote the file
+// (e.g. lintVitalRelease during assembleRelease). With warningsAsErrors =
+// true every lint finding is a build failure outright - there is nothing
+// to baseline away. If a truly unfixable upstream finding ever appears,
+// prefer a scoped lint.xml severity override over reintroducing a baseline.
