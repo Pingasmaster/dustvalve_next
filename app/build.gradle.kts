@@ -139,6 +139,11 @@ android {
                 // never carries these keeps.
                 proguardFiles("proguard-test-support.pro")
             }
+            // Shrink rules for the TEST APK when it instruments this build
+            // type (minifyReleaseAndroidTestWithR8). Without them R8 strips
+            // androidx.tracing out of the test APK and AndroidJUnitRunner
+            // crashes in onCreate before running a single test.
+            testProguardFiles("proguard-androidtest.pro")
             signingConfig = signingConfigs.getByName("release")
         }
     }
@@ -443,6 +448,7 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.rules)
     androidTestImplementation(libs.androidx.test.uiautomator)
+    androidTestImplementation(libs.androidx.tracing)
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.coroutines.test)
     androidTestImplementation(libs.media3.session)
