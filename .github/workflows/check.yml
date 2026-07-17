@@ -240,14 +240,19 @@ jobs:
           -PtestReleaseBuild
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
-      - name: Smoke suite (minified release APK)
+      - name: Full androidTest suite (minified release APK)
+        # No filter: every smoke + E2E test runs against the R8-processed
+        # APK. (A class/annotation filter kept matching nothing here - and
+        # unfiltered means MORE release coverage anyway.)
         run: |
           set -o pipefail
           ./gradlew :app:pixel7aApi33ReleaseAndroidTest \
             -PtestReleaseBuild \
-            -Pandroid.testInstrumentationRunnerArguments.class=com.dustvalve.next.android.smoke.AppSmokeTest \
             -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
             2>&1 | tee gradle-release-smoke.log
+
+      - name: Assert tests actually ran
+        run: bash scripts/ci_assert_tests_ran.sh 3
 
       - name: Annotate Gradle output tail on failure
         if: failure()
@@ -282,10 +287,6 @@ jobs:
                           text = (node.text or '')[:600].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
                           print(f"::error title={name}::{text or msg}")
           PY
-
-      - name: Assert tests actually ran
-        if: success()
-        run: bash scripts/ci_assert_tests_ran.sh 3
 
       - name: Surface app logcat (success or failure)
         if: always()
