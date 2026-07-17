@@ -5,6 +5,14 @@
 # crashing with NoClassDefFoundError: androidx.tracing.Trace in onCreate,
 # aborting the run with 'Starting 0 tests'.
 
+# Keeping the classes is not enough: R8 also strips annotation ATTRIBUTES
+# (RuntimeVisibleAnnotations) unless told otherwise, which made the
+# -Pandroid.testInstrumentationRunnerArguments.annotation=SmokeTest filter
+# match NOTHING - 'Starting 0 tests' reported as green until the
+# zero-test guard caught it. JUnit and the runner's annotation filtering
+# are pure runtime reflection; keep every reflective attribute.
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod,SourceFile,LineNumberTable
+
 -keep class androidx.tracing.** { *; }
 -keep class androidx.test.** { *; }
 -keep class androidx.compose.ui.test.** { *; }

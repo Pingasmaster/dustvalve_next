@@ -245,7 +245,7 @@ jobs:
           set -o pipefail
           ./gradlew :app:pixel7aApi33ReleaseAndroidTest \
             -PtestReleaseBuild \
-            -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest \
+            -Pandroid.testInstrumentationRunnerArguments.class=com.dustvalve.next.android.smoke.AppSmokeTest \
             -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
             2>&1 | tee gradle-release-smoke.log
 
