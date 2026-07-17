@@ -16,7 +16,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
-import com.dustvalve.next.android.R
 import com.dustvalve.next.android.testing.Flows.clickTab
 import com.dustvalve.next.android.testing.Flows.enableLocalMusicViaCta
 import com.dustvalve.next.android.testing.Flows.waitForContentDescription
@@ -64,8 +63,7 @@ class PlaylistLocalE2eTest {
     // create new named playlist -> appears in Library with the track inside.
     @Test
     fun createPlaylistFromLocalTrack_visibleInLibrary() {
-        val enableLabel = InstrumentationRegistry.getInstrumentation()
-            .targetContext.getString(R.string.local_enable)
+        val enableLabel = com.dustvalve.next.android.testing.Flows.appString("local_enable")
         composeRule.enableLocalMusicViaCta(enableLabel)
         composeRule.waitForText("Dustvalve Test Tone 1", timeoutMs = 30_000)
         composeRule.onAllNodesWithText("Dustvalve Test Tone 1")[0]
