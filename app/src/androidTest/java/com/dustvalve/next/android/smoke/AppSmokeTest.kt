@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.player.PlaybackService
 import com.dustvalve.next.android.testing.Flows.clickTab
@@ -79,7 +80,7 @@ class AppSmokeTest {
     @Test
     fun localTrack_playsPastZero() {
         val enableLabel = InstrumentationRegistry.getInstrumentation()
-            .targetContext.getString(com.dustvalve.next.android.R.string.local_enable)
+            .targetContext.getString(R.string.local_enable)
         composeRule.enableLocalMusicViaCta(enableLabel)
 
         // Wait for the app's own scan to surface the seeded tones, then tap one.
