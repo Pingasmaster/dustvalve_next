@@ -19,6 +19,10 @@ CONTEXT='dustvalve|Dustvalve|ExoPlayer|PlaybackService|PlaybackManager|MediaSess
 
 mapfile -t LOGS < <(find "$RESULTS_DIR" -type f -name '*logcat*' 2>/dev/null | sort)
 
+# Public, API-readable count so a lane that produces no logcat at all is
+# distinguishable from a lane whose logs are simply clean.
+echo "::notice title=logcat-file-count::${#LOGS[@]} logcat files under $RESULTS_DIR"
+
 {
   echo "## Emulator app log excerpts"
   if [ "${#LOGS[@]}" -eq 0 ]; then

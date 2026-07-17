@@ -176,6 +176,10 @@ jobs:
                           print(f"::error title={name}::{text or msg}")
           PY
 
+      - name: Assert tests actually ran
+        if: success()
+        run: bash scripts/ci_assert_tests_ran.sh 3
+
       - name: Surface app logcat (success or failure)
         if: always()
         run: bash scripts/ci_surface_logcat.sh
@@ -279,6 +283,10 @@ jobs:
                           print(f"::error title={name}::{text or msg}")
           PY
 
+      - name: Assert tests actually ran
+        if: success()
+        run: bash scripts/ci_assert_tests_ran.sh 3
+
       - name: Surface app logcat (success or failure)
         if: always()
         run: bash scripts/ci_surface_logcat.sh
@@ -364,6 +372,10 @@ jobs:
                           text = (node.text or '')[:600].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
                           print(f"::error title={name}::{text or msg}")
           PY
+
+      - name: Assert tests actually ran
+        if: success()
+        run: bash scripts/ci_assert_tests_ran.sh 3
 
       - name: Surface app logcat (success or failure)
         if: always()
