@@ -13,6 +13,8 @@
 # code (com.dustvalve.**) stays fully minified/obfuscated, which is where
 # release-only breakage lives. Never shipped: test lane only.
 -keep class androidx.tracing.** { *; }
+-keep class androidx.collection.** { *; }
+-keep class androidx.concurrent.futures.** { *; }
 -keep class kotlin.** { *; }
 -keep class kotlinx.coroutines.** { *; }
 -keep class androidx.compose.** { *; }
