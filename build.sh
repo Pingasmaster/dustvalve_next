@@ -7,6 +7,7 @@
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
 #   ./build.sh --workflow-tests   # Tier 1 JVM workflow tests only (fast) + exit
 #   ./build.sh --smoke            # Tier 2 on-device smoke on GMD pixel7aApi33 + exit
+#   ./build.sh --smoke-release    # Tier 2 smoke against the MINIFIED release APK + exit
 #   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel7aApi33 + exit
 #   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
@@ -49,10 +50,11 @@ for arg in "$@"; do
         --build-health) DO_BUILD_HEALTH=1 ;;
         --workflow-tests) DO_WORKFLOW_TESTS=1 ;;
         --smoke)        DO_SMOKE=1 ;;
+        --smoke-release) DO_SMOKE_RELEASE=1 ;;
         --e2e)          DO_E2E=1 ;;
         --e2e-live)     DO_E2E_LIVE=1 ;;
         --live-net)     DO_LIVE_NET=1 ;;
-        *) echo "Unknown arg: $arg (accepted: --clean, --format, --build-health, --workflow-tests, --smoke, --e2e, --e2e-live, --live-net)" >&2; exit 2 ;;
+        *) echo "Unknown arg: $arg (accepted: --clean, --format, --build-health, --workflow-tests, --smoke, --smoke-release, --e2e, --e2e-live, --live-net)" >&2; exit 2 ;;
     esac
 done
 
@@ -109,6 +111,17 @@ if [[ "$DO_SMOKE" -eq 1 ]]; then
     ./gradlew :app:pixel7aApi33DebugAndroidTest "$GMD_GPU" \
         -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
     echo "Smoke suite complete."
+    exit 0
+fi
+
+# --smoke-release: Tier 2 smoke against the MINIFIED release APK (R8 full
+# mode). Catches release-only breakage the debug lanes cannot see.
+if [[ "${DO_SMOKE_RELEASE:-0}" -eq 1 ]]; then
+    acquire_lock
+    ./gradlew :app:pixel7aApi33Setup -PtestReleaseBuild "$GMD_GPU"
+    ./gradlew :app:pixel7aApi33ReleaseAndroidTest -PtestReleaseBuild "$GMD_GPU" \
+        -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
+    echo "Release smoke suite complete."
     exit 0
 fi
 

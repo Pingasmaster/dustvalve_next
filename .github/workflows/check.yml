@@ -176,11 +176,100 @@ jobs:
                           print(f"::error title={name}::{text or msg}")
           PY
 
-      - name: Upload smoke results on failure
-        if: failure()
+      - name: Surface app logcat (success or failure)
+        if: always()
+        run: bash scripts/ci_surface_logcat.sh
+
+      - name: Upload smoke results
+        if: always()
         uses: actions/upload-artifact@v7.0.1
         with:
           name: smoke-results
+          path: app/build/outputs/androidTest-results/managedDevice/
+          if-no-files-found: ignore
+
+  # Same smoke suite against the MINIFIED release APK (R8 full mode +
+  # resource shrinking). The v0.5.0/v0.5.1 'playback dead in prod' reports
+  # came from release builds while every debug-APK test was green - this
+  # lane exists to reproduce release-only breakage in CI. The release APK
+  # falls back to debug signing here (no keystore in this job), which is
+  # exactly what lets the debug-signed test APK instrument it.
+  emulator-smoke-release:
+    name: emulator smoke (RELEASE APK, R8 full mode)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -la /dev/kvm
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.5.0
+        with:
+          distribution: 'zulu'
+          java-version: 25
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4.0.1
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.2.0
+        with:
+          cache-provider: basic
+          # Read-only: the check job is the sole cache writer (see above).
+          cache-read-only: true
+
+      - name: Setup GMD (Pixel 7a, API 33, AOSP)
+        run: >-
+          ./gradlew :app:pixel7aApi33Setup
+          -PtestReleaseBuild
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Smoke suite (minified release APK)
+        run: >-
+          ./gradlew :app:pixel7aApi33ReleaseAndroidTest
+          -PtestReleaseBuild
+          -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Annotate failing tests (public check-run annotations)
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for f in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              try: root = ET.parse(f).getroot()
+              except Exception: continue
+              for case in root.iter('testcase'):
+                  for kind in ('failure', 'error'):
+                      for node in case.findall(kind):
+                          msg = (node.get('message') or (node.text or '').strip().splitlines()[0:1] or [''])
+                          msg = msg if isinstance(msg, str) else (msg[0] if msg else '')
+                          name = f"{case.get('classname')}#{case.get('name')}"
+                          text = (node.text or '')[:600].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+                          print(f"::error title={name}::{text or msg}")
+          PY
+
+      - name: Surface app logcat (success or failure)
+        if: always()
+        run: bash scripts/ci_surface_logcat.sh
+
+      - name: Upload release smoke results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: release-smoke-results
           path: app/build/outputs/androidTest-results/managedDevice/
           if-no-files-found: ignore
 
@@ -257,6 +346,10 @@ jobs:
                           text = (node.text or '')[:600].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
                           print(f"::error title={name}::{text or msg}")
           PY
+
+      - name: Surface app logcat (success or failure)
+        if: always()
+        run: bash scripts/ci_surface_logcat.sh
 
       - name: Upload E2E results
         if: always()
