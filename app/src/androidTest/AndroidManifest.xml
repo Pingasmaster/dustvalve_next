@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  androidx.test's TestRequestBuilder probes the legacy
+  android.test.suitebuilder.annotation.Suppress class. In debug that probe
+  is a Class.forName string lookup whose ClassNotFoundException is caught;
+  when the test APK is processed by R8 (release-test lane), R8 rewrites the
+  forName into a direct class reference because the class exists in the
+  compile-time android.jar - and at runtime it only exists if the optional
+  android.test.base library is loaded. Declare the legacy test libraries so
+  the reference resolves on-device; required=false keeps installs working
+  on images without them.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <uses-library
+            android:name="android.test.base"
+            android:required="false" />
+        <uses-library
+            android:name="android.test.runner"
+            android:required="false" />
+    </application>
+</manifest>
