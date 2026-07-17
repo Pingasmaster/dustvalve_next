@@ -41,7 +41,10 @@ mapfile -t LOGS < <(find "$RESULTS_DIR" -type f -name '*logcat*' 2>/dev/null | s
 # Public annotations: GitHub keeps at most 10 warnings per step - emit the
 # 8 most severe distinct lines so they are API-readable on any conclusion.
 if [ "${#LOGS[@]}" -gt 0 ]; then
+  # Headline lines only - drop stack frames ('at ...') so the 8 slots carry
+  # 8 distinct problems, not one exception's backtrace.
   grep -hE "$SIGNAL" "${LOGS[@]}" 2>/dev/null \
+    | grep -vE '^[[:space:]]*at |: [[:space:]]*at |\.\.\. [0-9]+ more' \
     | sed 's/%/%25/g' | cut -c1-500 | sort -u | head -n 8 \
     | while IFS= read -r line; do
         echo "::warning title=app-logcat::${line}"

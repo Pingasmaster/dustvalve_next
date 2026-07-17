@@ -237,11 +237,29 @@ jobs:
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Smoke suite (minified release APK)
-        run: >-
-          ./gradlew :app:pixel7aApi37ReleaseAndroidTest
-          -PtestReleaseBuild
-          -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
-          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+        run: |
+          set -o pipefail
+          ./gradlew :app:pixel7aApi37ReleaseAndroidTest \
+            -PtestReleaseBuild \
+            -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
+            2>&1 | tee gradle-release-smoke.log
+
+      - name: Annotate Gradle output tail on failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          # The release lane can fail before any JUnit XML exists (install,
+          # R8, device errors). Surface the last Gradle lines as a public
+          # annotation so the failure is diagnosable without job-log auth.
+          try:
+              lines = open('gradle-release-smoke.log', encoding='utf-8', errors='replace').read().splitlines()
+          except FileNotFoundError:
+              lines = ['gradle-release-smoke.log missing - step failed before Gradle ran']
+          interesting = [l for l in lines if l.strip()][-45:]
+          text = '%0A'.join(l[:300].replace('%', '%25') for l in interesting)[:3800]
+          print(f"::error title=release-smoke-gradle-tail::{text}")
+          PY
 
       - name: Annotate failing tests (public check-run annotations)
         if: failure()
