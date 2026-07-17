@@ -4,6 +4,13 @@
 # app class the tests reference directly (constructors, methods) must keep
 # its name in that lane. The shipped release APK never includes these.
 
+# AndroidJUnitRunner calls androidx.tracing.Trace in onCreate. The library
+# is already in the APP's dependency graph (WorkManager pulls it), so AGP
+# EXCLUDES it from the test APK as app-provided - which means the app's R8
+# must not strip or rename it, or the runner dies with NoClassDefFoundError
+# before a single test runs ('Starting 0 tests').
+-keep class androidx.tracing.** { *; }
+
 # Tests construct SettingsDataStore(context) directly to read/write prefs.
 -keep class com.dustvalve.next.android.data.local.datastore.SettingsDataStore { *; }
 
