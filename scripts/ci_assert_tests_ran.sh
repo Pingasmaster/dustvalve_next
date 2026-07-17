@@ -48,6 +48,37 @@ for f in files[:4]:
     text = '%0A'.join(b.replace('%', '%25').replace('\n', ' ') for b in bits)[:3800]
     print(f"::error title=result-xml-dump::{text}")
 PY
+  # The instrumentation stream (am instrument -r output: INSTRUMENTATION_
+  # STATUS lines, runner/scanner errors) lives in UTP's logs, not the XML.
+  # Surface the most interesting tails as annotations too.
+  python3 - <<'PY'
+import glob, os
+roots = [
+    'app/build/outputs/androidTest-results',
+    'app/build/intermediates/managed_device_android_test_additional_output',
+    'app/build/intermediates/utp',
+]
+files = []
+for r in roots:
+    for pat in ('**/*.log', '**/*.txt', '**/*output*'):
+        files += [f for f in glob.glob(os.path.join(r, pat), recursive=True) if os.path.isfile(f)]
+files = sorted(set(files), key=os.path.getsize, reverse=True)
+listing = ' | '.join(f"{f}({os.path.getsize(f)}B)" for f in files[:15]) or 'no log/txt files found'
+print(f"::error title=utp-file-listing::{listing[:3800]}")
+import re
+for f in files[:3]:
+    try:
+        data = open(f, encoding='utf-8', errors='replace').read()
+    except Exception:
+        continue
+    # Prefer instrumentation/runner lines; fall back to the tail.
+    lines = [l for l in data.splitlines() if re.search(
+        r'INSTRUMENTATION|numtests|TestRequestBuilder|TestLoader|ClassPathScanner|Exception|Error|error', l)]
+    if not lines:
+        lines = data.splitlines()[-30:]
+    text = '%0A'.join(l[:300].replace('%', '%25') for l in lines[-40:])[:3800]
+    print(f"::error title=utp-log:{os.path.basename(f)}::{text}")
+PY
   exit 1
 fi
 exit 0
