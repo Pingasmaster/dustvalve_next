@@ -27,7 +27,6 @@ import com.dustvalve.next.android.testing.SmokeTest
 import com.dustvalve.next.android.ui.TestTags
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -63,10 +62,6 @@ class AppSmokeTest {
 
     @Before fun seed() {
         LocalMusicSeeder.seed()
-    }
-
-    @After fun cleanup() {
-        LocalMusicSeeder.cleanup()
     }
 
     @Test

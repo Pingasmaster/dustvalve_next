@@ -17,7 +17,6 @@ import com.dustvalve.next.android.testing.Flows.waitForText
 import com.dustvalve.next.android.testing.LocalMusicSeeder
 import com.dustvalve.next.android.testing.QuarantineRule
 import com.dustvalve.next.android.ui.TestTags
-import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -45,10 +44,6 @@ class PlaybackLocalE2eTest {
 
     @Before fun seed() {
         LocalMusicSeeder.seed()
-    }
-
-    @After fun cleanup() {
-        LocalMusicSeeder.cleanup()
     }
 
     private fun playTone(n: Int) {
