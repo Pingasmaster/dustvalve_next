@@ -6,9 +6,10 @@
 #     emitted as ::warning workflow commands, which become check-run
 #     annotations readable via the public API without auth.
 # Called from .github/workflows/check.yml after every GMD test step.
+# Usage: ci_surface_logcat.sh [results-dir]  (defaults to :app's)
 set -u
 
-RESULTS_DIR="app/build/outputs/androidTest-results"
+RESULTS_DIR="${1:-app/build/outputs/androidTest-results}"
 
 # High-signal patterns: process death, playback failures, permission/FGS
 # denials, unresolvable streams. Extend as new failure classes appear.

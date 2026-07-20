@@ -2,15 +2,24 @@
 
 ## Workflow tests - run before shipping behavior changes
 
-Three automated tiers (see docs/testing/README.md):
+Four automated tiers (see docs/testing/README.md):
 - `./build.sh --workflow-tests` - fast JVM regression net (real ExoPlayer +
   real MainActivity under Robolectric). Run this after ANY change touching
   playback, navigation, or the provider screens.
 - `./build.sh --smoke` / `--e2e` / `--e2e-live` - Gradle Managed Device
   suites (`pixel7aApi37`). If the host QEMU cannot boot modern images, rely
   on the check.yml emulator-smoke / emulator-e2e CI jobs instead.
+- `:shippedsmoke` - drives the APK as SHIPPED (release + proguard-rules.pro
+  alone) through UiAutomator, covering the library minification the
+  `-PtestReleaseBuild` lane cannot. NEVER pass `-PtestReleaseBuild` to it:
+  that applies proguard-test-support.pro and defeats the whole point.
+  CI: emulator-smoke-shipped.
 - Scenario backlog lives in docs/testing/catalog-*.md; new E2E tests must
   reference their catalog id.
+
+E2E tests must not inherit provider state. The release lane runs the suite
+UNFILTERED in one pass, so DataStore flags leak between classes; declare what
+a class needs with `ProviderStateRule` rather than assuming a starting state.
 
 ## Protected branches - DO NOT DELETE OR FORCE-PUSH
 

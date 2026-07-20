@@ -3,14 +3,19 @@
 # instrumentation matches nothing (wrong annotation filter, renamed test
 # classes, runner mismatch) exits 0 with 'Starting 0 tests'. Parse the JUnit
 # XML, publish the executed count as a ::notice (public, API-readable), and
-# FAIL the job when nothing ran. Usage: ci_assert_tests_ran.sh <min-tests>
+# FAIL the job when nothing ran.
+# Usage: ci_assert_tests_ran.sh <min-tests> [gradle-module-dir]
+# The module dir defaults to "app"; pass e.g. "shippedsmoke" for lanes whose
+# instrumentation lives in another module.
 set -u
 MIN="${1:-1}"
+export RESULTS_ROOT="${2:-app}"
 
 count=$(python3 - <<'PY'
-import glob, xml.etree.ElementTree as ET
+import glob, os, xml.etree.ElementTree as ET
+root_dir = os.environ.get('RESULTS_ROOT', 'app')
 total = 0
-for f in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+for f in glob.glob(f'{root_dir}/build/outputs/androidTest-results/**/*.xml', recursive=True):
     try:
         root = ET.parse(f).getroot()
     except Exception:
@@ -27,8 +32,9 @@ if [ "${count}" -lt "${MIN}" ]; then
   # plus any instrumentation output embedded in the XML) so the cause is
   # diagnosable from public annotations alone.
   python3 - <<'PY'
-import glob, xml.etree.ElementTree as ET
-files = sorted(glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True))
+import glob, os, xml.etree.ElementTree as ET
+root_dir = os.environ.get('RESULTS_ROOT', 'app')
+files = sorted(glob.glob(f'{root_dir}/build/outputs/androidTest-results/**/*.xml', recursive=True))
 if not files:
     print("::error title=no-result-xml::No JUnit XML found at all under androidTest-results")
 for f in files[:4]:

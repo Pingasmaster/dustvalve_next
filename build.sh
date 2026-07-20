@@ -8,6 +8,7 @@
 #   ./build.sh --workflow-tests   # Tier 1 JVM workflow tests only (fast) + exit
 #   ./build.sh --smoke            # Tier 2 on-device smoke on GMD pixel7aApi37 + exit
 #   ./build.sh --smoke-release    # Tier 2 smoke against the MINIFIED release APK + exit
+#   ./build.sh --smoke-shipped    # Tier 4 smoke against the APK AS SHIPPED + exit
 #   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel7aApi37 + exit
 #   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
@@ -51,10 +52,11 @@ for arg in "$@"; do
         --workflow-tests) DO_WORKFLOW_TESTS=1 ;;
         --smoke)        DO_SMOKE=1 ;;
         --smoke-release) DO_SMOKE_RELEASE=1 ;;
+        --smoke-shipped) DO_SMOKE_SHIPPED=1 ;;
         --e2e)          DO_E2E=1 ;;
         --e2e-live)     DO_E2E_LIVE=1 ;;
         --live-net)     DO_LIVE_NET=1 ;;
-        *) echo "Unknown arg: $arg (accepted: --clean, --format, --build-health, --workflow-tests, --smoke, --smoke-release, --e2e, --e2e-live, --live-net)" >&2; exit 2 ;;
+        *) echo "Unknown arg: $arg (accepted: --clean, --format, --build-health, --workflow-tests, --smoke, --smoke-release, --smoke-shipped, --e2e, --e2e-live, --live-net)" >&2; exit 2 ;;
     esac
 done
 
@@ -121,6 +123,20 @@ if [[ "${DO_SMOKE_RELEASE:-0}" -eq 1 ]]; then
     ./gradlew :app:pixel7aApi37Setup -PtestReleaseBuild "$GMD_GPU"
     ./gradlew :app:pixel7aApi37ReleaseAndroidTest -PtestReleaseBuild "$GMD_GPU"
     echo "Release smoke suite complete."
+    exit 0
+fi
+
+# --smoke-shipped: Tier 4 - the APK as users receive it. --smoke-release
+# above has to apply proguard-test-support.pro (the instrumentation APK links
+# app-provided classes), which keeps every non-app class, so it cannot see
+# library minification breakage. :shippedsmoke drives :app release built with
+# proguard-rules.pro ALONE, via UiAutomator. Note the deliberate ABSENCE of
+# -PtestReleaseBuild: passing it here would defeat the entire purpose.
+if [[ "${DO_SMOKE_SHIPPED:-0}" -eq 1 ]]; then
+    acquire_lock
+    ./gradlew :shippedsmoke:pixel7aApi37Setup "$GMD_GPU"
+    ./gradlew :shippedsmoke:pixel7aApi37ReleaseAndroidTest "$GMD_GPU"
+    echo "Shipped-config smoke complete."
     exit 0
 fi
 
