@@ -9,20 +9,21 @@
 # strip or rename anything the test harness touches, or instrumentation
 # dies with NoClassDefFoundError before a single test runs ('Starting 0
 # tests'; observed for androidx.tracing.Trace, then kotlin.LazyKt).
-# FIDELITY NOTE: these keeps freeze LIBRARY namespaces only - the app's own
-# code (com.dustvalve.**) stays fully minified/obfuscated, which is where
-# release-only breakage lives. Never shipped: test lane only.
--keep class androidx.tracing.** { *; }
--keep class androidx.collection.** { *; }
--keep class androidx.concurrent.futures.** { *; }
--keep class kotlin.** { *; }
--keep class kotlinx.coroutines.** { *; }
--keep class androidx.compose.** { *; }
--keep class androidx.lifecycle.** { *; }
--keep class androidx.activity.** { *; }
--keep class androidx.core.** { *; }
--keep class androidx.media3.session.** { *; }
--keep class androidx.media3.common.** { *; }
+#
+# Enumerating those namespaces one at a time is a losing game: each CI round
+# surfaced exactly one more missing package (androidx.tracing, kotlin,
+# androidx.collection, androidx.concurrent.futures, ... then javax.inject,
+# which espresso-core needs and which the app happens to provide via Hilt,
+# so AGP deduplicated it out of the test APK while the app's R8 renamed it).
+# The set is unknowable up front - it is the transitive closure of every
+# library the test APK touches that the app also ships. So keep the whole
+# non-app universe instead, and let the negated filter carve out app code.
+#
+# FIDELITY NOTE: this freezes LIBRARY namespaces only - the app's own code
+# (com.dustvalve.**) stays fully minified/obfuscated, which is where
+# release-only breakage lives. Never shipped: test lane only, and the test
+# APK's size/method count is irrelevant on a CI emulator.
+-keep class !com.dustvalve.next.**,** { *; }
 
 # Tests construct SettingsDataStore(context) directly to read/write prefs.
 -keep class com.dustvalve.next.android.data.local.datastore.SettingsDataStore { *; }
