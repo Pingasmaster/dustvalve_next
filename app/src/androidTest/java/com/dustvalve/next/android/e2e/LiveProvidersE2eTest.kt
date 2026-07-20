@@ -8,10 +8,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.lifecycle.Lifecycle
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.rule.GrantPermissionRule
 import com.dustvalve.next.android.MainActivity
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.testing.Flows.clickTab
 import com.dustvalve.next.android.testing.Flows.waitForAnySignal
 import com.dustvalve.next.android.testing.Flows.waitForAnyText
@@ -19,12 +17,11 @@ import com.dustvalve.next.android.testing.Flows.waitForPositionPastZero
 import com.dustvalve.next.android.testing.Flows.waitForTag
 import com.dustvalve.next.android.testing.Flows.waitForText
 import com.dustvalve.next.android.testing.LiveNetwork
+import com.dustvalve.next.android.testing.ProviderStateRule
 import com.dustvalve.next.android.testing.QuarantineRule
 import com.dustvalve.next.android.testing.RetryRule
 import com.dustvalve.next.android.ui.TestTags
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.runBlocking
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,17 +48,19 @@ class LiveProvidersE2eTest {
     @get:Rule(order = 2)
     val retry = RetryRule()
 
+    /**
+     * These tests drive the live provider screens, so both providers must be
+     * on. Declared as a rule rather than an @Before so the flags are written
+     * BEFORE MainActivity launches - an @Before runs after the activity is
+     * already up and leaves the nav bar reacting to the write mid-test. This
+     * is also the write that used to leak into later classes; see
+     * [ProviderStateRule].
+     */
     @get:Rule(order = 3)
+    val providerState = ProviderStateRule(bandcamp = true, youtube = true)
+
+    @get:Rule(order = 4)
     val composeRule = createAndroidComposeRule<MainActivity>()
-
-    private fun settings(): SettingsDataStore = SettingsDataStore(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext)
-
-    @Before fun enableProviders() {
-        runBlocking {
-            settings().setBandcampEnabled(true)
-            settings().setYoutubeEnabled(true)
-        }
-    }
 
     // bc-home-genre-tiles-render + bc-category-sheet-content (live)
     @Test

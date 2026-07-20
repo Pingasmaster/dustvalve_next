@@ -15,6 +15,7 @@ import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.testing.Flows.clickTab
 import com.dustvalve.next.android.testing.Flows.waitForTag
+import com.dustvalve.next.android.testing.ProviderStateRule
 import com.dustvalve.next.android.testing.QuarantineRule
 import com.dustvalve.next.android.ui.TestTags
 import com.google.common.truth.Truth.assertThat
@@ -22,7 +23,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 
 /**
@@ -43,25 +43,12 @@ class SettingsPersistenceE2eTest {
     val quarantine = QuarantineRule()
 
     /**
-     * Provider flags live in DataStore, which survives between tests in the
-     * same install. The release lane runs the WHOLE suite in one unfiltered
-     * instrumentation pass, so LiveProvidersE2eTest's @Before
-     * (setBandcampEnabled(true)) and AppSmokeTest's per-test enables leak in
-     * here. Starting with Bandcamp already on, the tap in
-     * enablingBandcamp_addsTab TOGGLES IT OFF: the tab disappears and the
-     * test times out waiting for it. The debug lanes never caught this
-     * because their hermetic pass filters LiveProvidersE2eTest out
-     * (notAnnotation=LiveNetwork), so nothing enabled Bandcamp first.
-     *
-     * Ordered ahead of composeRule so MainActivity launches from the known
-     * state rather than racing a write against a live nav bar.
+     * Bandcamp MUST start disabled: enablingBandcamp_addsTab taps the switch
+     * to turn it on, so an already-enabled switch would be toggled OFF and
+     * the tab under assertion would disappear. See [ProviderStateRule].
      */
     @get:Rule(order = 2)
-    val providersReset: ExternalResource = object : ExternalResource() {
-        override fun before() {
-            runBlocking { settings().setBandcampEnabled(false) }
-        }
-    }
+    val providerState = ProviderStateRule(bandcamp = false, youtube = false)
 
     @get:Rule(order = 3)
     val composeRule = createAndroidComposeRule<MainActivity>()
