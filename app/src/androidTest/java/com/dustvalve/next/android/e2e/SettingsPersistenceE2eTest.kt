@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 
 /**
@@ -41,7 +42,28 @@ class SettingsPersistenceE2eTest {
     @get:Rule(order = 1)
     val quarantine = QuarantineRule()
 
+    /**
+     * Provider flags live in DataStore, which survives between tests in the
+     * same install. The release lane runs the WHOLE suite in one unfiltered
+     * instrumentation pass, so LiveProvidersE2eTest's @Before
+     * (setBandcampEnabled(true)) and AppSmokeTest's per-test enables leak in
+     * here. Starting with Bandcamp already on, the tap in
+     * enablingBandcamp_addsTab TOGGLES IT OFF: the tab disappears and the
+     * test times out waiting for it. The debug lanes never caught this
+     * because their hermetic pass filters LiveProvidersE2eTest out
+     * (notAnnotation=LiveNetwork), so nothing enabled Bandcamp first.
+     *
+     * Ordered ahead of composeRule so MainActivity launches from the known
+     * state rather than racing a write against a live nav bar.
+     */
     @get:Rule(order = 2)
+    val providersReset: ExternalResource = object : ExternalResource() {
+        override fun before() {
+            runBlocking { settings().setBandcampEnabled(false) }
+        }
+    }
+
+    @get:Rule(order = 3)
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     private fun settings(): SettingsDataStore = SettingsDataStore(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext)
