@@ -43,10 +43,17 @@ exercised.
    minification in the shipped APK. Since Hilt, Room and
    kotlinx-serialization are reflection- and codegen-heavy, that is exactly
    where a missing keep rule hides.
-   `:shippedsmoke` is a `com.android.test` module: it ships its own APK and
-   addresses the app through UiAutomator by resource id, never linking app
-   classes, so `:app`'s release variant can be built with
-   `proguard-rules.pro` ALONE. Deliberately shallow - cold start reaches a
+   `:shippedsmoke` is a SELF-INSTRUMENTING `com.android.test` module: it
+   carries its own dependencies, runs in its OWN process, and reaches the app
+   only through UiAutomator by resource id, so `:app`'s release variant can be
+   built with `proguard-rules.pro` ALONE. The
+   `android.experimental.self-instrumenting` property is load-bearing, not
+   decoration: without it AGP deduplicates app-provided classes out of this
+   APK and runs the instrumentation inside the app's process, so the runner
+   itself dies in `AndroidJUnitRunner.onCreate` with NoClassDefFoundError
+   (kotlin.LazyKt) on library classes the shipped APK strips - the same
+   dedup-then-strip trap that broke the `-PtestReleaseBuild` lane.
+   Deliberately shallow - cold start reaches a
    composed nav bar, and Settings opens (Hilt graph + DataStore +
    serialization) - because its job is only to catch an APK that dies on
    launch or on first touching a reflective subsystem.

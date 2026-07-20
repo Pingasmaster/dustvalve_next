@@ -27,6 +27,18 @@ android {
 
     targetProjectPath = ":app"
 
+    // THE load-bearing setting. Without it AGP treats this like an ordinary
+    // androidTest: it deduplicates app-provided classes out of this APK and
+    // runs the instrumentation INSIDE the app's process - so the runner needs
+    // library classes the shipped APK has stripped, and dies in
+    // AndroidJUnitRunner.onCreate with NoClassDefFoundError (observed:
+    // kotlin.LazyKt, via androidx.test's TestDirCalculator) before a single
+    // test is discovered. Self-instrumenting makes this APK standalone: it
+    // carries its own dependencies, runs in its OWN process, and reaches the
+    // app only through UiAutomator - which is what lets the app under test be
+    // minified as aggressively as the shipped build.
+    experimentalProperties["android.experimental.self-instrumenting"] = true
+
     defaultConfig {
         minSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -41,11 +53,11 @@ android {
     buildTypes {
         create("release") {
             signingConfig = signingConfigs.getByName("debug")
-            // Required, not desired: AGP refuses to instrument a minified app
-            // from a non-minified test module. proguard-rules.pro turns every
-            // actual transformation back off - see the file for why.
-            isMinifyEnabled = true
-            proguardFiles("proguard-rules.pro")
+            // Left unminified on purpose. The checkTestedAppObfuscation task
+            // that would otherwise demand shrinking here only applies when the
+            // test APK links the tested app's classes; a self-instrumenting
+            // module never does, so there is no mapping to apply and no reason
+            // to run R8 over a two-test harness.
         }
     }
 
