@@ -358,7 +358,7 @@ jobs:
             2>&1 | tee gradle-shipped-smoke.log
 
       - name: Assert tests actually ran
-        run: bash scripts/ci_assert_tests_ran.sh 2 shippedsmoke
+        run: bash scripts/ci_assert_tests_ran.sh 1 shippedsmoke
 
       - name: Annotate Gradle output tail on failure
         if: failure()

@@ -8,7 +8,6 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -37,8 +36,15 @@ class ShippedReleaseSmokeTest {
 
     private lateinit var device: UiDevice
 
-    @Before
-    fun launchApp() {
+    /**
+     * ONE test, one launch, walked end to end - not several tests each cold
+     * starting the app. The first CI run proved a single launch works
+     * (coldStart reached a composed nav bar); it was the SECOND test's
+     * relaunch that never came back to the foreground. Re-launching between
+     * tests adds flake surface and buys no coverage a smoke test wants, so
+     * the whole path is asserted in sequence instead.
+     */
+    private fun launchApp() {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         // Pre-grant so a runtime permission dialog cannot sit on top of the
         // UI we are about to assert on. Tolerate failure: the permission may
@@ -58,26 +64,24 @@ class ShippedReleaseSmokeTest {
     }
 
     /**
-     * Cold start reaches a composed nav bar. Covers Application onCreate, the
-     * Hilt object graph, and first composition - the R8 casualties that abort
-     * before anything is drawn.
+     * Cold start reaches a composed nav bar, then Settings opens.
+     *
+     * The launch covers Application onCreate, the Hilt object graph and first
+     * composition - the R8 casualties that abort before anything is drawn.
+     * Opening Settings then drives the reflective subsystems that break under
+     * R8 without a keep rule: the Hilt graph resolves SettingsDataStore,
+     * which reads DataStore and decodes kotlinx-serialization payloads to
+     * populate the screen.
      */
     @Test
-    fun coldStart_rendersBottomNav() {
+    fun shippedApk_coldStarts_andOpensSettings() {
+        launchApp()
+
         assertTrue(
             "bottom nav never rendered in the shipped APK",
             device.wait(Until.hasObject(By.res("bottom_nav")), UI_TIMEOUT_MS),
         )
-    }
 
-    /**
-     * Opening Settings drives the reflective subsystems that historically
-     * break under R8 without a keep rule: the Hilt graph resolves
-     * SettingsDataStore, which reads DataStore and decodes
-     * kotlinx-serialization payloads to populate the screen.
-     */
-    @Test
-    fun settingsTab_opensAndReadsSettings() {
         assertTrue(
             "settings tab never appeared",
             device.wait(Until.hasObject(By.res("bottom_nav_item_settings")), UI_TIMEOUT_MS),
