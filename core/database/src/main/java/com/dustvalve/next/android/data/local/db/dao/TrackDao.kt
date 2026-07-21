@@ -24,6 +24,9 @@ interface TrackDao {
     @Query("SELECT * FROM tracks WHERE id = :id")
     suspend fun getById(id: String): TrackEntity?
 
+    @Query("SELECT id FROM tracks")
+    suspend fun getAllIdsSync(): List<String>
+
     @Query("SELECT * FROM tracks WHERE id IN (:ids)")
     suspend fun getByIdsChunk(ids: List<String>): List<TrackEntity>
 

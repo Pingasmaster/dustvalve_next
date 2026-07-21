@@ -321,6 +321,23 @@ class LocalViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Permission denied: roll the enable flag back so the "Enable local
+     * music" button reappears and the user can retry (or grant from system
+     * settings). Without this, one "Deny" left localMusicEnabled = true with
+     * no scan source configured - a permanent "no local music found"
+     * dead-end with no in-app way back.
+     */
+    fun onAudioPermissionDenied() {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setLocalMusicEnabled(false)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     fun onAudioPermissionGranted() {
         viewModelScope.launch {
             try {

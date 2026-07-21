@@ -64,6 +64,11 @@ class FolderMirror @Inject constructor(
 ) {
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private var activeJobs: MutableList<Job> = mutableListOf()
+
+    // Touched from two collector coroutines on the multi-threaded IO
+    // dispatcher (the metadata sub-toggle collector and stopMirrorJobs via
+    // the enabled-flag collector) - every access must hold this monitor or
+    // concurrent toggling can corrupt the list / leak a running job.
     private val metadataJobs: MutableList<Job> = mutableListOf()
 
     @Volatile private var suspendUntil: Long = 0L
@@ -213,15 +218,17 @@ class FolderMirror @Inject constructor(
             settingsDataStore.dedicatedFolderIncludeMetadataCache
                 .distinctUntilChanged()
                 .collect { include ->
-                    metadataJobs.forEach { it.cancel() }
-                    metadataJobs.clear()
+                    synchronized(metadataJobs) {
+                        metadataJobs.forEach { it.cancel() }
+                        metadataJobs.clear()
+                    }
                     if (include) startMetadataJobs()
                 }
         }
     }
 
     private fun startMetadataJobs() {
-        metadataJobs += mirrorFlow(
+        val job = mirrorFlow(
             combine(
                 ytVideoDao.getAllFlow(),
                 ytPlaylistDao.getAllFlow(),
@@ -235,13 +242,16 @@ class FolderMirror @Inject constructor(
             )
             writeMetadataCache(uri, file)
         }
+        synchronized(metadataJobs) { metadataJobs += job }
     }
 
     private fun stopMirrorJobs() {
         activeJobs.forEach { it.cancel() }
         activeJobs.clear()
-        metadataJobs.forEach { it.cancel() }
-        metadataJobs.clear()
+        synchronized(metadataJobs) {
+            metadataJobs.forEach { it.cancel() }
+            metadataJobs.clear()
+        }
     }
 
     private suspend fun writePlaylists() {

@@ -88,7 +88,10 @@ class YouTubeRepositoryCacheTest {
         assertThat(track.artist).isEqualTo("Cached Artist")
         assertThat(track.duration).isEqualTo(233f)
         assertThat(track.source).isEqualTo(TrackSource.YOUTUBE)
-        assertThat(track.streamUrl).isNull() // Stream URLs are never cached.
+        // Cache hits carry the canonical watch URL (never null, never a raw
+        // googlevideo stream): the player re-resolves the real stream from it.
+        // null here made every REPLAY of a cached video silently unplayable.
+        assertThat(track.streamUrl).isEqualTo("https://www.youtube.com/watch?v=abc12345678")
         coVerify(exactly = 0) { client.player(any()) }
     }
 

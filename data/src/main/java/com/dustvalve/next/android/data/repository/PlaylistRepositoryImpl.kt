@@ -282,13 +282,16 @@ class PlaylistRepositoryImpl @Inject constructor(
 
     override suspend fun moveTrackInPlaylist(playlistId: String, fromPosition: Int, toPosition: Int) {
         // System playlists (Favorites / Downloads) don't normally carry
-        // playlist_track rows - tracks are derived from source tables. The
-        // first time the user reorders, seed playlist_tracks with the
-        // current source ordering so the override exists + getTracksInPlaylist's
-        // merge path takes over. (Recents is intentionally non-reorderable
-        // in the UI so this branch never fires for it.)
-        if (playlistDao.getPlaylistTrackCount(playlistId) == 0 && isSystemPlaylistId(playlistId)) {
-            seedSystemPlaylistOrdering(playlistId)
+        // playlist_track rows - tracks are derived from source tables and the
+        // UI displays mergeSystemPlaylist's view (override order + newly
+        // favorited tracks appended + unfavorited tracks dropped). The
+        // from/to indices arriving here are indices into THAT merged view,
+        // so the override must be re-seeded to match it before reordering.
+        // Seeding only when count == 0 (the old behavior) desynced the two
+        // lists as soon as a track was (un)favorited after the first
+        // reorder, silently turning later drags into no-ops.
+        if (isSystemPlaylistId(playlistId)) {
+            reseedSystemPlaylistFromMergedView(playlistId)
         }
 
         val tracks = playlistDao.getTracksInPlaylistSync(playlistId)
@@ -304,7 +307,14 @@ class PlaylistRepositoryImpl @Inject constructor(
         else -> false
     }
 
-    private suspend fun seedSystemPlaylistOrdering(playlistId: String) {
+    /**
+     * Rewrites the playlist_tracks override for a system playlist so its
+     * rows exactly match the merged view the UI is displaying right now
+     * (override order, minus tracks that left the source, plus new source
+     * tracks appended). Guarantees contiguous 0..n-1 positions, which
+     * reorderTrack's range-shift arithmetic depends on.
+     */
+    private suspend fun reseedSystemPlaylistFromMergedView(playlistId: String) {
         val source: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity> = when (playlistId) {
             Playlist.ID_FAVORITES -> trackDao.getFavorites().first()
             Playlist.ID_DOWNLOADS -> trackDao.getDownloaded().first()
@@ -312,10 +322,16 @@ class PlaylistRepositoryImpl @Inject constructor(
             else -> return
         }
         if (source.isEmpty()) return
-        val rows = source.mapIndexed { index, t ->
-            PlaylistTrackEntity(playlistId = playlistId, trackId = t.id, position = index)
+        val ordered = playlistDao.getTracksInPlaylistSync(playlistId)
+        val merged = mergeSystemPlaylist(source, ordered)
+        database.withTransaction {
+            playlistDao.clearPlaylistTracks(playlistId)
+            playlistDao.insertPlaylistTracks(
+                merged.mapIndexed { index, t ->
+                    PlaylistTrackEntity(playlistId = playlistId, trackId = t.id, position = index)
+                },
+            )
         }
-        playlistDao.insertPlaylistTracks(rows)
     }
 
     override suspend fun isTrackInPlaylist(playlistId: String, trackId: String): Boolean =

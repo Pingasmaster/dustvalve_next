@@ -127,6 +127,8 @@ fun LocalScreen(
     ) { granted: Boolean ->
         if (granted) {
             viewModel.onAudioPermissionGranted()
+        } else {
+            viewModel.onAudioPermissionDenied()
         }
     }
 

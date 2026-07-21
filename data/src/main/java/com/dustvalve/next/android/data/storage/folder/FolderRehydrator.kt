@@ -116,7 +116,15 @@ class FolderRehydrator @Inject constructor(
                     // so the FK on playlist_tracks doesn't abort the whole
                     // rehydrate transaction on a slightly-stale snapshot.
                     val knownPlaylistIds = playlists.playlists.map { it.id }.toSet()
-                    val knownTrackIds = (tracks?.tracks?.map { it.id } ?: emptyList()).toSet()
+                    // Validate against the track set that will actually be in
+                    // the DB after this transaction: the snapshot's tracks if
+                    // tracks.json was rehydrated, otherwise the UNTOUCHED
+                    // current DB rows. The old code used emptySet() when
+                    // tracks.json was missing/unreadable, which dropped every
+                    // playlist-track mapping even though the referenced tracks
+                    // still existed - emptying all user playlists.
+                    val knownTrackIds = tracks?.tracks?.map { it.id }?.toSet()
+                        ?: trackDao.getAllIdsSync().toSet()
                     val safe = playlists.mappings.filter {
                         it.playlistId in knownPlaylistIds && it.trackId in knownTrackIds
                     }
