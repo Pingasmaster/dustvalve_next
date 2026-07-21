@@ -47,6 +47,22 @@ object Flows {
             .joinToString(" | ")
     }.getOrDefault("<semantics tree unavailable>")
 
+    /**
+     * Compact snapshot of every testTag currently in the semantics tree.
+     * Texts alone cannot answer "did the widget render at all, under a
+     * different tag?" - the question a timed-out waitForTag actually raises.
+     * Reported BEFORE the texts because CI annotation messages are truncated
+     * and the tags are the higher-signal half.
+     */
+    private fun AndroidComposeTestRule<*, *>.onScreenTags(): String = runCatching {
+        onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.TestTag), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.TestTag)?.takeIf { it.isNotBlank() } }
+            .distinct()
+            .take(40)
+            .joinToString(" | ")
+    }.getOrDefault("<semantics tree unavailable>")
+
     private fun AndroidComposeTestRule<*, *>.waitOrExplain(
         what: String,
         timeoutMs: Long,
@@ -56,7 +72,8 @@ object Flows {
             waitUntil(timeoutMs) { condition() }
         } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
             throw AssertionError(
-                "Timed out after ${timeoutMs}ms waiting for $what. On screen: [${onScreenTexts()}]",
+                "Timed out after ${timeoutMs}ms waiting for $what. " +
+                    "Tags on screen: [${onScreenTags()}]. Texts on screen: [${onScreenTexts()}]",
                 e,
             )
         }

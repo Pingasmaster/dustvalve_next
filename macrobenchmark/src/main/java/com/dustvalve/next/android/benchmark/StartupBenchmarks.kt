@@ -4,7 +4,11 @@
  * Measures the cold-start time of MainActivity, with and without the
  * baseline profile applied. Run from the project root with:
  *
- *   ./gradlew :macrobenchmark:pixel7aApi33AndroidTest
+ *   ./gradlew :macrobenchmark:pixel7aApi33ReleaseAndroidTest \
+ *     -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+ *
+ * (the release variant is the one being measured; the EMULATOR suppression is
+ * only needed when running on a GMD/emulator rather than real hardware)
  *
  * These benchmarks are NOT executed in the local CI build - they
  * require a managed device (Pixel 7a / API 33 / AOSP). They are intended

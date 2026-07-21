@@ -5,7 +5,7 @@ introduced after v0.5.0 shipped with local playback dead (stuck at 0:00) and
 instant crashes on Bandcamp / YouTube Music - none of which any existing test
 exercised.
 
-## The three automated tiers
+## The four automated tiers
 
 1. **Tier 1 - JVM workflow tests** (`app/src/test/.../workflow/`):
    Robolectric + media3-test-utils drive the REAL PlaybackManager /
@@ -18,8 +18,7 @@ exercised.
    Local run: `./build.sh --workflow-tests`
 
 2. **Tier 2 - emulator smoke** (`app/src/androidTest/.../smoke/`):
-   Gradle Managed Device `pixel7aApi33` (Pixel 7a profile, API 33 AOSP on this legacy branch;
-   master uses `pixel7aApi37`). Installs the real APK, seeds
+   Gradle Managed Device `pixel7aApi33` (API 33 AOSP image). Installs the real APK, seeds
    MediaStore with bundled tones, taps a track, and asserts the elapsed
    label leaves 0:00 AND a real MediaController reports progress; opens
    Bandcamp / YouTube Music without crashing. CI: emulator-smoke job.
@@ -32,6 +31,33 @@ exercised.
    scraper breakage is caught) run as separate CI invocations so a service
    outage never masks a hermetic regression. CI: emulator-e2e job.
    Local run: `./build.sh --e2e` / `./build.sh --e2e-live`
+
+4. **Tier 4 - shipped-config smoke** (`shippedsmoke/`):
+   The other three tiers all instrument an APK that is not the one users
+   install. Tiers 1-2 use debug builds; the release lane
+   (`-PtestReleaseBuild`, CI: emulator-smoke-release) must apply
+   `app/proguard-test-support.pro` so the instrumentation APK can link
+   against app-provided classes, and that keeps every non-app class - so it
+   proves app-code minification works but says nothing about library
+   minification in the shipped APK. Since Hilt, Room and
+   kotlinx-serialization are reflection- and codegen-heavy, that is exactly
+   where a missing keep rule hides.
+   `:shippedsmoke` is a SELF-INSTRUMENTING `com.android.test` module: it
+   carries its own dependencies, runs in its OWN process, and reaches the app
+   only through UiAutomator by resource id, so `:app`'s release variant can be
+   built with `proguard-rules.pro` ALONE. The
+   `android.experimental.self-instrumenting` property is load-bearing, not
+   decoration: without it AGP deduplicates app-provided classes out of this
+   APK and runs the instrumentation inside the app's process, so the runner
+   itself dies in `AndroidJUnitRunner.onCreate` with NoClassDefFoundError
+   (kotlin.LazyKt) on library classes the shipped APK strips - the same
+   dedup-then-strip trap that broke the `-PtestReleaseBuild` lane.
+   Deliberately shallow - cold start reaches a
+   composed nav bar, and Settings opens (Hilt graph + DataStore +
+   serialization) - because its job is only to catch an APK that dies on
+   launch or on first touching a reflective subsystem.
+   CI: emulator-smoke-shipped job. Never pass `-PtestReleaseBuild` to it;
+   that re-introduces the test-support keeps and defeats the point.
 
 Plus the opt-in JVM live smokes gated on `DUSTVALVE_LIVE_NET=1`
 (`./build.sh --live-net`) and the manual `docs/RELEASE_CHECKLIST.md`.
@@ -59,7 +85,7 @@ catalog id, and unimplemented ids are the prioritized backlog:
 
 ## Notes
 
-- The GMD needs an emulator able to boot modern images; some bleeding-edge
+- The GMD needs an emulator able to boot API 36+ images; some bleeding-edge
   host distros segfault QEMU - use the CI jobs in that case.
 - Instrumentation runs against the REAL app object graph (no
   HiltTestApplication): what the tests exercise is what users run.

@@ -43,4 +43,12 @@ object TestTags {
     const val SETTINGS_LIST = "settings_list"
     const val LIBRARY_LIST = "library_list"
     fun settingsSwitch(key: String) = "settings_switch_$key"
+
+    /**
+     * The "enable this provider?" dialog raised by a link pointing at a
+     * disabled source. Tagged because asserting on its TEXT cannot tell the
+     * dialog apart from the provider screen the link would open if the
+     * provider were already enabled - both contain the provider name.
+     */
+    const val PROVIDER_ENABLE_DIALOG = "provider_enable_dialog"
 }

@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -12,10 +13,12 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.dustvalve.next.android.util.CookieEncryption
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -82,27 +85,45 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         const val DEFAULT_STORAGE_LIMIT = 2L * 1024 * 1024 * 1024 // 2 GB
     }
 
-    val themeMode: Flow<String> = context.dataStore.data.map { prefs ->
+    /**
+     * Every settings READ goes through here. DataStore reports read failures
+     * by throwing INTO the flow, so a bare `dataStore.data` collector dies on
+     * the first IOException and never resumes: the app silently stops
+     * reacting to settings changes, with no crash to point at and no recovery
+     * short of a process restart. Recover to defaults instead.
+     *
+     * Only IOException is swallowed - a CorruptionException or any other
+     * throwable is a real bug and must still propagate rather than be
+     * quietly papered over with default settings.
+     *
+     * Declared ahead of the flows below because they capture it at property
+     * initialization; moving it lower makes them capture null.
+     */
+    private val guardedPreferences: Flow<Preferences> = context.dataStore.data.catch { e ->
+        if (e is IOException) emit(emptyPreferences()) else throw e
+    }
+
+    val themeMode: Flow<String> = guardedPreferences.map { prefs ->
         prefs[Keys.THEME_MODE] ?: "system"
     }
 
-    val dynamicColor: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val dynamicColor: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.DYNAMIC_COLOR] ?: true
     }
 
-    val storageLimit: Flow<Long> = context.dataStore.data.map { prefs ->
+    val storageLimit: Flow<Long> = guardedPreferences.map { prefs ->
         prefs[Keys.STORAGE_LIMIT] ?: DEFAULT_STORAGE_LIMIT
     }
 
-    val accountUsername: Flow<String?> = context.dataStore.data.map { prefs ->
+    val accountUsername: Flow<String?> = guardedPreferences.map { prefs ->
         prefs[Keys.ACCOUNT_USERNAME]
     }
 
-    val accountAvatar: Flow<String?> = context.dataStore.data.map { prefs ->
+    val accountAvatar: Flow<String?> = guardedPreferences.map { prefs ->
         prefs[Keys.ACCOUNT_AVATAR]
     }
 
-    val authCookies: Flow<String?> = context.dataStore.data.map { prefs ->
+    val authCookies: Flow<String?> = guardedPreferences.map { prefs ->
         prefs[Keys.AUTH_COOKIES]?.let { encrypted ->
             try {
                 CookieEncryption.decrypt(encrypted)
@@ -113,53 +134,53 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    val accountFanId: Flow<Long?> = context.dataStore.data.map { prefs ->
+    val accountFanId: Flow<Long?> = guardedPreferences.map { prefs ->
         prefs[Keys.ACCOUNT_FAN_ID]
     }
 
-    val autoDownloadCollection: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val autoDownloadCollection: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.AUTO_DOWNLOAD_COLLECTION] ?: true
     }
 
-    val autoDownloadFutureContent: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val autoDownloadFutureContent: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.AUTO_DOWNLOAD_FUTURE_CONTENT] ?: false
     }
 
-    val downloadFormat: Flow<String> = context.dataStore.data.map { prefs ->
+    val downloadFormat: Flow<String> = guardedPreferences.map { prefs ->
         prefs[Keys.DOWNLOAD_FORMAT] ?: "flac"
     }
 
-    val saveDataOnMetered: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val saveDataOnMetered: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SAVE_DATA_ON_METERED] ?: true
     }
 
-    val progressiveDownload: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val progressiveDownload: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.PROGRESSIVE_DOWNLOAD] ?: true
     }
 
-    val seamlessQualityUpgrade: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val seamlessQualityUpgrade: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SEAMLESS_QUALITY_UPGRADE] ?: false
     }
 
-    val downloadNotificationsEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val downloadNotificationsEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.DOWNLOAD_NOTIFICATIONS_ENABLED] ?: true
     }
 
-    val oledBlack: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val oledBlack: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.OLED_BLACK] ?: false
     }
 
-    val albumArtTheme: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val albumArtTheme: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.ALBUM_ART_THEME] ?: false
     }
 
     /** "wavy" or "linear". Replaces the legacy boolean wavyProgressBar. */
-    val progressBarStyle: Flow<String> = context.dataStore.data.map { prefs ->
+    val progressBarStyle: Flow<String> = guardedPreferences.map { prefs ->
         prefs[Keys.PROGRESS_BAR_STYLE] ?: "wavy"
     }
 
     /** Stroke height of the player progress bar in dp; default 24. */
-    val progressBarSizeDp: Flow<Int> = context.dataStore.data.map { prefs ->
+    val progressBarSizeDp: Flow<Int> = guardedPreferences.map { prefs ->
         prefs[Keys.PROGRESS_BAR_SIZE_DP] ?: 24
     }
 
@@ -168,7 +189,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
      * track is downloaded in the background and the Favorites playlist
      * hides its manual Download button (no point - it'd be redundant).
      */
-    val autoDownloadFavorites: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val autoDownloadFavorites: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.AUTO_DOWNLOAD_FAVORITES] ?: false
     }
 
@@ -224,7 +245,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    suspend fun getStorageLimitSync(): Long = context.dataStore.data.firstOrNull()?.get(Keys.STORAGE_LIMIT)
+    suspend fun getStorageLimitSync(): Long = guardedPreferences.firstOrNull()?.get(Keys.STORAGE_LIMIT)
         ?: DEFAULT_STORAGE_LIMIT
 
     suspend fun setAutoDownloadCollection(enabled: Boolean) {
@@ -240,7 +261,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     }
 
     suspend fun getAutoDownloadFutureContentSync(): Boolean =
-        context.dataStore.data.firstOrNull()?.get(Keys.AUTO_DOWNLOAD_FUTURE_CONTENT) ?: false
+        guardedPreferences.firstOrNull()?.get(Keys.AUTO_DOWNLOAD_FUTURE_CONTENT) ?: false
 
     suspend fun setDownloadFormat(formatKey: String) {
         context.dataStore.edit { prefs ->
@@ -296,13 +317,13 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         context.dataStore.edit { prefs -> prefs[Keys.AUTO_DOWNLOAD_FAVORITES] = enabled }
     }
 
-    suspend fun getDownloadFormatSync(): String = context.dataStore.data.firstOrNull()?.get(Keys.DOWNLOAD_FORMAT) ?: "flac"
+    suspend fun getDownloadFormatSync(): String = guardedPreferences.firstOrNull()?.get(Keys.DOWNLOAD_FORMAT) ?: "flac"
 
-    suspend fun getProgressiveDownloadSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.PROGRESSIVE_DOWNLOAD) ?: true
+    suspend fun getProgressiveDownloadSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.PROGRESSIVE_DOWNLOAD) ?: true
 
-    suspend fun getSeamlessQualityUpgradeSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.SEAMLESS_QUALITY_UPGRADE) ?: false
+    suspend fun getSeamlessQualityUpgradeSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.SEAMLESS_QUALITY_UPGRADE) ?: false
 
-    suspend fun getSaveDataOnMeteredSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.SAVE_DATA_ON_METERED) ?: true
+    suspend fun getSaveDataOnMeteredSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.SAVE_DATA_ON_METERED) ?: true
 
     suspend fun clearAccount() {
         context.dataStore.edit { prefs ->
@@ -313,16 +334,16 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    val localMusicEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val localMusicEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.LOCAL_MUSIC_ENABLED] ?: false
     }
 
-    val localMusicFolderUris: Flow<List<String>> = context.dataStore.data.map { prefs ->
+    val localMusicFolderUris: Flow<List<String>> = guardedPreferences.map { prefs ->
         val json = prefs[Keys.LOCAL_MUSIC_FOLDER_URIS]
         if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
     }
 
-    val localMusicUseMediaStore: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val localMusicUseMediaStore: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.LOCAL_MUSIC_USE_MEDIASTORE] ?: true
     }
 
@@ -373,33 +394,32 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    suspend fun getLocalMusicEnabledSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
+    suspend fun getLocalMusicEnabledSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
 
     suspend fun getLocalMusicFolderUrisSync(): List<String> {
-        val json = context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS)
+        val json = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS)
         return if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
     }
 
-    suspend fun getLocalMusicUseMediaStoreSync(): Boolean =
-        context.dataStore.data.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true
+    suspend fun getLocalMusicUseMediaStoreSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true
 
-    val bandcampEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val bandcampEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.BANDCAMP_ENABLED] ?: false
     }
 
-    val youtubeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val youtubeEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.YOUTUBE_ENABLED] ?: false
     }
 
-    val showInlineVolumeSlider: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val showInlineVolumeSlider: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SHOW_INLINE_VOLUME_SLIDER] ?: false
     }
 
-    val showVolumeButton: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val showVolumeButton: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SHOW_VOLUME_BUTTON] ?: false
     }
 
-    val lastYoutubeVideoId: Flow<String?> = context.dataStore.data.map { prefs ->
+    val lastYoutubeVideoId: Flow<String?> = guardedPreferences.map { prefs ->
         prefs[Keys.LAST_YOUTUBE_VIDEO_ID]
     }
 
@@ -427,7 +447,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    val keepScreenOnInApp: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val keepScreenOnInApp: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.KEEP_SCREEN_ON_IN_APP] ?: false
     }
 
@@ -437,23 +457,23 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
      * to true so that flipping the parent on yields the lower-impact
      * "only-while-playing" behaviour out of the box.
      */
-    val keepScreenOnWhilePlaying: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val keepScreenOnWhilePlaying: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.KEEP_SCREEN_ON_WHILE_PLAYING] ?: true
     }
 
-    val searchHistoryEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val searchHistoryEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SEARCH_HISTORY_ENABLED] ?: true
     }
 
-    val searchHistoryBandcamp: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val searchHistoryBandcamp: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SEARCH_HISTORY_BANDCAMP] ?: true
     }
 
-    val searchHistoryYoutube: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val searchHistoryYoutube: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SEARCH_HISTORY_YOUTUBE] ?: true
     }
 
-    val searchHistoryLocal: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val searchHistoryLocal: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SEARCH_HISTORY_LOCAL] ?: true
     }
 
@@ -492,7 +512,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
      * shows a debug overlay instead of the cover carousel. Off by default.
      * Surfaced as the "Show debug info" toggle in Settings -> Debug.
      */
-    val albumCoverLongPressCarousel: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val albumCoverLongPressCarousel: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] ?: false
     }
 
@@ -502,7 +522,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    val ytmConnected: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val ytmConnected: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.YTM_CONNECTED] ?: false
     }
 
@@ -512,7 +532,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    val youtubeDefaultSource: Flow<String> = context.dataStore.data.map { prefs ->
+    val youtubeDefaultSource: Flow<String> = guardedPreferences.map { prefs ->
         prefs[Keys.YOUTUBE_DEFAULT_SOURCE] ?: "youtube"
     }
 
@@ -526,7 +546,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     // DustvalveNextApplication.onCreate. Defaults on: pre-alpha ships several
     // builds a day and we want users on the latest by default. The manual
     // "Search for updates" button in Settings -> About is never gated by this.
-    val autoUpdateCheckEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
+    val autoUpdateCheckEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.AUTO_UPDATE_CHECK_ENABLED] ?: true
     }
 
@@ -553,8 +573,8 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     }
 
     // Local-section persistence: independent toggles for sort + filters.
-    val keepLocalSort: Flow<Boolean> = context.dataStore.data.map { it[Keys.KEEP_LOCAL_SORT] ?: false }
-    val keepLocalFilters: Flow<Boolean> = context.dataStore.data.map { it[Keys.KEEP_LOCAL_FILTERS] ?: false }
+    val keepLocalSort: Flow<Boolean> = guardedPreferences.map { it[Keys.KEEP_LOCAL_SORT] ?: false }
+    val keepLocalFilters: Flow<Boolean> = guardedPreferences.map { it[Keys.KEEP_LOCAL_FILTERS] ?: false }
     suspend fun setKeepLocalSort(enabled: Boolean) {
         context.dataStore.edit { it[Keys.KEEP_LOCAL_SORT] = enabled }
     }
@@ -564,13 +584,13 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     // Persisted local sort/filter state. The Local tab consults the toggles
     // above to decide whether to read these on init and write them on change.
-    val localSortOption: Flow<String?> = context.dataStore.data.map { it[Keys.LOCAL_SORT_OPTION] }
-    val localReverseOrder: Flow<Boolean> = context.dataStore.data.map { it[Keys.LOCAL_REVERSE_ORDER] ?: false }
-    val localSelectedArtists: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_ARTISTS] ?: emptySet() }
-    val localSelectedAlbums: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_ALBUMS] ?: emptySet() }
-    val localSelectedDurations: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_DURATIONS] ?: emptySet() }
-    val localFavoritesOnly: Flow<Boolean> = context.dataStore.data.map { it[Keys.LOCAL_FAVORITES_ONLY] ?: false }
-    val localSelectedFolders: Flow<Set<String>> = context.dataStore.data.map { it[Keys.LOCAL_SELECTED_FOLDERS] ?: emptySet() }
+    val localSortOption: Flow<String?> = guardedPreferences.map { it[Keys.LOCAL_SORT_OPTION] }
+    val localReverseOrder: Flow<Boolean> = guardedPreferences.map { it[Keys.LOCAL_REVERSE_ORDER] ?: false }
+    val localSelectedArtists: Flow<Set<String>> = guardedPreferences.map { it[Keys.LOCAL_SELECTED_ARTISTS] ?: emptySet() }
+    val localSelectedAlbums: Flow<Set<String>> = guardedPreferences.map { it[Keys.LOCAL_SELECTED_ALBUMS] ?: emptySet() }
+    val localSelectedDurations: Flow<Set<String>> = guardedPreferences.map { it[Keys.LOCAL_SELECTED_DURATIONS] ?: emptySet() }
+    val localFavoritesOnly: Flow<Boolean> = guardedPreferences.map { it[Keys.LOCAL_FAVORITES_ONLY] ?: false }
+    val localSelectedFolders: Flow<Set<String>> = guardedPreferences.map { it[Keys.LOCAL_SELECTED_FOLDERS] ?: emptySet() }
 
     suspend fun setLocalSort(sortOptionName: String, reverseOrder: Boolean) {
         context.dataStore.edit {
@@ -598,25 +618,25 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     // downloads, history, settings) is mirrored to a user-picked SAF tree.
     // The two include-cache keys are sub-toggles, ignored when the main
     // toggle is off.
-    val dedicatedFolderEnabled: Flow<Boolean> = context.dataStore.data.map {
+    val dedicatedFolderEnabled: Flow<Boolean> = guardedPreferences.map {
         it[Keys.DEDICATED_FOLDER_ENABLED] ?: false
     }
-    val dedicatedFolderTreeUri: Flow<String?> = context.dataStore.data.map {
+    val dedicatedFolderTreeUri: Flow<String?> = guardedPreferences.map {
         it[Keys.DEDICATED_FOLDER_TREE_URI]
     }
-    val dedicatedFolderIncludeImageCache: Flow<Boolean> = context.dataStore.data.map {
+    val dedicatedFolderIncludeImageCache: Flow<Boolean> = guardedPreferences.map {
         it[Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE] ?: false
     }
-    val dedicatedFolderIncludeMetadataCache: Flow<Boolean> = context.dataStore.data.map {
+    val dedicatedFolderIncludeMetadataCache: Flow<Boolean> = guardedPreferences.map {
         it[Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE] ?: false
     }
 
-    suspend fun getDedicatedFolderEnabledSync(): Boolean = context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_ENABLED) ?: false
+    suspend fun getDedicatedFolderEnabledSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.DEDICATED_FOLDER_ENABLED) ?: false
 
-    suspend fun getDedicatedFolderTreeUriSync(): String? = context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_TREE_URI)
+    suspend fun getDedicatedFolderTreeUriSync(): String? = guardedPreferences.firstOrNull()?.get(Keys.DEDICATED_FOLDER_TREE_URI)
 
     suspend fun getDedicatedFolderIncludeMetadataCacheSync(): Boolean =
-        context.dataStore.data.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE) ?: false
+        guardedPreferences.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE) ?: false
 
     suspend fun setDedicatedFolder(enabled: Boolean, treeUri: String?) {
         context.dataStore.edit { prefs ->
@@ -638,7 +658,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     }
 
     /** Custom Bandcamp genres added by the user, stored as JSON. */
-    val bandcampCustomGenres: Flow<List<String>> = context.dataStore.data.map { prefs ->
+    val bandcampCustomGenres: Flow<List<String>> = guardedPreferences.map { prefs ->
         val json = prefs[Keys.BANDCAMP_CUSTOM_GENRES]
         if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
     }
@@ -653,7 +673,12 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    /** Raw preferences Flow used by [FolderMirror] to mirror every edit. */
+    /**
+     * Raw preferences Flow used by [FolderMirror] to mirror every edit.
+     * Deliberately NOT routed through [guardedPreferences]: recovering to
+     * emptyPreferences() here would mirror an empty settings map over a good
+     * backup. Failing the collector is the safe direction for a mirror.
+     */
     val rawPreferencesFlow: Flow<Preferences> = context.dataStore.data
 
     /**
@@ -663,7 +688,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
      * folder (that would make turning the toggle off impossible once on).
      */
     suspend fun captureAllPreferences(): Map<String, Any> {
-        val prefs = context.dataStore.data.firstOrNull() ?: return emptyMap()
+        val prefs = guardedPreferences.firstOrNull() ?: return emptyMap()
         val skip = setOf(
             Keys.DEDICATED_FOLDER_ENABLED.name,
             Keys.DEDICATED_FOLDER_TREE_URI.name,

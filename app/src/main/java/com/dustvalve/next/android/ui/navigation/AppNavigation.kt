@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -32,6 +33,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.repository.AccountRepository
+import com.dustvalve.next.android.ui.TestTags
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
 import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
@@ -224,6 +226,7 @@ fun AppNavigation(
         pendingLink?.let { pending ->
             val typeNoun = stringResource(linkKindRes(pending.type))
             AlertDialog(
+                modifier = Modifier.testTag(TestTags.PROVIDER_ENABLE_DIALOG),
                 onDismissRequest = { navViewModel.dismissPendingLink() },
                 icon = {
                     Icon(

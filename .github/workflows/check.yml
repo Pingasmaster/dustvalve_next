@@ -5,7 +5,7 @@ name: Checks (lint, tests, screenshots)
 # Runs on commits landed on master and on manual dispatch only.
 on:
   push:
-    branches: [legacy-android8]
+    branches: [master]
   workflow_dispatch:
     inputs:
       live_soft_fail:
@@ -75,6 +75,16 @@ jobs:
 
       - name: Unit tests
         run: ./gradlew testDebugUnitTest
+
+      - name: Compile device-test harnesses (benchmark + shippedsmoke)
+        # These com.android.test modules only run on GMD/CI-KVM jobs, so
+        # nothing else in this job compiles them; without this step a change
+        # that breaks :macrobenchmark / :baselineprofile / :shippedsmoke
+        # rots undetected until the next (rare) benchmark or shipped-smoke
+        # run. Assemble is cheap here because the app itself was just built.
+        run: >-
+          ./gradlew :macrobenchmark:assembleRelease
+          :baselineprofile:assembleRelease :shippedsmoke:assembleRelease
 
       - name: Locale screenshot verification (Roborazzi)
         run: ./gradlew :app:verifyRoborazziDebug
@@ -298,6 +308,111 @@ jobs:
         with:
           name: release-smoke-results
           path: app/build/outputs/androidTest-results/managedDevice/
+          if-no-files-found: ignore
+
+  # The APK AS SHIPPED. emulator-smoke-release above must apply
+  # proguard-test-support.pro so the instrumentation APK can link against
+  # app-provided classes, which keeps every non-app class - so that lane
+  # proves app-code minification works but says NOTHING about library
+  # minification in the real APK (Hilt, Room, kotlinx-serialization are all
+  # reflection- or codegen-heavy and exactly where missing keep rules bite).
+  # :shippedsmoke drives :app's release variant with proguard-rules.pro ALONE
+  # via UiAutomator, which addresses the app by resource id and never links
+  # its classes. Deliberately NOT passed -PtestReleaseBuild: that flag would
+  # re-introduce the test-support keeps and defeat the point.
+  emulator-smoke-shipped:
+    name: emulator smoke (SHIPPED release config)
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -la /dev/kvm
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.5.0
+        with:
+          distribution: 'zulu'
+          java-version: 25
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4.0.1
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.2.0
+        with:
+          cache-provider: basic
+          cache-read-only: true
+
+      - name: Setup GMD (Pixel 7a, API 33, AOSP)
+        run: >-
+          ./gradlew :shippedsmoke:pixel7aApi33Setup
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Shipped-config smoke (release APK, no test-support keeps)
+        run: |
+          set -o pipefail
+          ./gradlew :shippedsmoke:pixel7aApi33ReleaseAndroidTest \
+            -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect \
+            2>&1 | tee gradle-shipped-smoke.log
+
+      - name: Assert tests actually ran
+        run: bash scripts/ci_assert_tests_ran.sh 1 shippedsmoke
+
+      - name: Annotate Gradle output tail on failure
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          # This lane can fail before any JUnit XML exists (R8, install,
+          # device errors); surface the tail as a public annotation.
+          import os
+          tail = []
+          if os.path.exists('gradle-shipped-smoke.log'):
+              with open('gradle-shipped-smoke.log', errors='replace') as fh:
+                  tail = fh.read().splitlines()[-60:]
+          if tail:
+              text = '%0A'.join(line.replace('%', '%25') for line in tail)
+              print(f"::error title=shipped-smoke-gradle-tail::{text}")
+          PY
+
+      - name: Annotate failing tests (public check-run annotations)
+        if: failure()
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          for f in glob.glob('shippedsmoke/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              try: root = ET.parse(f).getroot()
+              except Exception: continue
+              for case in root.iter('testcase'):
+                  for kind in ('failure', 'error'):
+                      for node in case.findall(kind):
+                          msg = (node.get('message') or '')
+                          name = f"{case.get('classname')}#{case.get('name')}"
+                          text = (node.text or '')[:600].replace('%', '%25').replace('\r', '').replace('\n', '%0A')
+                          print(f"::error title={name}::{text or msg}")
+          PY
+
+      - name: Surface app logcat (success or failure)
+        if: always()
+        run: bash scripts/ci_surface_logcat.sh shippedsmoke/build/outputs/androidTest-results
+
+      - name: Upload shipped smoke results
+        if: always()
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: shipped-smoke-results
+          path: shippedsmoke/build/outputs/androidTest-results/
           if-no-files-found: ignore
 
   # Tier 3: full E2E. Hermetic and live passes run as SEPARATE invocations so

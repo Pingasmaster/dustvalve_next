@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Package visibility: without this, getLaunchIntentForPackage returns
+         null on API 30+ and the smoke cannot start the app under test. -->
+    <queries>
+        <package android:name="com.dustvalve.next.android" />
+    </queries>
+
+</manifest>

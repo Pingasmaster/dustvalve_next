@@ -15,6 +15,7 @@ import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.testing.Flows.clickTab
 import com.dustvalve.next.android.testing.Flows.waitForTag
+import com.dustvalve.next.android.testing.ProviderStateRule
 import com.dustvalve.next.android.testing.QuarantineRule
 import com.dustvalve.next.android.ui.TestTags
 import com.google.common.truth.Truth.assertThat
@@ -41,7 +42,15 @@ class SettingsPersistenceE2eTest {
     @get:Rule(order = 1)
     val quarantine = QuarantineRule()
 
+    /**
+     * Bandcamp MUST start disabled: enablingBandcamp_addsTab taps the switch
+     * to turn it on, so an already-enabled switch would be toggled OFF and
+     * the tab under assertion would disappear. See [ProviderStateRule].
+     */
     @get:Rule(order = 2)
+    val providerState = ProviderStateRule(bandcamp = false, youtube = false)
+
+    @get:Rule(order = 3)
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     private fun settings(): SettingsDataStore = SettingsDataStore(InstrumentationRegistry.getInstrumentation().targetContext.applicationContext)

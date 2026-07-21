@@ -9,8 +9,8 @@ import androidx.test.platform.app.InstrumentationRegistry
  * Seeds the device MediaStore with the small MP3 tones bundled in
  * androidTest/assets/audio. Instrumentation shares the app UID, so the
  * inserts are app-owned and visible to MediaStoreScanner after the app's
- * own enable + scan flow runs. Idempotent; [cleanup] deletes by the
- * DISPLAY_NAME prefix.
+ * own enable + scan flow runs. Idempotent: seeding repeatedly is safe and
+ * keeps the SAME rows, which is the point - see [cleanup].
  */
 object LocalMusicSeeder {
 
@@ -51,6 +51,25 @@ object LocalMusicSeeder {
         return seeded
     }
 
+    /**
+     * Deletes the seeded rows. NOT for use between tests - do not put this in
+     * an @After.
+     *
+     * MediaStore hands out a NEW _ID on every insert, but the app's Room
+     * library persists for the whole install and keeps the
+     * content://media/external/audio/media/<id> URIs from its last scan.
+     * Deleting and re-seeding between tests therefore leaves the app holding
+     * URIs that no longer resolve, and the next playback dies with
+     * "FileNotFoundException: No item at content://..." - which surfaces as a
+     * position stuck at 0:00, i.e. indistinguishable from the exact playback
+     * regression this suite exists to catch. That cost a full CI
+     * investigation once; it was an @After on three test classes.
+     *
+     * Seeding is idempotent, so stability is free: seed in @Before, never
+     * delete mid-run. CI gets a fresh GMD emulator each time, and on a
+     * persistent local device leftover tones are harmless. Kept only for
+     * manually resetting a dev device.
+     */
     fun cleanup() {
         val resolver = InstrumentationRegistry.getInstrumentation().targetContext.contentResolver
         val collection = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
