@@ -12,7 +12,9 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.util.Log
 import androidx.core.app.ActivityCompat
+import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.graphics.drawable.IconCompat
 import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
@@ -36,20 +38,29 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Owns the single user-visible "downloads in progress" notification -
- * always rendered as the Android 16 QPR1+ status-bar **Live Update** chip
- * via `Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
- * `setShortCriticalText(...)`. The app's `minSdk = 36` (Android 16 base);
- * the Live Update APIs technically require API 36.1 (QPR1) - we accept
- * that residual risk pre-QPR1, see `@SuppressLint("NewApi")` on
- * `buildNotification`. minSdk will rise to 37 (Android 17) once Robolectric
- * supports it for unit tests.
+ * Owns the single user-visible "downloads in progress" notification.
+ *
+ * Two rendering pipelines, selected once via [liveUpdateCapable]:
+ * - Android 16 QPR1+ (API 36.1): the status-bar **Live Update** chip via
+ *   `Notification.ProgressStyle` + `setRequestPromotedOngoing(true)` +
+ *   `setShortCriticalText(...)`.
+ * - Everything below (this branch's minSdk is 26): a classic
+ *   NotificationCompat determinate-progress card. This path MUST exist -
+ *   ProgressStyle is an API 36 class and the promoted-ongoing setters are
+ *   API 36.1, and calling them below that crashed every download in
+ *   v0.5.0-v0.5.2 (NoClassDefFoundError inside DownloadService's
+ *   startForeground).
  *
  * The center supports nested batches (e.g. an artist download internally
  * wraps album downloads); the outer-most batch wins so the chip stays on
  * the artist label rather than flickering between albums. Individual
  * `downloadTrack` calls outside any batch show a single-track notification.
  */
+// TooManyFunctions: the count comes from carrying BOTH notification
+// pipelines (Live Update platform builders + the pre-API-36 compat
+// builders); splitting them into separate classes would spread one
+// notification's state over two files for a style metric.
+@Suppress("TooManyFunctions")
 @OptIn(FlowPreview::class)
 @Singleton
 class DownloadNotificationCenter @Inject constructor(
@@ -203,29 +214,67 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    // Legacy branch: the whole pipeline renders Notification.ProgressStyle,
-    // an API 36 class, so it is gated at BAKLAVA - below Android 16 legacy
-    // shows no download-progress notification at all (downloads themselves
-    // are unaffected). This also keeps the API 33 POST_NOTIFICATIONS check
-    // behind an SDK gate.
-    private fun hasPostPermission(): Boolean = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.BAKLAVA &&
+    // POST_NOTIFICATIONS only exists from API 33; below that, respect the
+    // system-level per-app notifications toggle. (The previous legacy gate
+    // returned false below Android 16, which suppressed all download-progress
+    // notifications on the very devices this branch serves.)
+    private fun hasPostPermission(): Boolean = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
         ActivityCompat.checkSelfPermission(
             context,
             Manifest.permission.POST_NOTIFICATIONS,
         ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        notificationManager.areNotificationsEnabled()
+    }
 
-    // setRequestPromotedOngoing + setShortCriticalText are API 36.1 (Android
-    // 16 QPR1) APIs. minSdk is 36 (Android 16 base) until Robolectric 4.17+
-    // supports API 37 for tests. We accept the residual risk that devices on
-    // pre-QPR1 Android 16 will hit a NoSuchMethodError; QPR1 ships within the
-    // first ~3 months of the OS release.
-    @android.annotation.SuppressLint("NewApi")
+    /**
+     * True when the Android 16 QPR1+ Live Update pipeline
+     * (Notification.ProgressStyle + setShortCriticalText +
+     * setRequestPromotedOngoing) is safe to call. ProgressStyle is an API 36
+     * class; the two promoted-ongoing calls are API 36.1 (BAKLAVA_1). Below
+     * that - i.e. on virtually every device this legacy branch serves - the
+     * NotificationCompat builders are used instead.
+     *
+     * v0.5.0-v0.5.2 REGRESSION: this gate did not exist. The foreground
+     * notification handed to DownloadService ALWAYS went through
+     * ProgressStyle, so starting any download instantly crashed the app with
+     * NoClassDefFoundError on Android 8-15 (NoSuchMethodError on Android
+     * 16.0). The SDK_INT_FULL read is wrapped defensively: if the field is
+     * missing at runtime the answer is "not capable", never a crash.
+     */
+    private val liveUpdateCapable: Boolean by lazy { computeLiveUpdateCapable() }
+
+    @Suppress("TooGenericExceptionCaught", "SwallowedException")
+    private fun computeLiveUpdateCapable(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.BAKLAVA) return false
+        return try {
+            android.os.Build.VERSION.SDK_INT_FULL >= android.os.Build.VERSION_CODES_FULL.BAKLAVA_1
+        } catch (e: Throwable) {
+            false
+        }
+    }
+
+    /** Everything both notification pipelines need to render progress. */
+    private data class ProgressContent(
+        val title: String,
+        val text: String,
+        val progressMax: Int,
+        val progressCurrent: Int,
+        val chipText: String,
+    )
+
     private fun buildNotification(snapshot: State): Notification? {
-        // While paused the batch has unwound (its coroutine was cancelled), so
-        // activeTracks/batchStack are empty - show a static "paused" card with a
-        // Resume action instead of falling through to the empty case.
         if (snapshot.paused) return buildPausedNotification()
+        val content = progressContent(snapshot) ?: return null
+        return if (liveUpdateCapable) {
+            buildLiveUpdateNotification(content)
+        } else {
+            buildCompatNotification(content)
+        }
+    }
 
+    @Suppress("CyclomaticComplexMethod")
+    private fun progressContent(snapshot: State): ProgressContent? {
         val outer = snapshot.batchStack.firstOrNull()
         val currentTrack = snapshot.activeTracks.values.firstOrNull()
 
@@ -290,27 +339,64 @@ class DownloadNotificationCenter @Inject constructor(
             }
         }
 
+        return ProgressContent(title, text, progressMax, progressCurrent, chipText)
+    }
+
+    /** Android 16 QPR1+ Live Update chip. Only reachable when [liveUpdateCapable]. */
+    @android.annotation.SuppressLint("NewApi")
+    private fun buildLiveUpdateNotification(content: ProgressContent): Notification {
         val style = Notification.ProgressStyle()
-            .setProgress(progressCurrent)
-            .setProgressSegments(listOf(Notification.ProgressStyle.Segment(progressMax)))
+            .setProgress(content.progressCurrent)
+            .setProgressSegments(listOf(Notification.ProgressStyle.Segment(content.progressMax)))
         val builder = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_download)
-            .setContentTitle(title)
+            .setContentTitle(content.title)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setStyle(style)
-            .setShortCriticalText(chipText)
+            .setShortCriticalText(content.chipText)
             .setRequestPromotedOngoing(true)
             .setContentIntent(contentIntent())
-        if (text.isNotEmpty()) builder.setContentText(text)
+        if (content.text.isNotEmpty()) builder.setContentText(content.text)
         builder.addAction(pauseResumeAction(isPaused = false))
         builder.addAction(cancelAction())
         return builder.build()
     }
 
+    /** Classic determinate-progress notification for API 26..35 (and 36.0). */
+    private fun buildCompatNotification(content: ProgressContent): Notification {
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_download)
+            .setContentTitle(content.title)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setProgress(content.progressMax, content.progressCurrent, false)
+            .setContentIntent(contentIntent())
+        if (content.text.isNotEmpty()) builder.setContentText(content.text)
+        builder.addAction(compatPauseResumeAction(isPaused = false))
+        builder.addAction(compatCancelAction())
+        return builder.build()
+    }
+
     /** Static "downloads paused" card with Resume + Cancel actions. */
-    @android.annotation.SuppressLint("NewApi")
     private fun buildPausedNotification(): Notification {
+        if (!liveUpdateCapable) {
+            return NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_download)
+                .setContentTitle(context.getString(R.string.notification_download_paused))
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setProgress(UNIT_PER_TRACK, 0, false)
+                .setContentIntent(contentIntent())
+                .addAction(compatPauseResumeAction(isPaused = true))
+                .addAction(compatCancelAction())
+                .build()
+        }
+        return buildLiveUpdatePausedNotification()
+    }
+
+    @android.annotation.SuppressLint("NewApi")
+    private fun buildLiveUpdatePausedNotification(): Notification {
         val style = Notification.ProgressStyle()
             .setProgress(0)
             .setProgressSegments(listOf(Notification.ProgressStyle.Segment(UNIT_PER_TRACK)))
@@ -332,12 +418,31 @@ class DownloadNotificationCenter @Inject constructor(
      * Notification handed to [DownloadService.startForeground]. The service may
      * call this before any track has started (state still empty), so fall back
      * to a "preparing" placeholder rather than returning null.
+     *
+     * This is the exact call that crashed every download in v0.5.0-v0.5.2 on
+     * devices below Android 16 QPR1: it unconditionally built a
+     * Notification.ProgressStyle (API 36) with 36.1-only promoted-ongoing
+     * calls. Both paths are now gated on [liveUpdateCapable].
      */
-    @android.annotation.SuppressLint("NewApi")
     fun currentForegroundNotification(): Notification = buildNotification(state.value) ?: buildPlaceholderNotification()
 
-    @android.annotation.SuppressLint("NewApi")
     private fun buildPlaceholderNotification(): Notification {
+        if (!liveUpdateCapable) {
+            return NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_download)
+                .setContentTitle(context.getString(R.string.notification_download_preparing))
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setProgress(UNIT_PER_TRACK, 0, true)
+                .setContentIntent(contentIntent())
+                .addAction(compatCancelAction())
+                .build()
+        }
+        return buildLiveUpdatePlaceholderNotification()
+    }
+
+    @android.annotation.SuppressLint("NewApi")
+    private fun buildLiveUpdatePlaceholderNotification(): Notification {
         val style = Notification.ProgressStyle()
             .setProgress(0)
             .setProgressSegments(listOf(Notification.ProgressStyle.Segment(UNIT_PER_TRACK)))
@@ -395,10 +500,47 @@ class DownloadNotificationCenter @Inject constructor(
         ).build()
     }
 
+    private fun compatPauseResumeAction(isPaused: Boolean): NotificationCompat.Action {
+        val intent = PendingIntent.getBroadcast(
+            context,
+            DownloadActionReceiver.RC_PAUSE_RESUME,
+            Intent(context, DownloadActionReceiver::class.java)
+                .setAction(DownloadActionReceiver.ACTION_PAUSE_RESUME),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val iconRes = if (isPaused) R.drawable.ic_play_arrow else R.drawable.ic_pause
+        val label = context.getString(
+            if (isPaused) R.string.notification_download_resume else R.string.notification_download_pause,
+        )
+        return NotificationCompat.Action.Builder(
+            IconCompat.createWithResource(context, iconRes),
+            label,
+            intent,
+        ).build()
+    }
+
+    private fun compatCancelAction(): NotificationCompat.Action {
+        val intent = PendingIntent.getBroadcast(
+            context,
+            DownloadActionReceiver.RC_CANCEL,
+            Intent(context, DownloadActionReceiver::class.java)
+                .setAction(DownloadActionReceiver.ACTION_CANCEL),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        return NotificationCompat.Action.Builder(
+            IconCompat.createWithResource(context, R.drawable.ic_close),
+            context.getString(R.string.notification_download_cancel),
+            intent,
+        ).build()
+    }
+
     @SuppressLint("NewApi")
     @Suppress("TooGenericExceptionCaught")
     private fun logPromotionDiagnostics(built: Notification) {
         if (!BuildConfig.DEBUG) return
+        // hasPromotableCharacteristics / canPostPromotedNotifications are
+        // API 36.1 - never touch them on the compat path.
+        if (!liveUpdateCapable) return
         try {
             val promotable = built.hasPromotableCharacteristics()
             val canPost = platformNotificationManager.canPostPromotedNotifications()

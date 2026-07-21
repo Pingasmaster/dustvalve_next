@@ -9,7 +9,6 @@ import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -23,6 +22,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.player.MediaSessionConstants
 import com.dustvalve.next.android.player.PlaybackManager
@@ -66,7 +66,15 @@ object PlayerModule {
     @OptIn(UnstableApi::class)
     @Provides
     @Singleton
-    fun provideExoPlayer(@ApplicationContext context: Context, okHttpClient: OkHttpClient, simpleCache: SimpleCache): ExoPlayer {
+    fun provideExoPlayer(
+        @ApplicationContext context: Context,
+        // MediaHttp: no callTimeout. The base client's 30s callTimeout caps the
+        // whole call including body consumption, and ExoPlayer holds a stream's
+        // response body open for the life of the track - the base client
+        // force-aborted every streamed track ~30s in (v0.5.0 regression).
+        @MediaHttp okHttpClient: OkHttpClient,
+        simpleCache: SimpleCache,
+    ): ExoPlayer {
         // ExoPlayer.Builder.build() must run on the main thread.
         // Use Handler.post + CountDownLatch instead of runBlocking(Dispatchers.Main)
         // to avoid potential deadlock with the coroutine dispatcher.
@@ -133,19 +141,19 @@ object PlayerModule {
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
 
-        // Stream compressed audio straight to the DSP, bypassing the CPU.
-        // Speed change must stay off for offload to engage; the speed-control
-        // path re-enables CPU decoding dynamically if the user picks != 1.0x.
-        val offloadPrefs = AudioOffloadPreferences.Builder()
-            .setAudioOffloadMode(AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
-            .setIsGaplessSupportRequired(true)
-            .setIsSpeedChangeSupportRequired(false)
-            .build()
-        player.trackSelectionParameters = player.trackSelectionParameters
-            .buildUpon()
-            .setAudioOffloadPreferences(offloadPrefs)
-            .build()
-
+        // Audio offload is DISABLED on the legacy branch (Android 8-16).
+        //
+        // v0.5.0 enabled AUDIO_OFFLOAD_MODE_ENABLED with gapless-required
+        // (perf: stream compressed audio straight to the DSP). On the wide
+        // range of OEM HALs this branch targets, offloaded AudioTrack is a
+        // well-known source of silent playback failure: no audio and/or a
+        // playback position frozen at 0:00, with no PlaybackException raised -
+        // exactly the "stuck on 0:00, play does nothing" reports against
+        // v0.5.x. The JVM test tier cannot see this (TestExoPlayerBuilder
+        // never touches the device audio sink), and emulators fall back to
+        // the PCM path, so only real devices regressed. Battery savings are
+        // not worth broken playback; if offload returns here it must be an
+        // opt-in setting with a same-screen kill switch.
         return player
     }
 

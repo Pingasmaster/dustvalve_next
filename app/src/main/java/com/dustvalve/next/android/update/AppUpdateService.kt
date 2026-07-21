@@ -6,6 +6,7 @@ import androidx.core.content.FileProvider
 import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
@@ -38,7 +39,9 @@ import kotlin.coroutines.coroutineContext
  */
 @Singleton
 open class AppUpdateService @Inject constructor(
-    private val client: OkHttpClient,
+    // MediaHttp: no callTimeout - the APK download outlives the base client's
+    // 30s whole-call cap on any real-world connection.
+    @param:MediaHttp private val client: OkHttpClient,
     @param:ApplicationContext private val context: Context,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
