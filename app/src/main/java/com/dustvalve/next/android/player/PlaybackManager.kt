@@ -67,6 +67,19 @@ class PlaybackManager @Inject constructor(
     private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
     val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
 
+    /**
+     * Last playback error, or null. Before this existed, onPlayerError only
+     * logged: the UI showed the track at 0:00 with a play button that did
+     * nothing and the user had no idea anything failed. The ViewModel surfaces
+     * this as a snackbar and clears it via [clearPlaybackError].
+     */
+    private val _playbackError = MutableStateFlow<PlaybackException?>(null)
+    val playbackError: StateFlow<PlaybackException?> = _playbackError.asStateFlow()
+
+    fun clearPlaybackError() {
+        _playbackError.value = null
+    }
+
     private var positionUpdateJob: Job? = null
 
     /** Tracks whether a seek is in progress to avoid position update overwrite */
@@ -126,6 +139,7 @@ class PlaybackManager @Inject constructor(
 
         override fun onPlayerError(error: PlaybackException) {
             android.util.Log.e("PlaybackManager", "Player error: ${error.errorCodeName}", error)
+            _playbackError.value = error
             _isPlaying.value = false
             _playbackState.value = Player.STATE_IDLE
             _duration.value = 0L
@@ -205,14 +219,35 @@ class PlaybackManager @Inject constructor(
         val url = track.streamUrl
         if (url.isNullOrBlank()) {
             android.util.Log.w("PlaybackManager", "Cannot play track '${track.title}': streamUrl is null")
+            // One unresolvable track (region-blocked, deleted, failed
+            // pre-resolution) must not silently kill the rest of the queue:
+            // auto-advance to the next playable track, bounded by queue size
+            // so an all-unplayable queue can't loop forever.
+            var advanced = 0
+            val queueSize = queueManager.queue.value.size
+            while (advanced < queueSize) {
+                val next = queueManager.next() ?: break
+                advanced++
+                if (!next.streamUrl.isNullOrBlank()) {
+                    playTrack(next)
+                    return
+                }
+            }
             _playbackState.value = Player.STATE_IDLE
             _isPlaying.value = false
+            _playbackError.value = PlaybackException(
+                "No playable stream URL for '${track.title}'",
+                null,
+                PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+            )
             return
         }
         ensureServiceStarted()
 
         // Reset seek flag so position updates resume immediately for the new track
         seekInProgress = false
+        // A new track supersedes any previous failure.
+        _playbackError.value = null
 
         // Include queue position info in metadata for notification display
         val currentIndex = queueManager.currentIndex.value
@@ -256,6 +291,14 @@ class PlaybackManager @Inject constructor(
 
     fun play() {
         if (released) return
+        // After a PlaybackException ExoPlayer sits in STATE_IDLE and ignores
+        // play() until prepare() is called again. Without this, the play
+        // button silently did nothing forever after any error. prepare()
+        // keeps the current media item and position, so this resumes where
+        // the failure happened.
+        if (player.playbackState == Player.STATE_IDLE && player.mediaItemCount > 0) {
+            player.prepare()
+        }
         if (player.playbackState == Player.STATE_ENDED) {
             // Respect repeat mode when restarting after playback ended
             when (_repeatMode.value) {
@@ -301,6 +344,7 @@ class PlaybackManager @Inject constructor(
         if (released) return
         player.stop()
         player.clearMediaItems()
+        _playbackError.value = null
         _isPlaying.value = false
         _currentPosition.value = 0L
         _duration.value = 0L

@@ -23,6 +23,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.player.MediaSessionConstants
 import com.dustvalve.next.android.player.PlaybackManager
@@ -66,7 +67,15 @@ object PlayerModule {
     @OptIn(UnstableApi::class)
     @Provides
     @Singleton
-    fun provideExoPlayer(@ApplicationContext context: Context, okHttpClient: OkHttpClient, simpleCache: SimpleCache): ExoPlayer {
+    fun provideExoPlayer(
+        @ApplicationContext context: Context,
+        // MediaHttp: no callTimeout. The base client's 30s callTimeout caps the
+        // whole call including body consumption, and ExoPlayer holds a stream's
+        // response body open for the life of the track - the base client
+        // force-aborted every streamed track ~30s in (v0.5.0 regression).
+        @MediaHttp okHttpClient: OkHttpClient,
+        simpleCache: SimpleCache,
+    ): ExoPlayer {
         // ExoPlayer.Builder.build() must run on the main thread.
         // Use Handler.post + CountDownLatch instead of runBlocking(Dispatchers.Main)
         // to avoid potential deadlock with the coroutine dispatcher.
@@ -136,6 +145,15 @@ object PlayerModule {
         // Stream compressed audio straight to the DSP, bypassing the CPU.
         // Speed change must stay off for offload to engage; the speed-control
         // path re-enables CPU decoding dynamically if the user picks != 1.0x.
+        //
+        // KNOWN RISK (kept on this Android 17-only branch, REMOVED on
+        // legacy-android8): offloaded AudioTrack is a historical source of
+        // silent on-device playback failure - no audio, position frozen at
+        // 0:00, no PlaybackException - on buggy OEM HALs, and neither the JVM
+        // test tier (TestExoPlayerBuilder never touches the device sink) nor
+        // emulators (no offload support, PCM fallback) can see it. The v0.5.x
+        // "stuck at 0:00" reports on legacy devices trace here. If Android 17
+        // devices ever report the same signature, delete this block first.
         val offloadPrefs = AudioOffloadPreferences.Builder()
             .setAudioOffloadMode(AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
             .setIsGaplessSupportRequired(true)

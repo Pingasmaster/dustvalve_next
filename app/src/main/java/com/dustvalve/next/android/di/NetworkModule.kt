@@ -2,6 +2,7 @@ package com.dustvalve.next.android.di
 
 import android.content.Context
 import com.dustvalve.next.android.data.remote.CookieStore
+import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -78,6 +79,25 @@ object NetworkModule {
             .readTimeout(READ_TIMEOUT)
             .build()
     }
+
+    /**
+     * Media-transfer client: shares the base client's pool, cache, cookies and
+     * interceptors (newBuilder copies them) but drops the 30s callTimeout.
+     *
+     * callTimeout caps the WHOLE call, from newCall() until the response body
+     * is closed. ExoPlayer's OkHttpDataSource keeps the body open for the life
+     * of a progressive stream and reads it as the buffer drains, so with the
+     * base client EVERY streamed track was force-aborted ~30s in (v0.5.0
+     * regression); likewise any track/APK download outliving 30s. connect and
+     * read timeouts remain: they bound inactivity, which is the correct guard
+     * for stalled transfers. Duration.ZERO = no call timeout (OkHttp semantics).
+     */
+    @Provides
+    @Singleton
+    @MediaHttp
+    fun provideMediaOkHttpClient(base: OkHttpClient): OkHttpClient = base.newBuilder()
+        .callTimeout(Duration.ZERO)
+        .build()
 
     /**
      * Sets the User-Agent only when the caller hasn't supplied one

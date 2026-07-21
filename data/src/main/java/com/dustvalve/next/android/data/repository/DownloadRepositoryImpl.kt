@@ -17,6 +17,7 @@ import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.data.storage.folder.DedicatedFolderPaths
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.PurchaseInfo
@@ -49,7 +50,9 @@ class DownloadRepositoryImpl @Inject constructor(
     private val downloadDao: DownloadDao,
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao,
-    private val client: OkHttpClient,
+    // MediaHttp: no callTimeout - a track download on a slow connection
+    // legitimately outlives the base client's 30s whole-call cap.
+    @param:MediaHttp private val client: OkHttpClient,
     private val storageTracker: StorageTracker,
     private val downloadScraper: DustvalveDownloadScraper,
     private val settingsDataStore: SettingsDataStore,
