@@ -6,7 +6,8 @@
  *
  * Run from the project root with:
  *
- *   ./gradlew :macrobenchmark:pixel7aApi37AndroidTest
+ *   ./gradlew :macrobenchmark:pixel7aApi37ReleaseAndroidTest \
+ *     -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
  */
 package com.dustvalve.next.android.benchmark
 

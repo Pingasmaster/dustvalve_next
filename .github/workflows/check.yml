@@ -76,6 +76,16 @@ jobs:
       - name: Unit tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Compile device-test harnesses (benchmark + shippedsmoke)
+        # These com.android.test modules only run on GMD/CI-KVM jobs, so
+        # nothing else in this job compiles them; without this step a change
+        # that breaks :macrobenchmark / :baselineprofile / :shippedsmoke
+        # rots undetected until the next (rare) benchmark or shipped-smoke
+        # run. Assemble is cheap here because the app itself was just built.
+        run: >-
+          ./gradlew :macrobenchmark:assembleRelease
+          :baselineprofile:assembleRelease :shippedsmoke:assembleRelease
+
       - name: Locale screenshot verification (Roborazzi)
         run: ./gradlew :app:verifyRoborazziDebug
 

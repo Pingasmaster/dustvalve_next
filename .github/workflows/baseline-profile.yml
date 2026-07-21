@@ -7,6 +7,13 @@ on:
   push:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      run_macrobenchmarks:
+        description: >-
+          Also run :macrobenchmark (startup + scroll, with and without the
+          baseline profile) after regeneration and upload the JSON results.
+        type: boolean
+        default: false
 
 # One run per ref: a newer push supersedes the in-flight run for the same
 # branch, so stale commits stop burning runner minutes.
@@ -62,10 +69,39 @@ jobs:
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
 
       - name: Generate Baseline + Startup Profile
+        # Runs the BaselineProfileGenerator against :app's RELEASE variant on
+        # the managed device. :app:assembleRelease alone does NOT do this -
+        # the androidx.baselineprofile plugin (which would hook generation
+        # into the release build) cannot be applied on this AGP, so the
+        # generator test must be invoked explicitly.
         run: >-
-          ./gradlew :app:assembleRelease
+          ./gradlew :baselineprofile:pixel7aApi37ReleaseAndroidTest
           -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
           -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Assert the generator actually ran
+        # A filter/runner mismatch exits 0 with 'Starting 0 tests'; that must
+        # fail this job, not silently open no PR.
+        run: bash scripts/ci_assert_tests_ran.sh 1 baselineprofile
+
+      - name: Copy generated profiles into :app source tree
+        # BaselineProfileRule pulls the device-generated profiles into the
+        # module's managed-device additional-output directory. AGP packages
+        # app/src/release/baseline-prof.txt into the release APK as
+        # assets/dexopt/baseline.prof (installed on first run by
+        # androidx.profileinstaller); startup-prof.txt sits alongside it for
+        # dex-layout optimization.
+        run: |
+          set -euo pipefail
+          out=$(find baselineprofile/build/outputs -type d -name '*additional*output*' | head -1)
+          test -n "$out" || { echo "::error::no additional-output dir produced"; exit 1; }
+          baseline=$(find "$out" -name '*baseline-prof*.txt' | head -1)
+          startup=$(find "$out" -name '*startup-prof*.txt' | head -1)
+          test -s "$baseline" || { echo "::error::no non-empty baseline profile generated"; exit 1; }
+          mkdir -p app/src/release
+          cp "$baseline" app/src/release/baseline-prof.txt
+          if [ -s "$startup" ]; then cp "$startup" app/src/release/startup-prof.txt; fi
+          wc -l app/src/release/baseline-prof.txt app/src/release/startup-prof.txt 2>/dev/null || true
 
       - name: Annotate failures (public check-run annotations)
         if: failure()
@@ -94,6 +130,32 @@ jobs:
             app/build/outputs/androidTest-results/
           if-no-files-found: ignore
 
+      - name: Run macrobenchmarks (startup + scroll)
+        # Opt-in via workflow_dispatch: measurement doubles the job's device
+        # time and its numbers are advisory on an emulator (hence the
+        # EMULATOR suppression), so it is not part of every master push.
+        # Runs AFTER the profile copy so coldBaselineProfile / scroll
+        # BaselineProfile (BaselineProfileMode.Require) measure an APK that
+        # actually carries the freshly generated profile.
+        if: github.event_name == 'workflow_dispatch' && inputs.run_macrobenchmarks
+        run: >-
+          ./gradlew :macrobenchmark:pixel7aApi37ReleaseAndroidTest
+          -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+
+      - name: Assert macrobenchmarks actually ran
+        if: github.event_name == 'workflow_dispatch' && inputs.run_macrobenchmarks
+        run: bash scripts/ci_assert_tests_ran.sh 4 macrobenchmark
+
+      - name: Upload macrobenchmark results
+        if: github.event_name == 'workflow_dispatch' && inputs.run_macrobenchmarks
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: macrobenchmark-results
+          path: |
+            macrobenchmark/build/outputs/androidTest-results/
+          if-no-files-found: warn
+
       - name: Open PR with regenerated profiles
         uses: peter-evans/create-pull-request@v8.1.1
         with:
@@ -102,7 +164,7 @@ jobs:
           commit-message: "chore(baseline-profile): regenerate from API 37 / Pixel 7a"
           body: |
             Automated regeneration via the baseline-profile CI workflow.
-            See app/src/release/generated/baselineProfiles/ for the diff.
+            See app/src/release/ for the diff.
           add-paths: |
-            app/src/release/generated/baselineProfiles/baseline-prof.txt
-            app/src/release/generated/baselineProfiles/startup-prof.txt
+            app/src/release/baseline-prof.txt
+            app/src/release/startup-prof.txt

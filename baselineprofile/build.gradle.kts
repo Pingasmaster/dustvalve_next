@@ -12,6 +12,32 @@ android {
 
     targetProjectPath = ":app"
 
+    // THE load-bearing setting (same as :shippedsmoke and :macrobenchmark).
+    // Without it AGP points android:targetPackage at the APP package, so the
+    // instrumentation runs INSIDE the process being profiled and
+    // benchmark-macro aborts with NOT-SELF-INSTRUMENTING before collecting
+    // anything. Self-instrumenting runs this APK in its OWN process, driving
+    // the app externally through UiAutomator - required for profile
+    // collection.
+    experimentalProperties["android.experimental.self-instrumenting"] = true
+
+    defaultConfig {
+        minSdk = 37
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Profiles must be collected from the NON-DEBUGGABLE release variant
+    // (what ships); variants are matched to the target project BY NAME, so
+    // declare a release build type. Debug-signed for the same reason as
+    // :shippedsmoke: :app's release signingConfig resolves to the
+    // materialized debug keystore, and instrumenting another package
+    // requires matching certificates.
+    buildTypes {
+        create("release") {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
     testOptions.managedDevices.localDevices {
         // apiLevel must be >= :app's minSdk (37); API 33 cannot install the
         // APK (INSTALL_FAILED_OLDER_SDK). Only 16 KB page-size Google APIs

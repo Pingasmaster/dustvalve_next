@@ -3,9 +3,18 @@
  *
  * Collects the critical-user-journey (CUJ) hot paths so the ART ahead-of-time
  * compiler can pre-compile them and we get a faster cold start and smoother
- * first-time use of the app. Profile is regenerated automatically as part of
- * the release build (`baselineProfile { automaticGenerationDuringBuild = true }`)
- * and committed via the `.github/workflows/baseline-profile.yml` job.
+ * first-time use of the app.
+ *
+ * The androidx.baselineprofile Gradle plugin cannot be applied on this
+ * project's AGP (it hard-rejects AGP > 9.0.1), so generation is manual:
+ * the `.github/workflows/baseline-profile.yml` job runs
+ *
+ *   ./gradlew :baselineprofile:pixel7aApi37ReleaseAndroidTest \
+ *     -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
+ *
+ * then copies the pulled baseline-prof.txt / startup-prof.txt into
+ * app/src/release/ (AGP packages src/<sourceSet>/baseline-prof.txt into the
+ * APK as assets/dexopt/baseline.prof) and opens a PR with the diff.
  */
 package com.dustvalve.next.android.benchmark
 
