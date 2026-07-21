@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -405,6 +407,27 @@ private fun MainContent(
         playerViewModel.uiState.map { it.isMiniPlayerVisible }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
 
+    // Player snackbars (play-next / added-to-playlist confirmations, playback
+    // errors) were historically rendered ONLY inside FullPlayer, so a message
+    // raised from a browse screen while the full player was closed showed
+    // nothing - and then popped up stale the next time the player opened.
+    // This host renders them globally whenever the full player is NOT on
+    // screen; FullPlayer keeps its own host for anchoring above its controls.
+    val globalSnackbarHostState = remember { SnackbarHostState() }
+    val playerSnackbarMessage by remember {
+        playerViewModel.uiState.map { it.snackbarMessage }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = null)
+    val globalSnackbarText = if (!showFullPlayer) playerSnackbarMessage?.asString() else null
+    LaunchedEffect(globalSnackbarText) {
+        globalSnackbarText?.let { message ->
+            try {
+                globalSnackbarHostState.showSnackbar(message)
+            } finally {
+                playerViewModel.clearSnackbar()
+            }
+        }
+    }
+
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
@@ -635,6 +658,13 @@ private fun MainContent(
                     }
                 }
             }
+
+            SnackbarHost(
+                hostState = globalSnackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = with(density) { bottomBarHeightPx.toDp() } + 8.dp),
+            )
         }
     }
 }

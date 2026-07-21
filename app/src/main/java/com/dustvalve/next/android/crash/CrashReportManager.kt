@@ -129,7 +129,12 @@ class CrashReportManager @Inject constructor(
     fun openGitHubIssue(activityContext: Context) {
         val pending = (_state.value as? PromptState.Pending) ?: return
         val view = Intent(Intent.ACTION_VIEW, buildIssueUrl(pending.report.logText).toUri())
-        activityContext.startActivity(view)
+        try {
+            activityContext.startActivity(view)
+        } catch (_: android.content.ActivityNotFoundException) {
+            // No browser/URL handler on this device. The one button meant to
+            // REPORT a crash must never itself crash the app.
+        }
     }
 
     // ---------------------------------------------------------------- impl

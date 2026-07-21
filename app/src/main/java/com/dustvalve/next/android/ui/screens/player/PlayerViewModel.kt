@@ -137,7 +137,27 @@ class PlayerViewModel @Inject constructor(
         collectPlaylists()
         collectUserPlaylistTrackIds()
         collectFavoriteTrackIds()
+        collectPlaybackErrors()
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, Handler(Looper.getMainLooper()))
+    }
+
+    // Surface player errors as a snackbar. Historically onPlayerError only
+    // logged to logcat, so a failed stream/file looked like "track shown,
+    // stuck at 0:00, play button dead" with zero feedback.
+    private fun collectPlaybackErrors() {
+        viewModelScope.launch {
+            playbackManager.playbackError.collect { error ->
+                if (error != null) {
+                    _extraState.update {
+                        it.copy(
+                            snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
+                            isSnackbarError = true,
+                        )
+                    }
+                    playbackManager.clearPlaybackError()
+                }
+            }
+        }
     }
 
     // Reactively patch the queue's per-track isFavorite from the DB so
@@ -191,9 +211,16 @@ class PlayerViewModel @Inject constructor(
                 }
                 return track.copy(streamUrl = ytDownloadInfo.streamUri)
             }
-            // Resolve stream URL from YouTube
+            // Resolve stream URL from YouTube. Belt-and-braces: if the track
+            // arrived without a watch URL (older cached entries carried
+            // streamUrl = null), reconstruct it from the yt_<videoId> id the
+            // same way DownloadRepositoryImpl does, instead of silently
+            // bailing with an unplayable track.
+            val watchUrl = track.streamUrl
+                ?: track.id.removePrefix("yt_").takeIf { it.isNotBlank() && it != track.id }
+                    ?.let { "https://www.youtube.com/watch?v=$it" }
             return try {
-                val streamUrl = youtubeRepository.getStreamUrl(track.streamUrl ?: return track)
+                val streamUrl = youtubeRepository.getStreamUrl(watchUrl ?: return track.copy(streamUrl = null))
                 if (updateState) {
                     _extraState.update {
                         it.copy(currentPlaybackFormat = null, currentSourcePath = null)
@@ -202,11 +229,17 @@ class PlayerViewModel @Inject constructor(
                 track.copy(streamUrl = streamUrl)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _extraState.update {
-                    it.copy(
-                        snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
-                        isSnackbarError = true,
-                    )
+                // Only surface the failure when resolving the track the user
+                // asked to play NOW. Background pre-resolution of the rest of
+                // the queue (updateState = false) must not raise a spurious
+                // "stream failed" snackbar over perfectly healthy playback.
+                if (updateState) {
+                    _extraState.update {
+                        it.copy(
+                            snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
+                            isSnackbarError = true,
+                        )
+                    }
                 }
                 // Return track with null streamUrl so callers skip playback
                 // instead of passing the YouTube watch page URL to ExoPlayer
@@ -450,7 +483,13 @@ class PlayerViewModel @Inject constructor(
     fun setVolume(level: Float) {
         val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val newVol = (level * maxVol).roundToInt().coerceIn(0, maxVol)
-        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+        try {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+        } catch (_: SecurityException) {
+            // Do-Not-Disturb / volume policy can forbid the change. This is
+            // called from a drag-gesture snapshotFlow collector; an uncaught
+            // SecurityException there kills the whole app.
+        }
     }
 
     fun onPlayPause() {

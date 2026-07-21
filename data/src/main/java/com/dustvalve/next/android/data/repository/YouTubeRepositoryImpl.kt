@@ -158,7 +158,12 @@ class YouTubeRepositoryImpl @Inject constructor(
         artistUrl = cached.artistUrl,
         trackNumber = 0,
         duration = cached.durationSec,
-        streamUrl = null, // Re-resolved live by the player.
+        // The canonical watch URL, NOT null: PlayerViewModel.resolveTrackForPlayback
+        // resolves the real googlevideo stream from track.streamUrl, and bails out
+        // when it is null. Cached tracks used to carry null here, so REPLAYING any
+        // previously-cached video (or "play all" on a cached playlist) silently did
+        // nothing - the "play button does nothing" class of bug.
+        streamUrl = "https://www.youtube.com/watch?v=${cached.videoId}",
         artUrl = cached.artUrl,
         albumTitle = "",
         albumUrl = cached.albumUrl,
