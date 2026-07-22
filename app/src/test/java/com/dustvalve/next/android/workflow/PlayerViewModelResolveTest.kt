@@ -4,10 +4,12 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.test.utils.FakeClock
 import androidx.media3.test.utils.TestExoPlayerBuilder
+import androidx.media3.test.utils.robolectric.RobolectricUtil
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
 import androidx.test.core.app.ApplicationProvider
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
+import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
@@ -23,8 +25,10 @@ import com.dustvalve.next.android.workflow.support.AudioFixture
 import com.dustvalve.next.android.workflow.support.FixtureTracks
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import org.junit.After
@@ -63,6 +67,7 @@ class PlayerViewModelResolveTest {
     }
     private val libraryRepository = mockk<LibraryRepository>(relaxed = true)
     private val youtubeRepository = mockk<YouTubeRepository>()
+    private val dustvalveStreamResolver = mockk<DustvalveStreamResolver>()
     private val settingsDataStore = mockk<SettingsDataStore>(relaxed = true) {
         coEvery { getProgressiveDownloadSync() } returns false
         // uiState combines these flows; they must emit or uiState stays at
@@ -93,6 +98,7 @@ class PlayerViewModelResolveTest {
             favoriteDao,
             settingsDataStore,
             youtubeRepository,
+            dustvalveStreamResolver,
             ApplicationProvider.getApplicationContext(),
         )
     }
@@ -186,5 +192,165 @@ class PlayerViewModelResolveTest {
         TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
         assertThat(queueManager.currentTrack.value?.id).isEqualTo("a2")
         assertThat(queueManager.queue.value).hasSize(3)
+    }
+
+    // --- H3: never hand a watch-page URL to ExoPlayer, skip path ---
+
+    @Test
+    fun skipNext_toUnresolvedYouTubeEntry_resolvesBeforeHandingToExoPlayer() {
+        val resolved = AudioFixture.toneWavUri()
+        coEvery { youtubeRepository.getStreamUrl(any()) } returns resolved
+
+        // Install the queue directly so the second entry still carries its
+        // watch-page URL (exactly the background-resolution window state).
+        playbackManager.playQueue(listOf(FixtureTracks.localTrack(), FixtureTracks.youtubeTrack()), 0)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+
+        playbackManager.skipNext()
+        idle()
+
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+        val playingUri = player.currentMediaItem?.localConfiguration?.uri.toString()
+        assertThat(playingUri).isEqualTo(resolved)
+        assertThat(playingUri).doesNotContain("watch?v=")
+        // The queue entry was patched in place with the resolved URL.
+        assertThat(queueManager.queue.value[1].streamUrl).isEqualTo(resolved)
+    }
+
+    // --- H2: expired stream URLs are re-resolved once and playback retried ---
+
+    @Test
+    fun expiredStreamUrl_ioError_autoReResolvesOnce_andRetriesPlayback() {
+        val goodUri = AudioFixture.toneWavUri()
+        // First resolution hands out a URL that dies with an IO error (stands
+        // in for an expired CDN link); the re-resolve returns a live one.
+        coEvery { youtubeRepository.getStreamUrl(any()) } returnsMany listOf("file:///does/not/exist.mp3", goodUri)
+
+        viewModel.playTrack(FixtureTracks.youtubeTrack())
+        idle()
+
+        // Pump until the one-shot recovery has re-resolved and reached READY
+        // on the fresh URL (the intermediate error and the auto-retry can land
+        // anywhere in between, so wait on the final outcome only).
+        RobolectricUtil.runMainLooperUntil {
+            player.playbackState == Player.STATE_READY &&
+                player.currentMediaItem?.localConfiguration?.uri.toString() == goodUri
+        }
+
+        assertThat(queueManager.queue.value[0].streamUrl).isEqualTo(goodUri)
+        assertThat(playbackManager.playbackError.value).isNull()
+        coVerify(exactly = 2) { youtubeRepository.getStreamUrl(any()) }
+    }
+
+    @Test
+    fun expiredStreamUrl_reResolveAlsoDead_surfacesErrorWithoutLooping() {
+        // First call = initial resolution, second = the single auto-retry.
+        val deadUrls = listOf("file:///does/not/exist.mp3", "file:///also/does/not/exist.mp3")
+        coEvery { youtubeRepository.getStreamUrl(any()) } returnsMany deadUrls
+
+        val collected = mutableListOf<com.dustvalve.next.android.ui.screens.player.PlayerUiState>()
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val job = scope.launch { viewModel.uiState.collect { collected.add(it) } }
+
+        viewModel.playTrack(FixtureTracks.youtubeTrack())
+        idle()
+
+        // First failure triggers the single auto-retry; the retry's URL is
+        // dead too, so the ordinary error UI must surface - and only then.
+        RobolectricUtil.runMainLooperUntil {
+            collected.lastOrNull()?.snackbarMessage != null
+        }
+
+        // Exactly one automatic re-resolve (initial + retry = 2 calls): no
+        // retry loop on a permanently dead track.
+        coVerify(exactly = 2) { youtubeRepository.getStreamUrl(any()) }
+        job.cancel()
+    }
+
+    // --- H5: a failed direct tap must not destroy the previous queue ---
+
+    @Test
+    fun playTrack_resolutionFails_leavesPreviousQueueAndPlayerIntact() {
+        viewModel.playTrackInList(listOf(FixtureTracks.localTrack()), 0)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+        val playingBefore = player.currentMediaItem?.localConfiguration?.uri.toString()
+
+        coEvery { youtubeRepository.getStreamUrl(any()) } throws IllegalStateException("HTTP 403")
+        viewModel.playTrack(FixtureTracks.youtubeTrack())
+        idle()
+
+        // Queue untouched, player still holds the previous track.
+        assertThat(queueManager.queue.value.map { it.id }).containsExactly("local_ms_1")
+        assertThat(queueManager.currentTrack.value?.id).isEqualTo("local_ms_1")
+        assertThat(player.currentMediaItem?.localConfiguration?.uri.toString()).isEqualTo(playingBefore)
+    }
+
+    // --- H4: queue edits made during background resolution survive ---
+
+    @Test
+    fun queueEdit_duringBackgroundResolution_survivesAndPatchLandsById() {
+        val gate = CompletableDeferred<String>()
+        coEvery { youtubeRepository.getStreamUrl(any()) } coAnswers { gate.await() }
+
+        viewModel.playTrackInList(listOf(FixtureTracks.localTrack(), FixtureTracks.youtubeTrack()), 0)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+
+        // Edit the queue while the YouTube entry is still resolving.
+        viewModel.playNext(FixtureTracks.bandcampTrack(id = "bc_inserted"))
+        idle()
+
+        gate.complete(AudioFixture.toneWavUri())
+        idle()
+
+        // Old behavior: setQueue(originalListCopy) reverted the insert. Now the
+        // edit survives and the resolved URL is patched onto the right entry.
+        assertThat(queueManager.queue.value.map { it.id })
+            .containsExactly("local_ms_1", "bc_inserted", "yt_dQw4w9WgXcQ").inOrder()
+        assertThat(queueManager.queue.value.last().streamUrl).doesNotContain("watch?v=")
+    }
+
+    // --- L20: rapid double play must not lose the loading indicator ---
+
+    @Test
+    fun rapidDoublePlay_cancelledJobDoesNotClearNewJobsLoadingState() {
+        fun ytTrack(videoId: String) = FixtureTracks.youtubeTrack(id = "yt_$videoId")
+            .copy(streamUrl = "https://www.youtube.com/watch?v=$videoId")
+
+        // The gates suspend inside non-immediate Dispatchers.Main so that
+        // cancelling job A delivers its finally-block on the NEXT looper drain
+        // (like the production IO-dispatcher hop in getStreamUrl) - i.e. AFTER
+        // job B already set isLoadingTrack. That deferred finally is exactly
+        // what used to wrongly clear B's loading indicator.
+        val gateA = CompletableDeferred<String>()
+        val gateB = CompletableDeferred<String>()
+        coEvery { youtubeRepository.getStreamUrl("https://www.youtube.com/watch?v=aaaaaaaaaaa") } coAnswers {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { gateA.await() }
+        }
+        coEvery { youtubeRepository.getStreamUrl("https://www.youtube.com/watch?v=bbbbbbbbbbb") } coAnswers {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { gateB.await() }
+        }
+
+        val collected = mutableListOf<com.dustvalve.next.android.ui.screens.player.PlayerUiState>()
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val job = scope.launch { viewModel.uiState.collect { collected.add(it) } }
+
+        viewModel.playTrack(ytTrack("aaaaaaaaaaa"))
+        idle()
+        viewModel.playTrack(ytTrack("bbbbbbbbbbb"))
+        idle()
+
+        // The cancelled first job's finally must not clear the loading flag
+        // the second job set.
+        assertThat(collected.last().isLoadingTrack).isTrue()
+
+        gateB.complete(AudioFixture.toneWavUri())
+        idle()
+
+        assertThat(collected.last().isLoadingTrack).isFalse()
+        assertThat(queueManager.currentTrack.value?.id).isEqualTo("yt_bbbbbbbbbbb")
+        job.cancel()
     }
 }

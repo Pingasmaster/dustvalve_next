@@ -5,4 +5,13 @@
     <exclude domain="database" path="dustvalve_database" />
     <exclude domain="database" path="dustvalve_database-shm" />
     <exclude domain="database" path="dustvalve_database-wal" />
+    <!-- Bulk / device-local caches: multi-GB audio + image downloads and
+         diagnostic artifacts. Backing these up blows the ~25 MB Auto Backup
+         quota and restores orphan files on a new device. -->
+    <exclude domain="file" path="downloads" />
+    <exclude domain="file" path="crash" />
+    <exclude domain="file" path="diagnostics" />
+    <exclude domain="file" path="metrics" />
+    <exclude domain="file" path="profiles" />
+    <exclude domain="file" path="local_art" />
 </full-backup-content>

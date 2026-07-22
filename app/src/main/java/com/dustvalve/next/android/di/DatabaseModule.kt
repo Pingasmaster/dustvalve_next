@@ -3,6 +3,7 @@ package com.dustvalve.next.android.di
 import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
@@ -33,7 +34,14 @@ object DatabaseModule {
         DustvalveNextDatabase::class.java,
         "dustvalve_database",
     )
-        .fallbackToDestructiveMigration(dropAllTables = true)
+        // Migration policy: destructive fallback is a DEBUG-only convenience
+        // so schema churn during development never blocks on a hand-written
+        // migration. Release builds deliberately omit it - shipping a schema
+        // bump without a Migration must fail loudly on open
+        // (IllegalStateException) instead of silently dropping every user
+        // table (playlists, favorites, downloads). Exported schema JSON for
+        // writing those migrations lives in core/database/schemas/.
+        .apply { if (BuildConfig.DEBUG) fallbackToDestructiveMigration(dropAllTables = true) }
         // Write-Ahead Logging: readers and writers don't block each other,
         // which matters because DownloadService / DownloadController mutate
         // rows from a different dispatcher than UI queries. Default is

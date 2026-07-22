@@ -33,6 +33,8 @@ sealed interface UpdateUiState {
         val apkUrl: String,
         /** GitHub release body (Markdown), shown in the update dialog. Empty when none. */
         val releaseNotes: String,
+        /** Lowercase-hex SHA-256 of the APK from the release asset digest, or null when GitHub sent none. */
+        val apkSha256: String? = null,
     ) : UpdateUiState
 
     /** APK is streaming. [progress] is 0f..1f, or `null` when no Content-Length was sent. */
@@ -101,6 +103,7 @@ class AppUpdateController @Inject constructor(
                             versionName = available.versionName,
                             apkUrl = available.apkDownloadUrl,
                             releaseNotes = available.releaseNotes,
+                            apkSha256 = available.apkSha256,
                         )
                     }
                 }
@@ -130,6 +133,7 @@ class AppUpdateController @Inject constructor(
                         versionName = available.versionName,
                         apkUrl = available.apkDownloadUrl,
                         releaseNotes = available.releaseNotes,
+                        apkSha256 = available.apkSha256,
                     )
                 }
             } catch (e: Exception) {
@@ -148,7 +152,7 @@ class AppUpdateController @Inject constructor(
         downloadJob = scope.launch {
             _state.value = UpdateUiState.Downloading(current.versionName, 0f)
             try {
-                service.downloadApk(current.apkUrl).collect { p ->
+                service.downloadApk(current.apkUrl, current.apkSha256).collect { p ->
                     val frac = if (p.totalBytes > 0L) p.fraction else null
                     _state.value = UpdateUiState.Downloading(current.versionName, frac)
                 }

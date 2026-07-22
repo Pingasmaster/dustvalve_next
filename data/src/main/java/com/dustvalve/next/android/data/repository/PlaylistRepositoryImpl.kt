@@ -109,7 +109,10 @@ class PlaylistRepositoryImpl @Inject constructor(
         val existingPlaylists = playlistDao.getAllPlaylists().first()
         existingPlaylists
             .filter { it.isSystem && (it.systemType == null || it.systemType !in validTypeNames) }
-            .forEach { playlistDao.deletePlaylist(it.id) }
+            // deletePlaylist's SQL guards with isSystem = 0, which makes it a
+            // guaranteed no-op for these rows - the sweep needs the
+            // unguarded variant.
+            .forEach { playlistDao.deletePlaylistIncludingSystem(it.id) }
 
         val existingTypes = existingPlaylists
             .filter { it.isSystem && it.systemType in validTypeNames }
@@ -155,6 +158,8 @@ class PlaylistRepositoryImpl @Inject constructor(
         //
         // Recents stays source-ordered always (chronological by design;
         // the UI disables reorder for it).
+        // isFavorite comes from a combined favorites Flow (not a one-shot
+        // query inside map {}) so toggling a heart re-emits every branch.
         return when (playlistId) {
             Playlist.ID_FAVORITES -> combine(
                 trackDao.getFavorites(),
@@ -166,34 +171,28 @@ class PlaylistRepositoryImpl @Inject constructor(
             Playlist.ID_DOWNLOADS -> combine(
                 trackDao.getDownloaded(),
                 playlistDao.getTracksInPlaylist(playlistId),
-            ) { source, ordered ->
-                val merged = mergeSystemPlaylist(source, ordered)
-                val trackIds = merged.map { it.id }
-                val favoriteIds = if (trackIds.isNotEmpty()) favoriteDao.getFavoriteIds(trackIds).toSet() else emptySet()
-                merged.map { it.toDomain(it.id in favoriteIds) }
+                trackFavoriteIds(),
+            ) { source, ordered, favoriteIds ->
+                mergeSystemPlaylist(source, ordered).map { it.toDomain(it.id in favoriteIds) }
             }
 
-            Playlist.ID_RECENT -> trackDao.getRecent().map { tracks ->
-                val trackIds = tracks.map { it.id }
-                val favoriteIds = if (trackIds.isNotEmpty()) {
-                    favoriteDao.getFavoriteIds(trackIds).toSet()
-                } else {
-                    emptySet()
-                }
+            Playlist.ID_RECENT -> combine(
+                trackDao.getRecent(),
+                trackFavoriteIds(),
+            ) { tracks, favoriteIds ->
                 tracks.map { it.toDomain(it.id in favoriteIds) }
             }
 
-            else -> playlistDao.getTracksInPlaylist(playlistId).map { trackEntities ->
-                val trackIds = trackEntities.map { it.id }
-                val favoriteIds = if (trackIds.isNotEmpty()) {
-                    favoriteDao.getFavoriteIds(trackIds).toSet()
-                } else {
-                    emptySet()
-                }
+            else -> combine(
+                playlistDao.getTracksInPlaylist(playlistId),
+                trackFavoriteIds(),
+            ) { trackEntities, favoriteIds ->
                 trackEntities.map { it.toDomain(it.id in favoriteIds) }
             }
         }.flowOn(ioDispatcher)
     }
+
+    private fun trackFavoriteIds(): Flow<Set<String>> = favoriteDao.getAllTrackFavoriteIdsFlow().map { it.toSet() }
 
     /**
      * Merges a source-table list (favorites / downloaded) with an optional

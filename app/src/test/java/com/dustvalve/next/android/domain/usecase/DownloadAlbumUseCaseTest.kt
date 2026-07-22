@@ -83,12 +83,26 @@ class DownloadAlbumUseCaseTest {
         tracks.forEach { coVerify(exactly = 1) { downloadRepo.downloadTrack(it) } }
     }
 
-    @Test fun `downloadPlaylist keeps going when one track fails`() = runTest {
+    @Test fun `downloadPlaylist keeps going when one track fails then surfaces the failure`() {
         val tracks = listOf(track("t1"), track("t2"), track("t3"))
         coEvery { downloadRepo.downloadTrack(tracks[1]) } throws IOException("boom")
-        useCase.downloadPlaylist("Mix", tracks)
+        val ex = assertThrows(IOException::class.java) {
+            runTest { useCase.downloadPlaylist("Mix", tracks) }
+        }
+        // The remaining tracks still downloaded before the aggregate error.
+        assertThat(ex.message).contains("1 of 3")
+        assertThat(ex.message).contains("boom")
         coVerify(exactly = 1) { downloadRepo.downloadTrack(tracks[0]) }
         coVerify(exactly = 1) { downloadRepo.downloadTrack(tracks[2]) }
+    }
+
+    @Test fun `downloadPlaylist throws when every track fails`() {
+        val tracks = listOf(track("t1"), track("t2"))
+        coEvery { downloadRepo.downloadTrack(any()) } throws IOException("boom")
+        val ex = assertThrows(IOException::class.java) {
+            runTest { useCase.downloadPlaylist("Mix", tracks) }
+        }
+        assertThat(ex.message).contains("2 of 2")
     }
 
     @Test fun `downloadArtist with no albums throws`() {

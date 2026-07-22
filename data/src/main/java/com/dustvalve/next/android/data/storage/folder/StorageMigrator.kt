@@ -109,9 +109,13 @@ class StorageMigrator @Inject constructor(
         val treeUriStr = settingsDataStore.getDedicatedFolderTreeUriSync()
         val treeUri = treeUriStr?.toUri()
 
-        // 1) Copy audio files tree -> app-internal and repoint DownloadEntity rows.
+        // 1) Copy audio files tree -> app-internal and repoint DownloadEntity
+        //    rows. Failures are counted, NOT skipped-and-forgotten: the
+        //    folder tree is the failed tracks' only copy, so it must survive
+        //    unless every row was copied and repointed.
         val downloads = downloadDao.getAllSync()
         val total = downloads.size.coerceAtLeast(1)
+        var failedCopies = 0
         for ((idx, d) in downloads.withIndex()) {
             coroutineContext.ensureActive()
             onProgress(
@@ -125,15 +129,44 @@ class StorageMigrator @Inject constructor(
             val srcUri = try {
                 srcPath.toUri()
             } catch (_: Exception) {
+                failedCopies++
                 continue
             }
             val targetDir = File(StoragePaths.downloadsDir(context), d.albumId).also { it.mkdirs() }
             val fileName = srcUri.lastPathSegment?.substringAfterLast('/') ?: "${d.trackId}.bin"
             val targetFile = File(targetDir, fileName)
-            context.contentResolver.openInputStream(srcUri)?.use { input ->
-                targetFile.outputStream().use { input.copyTo(it, 8192) }
-            } ?: continue
+            val copied = try {
+                context.contentResolver.openInputStream(srcUri)?.use { input ->
+                    targetFile.outputStream().use { input.copyTo(it, 8192) }
+                    true
+                } ?: false
+            } catch (e: Exception) {
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                false
+            }
+            if (!copied) {
+                failedCopies++
+                // Don't leave a truncated partial file behind.
+                try {
+                    targetFile.delete()
+                } catch (e: Exception) {
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                }
+                continue
+            }
             downloadDao.insert(d.copy(filePath = targetFile.absolutePath))
+        }
+
+        // Partial failure: keep the toggle ON, keep the folder AND the
+        // permission grant - the rows that could not be copied still point
+        // into the tree and deleting it would destroy their only copy.
+        // Successful rows are already repointed to local paths and will be
+        // skipped on a retry. Surface the error to the caller.
+        if (failedCopies > 0) {
+            throw IOException(
+                "Failed to copy $failedCopies of ${downloads.size} downloads back to app storage; " +
+                    "the dedicated folder was left untouched - fix access and retry",
+            )
         }
 
         // 2) Turn off the toggle BEFORE we nuke the folder, so any
@@ -219,7 +252,9 @@ class StorageMigrator @Inject constructor(
         FolderIo.writeJson(context, treeUri, DedicatedFolderPaths.FILE_HISTORY, HistoryFile.serializer(), snap.history, ioDispatcher)
         if (includeMetadata && snap.metadata != null) {
             val cache = DedicatedFolderPaths.cacheDir(context, treeUri) ?: return
-            val tmpName = "${DedicatedFolderPaths.FILE_METADATA_CACHE}.tmp"
+            // Extension must match the JSON MIME or the provider appends
+            // ".json" and stale-tmp cleanup by name stops matching.
+            val tmpName = "${DedicatedFolderPaths.FILE_METADATA_CACHE.removeSuffix(".json")}.tmp.json"
             cache.findFile(tmpName)?.delete()
             val tmp = cache.createFile(DedicatedFolderPaths.JSON_MIME, tmpName) ?: return
             val text = FolderSnapshotSerializer.json.encodeToString(

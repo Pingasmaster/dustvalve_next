@@ -158,4 +158,21 @@ class PlaylistDaoTest : DbTestBase() {
         assertThat(dao.deletePlaylist("p1")).isEqualTo(1)
         assertThat(dao.getPlaylistById("p1")).isNull()
     }
+
+    @Test fun `deletePlaylistIncludingSystem removes system playlist`() = runTest {
+        // Regression: the defunct-system-playlist sweep used deletePlaylist,
+        // whose isSystem = 0 guard makes it a guaranteed no-op for the very
+        // rows the sweep targets.
+        val dao = db.playlistDao()
+        dao.insertPlaylist(systemPlaylist("sys1", "LOCAL"))
+        assertThat(dao.deletePlaylistIncludingSystem("sys1")).isEqualTo(1)
+        assertThat(dao.getPlaylistById("sys1")).isNull()
+    }
+
+    @Test fun `deletePlaylistIncludingSystem also removes user playlist`() = runTest {
+        val dao = db.playlistDao()
+        dao.insertPlaylist(userPlaylist())
+        assertThat(dao.deletePlaylistIncludingSystem("p1")).isEqualTo(1)
+        assertThat(dao.getPlaylistById("p1")).isNull()
+    }
 }

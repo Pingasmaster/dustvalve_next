@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
@@ -73,6 +74,11 @@ class FolderMirror @Inject constructor(
 
     @Volatile private var suspendUntil: Long = 0L
 
+    // Refcount of in-flight suppressed {} holds. AtomicInteger because
+    // rehydrate (MainActivity boot) and migration (SettingsViewModel) run on
+    // different dispatchers and may in principle overlap.
+    private val suppressionHolds = AtomicInteger(0)
+
     /**
      * Called from Application.onCreate. Watches the enabled flag; when true,
      * starts collectors for every table. When false, cancels them.
@@ -88,15 +94,32 @@ class FolderMirror @Inject constructor(
     }
 
     /**
-     * Call immediately before a rehydrate or migration so the observers
-     * don't fight the copy in progress. Pauses all mirror writes for
-     * [millis] ms regardless of the toggle state.
+     * Runs [block] with all mirror writes suppressed, releasing the hold when
+     * it returns or throws. This is the primary guard around rehydrates and
+     * migrations: unlike [suspendFor]'s wall-clock guess, the suppression
+     * lasts exactly as long as the operation, so a slow SAF provider can't
+     * outrun the window and let the mirror overwrite good snapshots with
+     * half-updated DB state.
+     */
+    suspend fun <T> suppressed(block: suspend () -> T): T {
+        suppressionHolds.incrementAndGet()
+        try {
+            return block()
+        } finally {
+            suppressionHolds.decrementAndGet()
+        }
+    }
+
+    /**
+     * Legacy time-boxed variant of [suppressed]: pauses all mirror writes for
+     * [millis] ms regardless of the toggle state. Prefer [suppressed] - a
+     * fixed window is only a guess at the operation's duration.
      */
     fun suspendFor(millis: Long) {
         suspendUntil = System.currentTimeMillis() + millis
     }
 
-    private fun isSuspended() = System.currentTimeMillis() < suspendUntil
+    private fun isSuspended() = suppressionHolds.get() > 0 || System.currentTimeMillis() < suspendUntil
 
     private suspend fun treeUri(): Uri? {
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return null
@@ -271,7 +294,9 @@ class FolderMirror @Inject constructor(
     private suspend fun writeMetadataCache(treeUri: Uri, file: MetadataCacheFile) {
         val cache = DedicatedFolderPaths.cacheDir(context, treeUri) ?: return
         val text = FolderSnapshotSerializer.json.encodeToString(MetadataCacheFile.serializer(), file)
-        val tmpName = "${DedicatedFolderPaths.FILE_METADATA_CACHE}.tmp"
+        // Extension must match the JSON MIME or the provider appends ".json"
+        // to the display name and stale-tmp cleanup by name stops matching.
+        val tmpName = "${DedicatedFolderPaths.FILE_METADATA_CACHE.removeSuffix(".json")}.tmp.json"
         cache.findFile(tmpName)?.delete()
         val tmp = cache.createFile(DedicatedFolderPaths.JSON_MIME, tmpName) ?: return
         context.contentResolver.openOutputStream(tmp.uri, "wt")?.use {

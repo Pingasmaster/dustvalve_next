@@ -238,8 +238,10 @@ class YouTubePlaylistParser @Inject constructor() {
 
     /**
      * Decodes the seed videoId from a Mix playlistId per NewPipe's rules.
-     * Returns null for genre mixes (`RDGMEM*`) and unknown / non-Mix IDs;
-     * the /next endpoint accepts playlistId alone for those.
+     * Returns null for genre mixes (`RDGMEM*`), personalized mixes (`RDEM*`),
+     * curated radio playlists (`RDCLAK*` - the suffix is an opaque playlist
+     * token, NOT a videoId), and unknown / non-Mix IDs; the /next endpoint
+     * accepts playlistId alone for those.
      */
     fun extractMixSeedVideoId(playlistId: String): String? {
         if (!playlistId.startsWith("RD")) return null
@@ -249,8 +251,7 @@ class YouTubePlaylistParser @Inject constructor() {
             playlistId.startsWith("RDAMVM") && playlistId.length >= 17 ->
                 safe(playlistId.substring(6, 17))
 
-            playlistId.startsWith("RDCLAK") && playlistId.length >= 17 ->
-                safe(playlistId.substring(6, 17))
+            playlistId.startsWith("RDCLAK") -> null
 
             playlistId.startsWith("RDMM") && playlistId.length >= 15 ->
                 safe(playlistId.substring(4, 15))

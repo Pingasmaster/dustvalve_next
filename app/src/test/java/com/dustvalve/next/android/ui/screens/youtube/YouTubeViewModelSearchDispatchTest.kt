@@ -141,6 +141,52 @@ class YouTubeViewModelSearchDispatchTest {
         coVerify { ytmRepo.getHome() }
     }
 
+    @Test fun `stale loadMore for the old query never appends into new results`() = runTest {
+        coEvery { ytRepo.search("old", null, null) } returns Pair(
+            listOf(track("https://www.youtube.com/watch?v=OLD1")),
+            "T1",
+        )
+        coEvery { ytRepo.search("old", null, "T1") } returns Pair(
+            listOf(track("https://www.youtube.com/watch?v=OLD2")),
+            null,
+        )
+        coEvery { ytRepo.search("new", null, null) } returns Pair(
+            listOf(track("https://www.youtube.com/watch?v=NEW1")),
+            null,
+        )
+
+        val vm = newViewModel()
+        advanceUntilIdle()
+
+        vm.onQueryChange("old")
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.results.map { it.url })
+            .containsExactly("https://www.youtube.com/watch?v=OLD1")
+
+        // Page-2 fetch for the OLD query is in flight when the query changes:
+        // it must be cancelled, never appended into the new result list.
+        vm.loadMore()
+        vm.onQueryChange("new")
+        advanceUntilIdle()
+
+        assertThat(vm.uiState.value.results.map { it.url })
+            .containsExactly("https://www.youtube.com/watch?v=NEW1")
+        // The stale page-2 request must have been cancelled outright.
+        coVerify(exactly = 0) { ytRepo.search("old", null, "T1") }
+    }
+
+    @Test fun `importPlaylist reports failure to the caller and sets the error state`() = runTest {
+        coEvery { ytRepo.getPlaylistTracks(any()) } throws RuntimeException("boom")
+
+        val vm = newViewModel()
+        advanceUntilIdle()
+
+        val imported = vm.importPlaylist("https://www.youtube.com/playlist?list=X", "Mix").await()
+
+        assertThat(imported).isFalse()
+        assertThat(vm.uiState.value.error).isNotNull()
+    }
+
     private fun newViewModel(): YouTubeViewModel = YouTubeViewModel(
         settingsDataStore = settings,
         youtubeRepository = ytRepo,

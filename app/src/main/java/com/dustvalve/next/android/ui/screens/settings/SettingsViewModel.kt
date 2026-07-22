@@ -185,19 +185,24 @@ class SettingsViewModel @Inject constructor(
                         folderMigrationError = null,
                     )
                 }
-                folderMirror.suspendFor(60_000L)
                 val includeImages = _uiState.value.dedicatedFolderIncludeImageCache
                 val includeMetadata = _uiState.value.dedicatedFolderIncludeMetadataCache
-                storageMigrator.migrateToFolder(
-                    treeUriStr = treeUri,
-                    includeImages = includeImages,
-                    includeMetadata = includeMetadata,
-                ) { p ->
-                    _uiState.update {
-                        it.copy(
-                            folderMigrationProgress = p.fraction,
-                            folderMigrationMessage = UiText.DynamicString(p.label),
-                        )
+                // Suppression is held for the migration's actual duration
+                // (try/finally inside suppressed) - a slow SAF provider used
+                // to outrun the old fixed 60s window and let the mirror
+                // overwrite good snapshots mid-copy.
+                folderMirror.suppressed {
+                    storageMigrator.migrateToFolder(
+                        treeUriStr = treeUri,
+                        includeImages = includeImages,
+                        includeMetadata = includeMetadata,
+                    ) { p ->
+                        _uiState.update {
+                            it.copy(
+                                folderMigrationProgress = p.fraction,
+                                folderMigrationMessage = UiText.DynamicString(p.label),
+                            )
+                        }
                     }
                 }
                 _uiState.update {
@@ -235,13 +240,16 @@ class SettingsViewModel @Inject constructor(
                         folderMigrationError = null,
                     )
                 }
-                folderMirror.suspendFor(60_000L)
-                storageMigrator.migrateFromFolder { p ->
-                    _uiState.update {
-                        it.copy(
-                            folderMigrationProgress = p.fraction,
-                            folderMigrationMessage = UiText.DynamicString(p.label),
-                        )
+                // Hold suppression for the migration's actual duration, not
+                // a fixed 60s window (see enableDedicatedFolder).
+                folderMirror.suppressed {
+                    storageMigrator.migrateFromFolder { p ->
+                        _uiState.update {
+                            it.copy(
+                                folderMigrationProgress = p.fraction,
+                                folderMigrationMessage = UiText.DynamicString(p.label),
+                            )
+                        }
                     }
                 }
                 _uiState.update {

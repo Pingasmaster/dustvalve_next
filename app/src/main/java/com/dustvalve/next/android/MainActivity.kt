@@ -191,8 +191,10 @@ class MainActivity : ComponentActivity() {
                                         contentResolver.takePersistableUriPermission(uri, flags)
                                     } catch (_: Exception) {}
                                     settingsDataStore.setDedicatedFolder(enabled = true, treeUri = uri.toString())
-                                    folderMirror.suspendFor(5_000L)
-                                    folderRehydrator.rehydrateAll()
+                                    // Hold mirror suppression for the whole
+                                    // rehydrate, however long the provider
+                                    // takes - not a fixed 5s guess.
+                                    folderMirror.suppressed { folderRehydrator.rehydrateAll() }
                                     clearDedicatedFolderError()
                                 } catch (_: Exception) {
                                     // Stay on error screen if re-pick fails.
@@ -267,10 +269,11 @@ class MainActivity : ComponentActivity() {
                     _bootState.value = BootState.DedicatedFolderUnreachable
                     return@launch
                 }
-                // Suspend the mirror while we overwrite Room + DataStore so its
-                // Flow collectors don't kick in and re-flush stale data.
-                folderMirror.suspendFor(5_000L)
-                folderRehydrator.rehydrateAll()
+                // Suppress the mirror while we overwrite Room + DataStore so
+                // its Flow collectors don't kick in and re-flush stale data.
+                // The hold lasts for the rehydrate's actual duration (slow
+                // SAF providers used to outrun the old fixed 5s window).
+                folderMirror.suppressed { folderRehydrator.rehydrateAll() }
                 _bootState.value = BootState.Ready
             } catch (_: Exception) {
                 _bootState.value = BootState.DedicatedFolderUnreachable

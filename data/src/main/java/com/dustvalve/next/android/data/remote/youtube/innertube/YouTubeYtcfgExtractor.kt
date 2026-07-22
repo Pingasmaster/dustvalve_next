@@ -2,8 +2,9 @@ package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * Scrapes `ytcfg.set({...})` blocks from a YouTube / YT Music landing page
@@ -46,14 +47,16 @@ internal object YouTubeYtcfgExtractor {
             } catch (_: IllegalArgumentException) {
                 continue
             }
-            val visitor = obj["INNERTUBE_CONTEXT"]?.jsonObject
-                ?.get("client")?.jsonObject
-                ?.get("visitorData")?.jsonPrimitive?.content
-                ?: obj["VISITOR_DATA"]?.jsonPrimitive?.content
+            // Safe casts throughout: a hostile block (e.g. INNERTUBE_CONTEXT
+            // as a string, VISITOR_DATA as an array) must skip to the next
+            // candidate, not abort the whole extraction with a cast error.
+            val client = (obj["INNERTUBE_CONTEXT"] as? JsonObject)?.get("client") as? JsonObject
+            val visitor = (client?.get("visitorData") as? JsonPrimitive)?.contentOrNull
+                ?: (obj["VISITOR_DATA"] as? JsonPrimitive)?.contentOrNull
                 ?: continue
             if (visitor.isBlank()) continue
-            val version = obj["INNERTUBE_CLIENT_VERSION"]?.jsonPrimitive?.content
-                ?: obj["INNERTUBE_CONTEXT_CLIENT_VERSION"]?.jsonPrimitive?.content
+            val version = (obj["INNERTUBE_CLIENT_VERSION"] as? JsonPrimitive)?.contentOrNull
+                ?: (obj["INNERTUBE_CONTEXT_CLIENT_VERSION"] as? JsonPrimitive)?.contentOrNull
             return YtcfgData(visitorData = visitor, clientVersion = version)
         }
         return null

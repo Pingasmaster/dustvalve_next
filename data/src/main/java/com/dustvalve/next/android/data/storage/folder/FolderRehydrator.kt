@@ -21,8 +21,12 @@ import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerializationException
 import javax.inject.Inject
 import javax.inject.Singleton
+
+private const val TAG = "FolderRehydrator"
 
 /**
  * Rebuilds the app-internal Room + DataStore state from the JSON snapshots
@@ -62,7 +66,7 @@ class FolderRehydrator @Inject constructor(
         }
 
         // Settings first so downstream reads pick up the user's prefs.
-        FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_SETTINGS, SettingsFile.serializer(), ioDispatcher)?.let { file ->
+        readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_SETTINGS, SettingsFile.serializer())?.let { file ->
             val map = file.entries.mapValues { (_, v) ->
                 when (v) {
                     is SettingValue.BoolV -> v.value
@@ -76,13 +80,13 @@ class FolderRehydrator @Inject constructor(
             settingsDataStore.restorePreferences(map)
         }
 
-        val playlists = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_PLAYLISTS, PlaylistsFile.serializer(), ioDispatcher)
-        val favorites = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_FAVORITES, FavoritesFile.serializer(), ioDispatcher)
-        val tracks = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_TRACKS, TracksFile.serializer(), ioDispatcher)
-        val albums = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_ALBUMS, AlbumsFile.serializer(), ioDispatcher)
-        val artists = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_ARTISTS, ArtistsFile.serializer(), ioDispatcher)
-        val downloads = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_DOWNLOADS, DownloadsFile.serializer(), ioDispatcher)
-        val history = FolderIo.readJson(context, uri, DedicatedFolderPaths.FILE_HISTORY, HistoryFile.serializer(), ioDispatcher)
+        val playlists = readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_PLAYLISTS, PlaylistsFile.serializer())
+        val favorites = readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_FAVORITES, FavoritesFile.serializer())
+        val tracks = readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_TRACKS, TracksFile.serializer())
+        val albums = readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_ALBUMS, AlbumsFile.serializer())
+        val artists = readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_ARTISTS, ArtistsFile.serializer())
+        val downloads = readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_DOWNLOADS, DownloadsFile.serializer())
+        val history = readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_HISTORY, HistoryFile.serializer())
 
         database.withTransaction {
             // Order of inserts matters due to FK constraints on
@@ -147,13 +151,26 @@ class FolderRehydrator @Inject constructor(
 
         // Metadata cache - only if the user opted in to keep it in the folder.
         if (settingsDataStore.getDedicatedFolderIncludeMetadataCacheSync()) {
-            val metadata = FolderIo.readJson(
-                context,
-                uri,
-                "${DedicatedFolderPaths.CACHE_DIR}/${DedicatedFolderPaths.FILE_METADATA_CACHE}",
-                MetadataCacheFile.serializer(),
-                ioDispatcher,
-            ) ?: readMetadataCacheFromCacheDir(uri)
+            val metadata = try {
+                FolderIo.readJson(
+                    context,
+                    uri,
+                    "${DedicatedFolderPaths.CACHE_DIR}/${DedicatedFolderPaths.FILE_METADATA_CACHE}",
+                    MetadataCacheFile.serializer(),
+                    ioDispatcher,
+                ) ?: readMetadataCacheFromCacheDir(uri)
+            } catch (e: SerializationException) {
+                // Corrupt cache snapshot: quarantine + skip, keep the local
+                // cache. Never fail the whole boot over a cache file.
+                android.util.Log.w(TAG, "Corrupt ${DedicatedFolderPaths.FILE_METADATA_CACHE}, skipping: ${e.message}")
+                try {
+                    DedicatedFolderPaths.findInCache(context, uri, DedicatedFolderPaths.FILE_METADATA_CACHE)
+                        ?.renameTo("${DedicatedFolderPaths.FILE_METADATA_CACHE}.corrupt")
+                } catch (qe: Exception) {
+                    if (qe is kotlin.coroutines.cancellation.CancellationException) throw qe
+                }
+                null
+            }
             if (metadata != null) {
                 database.withTransaction {
                     ytVideoDao.deleteAll()
@@ -167,6 +184,21 @@ class FolderRehydrator @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Reads `dustvalve/[name]`, treating a corrupt (undecodable) file exactly
+     * like an absent one: the matching table keeps its current app-internal
+     * rows and boot continues instead of surfacing the blocking folder-error
+     * screen. The corrupt file is quarantined to "[name].corrupt" so the
+     * mirror's next flush writes a fresh snapshot.
+     */
+    private suspend fun <T> readJsonOrQuarantine(uri: android.net.Uri, name: String, serializer: KSerializer<T>): T? = try {
+        FolderIo.readJson(context, uri, name, serializer, ioDispatcher)
+    } catch (e: SerializationException) {
+        android.util.Log.w(TAG, "Corrupt $name, quarantining: ${e.message}")
+        FolderIo.quarantine(context, uri, name, ioDispatcher)
+        null
     }
 
     private suspend fun readMetadataCacheFromCacheDir(uri: android.net.Uri): MetadataCacheFile? = withContext(ioDispatcher) {

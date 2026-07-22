@@ -86,7 +86,9 @@ class YouTubeChannelParser @Inject constructor() {
             ?: return null
 
         // Prefer selected tab; fall back to first tab with a richGridRenderer.
-        val selected = tabs.firstOrNull { it.path("tabRenderer")?.str("selected") == "true" }
+        // `selected` is a JSON boolean, not a string - str() returns null for
+        // booleans, which used to make this preference dead code.
+        val selected = tabs.firstOrNull { it.path("tabRenderer")?.bool("selected") == true }
             ?: tabs.firstOrNull {
                 it.path("tabRenderer")?.path("content")?.path("richGridRenderer") != null
             }

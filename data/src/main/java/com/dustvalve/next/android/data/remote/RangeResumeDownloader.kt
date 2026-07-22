@@ -34,6 +34,16 @@ object RangeResumeDownloader {
     const val DEFAULT_MAX_RETRIES = 3
 
     /**
+     * The server's 206 response no longer lines up with the partial content
+     * already written: the Content-Range start offset differs from the bytes
+     * we hold, or the advertised total differs from the one recorded when the
+     * partial was created. Appending would splice two different payloads into
+     * one corrupt file, so this is surfaced **non-retryably** - callers should
+     * discard the partial and restart from zero.
+     */
+    class ResumeMismatchException(message: String) : IOException(message)
+
+    /**
      * @param client OkHttpClient to use. Caller provides one with appropriate
      *   timeouts / protocol config; this helper doesn't tune the client.
      * @param url Resource URL.
@@ -47,6 +57,12 @@ object RangeResumeDownloader {
      *   a server that answers 200 (ignoring Range) is surfaced as a hard
      *   failure since appending to a from-scratch body would corrupt the file.
      * @param maxRetries Resume attempts after the initial request fails mid-flight.
+     * @param expectedTotalBytes Total resource size recorded by a previous
+     *   (paused) attempt, e.g. from a resume sidecar. When set, the first
+     *   response's total (Content-Range total, or Content-Length +
+     *   [startOffset]) must match or the helper throws
+     *   [ResumeMismatchException] - the URL now serves a different payload
+     *   than the one the partial came from.
      * @param backoffMillis Function returning the delay between attempt N and N+1.
      * @param onProgress Optional callback invoked after every successful write,
      *   carrying (bytesWritten, expectedTotal). `bytesWritten` includes
@@ -54,6 +70,7 @@ object RangeResumeDownloader {
      *   are parsed.
      * @return Total bytes written (including [startOffset]).
      */
+    @Suppress("LongParameterList")
     suspend fun stream(
         client: OkHttpClient,
         url: String,
@@ -61,6 +78,7 @@ object RangeResumeDownloader {
         trackId: String,
         startOffset: Long = 0L,
         maxRetries: Int = DEFAULT_MAX_RETRIES,
+        expectedTotalBytes: Long? = null,
         backoffMillis: (attempt: Int) -> Long = { attempt ->
             500L * (1L shl (attempt - 1).coerceAtMost(4))
         },
@@ -100,10 +118,38 @@ object RangeResumeDownloader {
                                 "cannot append $bytesWritten of partial content",
                         )
                     }
+                    if (gotPartial && bytesWritten > 0L) {
+                        // A 206 whose body doesn't start exactly where our
+                        // partial ends would splice mismatched content. Parse
+                        // "bytes <start>-<end>/<total>" and demand
+                        // start == bytesWritten; a missing/unparseable header
+                        // on a 206 is protocol-broken and treated the same.
+                        val start = response.header("Content-Range")
+                            ?.substringAfter("bytes ", "")
+                            ?.substringBefore('-')
+                            ?.trim()
+                            ?.toLongOrNull()
+                        if (start != bytesWritten) {
+                            throw ResumeMismatchException(
+                                "Resume offset mismatch for track $trackId: " +
+                                    "requested $bytesWritten, Content-Range starts at ${start ?: "unknown"}",
+                            )
+                        }
+                    }
                     if (expectedTotal == null) {
                         val cr = response.header("Content-Range")
                             ?.substringAfterLast('/')?.toLongOrNull()
                         val cl = response.header("Content-Length")?.toLongOrNull()
+                        val knownTotal = expectedTotalBytes
+                        if (knownTotal != null && knownTotal > 0L) {
+                            val responseTotal = cr ?: cl?.let { it + bytesWritten }
+                            if (responseTotal != null && responseTotal != knownTotal) {
+                                throw ResumeMismatchException(
+                                    "Resume total mismatch for track $trackId: " +
+                                        "partial was cut from $knownTotal bytes, server now reports $responseTotal",
+                                )
+                            }
+                        }
                         // On a 206, Content-Length is the *remaining* length -
                         // prefer the total from Content-Range. On a from-zero
                         // 200, Content-Length is the total. When resuming
@@ -133,6 +179,10 @@ object RangeResumeDownloader {
                 break
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                // Non-retryable restart-from-zero signal: retrying would hit
+                // the same mismatched payload again. Propagate unwrapped so
+                // callers can discard the partial and start over.
+                if (e is ResumeMismatchException) throw e
                 attempt++
                 val canRetry = attempt <= maxRetries &&
                     (bytesWritten == 0L || serverHonorsRange)

@@ -30,15 +30,24 @@ class DownloadAlbumUseCase @Inject constructor(
             totalTracks = tracks.size,
             kind = DownloadProgressReporter.BatchKind.PLAYLIST,
         ) {
+            val errors = mutableListOf<Exception>()
             for (track in tracks) {
                 try {
                     downloadRepository.downloadTrack(track)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (_: Exception) {
-                    // Best-effort: continue with the remaining tracks; surface
-                    // a generic error from the caller if anything failed.
+                } catch (e: Exception) {
+                    // Best-effort: continue with the remaining tracks, then
+                    // surface the aggregate failure below (mirrors
+                    // downloadAlbumInner) so an all-failed playlist doesn't
+                    // report success.
+                    errors.add(e)
                 }
+            }
+            if (errors.isNotEmpty()) {
+                throw IOException(
+                    "Failed to download ${errors.size} of ${tracks.size} tracks: ${errors.first().message}",
+                )
             }
         }
     }

@@ -1,6 +1,10 @@
 package com.dustvalve.next.android.ui.screens.local
 
 import android.content.Context
+import android.content.IntentSender
+import android.net.Uri
+import android.provider.DocumentsContract
+import android.provider.MediaStore
 import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
@@ -44,7 +48,14 @@ data class LocalUiState(
     val searchResults: List<Track> = emptyList(),
     val isSearching: Boolean = false,
     val searchFilter: LocalSearchFilter? = null,
+    /** Non-null while a MediaStore delete needs user consent via IntentSender. */
+    val pendingDeleteRequest: PendingDeleteRequest? = null,
+    /** One-shot flag: a delete attempt failed; the screen shows a snackbar. */
+    val deleteFailed: Boolean = false,
 )
+
+/** A MediaStore consent prompt for deleting [trackId]'s backing file. */
+data class PendingDeleteRequest(val trackId: String, val intentSender: IntentSender)
 
 enum class LocalSearchFilter { TRACKS, ARTISTS, ALBUMS }
 
@@ -472,18 +483,117 @@ class LocalViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Delete a local track's backing file, then its DB row - and ONLY then.
+     * Deleting the row while the file survives just resurrects the track on
+     * the next scan.
+     *
+     * - SAF documents (folder mode) need [DocumentsContract.deleteDocument];
+     *   a plain ContentResolver.delete() is a no-op/failure for them.
+     * - MediaStore items the app doesn't own throw RecoverableSecurityException;
+     *   [MediaStore.createDeleteRequest] raises a system consent prompt whose
+     *   IntentSender the screen launches; the row is removed on RESULT_OK.
+     */
     fun deleteLocalTrack(track: Track) {
         viewModelScope.launch {
             try {
-                track.streamUrl?.let { uri ->
-                    try {
-                        appContext.contentResolver.delete(uri.toUri(), null, null)
-                    } catch (_: Exception) { }
+                val rawUrl = track.streamUrl
+                if (rawUrl.isNullOrBlank()) {
+                    deleteDbRow(track.id)
+                    return@launch
                 }
-                trackDao.deleteByIdsChunk(listOf(track.id))
+                val uri = rawUrl.toUri()
+                when {
+                    uri.scheme != "content" -> {
+                        // Not a content URI (e.g. plain file path): best-effort direct
+                        // delete; the DB row goes regardless since there is no
+                        // consent flow to fall back to.
+                        try {
+                            appContext.contentResolver.delete(uri, null, null)
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                        }
+                        deleteDbRow(track.id)
+                    }
+
+                    DocumentsContract.isDocumentUri(appContext, uri) -> deleteSafDocument(track.id, uri)
+
+                    else -> deleteMediaStoreItem(track.id, uri)
+                }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                reportDeleteFailure()
             }
+        }
+    }
+
+    private suspend fun deleteSafDocument(trackId: String, uri: Uri) {
+        val deleted = try {
+            DocumentsContract.deleteDocument(appContext.contentResolver, uri)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            false
+        }
+        if (deleted) deleteDbRow(trackId) else reportDeleteFailure()
+    }
+
+    /**
+     * MediaStore content URI. Direct delete works for items this app owns;
+     * anything else throws (Recoverable)SecurityException and needs the
+     * user-consent delete request whose IntentSender the screen launches.
+     */
+    private suspend fun deleteMediaStoreItem(trackId: String, uri: Uri) {
+        val deleted = try {
+            appContext.contentResolver.delete(uri, null, null) > 0
+        } catch (_: SecurityException) {
+            false
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            false
+        }
+        if (deleted) {
+            deleteDbRow(trackId)
+            return
+        }
+        val sender = try {
+            MediaStore.createDeleteRequest(appContext.contentResolver, listOf(uri)).intentSender
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
+        if (sender != null) {
+            _uiState.update {
+                it.copy(pendingDeleteRequest = PendingDeleteRequest(trackId, sender))
+            }
+        } else {
+            reportDeleteFailure()
+        }
+    }
+
+    /** Result of the MediaStore consent prompt launched by the screen. */
+    fun onDeleteRequestResult(granted: Boolean) {
+        val pending = _uiState.value.pendingDeleteRequest ?: return
+        _uiState.update { it.copy(pendingDeleteRequest = null) }
+        if (granted) {
+            // The system already deleted the media item on consent; drop the row.
+            viewModelScope.launch { deleteDbRow(pending.trackId) }
+        }
+    }
+
+    fun clearDeleteFailed() {
+        _uiState.update { it.copy(deleteFailed = false) }
+    }
+
+    private fun reportDeleteFailure() {
+        _uiState.update { it.copy(deleteFailed = true) }
+    }
+
+    private suspend fun deleteDbRow(trackId: String) {
+        try {
+            trackDao.deleteByIdsChunk(listOf(trackId))
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            reportDeleteFailure()
         }
     }
 }

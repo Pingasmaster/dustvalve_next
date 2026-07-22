@@ -10,7 +10,7 @@ import com.dustvalve.next.android.domain.model.TileKind
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.JsonObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -155,7 +155,9 @@ class YouTubeMusicParser @Inject constructor() {
         val contents = renderer.path("contents")?.arr() ?: return null
         if (contents.isEmpty()) return null
 
-        val firstChild = contents.first().jsonObject
+        // A non-object first entry (seen in hostile/malformed responses) must
+        // skip just this shelf, not kill the whole home feed parse.
+        val firstChild = contents.first() as? JsonObject ?: return null
         return when {
             firstChild.containsKey("musicResponsiveListItemRenderer") -> {
                 val items = contents.mapNotNull { parseResponsiveListItemAsSong(it) }

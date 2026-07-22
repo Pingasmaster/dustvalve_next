@@ -251,9 +251,12 @@ class DustvalveArtistScraper @Inject constructor(
         val needle = "meets_buy_full_discography_criteria"
         val idx = html.indexOf(needle)
         if (idx < 0) return false
-        // Look at the next ~32 chars after the key to find the value token.
+        // Look at the next ~32 chars after the key to find the value token. The regex is
+        // anchored to the start of the tail (key's closing quote, colon, then the value)
+        // so a true/1 belonging to a LATER key can never produce a false positive when
+        // the actual value is false.
         val tail = html.substring(idx + needle.length, (idx + needle.length + 32).coerceAtMost(html.length))
-        return Regex("""[":\s]*(?:&quot;)?(true|1)(?:&quot;)?""").find(tail) != null
+        return Regex("""^\s*(?:&quot;|")?\s*:\s*(?:&quot;|")?(true|1)\b""").find(tail) != null
     }
 
     /**

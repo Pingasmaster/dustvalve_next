@@ -4,7 +4,10 @@ package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.justRun
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -35,10 +38,12 @@ class YouTubeInnertubeClientTest {
             visitorData = "MY_VISITOR_DATA_TOKEN",
             clientVersion = "2.20260421.00.00",
         )
+        justRun { visitor.invalidate() }
         client = TestableInnertubeClient(
             sharedOkHttpClient = OkHttpClient(),
             visitorDataFetcher = visitor,
-            mockBaseUrl = server.url("/").toString(),
+            mockBaseUrlWww = server.url("/").toString(),
+            mockBaseUrlM = server.url("/").toString(),
             dispatcher = UnconfinedTestDispatcher(),
         )
     }
@@ -187,6 +192,101 @@ class YouTubeInnertubeClientTest {
         assertThat(body.keys).containsExactly("context")
     }
 
+    @Test fun `browseContinuation with WEB client hits the www endpoint for channel pagination`() = runTest {
+        // Channel browse runs on WEB/www; its continuation must too, or the
+        // response comes back MWEB-shaped and parses to zero tracks.
+        val wwwServer = MockWebServer().also { it.start() }
+        val mServer = MockWebServer().also { it.start() }
+        try {
+            val dualClient = TestableInnertubeClient(
+                sharedOkHttpClient = OkHttpClient(),
+                visitorDataFetcher = visitor,
+                mockBaseUrlWww = wwwServer.url("/").toString(),
+                mockBaseUrlM = mServer.url("/").toString(),
+                dispatcher = UnconfinedTestDispatcher(),
+            )
+            wwwServer.enqueue(MockResponse().setBody("""{"x":1}"""))
+
+            dualClient.browseContinuation("CHAN_TOKEN_7", YouTubeClient.WEB_NO_AUTH)
+
+            assertThat(wwwServer.requestCount).isEqualTo(1)
+            assertThat(mServer.requestCount).isEqualTo(0)
+            val recorded = wwwServer.takeRequest()
+            assertThat(recorded.path)
+                .isEqualTo("/browse?prettyPrint=false&continuation=CHAN_TOKEN_7&type=next")
+            assertThat(recorded.headers["X-YouTube-Client-Name"]).isEqualTo("1") // WEB
+            assertThat(recorded.headers["X-Origin"]).isEqualTo("https://www.youtube.com")
+            val body = json.parseToJsonElement(recorded.body.readUtf8()).jsonObject
+            assertThat(body["context"]!!.jsonObject["client"]!!.jsonObject["clientName"]!!.toString())
+                .isEqualTo("\"WEB\"")
+        } finally {
+            wwwServer.shutdown()
+            mServer.shutdown()
+        }
+    }
+
+    @Test fun `browseContinuation default routes to the m endpoint`() = runTest {
+        val wwwServer = MockWebServer().also { it.start() }
+        val mServer = MockWebServer().also { it.start() }
+        try {
+            val dualClient = TestableInnertubeClient(
+                sharedOkHttpClient = OkHttpClient(),
+                visitorDataFetcher = visitor,
+                mockBaseUrlWww = wwwServer.url("/").toString(),
+                mockBaseUrlM = mServer.url("/").toString(),
+                dispatcher = UnconfinedTestDispatcher(),
+            )
+            mServer.enqueue(MockResponse().setBody("""{"x":1}"""))
+
+            dualClient.browseContinuation("PL_TOKEN_9")
+
+            assertThat(mServer.requestCount).isEqualTo(1)
+            assertThat(wwwServer.requestCount).isEqualTo(0)
+        } finally {
+            wwwServer.shutdown()
+            mServer.shutdown()
+        }
+    }
+
+    @Test fun `HTTP 403 invalidates visitor config and retries exactly once with a fresh token`() = runTest {
+        coEvery { visitor.get() } returnsMany listOf(
+            YouTubeVisitorDataFetcher.VisitorConfig("STALE_TOKEN", "2.20260421.00.00"),
+            YouTubeVisitorDataFetcher.VisitorConfig("FRESH_TOKEN", "2.20260500.00.00"),
+        )
+        server.enqueue(MockResponse().setResponseCode(403).setBody("visitor rejected"))
+        server.enqueue(MockResponse().setBody("""{"contents":{}}"""))
+
+        client.search(query = "q")
+
+        assertThat(server.requestCount).isEqualTo(2)
+        val first = server.takeRequest()
+        val second = server.takeRequest()
+        assertThat(first.headers["X-Goog-Visitor-Id"]).isEqualTo("STALE_TOKEN")
+        assertThat(second.headers["X-Goog-Visitor-Id"]).isEqualTo("FRESH_TOKEN")
+        verify(exactly = 1) { visitor.invalidate() }
+        coVerify(exactly = 2) { visitor.get() }
+    }
+
+    @Test fun `second HTTP 403 propagates - retry happens once, never loops`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(403).setBody("no"))
+        server.enqueue(MockResponse().setResponseCode(403).setBody("still no"))
+
+        val ex = runCatching { client.search(query = "q") }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        assertThat(ex!!.message).contains("HTTP 403")
+        assertThat(server.requestCount).isEqualTo(2)
+        verify(exactly = 1) { visitor.invalidate() }
+    }
+
+    @Test fun `HTTP 500 does not trigger the visitor-config retry`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(500).setBody("server broke"))
+        val ex = runCatching { client.search(query = "q") }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        assertThat(server.requestCount).isEqualTo(1)
+        verify(exactly = 0) { visitor.invalidate() }
+    }
+
     @Test fun `next uses MWEB and includes videoId only by default`() = runTest {
         server.enqueue(MockResponse().setBody("""{"contents":{}}"""))
         client.next(videoId = "vid12345678")
@@ -221,17 +321,19 @@ class YouTubeInnertubeClientTest {
     }
 
     /**
-     * Subclasses YouTubeInnertubeClient so both base URLs point at the test
-     * MockWebServer (m and www both go to the same host since MockWebServer
-     * answers any path).
+     * Subclasses YouTubeInnertubeClient so the www / m base URLs point at
+     * MockWebServer instances. Most tests pass the same server for both;
+     * the routing tests pass two distinct servers to assert which endpoint
+     * a request actually hit.
      */
     private class TestableInnertubeClient(
         sharedOkHttpClient: OkHttpClient,
         visitorDataFetcher: YouTubeVisitorDataFetcher,
-        private val mockBaseUrl: String,
+        private val mockBaseUrlWww: String,
+        private val mockBaseUrlM: String,
         dispatcher: CoroutineDispatcher,
     ) : YouTubeInnertubeClient(sharedOkHttpClient, visitorDataFetcher, dispatcher) {
-        override val baseUrlWww: String get() = mockBaseUrl.trimEnd('/')
-        override val baseUrlM: String get() = mockBaseUrl.trimEnd('/')
+        override val baseUrlWww: String get() = mockBaseUrlWww.trimEnd('/')
+        override val baseUrlM: String get() = mockBaseUrlM.trimEnd('/')
     }
 }

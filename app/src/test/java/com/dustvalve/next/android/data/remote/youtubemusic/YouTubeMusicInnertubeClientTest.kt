@@ -4,7 +4,10 @@ package com.dustvalve.next.android.data.remote.youtubemusic
 
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.justRun
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
@@ -36,6 +39,7 @@ class YouTubeMusicInnertubeClientTest {
             visitorData = "MY_VISITOR_DATA_TOKEN",
             clientVersion = "1.20260417.03.00",
         )
+        justRun { visitor.invalidate() }
         client = TestableInnertubeClient(OkHttpClient(), visitor, server.url("/").toString(), UnconfinedTestDispatcher())
     }
 
@@ -108,6 +112,45 @@ class YouTubeMusicInnertubeClientTest {
         val ex = runCatching { client.browse(browseId = "X") }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
         assertThat(ex!!.message).contains("returned empty body")
+    }
+
+    @Test fun `HTTP 403 invalidates visitor config and retries exactly once with a fresh token`() = runTest {
+        coEvery { visitor.get() } returnsMany listOf(
+            YouTubeMusicVisitorDataFetcher.VisitorConfig("STALE_TOKEN", "1.20260417.03.00"),
+            YouTubeMusicVisitorDataFetcher.VisitorConfig("FRESH_TOKEN", "1.20260500.00.00"),
+        )
+        server.enqueue(MockResponse().setResponseCode(403).setBody("visitor rejected"))
+        server.enqueue(MockResponse().setBody("""{"contents":{}}"""))
+
+        client.browse(browseId = "FEmusic_home")
+
+        assertThat(server.requestCount).isEqualTo(2)
+        val first = server.takeRequest()
+        val second = server.takeRequest()
+        assertThat(first.headers["X-Goog-Visitor-Id"]).isEqualTo("STALE_TOKEN")
+        assertThat(second.headers["X-Goog-Visitor-Id"]).isEqualTo("FRESH_TOKEN")
+        verify(exactly = 1) { visitor.invalidate() }
+        coVerify(exactly = 2) { visitor.get() }
+    }
+
+    @Test fun `second HTTP 403 propagates - retry happens once, never loops`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(403).setBody("no"))
+        server.enqueue(MockResponse().setResponseCode(403).setBody("still no"))
+
+        val ex = runCatching { client.browse(browseId = "FEmusic_home") }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        assertThat(ex!!.message).contains("HTTP 403")
+        assertThat(server.requestCount).isEqualTo(2)
+        verify(exactly = 1) { visitor.invalidate() }
+    }
+
+    @Test fun `HTTP 500 does not trigger the visitor-config retry`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(500).setBody("server broke"))
+        val ex = runCatching { client.browse(browseId = "FEmusic_home") }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        assertThat(server.requestCount).isEqualTo(1)
+        verify(exactly = 0) { visitor.invalidate() }
     }
 
     @Test fun `browseContinuation appends continuation to URL and includes context only`() = runTest {

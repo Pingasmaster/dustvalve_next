@@ -33,6 +33,13 @@ android {
     }
 }
 
+ksp {
+    // Exports the @Database schema as JSON into schemas/ (committed to git)
+    // so schema bumps can ship hand-written Migrations verified against the
+    // previous version. Pairs with exportSchema = true on the @Database.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 ktlint {
     version.set(libs.versions.ktlint.engine.get())
     android.set(true)

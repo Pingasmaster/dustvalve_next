@@ -5,8 +5,10 @@ import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import androidx.room.withTransaction
 import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.MusicProvider
+import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
@@ -20,8 +22,11 @@ import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -133,7 +138,7 @@ class CollectionDetailViewModelTest {
         assertThat(state.error).isNotNull()
     }
 
-    @Test fun `load marks isImported when a playlist with the same name exists`() = runTest(dispatcher) {
+    @Test fun `load marks isImported by name for display but never captures the foreign playlist id`() = runTest(dispatcher) {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
@@ -158,8 +163,87 @@ class CollectionDetailViewModelTest {
 
         val state = vm.uiState.value
         assertThat(state.isImported).isTrue()
-        assertThat(state.importedPlaylistId).isEqualTo("local_playlist_42")
+        // Name matching is display-only: the id must NOT be captured, because
+        // importedPlaylistId authorizes deletion in toggleFavorite.
+        assertThat(state.importedPlaylistId).isNull()
         assertThat(state.isFavorite).isTrue()
+    }
+
+    @Test fun `unfavoriting never deletes a same-named user playlist`() = runTest(dispatcher) {
+        val url = "https://youtube.com/playlist?list=PL1"
+        val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
+        coEvery { source.getCollection(url, null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "My Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("a")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns source
+        coEvery { favoriteDao.isFavorite(url) } returns true
+        val userPlaylist = mockk<com.dustvalve.next.android.data.local.db.entity.PlaylistEntity>()
+        every { userPlaylist.id } returns "users_own_playlist"
+        coEvery { playlistDao.getPlaylistByName("My Mix") } returns userPlaylist
+
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
+        advanceUntilIdle()
+
+        // Not imported this session (importedPlaylistId == null): unfavoriting
+        // must not resolve a deletion target by name.
+        vm.toggleFavorite()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { playlistRepository.deletePlaylist(any()) }
+        assertThat(vm.uiState.value.isFavorite).isFalse()
+    }
+
+    @Test fun `unfavoriting deletes only the playlist imported this session`() = runTest(dispatcher) {
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        try {
+            coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
+                firstArg<suspend () -> Any?>().invoke()
+            }
+            val url = "https://youtube.com/playlist?list=PL1"
+            val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
+            coEvery { source.getCollection(url, null) } returns MusicCollection(
+                id = url,
+                url = url,
+                name = "My Mix",
+                owner = "",
+                coverUrl = null,
+                tracks = listOf(track("a")),
+                continuation = null,
+                hasMore = false,
+            )
+            every { sources["youtube"] } returns source
+            coEvery { favoriteDao.isFavorite(url) } returns false
+            coEvery { playlistDao.getPlaylistByName("My Mix") } returns null
+            coEvery { playlistRepository.createPlaylist("My Mix") } returns Playlist(id = "imported_1", name = "My Mix")
+
+            val vm = newVm()
+            vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
+            advanceUntilIdle()
+
+            vm.importToLibrary()
+            advanceUntilIdle()
+            assertThat(vm.uiState.value.importedPlaylistId).isEqualTo("imported_1")
+
+            // Favorite, then unfavorite: exactly the imported id is deleted.
+            vm.toggleFavorite()
+            advanceUntilIdle()
+            vm.toggleFavorite()
+            advanceUntilIdle()
+
+            coVerify(exactly = 1) { playlistRepository.deletePlaylist("imported_1") }
+            assertThat(vm.uiState.value.importedPlaylistId).isNull()
+            assertThat(vm.uiState.value.isImported).isFalse()
+        } finally {
+            unmockkStatic("androidx.room.RoomDatabaseKt")
+        }
     }
 
     // --- helpers ------------------------------------------------------------

@@ -42,26 +42,40 @@ class CookieStore @Inject constructor(
 
     private val lock = Any()
     private var cachedCookies: List<SerializableCookie> = emptyList()
+
+    /**
+     * Set (under [lock]) by any writer that touches [cachedCookies] before the async init
+     * load has finished. Writers persist their own snapshot synchronously, so once one has
+     * run, the disk state the init coroutine read is stale and must not clobber the cache.
+     */
+    private var mutatedBeforeInit = false
     private val initLatch = CountDownLatch(1)
     private val persistMutex = Mutex()
 
     init {
         // Load cookies asynchronously instead of blocking the main thread
         scope.launch {
-            val cookiesJson = settingsDataStore.authCookies.firstOrNull()
-            val loaded = if (cookiesJson != null) {
-                try {
-                    json.decodeFromString<List<SerializableCookie>>(cookiesJson)
-                } catch (_: Exception) {
+            try {
+                val cookiesJson = settingsDataStore.authCookies.firstOrNull()
+                val loaded = if (cookiesJson != null) {
+                    try {
+                        json.decodeFromString<List<SerializableCookie>>(cookiesJson)
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                } else {
                     emptyList()
                 }
-            } else {
-                emptyList()
+                synchronized(lock) {
+                    if (!mutatedBeforeInit) {
+                        cachedCookies = loaded
+                    }
+                }
+            } finally {
+                // Must count down even when the load throws - otherwise every request
+                // would block on the latch and silently proceed cookie-less forever.
+                initLatch.countDown()
             }
-            synchronized(lock) {
-                cachedCookies = loaded
-            }
-            initLatch.countDown()
         }
     }
 
@@ -85,6 +99,7 @@ class CookieStore @Inject constructor(
         val urlPath = url.encodedPath
         return cookies
             .filter { cookie -> matchesDomain(url.host, cookie.domain) }
+            .filter { cookie -> !cookie.secure || url.isHttps }
             .filter { cookie -> urlPath.startsWith(cookie.path) }
             .filter { cookie -> cookie.expiresAt == 0L || cookie.expiresAt > System.currentTimeMillis() }
             .mapNotNull { cookie ->
@@ -127,6 +142,7 @@ class CookieStore @Inject constructor(
 
         // Update in-memory cache atomically under lock
         synchronized(lock) {
+            mutatedBeforeInit = true
             val existingCookies = cachedCookies.toMutableList()
             for (newCookie in newCookies) {
                 existingCookies.removeAll { it.name == newCookie.name && it.domain == newCookie.domain && it.path == newCookie.path }
@@ -190,6 +206,9 @@ class CookieStore @Inject constructor(
         }
 
         synchronized(lock) {
+            // May run before the async init load finishes (e.g. WebView login on a cold
+            // start); flag the mutation so init never clobbers what we import here.
+            mutatedBeforeInit = true
             val existing = cachedCookies.toMutableList()
             for (newCookie in newCookies) {
                 existing.removeAll { it.name == newCookie.name && it.domain == newCookie.domain && it.path == newCookie.path }
@@ -209,6 +228,7 @@ class CookieStore @Inject constructor(
     suspend fun clearCookiesForDomain(domain: String) {
         persistMutex.withLock {
             synchronized(lock) {
+                mutatedBeforeInit = true
                 cachedCookies = cachedCookies.filter { cookie ->
                     !matchesDomain(domain, cookie.domain)
                 }

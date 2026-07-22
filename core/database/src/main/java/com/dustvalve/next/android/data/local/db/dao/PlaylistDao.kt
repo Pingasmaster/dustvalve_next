@@ -56,6 +56,13 @@ interface PlaylistDao {
     @Query("DELETE FROM playlists WHERE id = :playlistId AND isSystem = 0")
     suspend fun deletePlaylist(playlistId: String): Int
 
+    // Sweep-only variant WITHOUT the isSystem = 0 guard. User-initiated
+    // deletes must keep using [deletePlaylist]; this one exists solely for
+    // the defunct-system-playlist sweep in PlaylistRepositoryImpl, which by
+    // definition targets rows where isSystem = 1.
+    @Query("DELETE FROM playlists WHERE id = :playlistId")
+    suspend fun deletePlaylistIncludingSystem(playlistId: String): Int
+
     @Query("SELECT * FROM playlists WHERE name = :name AND isSystem = 0 ORDER BY createdAt DESC LIMIT 1")
     suspend fun getPlaylistByName(name: String): PlaylistEntity?
 

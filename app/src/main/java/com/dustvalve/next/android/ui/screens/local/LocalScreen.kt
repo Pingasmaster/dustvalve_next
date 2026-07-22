@@ -1,7 +1,9 @@
 package com.dustvalve.next.android.ui.screens.local
 
 import android.Manifest
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -55,6 +57,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SheetValue
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
@@ -131,6 +135,31 @@ fun LocalScreen(
         }
     }
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    // MediaStore delete consent: non-owned items require the user to approve a
+    // system dialog; the DB row is removed only after RESULT_OK.
+    val deleteConsentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        viewModel.onDeleteRequestResult(result.resultCode == Activity.RESULT_OK)
+    }
+    LaunchedEffect(state.pendingDeleteRequest) {
+        val pending = state.pendingDeleteRequest ?: return@LaunchedEffect
+        deleteConsentLauncher.launch(IntentSenderRequest.Builder(pending.intentSender).build())
+    }
+
+    val deleteFailedMsg = stringResource(R.string.snackbar_delete_failed)
+    LaunchedEffect(state.deleteFailed) {
+        if (state.deleteFailed) {
+            try {
+                snackbarHostState.showSnackbar(deleteFailedMsg)
+            } finally {
+                viewModel.clearDeleteFailed()
+            }
+        }
+    }
+
     var contextMenuTrack by remember { mutableStateOf<Track?>(null) }
     var showLocalPlaylistSheet by remember { mutableStateOf(false) }
     var showDeleteTrackDialog by remember { mutableStateOf(false) }
@@ -166,7 +195,10 @@ fun LocalScreen(
             textFieldState = textFieldState,
             onSearch = {
                 val q = textFieldState.text.toString()
-                if (navViewModel != null && (detectedLink != null || DeepLinkRouter.looksLikeUrl(q))) {
+                // Only divert to the link path for recognised links or input with
+                // an explicit http/https scheme - scheme-less dotted words like
+                // "will.i.am" must run a normal search.
+                if (navViewModel != null && (detectedLink != null || hasExplicitWebScheme(q))) {
                     navViewModel.openLink(q)
                 } else {
                     viewModel.onSearch()
@@ -205,6 +237,7 @@ fun LocalScreen(
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         contentWindowInsets = WindowInsets(0),
         floatingActionButton = {
             if (filteredTracks.isNotEmpty()) {
@@ -958,4 +991,11 @@ fun LocalScreen(
             Spacer(modifier = Modifier.height(28.dp))
         }
     }
+}
+
+/** True only for input the user explicitly typed/pasted as a web URL. */
+private fun hasExplicitWebScheme(raw: String): Boolean {
+    val trimmed = raw.trim()
+    return trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true)
 }

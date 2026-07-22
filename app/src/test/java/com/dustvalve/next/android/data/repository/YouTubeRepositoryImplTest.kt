@@ -4,11 +4,13 @@ package com.dustvalve.next.android.data.repository
 
 import com.dustvalve.next.android.data.remote.youtube.innertube.PlayerStreamInfo
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeChannelParser
+import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeNextParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
@@ -35,6 +37,8 @@ class YouTubeRepositoryImplTest {
     private lateinit var playlistParser: YouTubePlaylistParser
     private lateinit var channelParser: YouTubeChannelParser
     private lateinit var nextParser: YouTubeNextParser
+    private lateinit var albumResolver: YouTubeMusicAlbumResolver
+    private lateinit var playlistCacheMock: com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
     private lateinit var repo: YouTubeRepositoryImpl
 
     private val empty: JsonElement = buildJsonObject {}
@@ -46,10 +50,11 @@ class YouTubeRepositoryImplTest {
         playlistParser = mockk()
         channelParser = mockk()
         nextParser = mockk()
+        albumResolver = mockk()
         // Cache DAOs explicitly return null on lookup so the existing tests
         // (which assert the network/parser path) hit the cache-miss branch.
         val videoCacheMock = mockk<com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao>(relaxed = true)
-        val playlistCacheMock = mockk<com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao>(relaxed = true)
+        playlistCacheMock = mockk(relaxed = true)
         coEvery { videoCacheMock.getById(any()) } returns null
         coEvery { videoCacheMock.getByIds(any()) } returns emptyList()
         coEvery { playlistCacheMock.getById(any()) } returns null
@@ -60,6 +65,7 @@ class YouTubeRepositoryImplTest {
             videoCache = videoCacheMock,
             playlistCache = playlistCacheMock,
             youTubeMusicRepository = ytmRepoMock,
+            albumResolver = albumResolver,
             ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
@@ -177,6 +183,38 @@ class YouTubeRepositoryImplTest {
         assertThat(tracks).hasSize(3)
     }
 
+    @Test fun `getPlaylistTracks resolves MPREb album ids to the audio playlist before browsing`() = runTest {
+        // YTM album search results emit playlist?list=MPREb_... URLs; the
+        // repository must resolve the album browse id to its OLAK5uy_ audio
+        // playlist first - browsing "VLMPREb_..." is invalid.
+        coEvery { albumResolver.resolveAudioPlaylistId("MPREb_album0001") } returns "OLAK5uy_realList001"
+        coEvery { client.browse("VLOLAK5uy_realList001", null) } returns empty
+        every { playlistParser.parse(empty, "OLAK5uy_realList001") } returns YouTubePlaylistParser.PlaylistPage(
+            tracks = listOf(track("a1")),
+            title = "Album Tracks",
+            continuation = null,
+        )
+
+        val (tracks, title) = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=MPREb_album0001")
+
+        assertThat(title).isEqualTo("Album Tracks")
+        assertThat(tracks).hasSize(1)
+        coVerify(exactly = 0) { client.browse("VLMPREb_album0001", any()) }
+        // Snapshot cached under BOTH the real playlist id and the MPREb
+        // alias, so re-opening the album URL is a direct cache hit.
+        coVerify { playlistCacheMock.insert(match { it.playlistId == "OLAK5uy_realList001" }) }
+        coVerify { playlistCacheMock.insert(match { it.playlistId == "MPREb_album0001" }) }
+    }
+
+    @Test fun `getPlaylistTracks fails cleanly when the MPREb album has no audio playlist`() = runTest {
+        coEvery { albumResolver.resolveAudioPlaylistId("MPREb_album0002") } returns null
+        val ex = runCatching {
+            repo.getPlaylistTracks("https://www.youtube.com/playlist?list=MPREb_album0002")
+        }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        coVerify(exactly = 0) { client.browse(any(), any()) }
+    }
+
     @Test fun `getChannelVideos uses videos tab params on first call`() = runTest {
         val params = slot<String>()
         coEvery { client.browse("UCaaaaaaaaaaaaaaaaaaaaaa", capture(params)) } returns empty
@@ -206,8 +244,10 @@ class YouTubeRepositoryImplTest {
         val (_, _, page1) = repo.getChannelVideos("https://www.youtube.com/channel/UCbbbbbbbbbbbbbbbbbbbbbb")
         assertThat(page1).isNotNull()
 
-        // Second page via continuation
-        coEvery { client.browseContinuation("CHAN_C1") } returns empty
+        // Second page via continuation - MUST go out with the WEB client so
+        // the response matches the WEB richGrid shape of page 1 (an MWEB
+        // continuation parses to zero tracks, truncating channels to page 1).
+        coEvery { client.browseContinuation("CHAN_C1", YouTubeClient.WEB_NO_AUTH) } returns empty
         every { channelParser.parseContinuation(empty, "UCbbbbbbbbbbbbbbbbbbbbbb", "C", 3) } returns
             YouTubeChannelParser.ChannelPage(
                 tracks = listOf(track("c")),

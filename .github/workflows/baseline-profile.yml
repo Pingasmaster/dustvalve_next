@@ -2,10 +2,13 @@ name: Regenerate Baseline + Startup Profile
 
 # Deliberately NOT triggered by pull_request: this job holds contents:write /
 # pull-requests:write, and workflows must never run on unreviewed fork code.
-# Runs on commits landed on master and on manual dispatch only.
+# Deliberately NOT triggered by push either: profiles are not byte-stable,
+# so a push-triggered regen opens a bot PR whose merge would re-trigger the
+# workflow forever. Runs on a weekly schedule and on manual dispatch only.
 on:
-  push:
-    branches: [master]
+  schedule:
+    # Weekly, Monday 04:00 UTC.
+    - cron: '0 4 * * 1'
   workflow_dispatch:
     inputs:
       run_macrobenchmarks:
@@ -28,6 +31,12 @@ permissions:
 jobs:
   baseline-profile:
     name: Generate Baseline + Startup Profile (release, API 37)
+    # Belt-and-braces treadmill guard: should a push trigger ever be
+    # reintroduced, a push whose head commit is the bot's own profile-regen
+    # merge must never re-trigger regeneration.
+    if: >-
+      github.event_name != 'push' ||
+      !contains(github.event.head_commit.message, 'chore(baseline-profile)')
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
