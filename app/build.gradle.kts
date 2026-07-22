@@ -352,18 +352,9 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
-    // DataStore
-    implementation(libs.datastore.preferences)
-
-    // DocumentFile (SAF directory/file creation for export)
-    implementation(libs.documentfile)
-
     // OkHttp
     implementation(libs.okhttp)
     implementation(libs.okhttp.brotli)
-
-    // Jsoup
-    implementation(libs.jsoup)
 
     // Coil 3
     implementation(libs.coil.compose)
@@ -392,9 +383,6 @@ dependencies {
 
     // Coroutines
     implementation(libs.coroutines.android)
-
-    // Immutable collections (stable Compose params for List/Set types)
-    implementation(libs.collections.immutable)
 
     // Reorderable lists (drag & drop for LazyColumn / LazyRow)
     implementation(libs.reorderable)

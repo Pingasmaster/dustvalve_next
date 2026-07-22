@@ -59,12 +59,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -82,7 +83,10 @@ import com.dustvalve.next.android.ui.components.AlbumCard
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
+import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.util.toggle
+import kotlinx.coroutines.launch
 
 /**
  * Source-agnostic artist detail screen.
@@ -301,7 +305,12 @@ private fun AlbumGridLayout(
         contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         item(key = "artist_hero", span = { GridItemSpan(2) }) {
-            ArtistHero(imageUrl = artist.imageUrl, name = artist.name, onDoubleTap = onToggleFavorite)
+            ArtistHero(
+                imageUrl = artist.imageUrl,
+                name = artist.name,
+                isFavorite = artist.isFavorite,
+                onDoubleTap = onToggleFavorite,
+            )
         }
         item(key = "actions", span = { GridItemSpan(2) }) {
             ActionBar(
@@ -401,7 +410,12 @@ private fun FlatTracksLayout(
         contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         item(key = "artist_hero") {
-            ArtistHero(imageUrl = artist.imageUrl, name = artist.name, onDoubleTap = onToggleFavorite)
+            ArtistHero(
+                imageUrl = artist.imageUrl,
+                name = artist.name,
+                isFavorite = artist.isFavorite,
+                onDoubleTap = onToggleFavorite,
+            )
         }
         item(key = "actions") {
             ActionBar(
@@ -465,34 +479,48 @@ private fun FlatTracksLayout(
 }
 
 @Composable
-private fun ArtistHero(imageUrl: String?, name: String, onDoubleTap: (() -> Unit)? = null) {
+private fun ArtistHero(imageUrl: String?, name: String, isFavorite: Boolean, onDoubleTap: (() -> Unit)? = null) {
     val hapticFeedback = LocalHapticFeedback.current
+    val heartMorph = rememberHeartMorphState()
+    val heartScope = rememberCoroutineScope()
     // Double-tap the hero to toggle the artist favorite; single tap stays a
-    // no-op, so the gesture detector adds no latency to anything else.
+    // no-op, so the gesture detector adds no latency to anything else. The
+    // artwork morphs into a heart - same animation as the player's album art.
     val doubleTapModifier = if (onDoubleTap != null) {
         Modifier.pointerInput(imageUrl) {
             detectTapGestures(
                 onDoubleTap = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    hapticFeedback.toggle(!isFavorite)
                     onDoubleTap()
+                    heartScope.launch { heartMorph.play() }
                 },
             )
         }
     } else {
         Modifier
     }
+    // Clip only while the morph is animating so the resting hero stays
+    // full-bleed.
+    val artModifier = Modifier
+        .fillMaxSize()
+        .then(
+            if (heartMorph.progress > 0f) {
+                Modifier.clip(heartMorph.shape)
+            } else {
+                Modifier
+            },
+        )
     Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).then(doubleTapModifier)) {
         if (imageUrl != null) {
             AsyncImage(
                 model = imageUrl,
                 contentDescription = name,
-                modifier = Modifier.fillMaxSize(),
+                modifier = artModifier,
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
+                modifier = artModifier
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             )
         }
