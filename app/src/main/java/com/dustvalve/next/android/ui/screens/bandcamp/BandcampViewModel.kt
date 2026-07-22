@@ -186,6 +186,9 @@ class BandcampViewModel @Inject constructor(
 
     private fun loadCategoryAlbums(tag: String) {
         loadCategoryJob?.cancel()
+        // Set at fetch start (not only in selectCategory/selectSubTag) so retry
+        // shows the spinner, and clear any stale error from a previous attempt.
+        _uiState.update { it.copy(isCategoryLoading = true, categoryError = null) }
         loadCategoryJob = viewModelScope.launch {
             try {
                 val genreParam = tag.takeIf { it.isNotEmpty() }
@@ -195,6 +198,7 @@ class BandcampViewModel @Inject constructor(
                     it.copy(
                         categoryAlbums = result.albums,
                         isCategoryLoading = false,
+                        categoryError = null,
                     )
                 }
             } catch (e: Exception) {

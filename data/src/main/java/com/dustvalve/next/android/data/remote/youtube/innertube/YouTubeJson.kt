@@ -16,6 +16,13 @@ internal fun JsonElement.str(key: String): String? = path(key)?.str()
 
 internal fun JsonElement.int(key: String): Int? = (path(key) as? JsonPrimitive)?.content?.toIntOrNull()
 
+/**
+ * Boolean at [key]. Innertube emits real JSON booleans (e.g. tabRenderer's
+ * `selected`), which [str] deliberately rejects (isString == false) - use
+ * this instead. Accepts "true"/"false" strings too, for defensiveness.
+ */
+internal fun JsonElement.bool(key: String): Boolean? = (path(key) as? JsonPrimitive)?.content?.toBooleanStrictOrNull()
+
 internal fun JsonElement.long(key: String): Long? = (path(key) as? JsonPrimitive)?.content?.toLongOrNull()
 
 internal fun JsonElement.runsText(key: String): String? {

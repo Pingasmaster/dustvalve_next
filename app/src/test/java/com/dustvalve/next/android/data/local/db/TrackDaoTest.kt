@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.local.db
 
 import com.dustvalve.next.android.data.local.db.dao.deleteByIds
 import com.dustvalve.next.android.data.local.db.dao.getByIds
+import com.dustvalve.next.android.data.local.db.entity.PlaylistEntity
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
@@ -70,6 +71,23 @@ class TrackDaoTest : DbTestBase() {
         )
         val r = dao.searchLocalTracks("foo").map { it.id }.toSet()
         assertThat(r).containsExactly("l1", "l2", "l3")
+    }
+
+    @Test fun `insertAll upserts in place and preserves playlist membership`() = runTest {
+        // Regression: insertAll used to be @Insert(REPLACE). SQLite REPLACE
+        // is DELETE + INSERT, and playlist_tracks has an ON DELETE CASCADE FK
+        // on trackId, so re-inserting an existing track (every rescan / album
+        // revalidation) wiped its playlist memberships.
+        val trackDao = db.trackDao()
+        val playlistDao = db.playlistDao()
+        trackDao.insertAll(listOf(t("t1")))
+        playlistDao.insertPlaylist(PlaylistEntity(id = "p1", name = "My"))
+        playlistDao.addTrackToPlaylist("p1", "t1")
+
+        trackDao.insertAll(listOf(t("t1", title = "updated")))
+
+        assertThat(trackDao.getById("t1")?.title).isEqualTo("updated")
+        assertThat(playlistDao.getTracksInPlaylistSync("p1").map { it.id }).containsExactly("t1")
     }
 
     @Test fun `getLocalTrackIdsByFolderSync filters by folderUri`() = runTest {

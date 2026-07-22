@@ -186,7 +186,41 @@ fun PlaylistDetailScreen(
                 )
             }
 
-            playlist != null -> {
+            // Playlist deleted underneath us (flow emitted null with no error):
+            // show an explicit dead-end state with a way back instead of a
+            // blank screen.
+            playlist == null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.playlist_gone_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.playlist_gone_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBack, shapes = ButtonDefaults.shapes()) {
+                            Text(stringResource(R.string.common_action_back))
+                        }
+                    }
+                }
+            }
+
+            else -> {
                 PlaylistContent(
                     playlist = playlist,
                     tracks = state.tracks,

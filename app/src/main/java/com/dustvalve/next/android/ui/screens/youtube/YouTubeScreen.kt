@@ -210,7 +210,10 @@ fun YouTubeScreen(
             textFieldState = textFieldState,
             onSearch = {
                 val q = textFieldState.text.toString()
-                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) {
+                // Only divert to the link path for recognised links or input with
+                // an explicit http/https scheme - scheme-less dotted words like
+                // "will.i.am" must run a normal search.
+                if (detectedLink != null || hasExplicitWebScheme(q)) {
                     onOpenLink(q)
                 } else {
                     viewModel.onSearch()
@@ -585,8 +588,14 @@ fun YouTubeScreen(
                                                     IconButton(
                                                         onClick = {
                                                             scope.launch {
-                                                                viewModel.importPlaylist(result.url, result.name)
-                                                                snackbarHostState.showSnackbar(importedMsg)
+                                                                // Success snackbar only once the import actually
+                                                                // finished; failures surface via state.error.
+                                                                val imported = viewModel
+                                                                    .importPlaylist(result.url, result.name)
+                                                                    .await()
+                                                                if (imported) {
+                                                                    snackbarHostState.showSnackbar(importedMsg)
+                                                                }
                                                             }
                                                         },
                                                         shapes = IconButtonDefaults.shapes(),
@@ -1158,4 +1167,11 @@ private fun FeedErrorCard(message: String, onRetry: () -> Unit, modifier: Modifi
             }
         }
     }
+}
+
+/** True only for input the user explicitly typed/pasted as a web URL. */
+private fun hasExplicitWebScheme(raw: String): Boolean {
+    val trimmed = raw.trim()
+    return trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true)
 }

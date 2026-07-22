@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
@@ -13,6 +14,7 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -29,6 +31,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -59,6 +62,7 @@ class DownloadController @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val notificationCenter: DownloadNotificationCenter,
+    private val downloadDao: DownloadDao,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     sealed interface DownloadWork {
@@ -121,33 +125,106 @@ class DownloadController @Inject constructor(
 
     private fun nextId() = seq.incrementAndGet()
 
+    private val coldStartPurgeStarted = AtomicBoolean(false)
+    private val coldStartPurgeDone = CompletableDeferred<Unit>()
+
     /**
-     * Best-effort cold-start sweep of partial `.tmp` files left by a previous
-     * process. Safe because no download is running yet at app start, and a
-     * process death already lost the in-memory queue that could have resumed
-     * them. Only covers app-internal downloads; SAF/folder mode restarts from 0
-     * anyway. Call once from Application.onCreate.
+     * Best-effort cold-start sweep of the internal downloads tree, launched
+     * once (idempotent). Two passes:
+     *
+     * 1. Delete partial `.tmp` files (and their `.tmp.meta` resume sidecars)
+     *    left by a previous process - the in-memory queue that could have
+     *    resumed them died with it.
+     * 2. Delete completed files no downloads row references - a process death
+     *    between the temp-file rename and the DB insert leaves an invisible
+     *    file that would otherwise never be reclaimed.
+     *
+     * Safe because callers that enqueue work at startup (the auto-download
+     * coordinator) await [awaitColdStartPurge] before enqueueing. Only covers
+     * app-internal downloads; SAF/folder mode restarts from 0 anyway. Call
+     * from Application.onCreate.
      */
     @Suppress("TooGenericExceptionCaught")
     fun purgeStalePartialsOnColdStart() {
+        if (!coldStartPurgeStarted.compareAndSet(false, true)) return
         scope.launch {
             try {
                 val downloads = File(context.filesDir, "downloads")
                 if (downloads.isDirectory) {
-                    downloads.walkTopDown()
-                        .filter { it.isFile && it.name.endsWith(".tmp") }
-                        .forEach { file ->
-                            try {
-                                file.delete()
-                            } catch (_: SecurityException) {
-                                // Ignore partials we can't delete.
-                            }
-                        }
+                    purgeStalePartials(downloads)
+                    reconcileOrphanFiles(downloads)
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.w(TAG, "Stale .tmp purge failed", e)
+                Log.w(TAG, "Cold-start downloads sweep failed", e)
+            } finally {
+                coldStartPurgeDone.complete(Unit)
             }
         }
+    }
+
+    /**
+     * Suspends until the cold-start sweep has finished, starting it if it
+     * hasn't run yet. Startup enqueuers (the auto-download favorites
+     * coordinator) call this so the purge can't race a fresh in-progress
+     * `.tmp` written by work they enqueue.
+     */
+    suspend fun awaitColdStartPurge() {
+        purgeStalePartialsOnColdStart()
+        coldStartPurgeDone.await()
+    }
+
+    private fun purgeStalePartials(downloads: File) {
+        downloads.walkTopDown()
+            .filter { it.isFile && (it.name.endsWith(".tmp") || it.name.endsWith(".tmp.meta")) }
+            .forEach { file ->
+                try {
+                    file.delete()
+                } catch (_: SecurityException) {
+                    // Ignore partials we can't delete.
+                }
+            }
+    }
+
+    /**
+     * Deletes files under the internal downloads tree that no downloads row
+     * references. Conservative: Coil's `images` subtree is skipped (its files
+     * are managed by Coil, not Room), files touched within the last
+     * [ORPHAN_GRACE_MS] are skipped (a rename racing its DB insert right now
+     * must not be swept), and any DB failure skips the pass entirely.
+     * `content://` rows (SAF mode) point outside this tree and are ignored.
+     */
+    @Suppress("TooGenericExceptionCaught")
+    private suspend fun reconcileOrphanFiles(downloads: File) {
+        val known = try {
+            downloadDao.getAllSync()
+                .asSequence()
+                .map { it.filePath }
+                .filter { it.isNotBlank() && !it.startsWith("content://") }
+                .map { File(it).absolutePath }
+                .toHashSet()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Skipping orphan-file reconcile; downloads query failed", e)
+            return
+        }
+        val imagesRoot = File(downloads, "images")
+        val now = System.currentTimeMillis()
+        downloads.walkTopDown()
+            .onEnter { dir -> dir != imagesRoot }
+            .filter { it.isFile }
+            .forEach { file ->
+                val fresh = now - file.lastModified() < ORPHAN_GRACE_MS
+                if (!fresh && file.absolutePath !in known) {
+                    try {
+                        file.delete()
+                    } catch (_: SecurityException) {
+                        // Ignore orphans we can't delete.
+                    }
+                }
+            }
     }
 
     /**
@@ -214,7 +291,11 @@ class DownloadController @Inject constructor(
     }
 
     private fun onWorkAdded() {
-        _isActive.value = true
+        // isActive writes are serialized with queue state under [lock]: the
+        // drain path only writes false while it *observes* an empty queue
+        // inside the lock, so this true-write (after the enqueue) can never be
+        // overwritten by a stale loop that saw the pre-enqueue queue.
+        synchronized(lock) { _isActive.value = true }
         startServiceIfPossible()
         ensureLoop()
     }
@@ -241,6 +322,10 @@ class DownloadController @Inject constructor(
         val cleared = synchronized(lock) {
             val c = queue.toList()
             queue.clear()
+            // Same ordering rule as runLoop: the false-write happens inside
+            // the critical section that emptied the queue, so it can't land
+            // after a concurrent enqueue's true-write.
+            _isActive.value = false
             c
         }
         _isPaused.value = false
@@ -248,7 +333,6 @@ class DownloadController @Inject constructor(
         // Plain cancellation (not a pause) so the repository deletes the partial
         // .tmp; the active work emits its own terminal event in runWork.
         activeJob?.cancel()
-        _isActive.value = false
         // Wake any awaiters of queued-but-never-run work so they don't hang.
         cleared.forEach {
             _events.tryEmit(DownloadEvent.Failed(it.id, it.label, CancellationException("download cancelled")))
@@ -286,13 +370,19 @@ class DownloadController @Inject constructor(
             if (_isPaused.value) _isPaused.first { !it }
             val work = synchronized(lock) {
                 val w = queue.firstOrNull()
-                if (w == null) loopRunning = false
+                if (w == null) {
+                    // Release the loop AND flip isActive inside the same
+                    // critical section that observed the empty queue. Writing
+                    // false outside the lock raced a concurrent enqueue: the
+                    // new loop's work could already be running when the stale
+                    // false-write landed, stopping the foreground service
+                    // mid-download with nothing to re-arm it.
+                    loopRunning = false
+                    _isActive.value = false
+                }
                 w
             }
-            if (work == null) {
-                _isActive.value = false
-                return
-            }
+            if (work == null) return
             runWork(work)
         }
     }
@@ -348,5 +438,12 @@ class DownloadController @Inject constructor(
 
     companion object {
         private const val TAG = "DownloadController"
+
+        /**
+         * Files younger than this are never treated as orphans by the
+         * cold-start reconcile - a just-renamed file whose DB insert is still
+         * in flight must survive the sweep.
+         */
+        private const val ORPHAN_GRACE_MS = 10L * 60L * 1000L
     }
 }

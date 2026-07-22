@@ -1,9 +1,8 @@
 package com.dustvalve.next.android.data.local.db.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -12,7 +11,13 @@ private const val SQLITE_MAX_BIND_PARAMS = 900
 @Dao
 interface TrackDao {
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    // True upsert (insert new rows, UPDATE existing ones in place). This must
+    // NOT be @Insert(onConflict = REPLACE): SQLite implements REPLACE as
+    // DELETE + INSERT, and playlist_tracks carries an ON DELETE CASCADE FK on
+    // trackId, so REPLACE-ing an already-present track (every local rescan,
+    // every album revalidation) silently wiped that track's playlist
+    // memberships.
+    @Upsert
     suspend fun insertAll(tracks: List<TrackEntity>)
 
     @Query("DELETE FROM tracks WHERE albumId = :albumId")

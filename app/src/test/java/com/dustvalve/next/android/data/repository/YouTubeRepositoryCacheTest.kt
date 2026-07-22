@@ -51,6 +51,7 @@ class YouTubeRepositoryCacheTest {
     private lateinit var videoCache: YouTubeVideoCacheDao
     private lateinit var playlistCache: YouTubePlaylistCacheDao
     private lateinit var ytmRepo: com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
+    private lateinit var albumResolver: com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
     private lateinit var repo: YouTubeRepositoryImpl
 
     @Before fun setUp() {
@@ -63,10 +64,11 @@ class YouTubeRepositoryCacheTest {
         videoCache = mockk(relaxed = true)
         playlistCache = mockk(relaxed = true)
         ytmRepo = mockk(relaxed = true)
+        albumResolver = mockk(relaxed = true)
         coEvery { ytmRepo.lookupAlbumPlaylistForVideo(any()) } returns null
         repo = YouTubeRepositoryImpl(
             client, playerParser, searchParser, playlistParser, channelParser, nextParser,
-            videoCache, playlistCache, ytmRepo,
+            videoCache, playlistCache, ytmRepo, albumResolver,
             ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
@@ -199,6 +201,118 @@ class YouTubeRepositoryCacheTest {
         assertThat(title).isEqualTo("Refreshed")
         assertThat(tracks).hasSize(2)
         coVerify { client.browse("VL$playlistId") }
+    }
+
+    @Test fun `playlist snapshot uses non-destructive bulk insert so upgraded rows survive`() = runTest {
+        val playlistId = "PLbulkIgnore"
+        coEvery { playlistCache.getById(playlistId) } returns null
+        coEvery { client.browse("VL$playlistId") } returns JsonObject(emptyMap())
+        every { playlistParser.parse(any(), playlistId) } returns
+            YouTubePlaylistParser.PlaylistPage(
+                tracks = listOf(sampleTrack("yt_bulkvid0001")),
+                title = "Bulk",
+                continuation = null,
+            )
+
+        repo.getPlaylistTracks("https://www.youtube.com/playlist?list=$playlistId")
+
+        // REPLACE here would clobber rows already upgraded with a resolved
+        // albumUrl / albumLookupDone=true by the single-video path,
+        // breaking the "once attempted, never re-lookup" invariant.
+        coVerify(exactly = 1) { videoCache.insertAllIgnore(any()) }
+        coVerify(exactly = 0) { videoCache.insertAll(any()) }
+    }
+
+    @Test fun `mix page cache write is non-destructive too`() = runTest {
+        every { playlistParser.extractMixSeedVideoId("RDdQw4w9WgXcQ") } returns "dQw4w9WgXcQ"
+        coEvery { client.next(videoId = "dQw4w9WgXcQ", playlistId = "RDdQw4w9WgXcQ") } returns JsonObject(emptyMap())
+        every { playlistParser.parseMix(any(), any(), any(), any()) } returns
+            YouTubePlaylistParser.MixPage(
+                tracks = listOf(sampleTrack("yt_mixvid00001")),
+                title = "Mix",
+                continuation = null,
+            )
+
+        repo.getMixPage("https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=RDdQw4w9WgXcQ")
+
+        coVerify(exactly = 1) { videoCache.insertAllIgnore(any()) }
+        coVerify(exactly = 0) { videoCache.insertAll(any()) }
+    }
+
+    @Test fun `failed album lookup leaves the cached row untouched for a later retry`() = runTest {
+        coEvery { videoCache.getById("retryvid001") } returns YouTubeVideoCacheEntity(
+            videoId = "retryvid001",
+            title = "Seeded",
+            artist = "A",
+            artistUrl = "",
+            durationSec = 10f,
+            artUrl = "",
+            albumLookupDone = false,
+        )
+        coEvery { ytmRepo.lookupAlbumPlaylistForVideo("retryvid001") } throws RuntimeException("network down")
+
+        val track = repo.getTrackInfo("https://www.youtube.com/watch?v=retryvid001")
+
+        assertThat(track.title).isEqualTo("Seeded")
+        // No write: persisting albumLookupDone=true after a transient
+        // failure would poison the negative cache forever.
+        coVerify(exactly = 0) { videoCache.insert(any()) }
+    }
+
+    @Test fun `completed negative lookup upgrades the row with albumLookupDone=true`() = runTest {
+        coEvery { videoCache.getById("negvid00001") } returns YouTubeVideoCacheEntity(
+            videoId = "negvid00001",
+            title = "Seeded",
+            artist = "A",
+            artistUrl = "",
+            durationSec = 10f,
+            artUrl = "",
+            albumLookupDone = false,
+        )
+        // Definitive "no album" from a successful lookup.
+        coEvery { ytmRepo.lookupAlbumPlaylistForVideo("negvid00001") } returns null
+
+        repo.getTrackInfo("https://www.youtube.com/watch?v=negvid00001")
+
+        val captured = slot<YouTubeVideoCacheEntity>()
+        coVerify { videoCache.insert(capture(captured)) }
+        assertThat(captured.captured.albumLookupDone).isTrue()
+        assertThat(captured.captured.albumUrl).isEmpty()
+    }
+
+    @Test fun `failed album lookup on a fresh fetch persists albumLookupDone=false`() = runTest {
+        coEvery { videoCache.getById("freshfail01") } returns null
+        coEvery { client.player("freshfail01") } returns JsonObject(emptyMap())
+        every { playerParser.parseTrack(any(), "freshfail01") } returns sampleTrack("yt_freshfail01")
+        coEvery { ytmRepo.lookupAlbumPlaylistForVideo("freshfail01") } throws RuntimeException("boom")
+
+        val track = repo.getTrackInfo("https://www.youtube.com/watch?v=freshfail01")
+
+        assertThat(track.albumUrl).isEmpty()
+        val captured = slot<YouTubeVideoCacheEntity>()
+        coVerify { videoCache.insert(capture(captured)) }
+        assertThat(captured.captured.albumLookupDone).isFalse()
+    }
+
+    @Test fun `cancellation during album lookup propagates instead of being swallowed`() = runTest {
+        coEvery { videoCache.getById("cancelvid01") } returns YouTubeVideoCacheEntity(
+            videoId = "cancelvid01",
+            title = "T",
+            artist = "A",
+            artistUrl = "",
+            durationSec = 1f,
+            artUrl = "",
+            albumLookupDone = false,
+        )
+        coEvery { ytmRepo.lookupAlbumPlaylistForVideo("cancelvid01") } throws
+            kotlinx.coroutines.CancellationException("cancelled")
+
+        val ex = runCatching {
+            repo.getTrackInfo("https://www.youtube.com/watch?v=cancelvid01")
+        }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+        coVerify(exactly = 0) { videoCache.insert(any()) }
     }
 
     private fun sampleTrack(id: String): Track = Track(

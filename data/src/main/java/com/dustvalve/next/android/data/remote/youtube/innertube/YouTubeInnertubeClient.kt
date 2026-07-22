@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -27,7 +28,9 @@ import javax.inject.Singleton
  *                           (only public client still emitting playlistVideoListRenderer)
  *   /next                -> MWEB_NO_AUTH on m.youtube.com
  *                           (videoWithContextRenderer; WEB now returns lockupViewModel)
- *   /browse (continuation) -> MWEB_NO_AUTH (paired with playlist browse)
+ *   /browse (continuation) -> same client as the originating browse:
+ *                           MWEB_NO_AUTH for playlists (default),
+ *                           WEB_NO_AUTH for channel Videos-tab pagination
  *
  * Innertube must NOT carry the shared CookieJar's cookies; stray half-set
  * login cookies confuse the API. We reuse the shared OkHttp connection
@@ -62,17 +65,16 @@ open class YouTubeInnertubeClient @Inject constructor(
      * every client fails.
      */
     suspend fun player(videoId: String): JsonElement {
-        val cfg = visitorDataFetcher.get()
         val clients = listOf(YouTubeClient.ANDROID_VR_NO_AUTH, YouTubeClient.IOS)
         var lastError: String? = null
         for (client in clients) {
             val response = try {
-                post(
+                postWithRetry(
                     client = client,
                     endpointPath = "player",
-                    visitor = cfg,
                     queryParams = "",
-                    body = buildJsonObject {
+                ) { cfg ->
+                    buildJsonObject {
                         put(
                             "context",
                             buildJsonObject {
@@ -82,8 +84,12 @@ open class YouTubeInnertubeClient @Inject constructor(
                         put("videoId", videoId)
                         put("contentCheckOk", true)
                         put("racyCheckOk", true)
-                    },
-                )
+                    }
+                }
+            } catch (e: CancellationException) {
+                // Caller cancellation must propagate, never be converted
+                // into a "failed across all clients" IllegalStateException.
+                throw e
             } catch (e: Exception) {
                 lastError = "${client.clientName}: ${e.message}"
                 continue
@@ -98,14 +104,13 @@ open class YouTubeInnertubeClient @Inject constructor(
     }
 
     suspend fun search(query: String, params: String? = null): JsonElement {
-        val cfg = visitorDataFetcher.get()
         val client = YouTubeClient.WEB_NO_AUTH
-        return post(
+        return postWithRetry(
             client = client,
             endpointPath = "search",
-            visitor = cfg,
             queryParams = "",
-            body = buildJsonObject {
+        ) { cfg ->
+            buildJsonObject {
                 put(
                     "context",
                     buildJsonObject {
@@ -114,8 +119,8 @@ open class YouTubeInnertubeClient @Inject constructor(
                 )
                 put("query", query)
                 if (params != null) put("params", params)
-            },
-        )
+            }
+        }
     }
 
     /**
@@ -124,18 +129,17 @@ open class YouTubeInnertubeClient @Inject constructor(
      * instead of the WEB-only lockupViewModel. All other browseIds use WEB.
      */
     suspend fun browse(browseId: String, params: String? = null): JsonElement {
-        val cfg = visitorDataFetcher.get()
         val client = if (browseId.startsWith("VL")) {
             YouTubeClient.MWEB_NO_AUTH
         } else {
             YouTubeClient.WEB_NO_AUTH
         }
-        return post(
+        return postWithRetry(
             client = client,
             endpointPath = "browse",
-            visitor = cfg,
             queryParams = "",
-            body = buildJsonObject {
+        ) { cfg ->
+            buildJsonObject {
                 put(
                     "context",
                     buildJsonObject {
@@ -144,28 +148,33 @@ open class YouTubeInnertubeClient @Inject constructor(
                 )
                 put("browseId", browseId)
                 if (params != null) put("params", params)
-            },
-        )
+            }
+        }
     }
 
-    /** Browse continuation. Uses MWEB to match the playlist browse routing. */
-    suspend fun browseContinuation(continuation: String): JsonElement {
-        val cfg = visitorDataFetcher.get()
-        val client = YouTubeClient.MWEB_NO_AUTH
-        return post(
-            client = client,
-            endpointPath = "browse",
-            visitor = cfg,
-            queryParams = "&continuation=$continuation&type=next",
-            body = buildJsonObject {
-                put(
-                    "context",
-                    buildJsonObject {
-                        put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
-                    },
-                )
-            },
-        )
+    /**
+     * Browse continuation. Defaults to MWEB to match the playlist browse
+     * routing; callers paginating a WEB browse (channel Videos tab) MUST
+     * pass [YouTubeClient.WEB_NO_AUTH] so the continuation comes back in
+     * the same richGrid shape as page 1 - an MWEB continuation for a WEB
+     * browse parses to zero tracks.
+     */
+    suspend fun browseContinuation(
+        continuation: String,
+        client: YouTubeClient = YouTubeClient.MWEB_NO_AUTH,
+    ): JsonElement = postWithRetry(
+        client = client,
+        endpointPath = "browse",
+        queryParams = "&continuation=$continuation&type=next",
+    ) { cfg ->
+        buildJsonObject {
+            put(
+                "context",
+                buildJsonObject {
+                    put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                },
+            )
+        }
     }
 
     /**
@@ -182,14 +191,13 @@ open class YouTubeInnertubeClient @Inject constructor(
         playlistIndex: Int? = null,
         params: String? = null,
     ): JsonElement {
-        val cfg = visitorDataFetcher.get()
         val client = YouTubeClient.MWEB_NO_AUTH
-        return post(
+        return postWithRetry(
             client = client,
             endpointPath = "next",
-            visitor = cfg,
             queryParams = "",
-            body = buildJsonObject {
+        ) { cfg ->
+            buildJsonObject {
                 put(
                     "context",
                     buildJsonObject {
@@ -200,13 +208,35 @@ open class YouTubeInnertubeClient @Inject constructor(
                 if (playlistId != null) put("playlistId", playlistId)
                 if (playlistIndex != null) put("playlistIndex", playlistIndex)
                 if (params != null) put("params", params)
-            },
-        )
+            }
+        }
     }
 
     private fun hasAudioFormats(response: JsonElement): Boolean {
         val formats = response.path("streamingData")?.path("adaptiveFormats")?.arr() ?: return false
         return formats.any { it.str("mimeType")?.startsWith("audio/") == true }
+    }
+
+    /**
+     * POSTs with the cached visitor config; on HTTP 400/401/403 (Google
+     * rotated the visitorData / clientVersion server-side) invalidates the
+     * cache and retries exactly once with a freshly scraped config. Any
+     * failure of the retry propagates - no retry loops.
+     */
+    private suspend fun postWithRetry(
+        client: YouTubeClient,
+        endpointPath: String,
+        queryParams: String,
+        buildBody: (YouTubeVisitorDataFetcher.VisitorConfig) -> JsonObject,
+    ): JsonElement {
+        val cfg = visitorDataFetcher.get()
+        return try {
+            post(client, endpointPath, cfg, queryParams, buildBody(cfg))
+        } catch (_: StaleVisitorConfigException) {
+            visitorDataFetcher.invalidate()
+            val fresh = visitorDataFetcher.get()
+            post(client, endpointPath, fresh, queryParams, buildBody(fresh))
+        }
     }
 
     private suspend fun post(
@@ -237,9 +267,13 @@ open class YouTubeInnertubeClient @Inject constructor(
         okHttpClient.newCall(request).execute().use { response ->
             val text = response.body.string()
             if (!response.isSuccessful) {
-                throw IllegalStateException(
-                    "YouTube Innertube POST /$endpointPath failed: HTTP ${response.code} - ${text.take(200)}",
-                )
+                val message =
+                    "YouTube Innertube POST /$endpointPath failed: HTTP ${response.code} - ${text.take(200)}"
+                throw if (response.code in STALE_VISITOR_HTTP_CODES) {
+                    StaleVisitorConfigException(message)
+                } else {
+                    IllegalStateException(message)
+                }
             }
             if (text.isEmpty()) {
                 throw IllegalStateException("YouTube Innertube POST /$endpointPath returned empty body")
@@ -248,9 +282,17 @@ open class YouTubeInnertubeClient @Inject constructor(
         }
     }
 
+    /**
+     * HTTP 400/401/403 marker: the cached visitorData / clientVersion is
+     * likely stale. Subclass of IllegalStateException so callers that only
+     * know the generic contract keep working when the retry also fails.
+     */
+    private class StaleVisitorConfigException(message: String) : IllegalStateException(message)
+
     companion object {
         private const val BASE_URL_WWW = "https://www.youtube.com/youtubei/v1"
         private const val BASE_URL_M = "https://m.youtube.com/youtubei/v1"
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
+        private val STALE_VISITOR_HTTP_CODES = setOf(400, 401, 403)
     }
 }

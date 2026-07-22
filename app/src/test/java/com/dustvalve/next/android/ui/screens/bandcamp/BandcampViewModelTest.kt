@@ -64,4 +64,29 @@ class BandcampViewModelTest {
         assertThat(vm.uiState.value.genreError).isNull()
         coVerify { settings.setBandcampCustomGenres(listOf("shoegaze")) }
     }
+
+    @Test fun `category retry after failure clears the error and shows results`() = runTest(dispatcher) {
+        var fail = true
+        coEvery { discover.invoke(any(), any()) } answers {
+            if (fail) throw RuntimeException("network down") else DiscoverResult(listOf(mockk<Album>()))
+        }
+        val vm = BandcampViewModel(discover, settings)
+        vm.selectCategory("rock", "rock")
+        advanceUntilIdle()
+
+        assertThat(vm.uiState.value.categoryError).isNotNull()
+        assertThat(vm.uiState.value.isCategoryLoading).isFalse()
+
+        // Retry succeeds: the sheet must leave the error dead-end.
+        fail = false
+        vm.retryCategory()
+        assertThat(vm.uiState.value.isCategoryLoading).isTrue()
+        assertThat(vm.uiState.value.categoryError).isNull()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertThat(state.categoryError).isNull()
+        assertThat(state.isCategoryLoading).isFalse()
+        assertThat(state.categoryAlbums).hasSize(1)
+    }
 }

@@ -182,6 +182,9 @@ fun BandcampScreen(
 
     var contextResult by remember { mutableStateOf<SearchResult?>(null) }
     var addToPlaylistTrackId by remember { mutableStateOf<String?>(null) }
+    // Rows that already played their staggered entrance; hoisted so recycled
+    // lazy items re-enter at full alpha instead of replaying the animation.
+    val staggerTracker = remember { StaggerAnimationTracker() }
     val loadingTrackMsg = stringResource(R.string.common_loading_track)
     val loadingAlbumMsg = stringResource(R.string.common_loading_album)
     val failedLoadMsg = stringResource(R.string.snackbar_failed_load)
@@ -317,7 +320,10 @@ fun BandcampScreen(
             textFieldState = textFieldState,
             onSearch = {
                 val q = textFieldState.text.toString()
-                if (detectedLink != null || DeepLinkRouter.looksLikeUrl(q)) {
+                // Only divert to the link path for recognised links or input with
+                // an explicit http/https scheme - scheme-less dotted words like
+                // "will.i.am" must run a normal search.
+                if (detectedLink != null || hasExplicitWebScheme(q)) {
                     onOpenLink(q)
                 } else {
                     searchViewModel.onSearch()
@@ -380,7 +386,7 @@ fun BandcampScreen(
                     modifier = Modifier.fillMaxSize(),
                 ) {
                     item(key = "discover_header") {
-                        StaggeredAnimatedItem(index = 0) {
+                        StaggeredAnimatedItem(index = 0, itemKey = "discover_header", tracker = staggerTracker) {
                             Text(
                                 text = stringResource(R.string.bandcamp_discover),
                                 style = MaterialTheme.typography.headlineMediumEmphasized,
@@ -395,7 +401,7 @@ fun BandcampScreen(
                         key = { _, cat -> "cat_${cat.name}" },
                     ) { index, category ->
                         val previews = state.categoryPreviews[category.tag] ?: emptyList()
-                        StaggeredAnimatedItem(index = index + 1) {
+                        StaggeredAnimatedItem(index = index + 1, itemKey = "cat_${category.name}", tracker = staggerTracker) {
                             Surface(
                                 onClick = {
                                     selectedCategoryColor = category.color
@@ -451,7 +457,11 @@ fun BandcampScreen(
                         key = { _, g -> "custom_$g" },
                     ) { index, genre ->
                         val color = discoverCategories[index % discoverCategories.size].color
-                        StaggeredAnimatedItem(index = discoverCategories.size + 1 + index) {
+                        StaggeredAnimatedItem(
+                            index = discoverCategories.size + 1 + index,
+                            itemKey = "custom_$genre",
+                            tracker = staggerTracker,
+                        ) {
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -483,7 +493,11 @@ fun BandcampScreen(
 
                     // "Add custom genre" row
                     item(key = "add_custom_genre") {
-                        StaggeredAnimatedItem(index = discoverCategories.size + state.customGenres.size + 1) {
+                        StaggeredAnimatedItem(
+                            index = discoverCategories.size + state.customGenres.size + 1,
+                            itemKey = "add_custom_genre",
+                            tracker = staggerTracker,
+                        ) {
                             Surface(
                                 onClick = { viewModel.setShowAddGenreDialog(true) },
                                 modifier = Modifier
@@ -1174,14 +1188,46 @@ private fun CarouselAlbumItem(album: Album, onClick: () -> Unit, modifier: Modif
     }
 }
 
+/**
+ * Cap on the stagger multiplier: rows past this index all animate with the
+ * same short delay instead of `index * staggerDelay`, which left far rows
+ * invisible for seconds when the list is long.
+ */
+private const val MAX_STAGGER_STEPS = 8
+
+/**
+ * Screen-scoped record of which discover rows already played their entrance
+ * animation. Hoisted (via remember) so recycled lazy items re-enter at full
+ * alpha instead of replaying the stagger on every scroll-back.
+ */
+private class StaggerAnimationTracker {
+    private val animatedKeys = mutableSetOf<String>()
+
+    /** True the first time [key] is seen; false afterwards. */
+    fun markAnimated(key: String): Boolean = animatedKeys.add(key)
+
+    fun hasAnimated(key: String): Boolean = key in animatedKeys
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun StaggeredAnimatedItem(index: Int, content: @Composable () -> Unit) {
-    val progress = remember { Animatable(0f) }
+private fun StaggeredAnimatedItem(
+    index: Int,
+    itemKey: String,
+    tracker: StaggerAnimationTracker,
+    content: @Composable () -> Unit,
+) {
+    // Lazy rows are recycled: without the hoisted [tracker] the enter
+    // animation (and its delay) replayed on every recomposition of a recycled
+    // row. Rows that already animated once render at full alpha immediately.
+    val alreadyAnimated = tracker.hasAnimated(itemKey)
+    val progress = remember { Animatable(if (alreadyAnimated) 1f else 0f) }
     val spec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     LaunchedEffect(Unit) {
-        delay(index * AppMotion.staggerDelay)
-        progress.animateTo(1f, spec)
+        if (tracker.markAnimated(itemKey)) {
+            delay(minOf(index, MAX_STAGGER_STEPS) * AppMotion.staggerDelay)
+            progress.animateTo(1f, spec)
+        }
     }
     Column(
         modifier = Modifier
@@ -1193,4 +1239,11 @@ private fun StaggeredAnimatedItem(index: Int, content: @Composable () -> Unit) {
     ) {
         content()
     }
+}
+
+/** True only for input the user explicitly typed/pasted as a web URL. */
+private fun hasExplicitWebScheme(raw: String): Boolean {
+    val trimmed = raw.trim()
+    return trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true)
 }

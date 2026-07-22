@@ -124,38 +124,41 @@ object HtmlUtils {
         return decodeHtmlEntities(encoded)
     }
 
+    // One combined pattern so decoding happens in a single left-to-right pass: each
+    // entity is decoded exactly once and its replacement is never re-scanned. Multi-pass
+    // decoding double-decoded escapes like "&#38;quot;" (-> "&quot;" -> '"'), which can
+    // corrupt data-tralbum JSON payloads.
+    private val ENTITY_RE = Regex("&(?:(amp|lt|gt|quot|apos|nbsp)|#(\\d+)|#x([0-9a-fA-F]+));")
+
     /**
-     * Decodes HTML entities in a string.
+     * Decodes HTML entities in a string. Single pass: an entity whose decoded form spells
+     * out another entity (e.g. "&#38;quot;") stays literal ("&quot;"), it is NOT decoded
+     * a second time.
      */
-    fun decodeHtmlEntities(text: String): String {
-        var result = text
-        // Decode numeric entities first
-        result = Regex("&#(\\d+);").replace(result) { matchResult ->
-            val code = matchResult.groupValues[1].toIntOrNull()
+    fun decodeHtmlEntities(text: String): String = ENTITY_RE.replace(text) { matchResult ->
+        val named = matchResult.groupValues[1]
+        if (named.isNotEmpty()) {
+            when (named) {
+                "amp" -> "&"
+                "lt" -> "<"
+                "gt" -> ">"
+                "quot" -> "\""
+                "apos" -> "'"
+                "nbsp" -> " "
+                else -> matchResult.value
+            }
+        } else {
+            val code = if (matchResult.groupValues[2].isNotEmpty()) {
+                matchResult.groupValues[2].toIntOrNull()
+            } else {
+                matchResult.groupValues[3].toIntOrNull(16)
+            }
             if (code != null && Character.isValidCodePoint(code)) {
                 String(Character.toChars(code))
             } else {
                 matchResult.value
             }
         }
-        result = Regex("&#x([0-9a-fA-F]+);").replace(result) { matchResult ->
-            val code = matchResult.groupValues[1].toIntOrNull(16)
-            if (code != null && Character.isValidCodePoint(code)) {
-                String(Character.toChars(code))
-            } else {
-                matchResult.value
-            }
-        }
-        // Named entities - &amp; must be decoded LAST to prevent double-decoding
-        result = result
-            .replace("&quot;", "\"")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&#39;", "'")
-            .replace("&apos;", "'")
-            .replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-        return result
     }
 
     /**

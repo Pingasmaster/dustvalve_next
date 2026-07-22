@@ -24,6 +24,12 @@ interface FavoriteDao {
     @Query("SELECT id FROM favorites WHERE id IN (:ids)")
     suspend fun getFavoriteIdsChunk(ids: List<String>): List<String>
 
+    // Reactive id set of favorited tracks. Combine this into any Flow that
+    // decorates tracks with isFavorite so heart toggles re-emit; a one-shot
+    // getFavoriteIds inside a map {} freezes the flags at collection time.
+    @Query("SELECT id FROM favorites WHERE type = 'track'")
+    fun getAllTrackFavoriteIdsFlow(): Flow<List<String>>
+
     @Query("SELECT * FROM favorites WHERE type = :type ORDER BY addedAt DESC")
     fun getAllByType(type: String): Flow<List<FavoriteEntity>>
 

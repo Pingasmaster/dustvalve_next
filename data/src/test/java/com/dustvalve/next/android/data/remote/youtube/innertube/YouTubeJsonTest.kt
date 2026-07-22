@@ -59,6 +59,19 @@ class YouTubeJsonTest {
         assertThat(obj.long("a")).isEqualTo(2147483648L)
     }
 
+    @Test fun `bool by key reads JSON booleans and boolean-like strings`() {
+        val obj = json.parseToJsonElement(
+            """{"a":true,"b":false,"c":"true","d":"yes","e":1,"f":{"x":1}}""",
+        )
+        assertThat(obj.bool("a")).isTrue()
+        assertThat(obj.bool("b")).isFalse()
+        assertThat(obj.bool("c")).isTrue()
+        assertThat(obj.bool("d")).isNull()
+        assertThat(obj.bool("e")).isNull()
+        assertThat(obj.bool("f")).isNull()
+        assertThat(obj.bool("missing")).isNull()
+    }
+
     @Test fun `runsText prefers first run text`() {
         val obj = json.parseToJsonElement(
             """{"title":{"runs":[{"text":"Foo"},{"text":"Bar"}]}}""",

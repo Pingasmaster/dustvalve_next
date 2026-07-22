@@ -80,4 +80,24 @@ class YouTubePlaylistParserTest {
         assertThat(page.tracks).isEmpty()
         assertThat(page.continuation).isNull()
     }
+
+    @Test fun `extractMixSeedVideoId decodes seeded mix families`() {
+        assertThat(parser.extractMixSeedVideoId("RDdQw4w9WgXcQ")).isEqualTo("dQw4w9WgXcQ")
+        assertThat(parser.extractMixSeedVideoId("RDAMVMdQw4w9WgXcQ")).isEqualTo("dQw4w9WgXcQ")
+        assertThat(parser.extractMixSeedVideoId("RDMMdQw4w9WgXcQ")).isEqualTo("dQw4w9WgXcQ")
+    }
+
+    @Test fun `extractMixSeedVideoId returns null for seedless mix families`() {
+        // RDCLAK suffixes are opaque playlist tokens, NOT videoIds. The old
+        // substring(6, 17) fabricated an 11-char "seed" that always passed
+        // the charset check and sent garbage videoIds to /next.
+        assertThat(parser.extractMixSeedVideoId("RDCLAK5uy_n20FRYQXNt1p1wS55Nj2r14IouO5weaYU")).isNull()
+        assertThat(parser.extractMixSeedVideoId("RDGMEMYH9CUrFNJS4mrRH8FcQ")).isNull()
+        assertThat(parser.extractMixSeedVideoId("RDEMabcdefghijklm")).isNull()
+    }
+
+    @Test fun `extractMixSeedVideoId returns null for non-mix ids`() {
+        assertThat(parser.extractMixSeedVideoId("PLKBWcWelelBCDoz6LpsUd2Qj6dCl9OmMZ")).isNull()
+        assertThat(parser.extractMixSeedVideoId("OLAK5uy_abcdefg")).isNull()
+    }
 }

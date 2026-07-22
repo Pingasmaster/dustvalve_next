@@ -6,6 +6,7 @@ import android.content.Context
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -93,10 +94,12 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         try {
             val dir = File(context.filesDir, "metrics").apply { mkdirs() }
             val file = File(dir, "startup.csv")
+            trimIfOversized(file)
             val wasNew = !file.exists()
-            file.bufferedWriter().use { w ->
+            // Append, never truncate: one row per process start, history kept.
+            FileOutputStream(file, true).bufferedWriter().use { w ->
                 if (wasNew) {
-                    w.appendLine("ts,reason,startType,bindToOnCreate,onCreateToFirstFrame,forkToFullyDrawn")
+                    w.appendLine(CSV_HEADER)
                 }
                 val ts = info.startupTimestamps
                 val bindToOnCreate = (
@@ -129,8 +132,27 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
         }
     }
 
+    /**
+     * Caps startup.csv: once it grows past [MAX_FILE_BYTES] it is rewritten
+     * in place keeping the header plus the newest [TRIM_KEEP_ROWS] rows, so
+     * an append-per-launch file can never grow without bound.
+     */
+    private fun trimIfOversized(file: File) {
+        if (!file.exists() || file.length() <= MAX_FILE_BYTES) return
+        val rows = file.readLines().filter { it.isNotBlank() && it != CSV_HEADER }
+        file.bufferedWriter().use { w ->
+            w.appendLine(CSV_HEADER)
+            rows.takeLast(TRIM_KEEP_ROWS).forEach { w.appendLine(it) }
+        }
+    }
+
     private companion object {
         const val TAG = "StartupMetrics"
         const val MAX_ENTRIES = 5
+        const val CSV_HEADER = "ts,reason,startType,bindToOnCreate,onCreateToFirstFrame,forkToFullyDrawn"
+
+        /** Trim threshold: ~256 KB keeps years of one-row-per-launch appends while staying adb-pull friendly. */
+        const val MAX_FILE_BYTES = 256L * 1024L
+        const val TRIM_KEEP_ROWS = 500
     }
 }

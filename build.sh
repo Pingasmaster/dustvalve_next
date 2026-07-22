@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Usage:
-#   ./build.sh                    # clean + ktlintCheck + detekt + lintRelease + test + assemble + bump version
+#   ./build.sh                    # bump version + clean + ktlintCheck + detekt + lintRelease + test + assemble
 #   ./build.sh --clean            # gradle clean + remove APK + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
@@ -178,7 +178,32 @@ if [[ -d "app/src/test" ]]; then
     GRADLE_TASKS+=(testDebugUnitTest)
 fi
 
-./gradlew "${GRADLE_TASKS[@]}"
+# Bump version BEFORE building so the artifact carries the bumped version.
+# release.yml gates on tag == versionName; an APK built before the bump
+# would ship the previous version and loop the in-app updater.
+CURRENT_CODE=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' "$BUILD_GRADLE")
+CURRENT_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' "$BUILD_GRADLE")
+
+NEW_CODE=$((CURRENT_CODE + 1))
+NEW_NAME=$(echo "$CURRENT_NAME" | awk -F. -v OFS=. '{$NF=$NF+1; print}')
+
+sed -i "s/versionCode = $CURRENT_CODE/versionCode = $NEW_CODE/" "$BUILD_GRADLE"
+sed -i "s/versionName = \"$CURRENT_NAME\"/versionName = \"$NEW_NAME\"/" "$BUILD_GRADLE"
+
+echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"
+
+# A red build must not burn the version: roll the bump back so the next run
+# re-bumps from the same base.
+revert_version_bump() {
+    sed -i "s/versionCode = $NEW_CODE/versionCode = $CURRENT_CODE/" "$BUILD_GRADLE"
+    sed -i "s/versionName = \"$NEW_NAME\"/versionName = \"$CURRENT_NAME\"/" "$BUILD_GRADLE"
+    echo "Build failed: reverted version to $CURRENT_NAME ($CURRENT_CODE)." >&2
+}
+
+if ! ./gradlew "${GRADLE_TASKS[@]}"; then
+    revert_version_bump
+    exit 1
+fi
 
 # Optional: dependency-analysis report (informational; not a build gate).
 if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
@@ -191,15 +216,3 @@ fi
 rm -f "$ROOT_APK"
 cp "$GRADLE_APK" "$ROOT_APK"
 echo "Copied release APK to $ROOT_APK"
-
-# Always bump version
-CURRENT_CODE=$(sed -n 's/.*versionCode = \([0-9]*\).*/\1/p' "$BUILD_GRADLE")
-CURRENT_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' "$BUILD_GRADLE")
-
-NEW_CODE=$((CURRENT_CODE + 1))
-NEW_NAME=$(echo "$CURRENT_NAME" | awk -F. -v OFS=. '{$NF=$NF+1; print}')
-
-sed -i "s/versionCode = $CURRENT_CODE/versionCode = $NEW_CODE/" "$BUILD_GRADLE"
-sed -i "s/versionName = \"$CURRENT_NAME\"/versionName = \"$NEW_NAME\"/" "$BUILD_GRADLE"
-
-echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"

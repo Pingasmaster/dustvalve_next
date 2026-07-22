@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.remote.youtubemusic
 
 import com.dustvalve.next.android.domain.model.Shelf
 import com.google.common.truth.Truth.assertThat
+import kotlinx.serialization.json.Json
 import org.junit.Test
 
 class YouTubeMusicParserTest {
@@ -64,6 +65,45 @@ class YouTubeMusicParserTest {
         }.exceptionOrNull()
         assertThat(ex).isInstanceOf(IllegalStateException::class.java)
         assertThat(ex!!.message).isEqualTo("YouTube Music returned an unrecognized home response")
+    }
+
+    @Test fun `parseHome skips a carousel whose first entry is not an object`() {
+        // A malformed shelf (non-object first carousel entry) must be
+        // skipped; contents.first().jsonObject used to throw and kill the
+        // whole home feed parse.
+        val root = Json {
+            isLenient = true
+            ignoreUnknownKeys = true
+        }.parseToJsonElement(
+            """
+            {"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
+              "sectionListRenderer":{"contents":[
+                {"musicCarouselShelfRenderer":{
+                  "header":{"musicCarouselShelfBasicHeaderRenderer":{"title":{"runs":[{"text":"Broken Shelf"}]}}},
+                  "contents":["garbage-string-entry"]
+                }},
+                {"musicCarouselShelfRenderer":{
+                  "header":{"musicCarouselShelfBasicHeaderRenderer":{"title":{"runs":[{"text":"Good Shelf"}]}}},
+                  "contents":[
+                    {"musicTwoRowItemRenderer":{
+                      "title":{"runs":[{"text":"Album Title"}]},
+                      "subtitle":{"runs":[{"text":"Artist X"}]},
+                      "navigationEndpoint":{"browseEndpoint":{
+                        "browseId":"MPREb_good1",
+                        "browseEndpointContextSupportedConfigs":{"browseEndpointContextMusicConfig":{"pageType":"MUSIC_PAGE_TYPE_ALBUM"}}
+                      }}
+                    }}
+                  ]
+                }}
+              ]}
+            }}}]}}}
+            """.trimIndent(),
+        )
+        val feed = parser.parseHome(root)
+        assertThat(feed.shelves).hasSize(1)
+        val tiles = feed.shelves.first() as Shelf.Tiles
+        assertThat(tiles.title).isEqualTo("Good Shelf")
+        assertThat(tiles.items.first().title).isEqualTo("Album Title")
     }
 
     @Test fun `parseHome surfaces messageRenderer text`() {

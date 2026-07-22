@@ -21,6 +21,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7.0.0
 
+      # The in-app updater compares the release tag against
+      # BuildConfig.VERSION_NAME. If the tagged commit does not carry the
+      # matching versionName, every install of this release re-prompts to
+      # "update" to itself forever. Fail fast before burning build minutes.
+      - name: Gate - tag must match versionName in app/build.gradle.kts
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          gradle_version=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts)
+          if [ "$gradle_version" != "$tag_version" ]; then
+            echo "::error title=Version gate::Tag ${GITHUB_REF_NAME} expects versionName '${tag_version}' but app/build.gradle.kts has '${gradle_version}'. Commit the release version to master BEFORE tagging, or the in-app updater will loop on this release."
+            exit 1
+          fi
+          echo "Version gate OK: tag ${GITHUB_REF_NAME} matches versionName ${gradle_version} on master" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Set up JDK 25
         uses: actions/setup-java@v5.5.0
         with:
@@ -76,6 +90,30 @@ jobs:
         uses: actions/checkout@v7.0.0
         with:
           ref: legacy-android8
+
+      # legacy-android8 is checked out at its MUTABLE branch tip (the tag
+      # points at a master commit). Record exactly which SHA this release's
+      # legacy APK was built from so releases stay traceable.
+      - name: Resolve legacy-android8 SHA
+        run: |
+          legacy_sha=$(git rev-parse HEAD)
+          echo "Building legacy APK from legacy-android8 @ ${legacy_sha}"
+          echo "Legacy APK built from legacy-android8 @ ${legacy_sha}" >> "$GITHUB_STEP_SUMMARY"
+
+      # Same gate as build-modern: the legacy branch carries its own
+      # versionName (BuildConfig.VERSION_NAME on Android 8-16 installs) and
+      # the legacy in-app updater compares it against the release tag.
+      # Master AND legacy-android8 must BOTH have the release version
+      # committed before the tag is published.
+      - name: Gate - tag must match versionName on legacy-android8
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          gradle_version=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts)
+          if [ "$gradle_version" != "$tag_version" ]; then
+            echo "::error title=Version gate (legacy)::Tag ${GITHUB_REF_NAME} expects versionName '${tag_version}' but legacy-android8's app/build.gradle.kts has '${gradle_version}'. Commit the release version to legacy-android8 BEFORE tagging, or the legacy in-app updater will loop on this release."
+            exit 1
+          fi
+          echo "Version gate OK: tag ${GITHUB_REF_NAME} matches versionName ${gradle_version} on legacy-android8" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Set up JDK 25
         uses: actions/setup-java@v5.5.0

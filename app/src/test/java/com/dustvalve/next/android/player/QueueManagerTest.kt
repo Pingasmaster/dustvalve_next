@@ -326,13 +326,204 @@ class QueueManagerTest {
         assertThat(qm.queue.value).isEmpty()
     }
 
-    @Test fun `release clears queue but derived flows stay alive`() {
-        qm.setQueue(tracks("a"), startIndex = 0)
+    @Test fun `release preserves queue across service teardown`() {
+        // H1 regression: PlaybackService.onDestroy also runs for the 5-minute
+        // idle-stop timer; release() must NOT erase the queue, or a long pause
+        // silently wipes the session and hides the mini player.
+        qm.setQueue(tracks("a", "b"), startIndex = 1)
         qm.release()
-        assertThat(qm.queue.value).isEmpty()
-        // Reinitialize just doesn't throw and we can setQueue again
-        qm.reinitialize()
-        qm.setQueue(tracks("b"), startIndex = 0)
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "b").inOrder()
+        assertThat(qm.currentIndex.value).isEqualTo(1)
         assertThat(qm.currentTrack.value?.id).isEqualTo("b")
+        // Reinitialize (service restart) keeps the preserved state.
+        qm.reinitialize()
+        assertThat(qm.currentTrack.value?.id).isEqualTo("b")
+        // Explicit clear (user dismiss) still works.
+        qm.clear()
+        assertThat(qm.queue.value).isEmpty()
+        qm.setQueue(tracks("c"), startIndex = 0)
+        assertThat(qm.currentTrack.value?.id).isEqualTo("c")
+    }
+
+    // --- queue entries (stable uid identity) ---
+
+    @Test fun `entries have unique stable uids even for duplicate track ids`() {
+        qm.setQueue(tracks("a", "a", "b"), startIndex = 0)
+        val entries = qm.entries.value
+        assertThat(entries.map { it.track.id }).containsExactly("a", "a", "b").inOrder()
+        assertThat(entries.map { it.uid }.toSet()).hasSize(3)
+    }
+
+    @Test fun `addToQueue duplicate track gets a fresh uid`() {
+        qm.setQueue(tracks("a"), startIndex = 0)
+        val firstUid = qm.entries.value[0].uid
+        qm.addToQueue(track("a"))
+        val uids = qm.entries.value.map { it.uid }
+        assertThat(uids).hasSize(2)
+        assertThat(uids[0]).isEqualTo(firstUid)
+        assertThat(uids[1]).isNotEqualTo(firstUid)
+    }
+
+    @Test fun `moveItem carries uids with the entries`() {
+        qm.setQueue(tracks("a", "b", "c"), startIndex = 0)
+        val uidC = qm.entries.value[2].uid
+        qm.moveItem(2, 0)
+        assertThat(qm.entries.value[0].uid).isEqualTo(uidC)
+        assertThat(qm.entries.value[0].track.id).isEqualTo("c")
+    }
+
+    @Test fun `removeEntry resolves by uid against the live queue`() {
+        qm.setQueue(tracks("a", "b", "c"), startIndex = 0)
+        val uidB = qm.entries.value[1].uid
+        // Queue shifts after the uid was captured (the stale-index race).
+        qm.moveItem(1, 2) // a, c, b
+        qm.removeEntry(uidB)
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "c").inOrder()
+    }
+
+    @Test fun `removeEntry with duplicate ids removes exactly the targeted slot`() {
+        qm.setQueue(tracks("a", "a", "b"), startIndex = 2)
+        val uidSecondA = qm.entries.value[1].uid
+        qm.removeEntry(uidSecondA)
+        assertThat(qm.entries.value.map { it.track.id }).containsExactly("a", "b").inOrder()
+        assertThat(qm.currentTrack.value?.id).isEqualTo("b")
+    }
+
+    @Test fun `removeEntry unknown uid is a no-op`() {
+        qm.setQueue(tracks("a", "b"), startIndex = 0)
+        qm.removeEntry(Long.MAX_VALUE)
+        assertThat(qm.queue.value).hasSize(2)
+    }
+
+    @Test fun `moveEntry resolves by uid at commit time`() {
+        qm.setQueue(tracks("a", "b", "c", "d"), startIndex = 0)
+        val uidD = qm.entries.value[3].uid
+        val uidB = qm.entries.value[1].uid
+        // Queue shifts between gesture start and commit.
+        qm.removeFromQueue(2) // a, b, d
+        qm.moveEntry(uidD, uidB)
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "d", "b").inOrder()
+    }
+
+    @Test fun `moveEntry with missing uid is a no-op`() {
+        qm.setQueue(tracks("a", "b"), startIndex = 0)
+        val uidA = qm.entries.value[0].uid
+        qm.moveEntry(uidA, Long.MAX_VALUE)
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "b").inOrder()
+    }
+
+    @Test fun `unshuffle with duplicate ids restores the exact playing slot`() {
+        qm.setQueue(tracks("a", "b", "a", "c"), startIndex = 2) // second "a"
+        val playingUid = qm.entries.value[2].uid
+        qm.shuffle()
+        qm.unshuffle()
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "b", "a", "c").inOrder()
+        assertThat(qm.currentIndex.value).isEqualTo(2)
+        assertThat(qm.entries.value[qm.currentIndex.value].uid).isEqualTo(playingUid)
+    }
+
+    // --- applyResolvedTracks ---
+
+    @Test fun `applyResolvedTracks patches in place preserving order index and uids`() {
+        qm.setQueue(tracks("a", "b", "c"), startIndex = 1)
+        val uids = qm.entries.value.map { it.uid }
+        qm.applyResolvedTracks(mapOf("c" to track("c").copy(streamUrl = "https://fresh/c")))
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "b", "c").inOrder()
+        assertThat(qm.queue.value[2].streamUrl).isEqualTo("https://fresh/c")
+        assertThat(qm.currentIndex.value).isEqualTo(1)
+        assertThat(qm.entries.value.map { it.uid }).isEqualTo(uids)
+    }
+
+    @Test fun `applyResolvedTracks preserves queue edits made during resolution`() {
+        qm.setQueue(tracks("a", "b"), startIndex = 0)
+        qm.playNext(track("inserted"))
+        qm.applyResolvedTracks(mapOf("b" to track("b").copy(streamUrl = "https://fresh/b")))
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "inserted", "b").inOrder()
+        assertThat(qm.queue.value[2].streamUrl).isEqualTo("https://fresh/b")
+    }
+
+    @Test fun `applyResolvedTracks preserves shuffle snapshot`() {
+        qm.setQueue(tracks("a", "b", "c"), startIndex = 0)
+        qm.shuffle()
+        qm.applyResolvedTracks(mapOf("b" to track("b").copy(streamUrl = "https://fresh/b")))
+        qm.unshuffle()
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "b", "c").inOrder()
+        // The snapshot itself was patched too.
+        assertThat(qm.queue.value[1].streamUrl).isEqualTo("https://fresh/b")
+    }
+
+    @Test fun `applyResolvedTracks keeps live favorite state over the stale copy`() {
+        qm.setQueue(tracks("a"), startIndex = 0)
+        qm.applyFavoriteIds(setOf("a"))
+        // The resolver worked from a pre-favorite copy of the track.
+        qm.applyResolvedTracks(mapOf("a" to track("a").copy(streamUrl = "https://fresh/a")))
+        assertThat(qm.queue.value[0].isFavorite).isTrue()
+        assertThat(qm.queue.value[0].streamUrl).isEqualTo("https://fresh/a")
+    }
+
+    // --- resetToStart ---
+
+    @Test fun `resetToStart moves index without touching queue or shuffle snapshot`() {
+        qm.setQueue(tracks("a", "b", "c", "d", "e"), startIndex = 0)
+        qm.shuffle()
+        // Make sure the shuffled order actually differs from the original so
+        // the unshuffle assertion below is meaningful.
+        var guard = 0
+        while (qm.queue.value.map { it.id } == listOf("a", "b", "c", "d", "e") && guard++ < 100) {
+            qm.shuffle()
+        }
+        qm.skipToIndex(qm.queue.value.lastIndex)
+        val shuffledOrder = qm.queue.value.map { it.id }
+
+        val first = qm.resetToStart()
+
+        assertThat(first?.id).isEqualTo(shuffledOrder.first())
+        assertThat(qm.currentIndex.value).isEqualTo(0)
+        assertThat(qm.queue.value.map { it.id }).isEqualTo(shuffledOrder)
+        // L18 regression: the wraparound must not destroy the pre-shuffle
+        // snapshot - shuffle-off after a full repeat-all pass still restores.
+        qm.unshuffle()
+        assertThat(qm.queue.value.map { it.id }).containsExactly("a", "b", "c", "d", "e").inOrder()
+    }
+
+    @Test fun `resetToStart on empty queue returns null`() {
+        assertThat(qm.resetToStart()).isNull()
+        assertThat(qm.currentIndex.value).isEqualTo(-1)
+    }
+
+    // --- remove-of-current callback ---
+
+    @Test fun `removing current mid-queue notifies with removed track and successor`() {
+        var removed: Track? = null
+        var successor: Track? = null
+        qm.onCurrentTrackRemoved = { r, n ->
+            removed = r
+            successor = n
+        }
+        qm.setQueue(tracks("a", "b", "c"), startIndex = 1)
+        qm.removeFromQueue(1)
+        assertThat(removed?.id).isEqualTo("b")
+        assertThat(successor?.id).isEqualTo("c")
+    }
+
+    @Test fun `removing non-current does not notify`() {
+        var notified = false
+        qm.onCurrentTrackRemoved = { _, _ -> notified = true }
+        qm.setQueue(tracks("a", "b", "c"), startIndex = 0)
+        qm.removeFromQueue(2)
+        assertThat(notified).isFalse()
+    }
+
+    @Test fun `removing last remaining current notifies with null successor`() {
+        var removed: Track? = null
+        var successor: Track? = track("sentinel")
+        qm.onCurrentTrackRemoved = { r, n ->
+            removed = r
+            successor = n
+        }
+        qm.setQueue(tracks("a"), startIndex = 0)
+        qm.removeFromQueue(0)
+        assertThat(removed?.id).isEqualTo("a")
+        assertThat(successor).isNull()
     }
 }

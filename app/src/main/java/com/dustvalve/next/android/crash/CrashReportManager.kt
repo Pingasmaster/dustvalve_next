@@ -117,6 +117,7 @@ class CrashReportManager @Inject constructor(
             putExtra(Intent.EXTRA_TEXT, pending.report.logText)
         }
         activityContext.startActivity(Intent.createChooser(send, null))
+        consumePendingFile()
     }
 
     /**
@@ -131,9 +132,24 @@ class CrashReportManager @Inject constructor(
         val view = Intent(Intent.ACTION_VIEW, buildIssueUrl(pending.report.logText).toUri())
         try {
             activityContext.startActivity(view)
+            consumePendingFile()
         } catch (_: android.content.ActivityNotFoundException) {
             // No browser/URL handler on this device. The one button meant to
-            // REPORT a crash must never itself crash the app.
+            // REPORT a crash must never itself crash the app. The pending
+            // file is kept: nothing was reported.
+        }
+    }
+
+    /**
+     * The user has acted on the report (share sheet or GitHub issue page):
+     * delete the on-disk log so the next launch does not re-prompt for the
+     * same crash. The in-memory [PromptState.Pending] is deliberately kept
+     * so the sheet stays usable for the rest of this session (e.g. share
+     * AND open an issue); nothing new is persisted.
+     */
+    private fun consumePendingFile() {
+        appScope.launch(ioDispatcher) {
+            pendingFile.delete()
         }
     }
 

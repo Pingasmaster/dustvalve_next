@@ -5,11 +5,13 @@ import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubePlaylistCacheEntity
 import com.dustvalve.next.android.data.local.db.entity.YouTubeVideoCacheEntity
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeChannelParser
+import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeNextParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.AudioFormat
@@ -18,6 +20,7 @@ import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -45,6 +48,7 @@ class YouTubeRepositoryImpl @Inject constructor(
     private val videoCache: YouTubeVideoCacheDao,
     private val playlistCache: YouTubePlaylistCacheDao,
     private val youTubeMusicRepository: com.dustvalve.next.android.domain.repository.YouTubeMusicRepository,
+    private val albumResolver: YouTubeMusicAlbumResolver,
     @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) : YouTubeRepository {
 
@@ -62,6 +66,11 @@ class YouTubeRepositoryImpl @Inject constructor(
         // This is the same value Metrolist / NewPipe / yt-dlp use; YT has
         // not rotated it in years.
         const val VIDEOS_TAB_PARAMS = "EgZ2aWRlb3PyBgQKAjoA"
+
+        // YTM album browse ids. Album search results carry these inside
+        // playlist-shaped URLs; they must be resolved to the album's real
+        // audioPlaylistId (OLAK5uy_...) before the playlist browse.
+        const val ALBUM_BROWSE_ID_PREFIX = "MPREb"
     }
 
     /**
@@ -120,7 +129,10 @@ class YouTubeRepositoryImpl @Inject constructor(
         // fire the lookup once and upgrade the row in place before returning.
         videoCache.getById(videoId)?.let { cached ->
             if (cached.albumLookupDone) return cachedToTrack(cached)
-            val resolvedAlbumUrl = resolveAlbumOnce(videoId)
+            // A null lookup result means it FAILED (network / API error):
+            // leave the row untouched so a later attempt retries instead of
+            // caching a poisoned "no album" negative.
+            val resolvedAlbumUrl = resolveAlbumOnce(videoId) ?: return cachedToTrack(cached)
             val upgraded = cached.copy(albumUrl = resolvedAlbumUrl, albumLookupDone = true)
             try {
                 videoCache.insert(upgraded)
@@ -130,24 +142,30 @@ class YouTubeRepositoryImpl @Inject constructor(
         val response = client.player(videoId)
         val parsed = playerParser.parseTrack(response, videoId)
         val albumUrl = resolveAlbumOnce(videoId)
-        val track = parsed.copy(albumUrl = albumUrl)
+        val track = parsed.copy(albumUrl = albumUrl.orEmpty())
         // Persist for future reads. Errors swallowed silently - caching is
-        // best-effort and must never break the user-facing call.
+        // best-effort and must never break the user-facing call. A failed
+        // album lookup (albumUrl == null) is persisted with
+        // albumLookupDone=false so the next getTrackInfo retries it.
         try {
-            videoCache.insert(track.toCacheEntity(videoId, albumLookupDone = true))
+            videoCache.insert(track.toCacheEntity(videoId, albumLookupDone = albumUrl != null))
         } catch (_: Throwable) {}
         return track
     }
 
     /**
-     * YTM album lookup with hard failure suppression. Returns `""` when the
-     * video has no album or when any step of the lookup blows up, matching
-     * the entity's empty-string "no album known" convention.
+     * YTM album lookup. Returns the album playlist URL, `""` when the lookup
+     * completed and the video definitively has no album (the entity's
+     * empty-string "no album known" convention), or `null` when the lookup
+     * FAILED (network / API error) - callers must not mark the row as
+     * looked-up in that case. Cancellation always propagates.
      */
-    private suspend fun resolveAlbumOnce(videoId: String): String = try {
+    private suspend fun resolveAlbumOnce(videoId: String): String? = try {
         youTubeMusicRepository.lookupAlbumPlaylistForVideo(videoId) ?: ""
+    } catch (e: CancellationException) {
+        throw e
     } catch (_: Throwable) {
-        ""
+        null
     }
 
     private fun cachedToTrack(cached: YouTubeVideoCacheEntity): Track = Track(
@@ -189,13 +207,15 @@ class YouTubeRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getPlaylistTracks(playlistUrl: String): Pair<List<Track>, String> {
-        val playlistId = extractPlaylistId(playlistUrl)
+        val extractedId = extractPlaylistId(playlistUrl)
             ?: throw IllegalArgumentException("Cannot extract playlistId from $playlistUrl")
 
         // Cache-first: rebuild the playlist from cached video metadata if
         // available. Then trigger a silent background refresh (errors
-        // swallowed) to pick up any newly-added videos.
-        val cached = playlistCache.getById(playlistId)
+        // swallowed) to pick up any newly-added videos. MPREb album ids get
+        // a snapshot cached under their own key (see below), so this path
+        // also serves them without a network round-trip.
+        val cached = playlistCache.getById(extractedId)
         if (cached != null) {
             val ids = try {
                 json.decodeFromString(stringListSerializer, cached.videoIdsJson)
@@ -210,7 +230,10 @@ class YouTubeRepositoryImpl @Inject constructor(
                     if (age >= PLAYLIST_REVALIDATE_MS) {
                         backgroundScope.launch {
                             try {
-                                fetchAndCachePlaylist(playlistId)
+                                fetchAndCachePlaylist(
+                                    playlistId = resolveBrowsablePlaylistId(extractedId),
+                                    aliasId = extractedId,
+                                )
                             } catch (_: Throwable) {}
                         }
                     }
@@ -220,11 +243,32 @@ class YouTubeRepositoryImpl @Inject constructor(
         }
 
         // Cache miss / partial cache: fetch synchronously.
-        val (freshTracks, title) = fetchAndCachePlaylist(playlistId)
+        val (freshTracks, title) = fetchAndCachePlaylist(
+            playlistId = resolveBrowsablePlaylistId(extractedId),
+            aliasId = extractedId,
+        )
         return freshTracks to title
     }
 
-    private suspend fun fetchAndCachePlaylist(playlistId: String): Pair<List<Track>, String> {
+    /**
+     * YTM album search results emit playlist-shaped URLs carrying `MPREb_...`
+     * album browse ids; browsing "VLMPREb_..." is invalid. Resolve those to
+     * the album's audioPlaylistId (`OLAK5uy_...`) first. Everything else
+     * passes through unchanged.
+     */
+    private suspend fun resolveBrowsablePlaylistId(extractedId: String): String {
+        if (!extractedId.startsWith(ALBUM_BROWSE_ID_PREFIX)) return extractedId
+        return albumResolver.resolveAudioPlaylistId(extractedId)
+            ?: throw IllegalStateException("Cannot resolve album $extractedId to an audio playlist")
+    }
+
+    /**
+     * Fetches the full playlist and persists video + playlist snapshots
+     * (best-effort). When [aliasId] differs from [playlistId] (an MPREb
+     * album id resolved to its OLAK playlist), the snapshot is stored under
+     * BOTH keys so future opens of the album URL hit the cache directly.
+     */
+    private suspend fun fetchAndCachePlaylist(playlistId: String, aliasId: String = playlistId): Pair<List<Track>, String> {
         val response = client.browse("VL$playlistId")
         val first = playlistParser.parse(response, playlistId)
         val all = first.tracks.toMutableList()
@@ -242,18 +286,31 @@ class YouTubeRepositoryImpl @Inject constructor(
         }
         val title = first.title ?: ""
 
-        // Persist video + playlist snapshots. Best-effort.
+        // Persist video + playlist snapshots. Best-effort. Videos use the
+        // non-destructive bulk insert: these entities carry default
+        // albumUrl/albumLookupDone and must never clobber rows already
+        // upgraded by the single-video path.
         try {
             val ids = all.map { it.id.removePrefix("yt_") }
             val videoEntities = all.zip(ids).map { (track, vid) -> track.toCacheEntity(vid) }
-            videoCache.insertAll(videoEntities)
+            videoCache.insertAllIgnore(videoEntities)
+            val idsJson = json.encodeToString(stringListSerializer, ids)
             playlistCache.insert(
                 YouTubePlaylistCacheEntity(
                     playlistId = playlistId,
                     title = title,
-                    videoIdsJson = json.encodeToString(stringListSerializer, ids),
+                    videoIdsJson = idsJson,
                 ),
             )
+            if (aliasId != playlistId) {
+                playlistCache.insert(
+                    YouTubePlaylistCacheEntity(
+                        playlistId = aliasId,
+                        title = title,
+                        videoIdsJson = idsJson,
+                    ),
+                )
+            }
         } catch (_: Throwable) {}
         return all to title
     }
@@ -282,10 +339,12 @@ class YouTubeRepositoryImpl @Inject constructor(
         )
         // If pagination yields zero new tracks, treat the mix as exhausted.
         val nextCursor = if (page.tracks.isEmpty()) null else page.continuation
-        // Best-effort cache write so freshly seen videos benefit getTrackInfo etc.
+        // Best-effort cache write so freshly seen videos benefit getTrackInfo
+        // etc. Non-destructive: default-seeded entities must not clobber
+        // rows already upgraded with a resolved albumUrl.
         try {
             val entities = page.tracks.map { it.toCacheEntity(it.id.removePrefix("yt_")) }
-            videoCache.insertAll(entities)
+            videoCache.insertAllIgnore(entities)
         } catch (_: Throwable) {}
         return Triple(page.tracks, page.title.orEmpty(), nextCursor)
     }
@@ -303,7 +362,10 @@ class YouTubeRepositoryImpl @Inject constructor(
                 parsed.continuation?.let { ChannelPageToken(channelId, parsed.channelName, parsed.tracks.size, it) },
             )
         } else {
-            val response = client.browseContinuation(token.continuation)
+            // Channel browse runs on WEB; the continuation must too, or the
+            // response comes back MWEB-shaped and parses to zero tracks
+            // (silently truncating every channel to page 1).
+            val response = client.browseContinuation(token.continuation, YouTubeClient.WEB_NO_AUTH)
             val parsed = channelParser.parseContinuation(response, channelId, token.channelName, token.totalSoFar + 1)
             val newTotal = token.totalSoFar + parsed.tracks.size
             Triple(

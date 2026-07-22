@@ -93,6 +93,27 @@ class SettingsDataStoreTest {
         assertThat(store.localMusicFolderUris.first()).isEmpty()
     }
 
+    @Test fun `malformed folder uris json reads as empty instead of throwing`() = runTest {
+        // restorePreferences writes the raw string preference, letting us
+        // plant a value that is not valid JSON - as a bad folder snapshot or
+        // an older buggy build could have.
+        store.restorePreferences(mapOf("local_music_folder_uris" to "not [ json"))
+        assertThat(store.localMusicFolderUris.first()).isEmpty()
+        assertThat(store.getLocalMusicFolderUrisSync()).isEmpty()
+
+        // And the next write repairs the key.
+        store.addLocalMusicFolderUri("content://a")
+        assertThat(store.localMusicFolderUris.first()).containsExactly("content://a")
+    }
+
+    @Test fun `malformed bandcamp custom genres json reads as empty instead of throwing`() = runTest {
+        store.restorePreferences(mapOf("bandcamp_custom_genres" to "{broken"))
+        assertThat(store.bandcampCustomGenres.first()).isEmpty()
+
+        store.setBandcampCustomGenres(listOf("dungeon-synth"))
+        assertThat(store.bandcampCustomGenres.first()).containsExactly("dungeon-synth")
+    }
+
     @Test fun `boolean toggles roundtrip`() = runTest {
         store.setDynamicColor(false)
         assertThat(store.dynamicColor.first()).isFalse()

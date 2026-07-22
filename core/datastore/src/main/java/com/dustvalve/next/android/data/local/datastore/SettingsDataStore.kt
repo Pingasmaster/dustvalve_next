@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.local.datastore
 
 import android.content.Context
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -16,13 +17,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+// A corrupt preferences file (torn write, bit rot) without a corruption
+// handler is fatal-forever: every READ throws CorruptionException into the
+// flow and every WRITE rethrows it, so no edit can ever repair the file.
+// Replacing with emptyPreferences() self-heals to defaults instead.
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "settings",
+    corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
+)
 
 @Singleton
 class SettingsDataStore @Inject constructor(@param:ApplicationContext private val context: Context) {
@@ -92,9 +101,12 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
      * reacting to settings changes, with no crash to point at and no recovery
      * short of a process restart. Recover to defaults instead.
      *
-     * Only IOException is swallowed - a CorruptionException or any other
-     * throwable is a real bug and must still propagate rather than be
-     * quietly papered over with default settings.
+     * CorruptionException never reaches this catch: it EXTENDS IOException,
+     * and the ReplaceFileCorruptionHandler installed on the DataStore
+     * consumes corruption before it surfaces - the file is replaced with
+     * emptyPreferences() and the read self-heals (writes work again too).
+     * So this branch handles genuine I/O errors only; anything that is not
+     * an IOException is a real bug and still propagates.
      *
      * Declared ahead of the flows below because they capture it at property
      * initialization; moving it lower makes them capture null.
@@ -334,13 +346,28 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
+    /**
+     * Decodes a JSON-encoded string list stored in a preference, treating a
+     * malformed value as empty instead of throwing SerializationException on
+     * every read forever. The next successful set() overwrites the bad value.
+     */
+    private fun decodeStringList(json: String?): List<String> {
+        if (json == null) return emptyList()
+        return try {
+            Json.decodeFromString<List<String>>(json)
+        } catch (_: SerializationException) {
+            emptyList()
+        } catch (_: IllegalArgumentException) {
+            emptyList()
+        }
+    }
+
     val localMusicEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.LOCAL_MUSIC_ENABLED] ?: false
     }
 
     val localMusicFolderUris: Flow<List<String>> = guardedPreferences.map { prefs ->
-        val json = prefs[Keys.LOCAL_MUSIC_FOLDER_URIS]
-        if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
+        decodeStringList(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
     }
 
     val localMusicUseMediaStore: Flow<Boolean> = guardedPreferences.map { prefs ->
@@ -365,9 +392,9 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     suspend fun addLocalMusicFolderUri(uri: String) {
         context.dataStore.edit { prefs ->
-            val current = prefs[Keys.LOCAL_MUSIC_FOLDER_URIS]
-                ?.let { Json.decodeFromString<List<String>>(it) }
-                ?: emptyList()
+            // decodeStringList treats a malformed stored value as empty, so
+            // this write also repairs the key.
+            val current = decodeStringList(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
             if (uri !in current) {
                 prefs[Keys.LOCAL_MUSIC_FOLDER_URIS] = Json.encodeToString(current + uri)
             }
@@ -376,9 +403,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     suspend fun removeLocalMusicFolderUri(uri: String) {
         context.dataStore.edit { prefs ->
-            val current = prefs[Keys.LOCAL_MUSIC_FOLDER_URIS]
-                ?.let { Json.decodeFromString<List<String>>(it) }
-                ?: emptyList()
+            val current = decodeStringList(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
             val updated = current - uri
             if (updated.isNotEmpty()) {
                 prefs[Keys.LOCAL_MUSIC_FOLDER_URIS] = Json.encodeToString(updated)
@@ -396,10 +421,8 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     suspend fun getLocalMusicEnabledSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
 
-    suspend fun getLocalMusicFolderUrisSync(): List<String> {
-        val json = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS)
-        return if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
-    }
+    suspend fun getLocalMusicFolderUrisSync(): List<String> =
+        decodeStringList(guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS))
 
     suspend fun getLocalMusicUseMediaStoreSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true
 
@@ -659,8 +682,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     /** Custom Bandcamp genres added by the user, stored as JSON. */
     val bandcampCustomGenres: Flow<List<String>> = guardedPreferences.map { prefs ->
-        val json = prefs[Keys.BANDCAMP_CUSTOM_GENRES]
-        if (json != null) Json.decodeFromString<List<String>>(json) else emptyList()
+        decodeStringList(prefs[Keys.BANDCAMP_CUSTOM_GENRES])
     }
 
     suspend fun setBandcampCustomGenres(genres: List<String>) {

@@ -196,6 +196,11 @@ fun ArtistDetailScreen(
         // Local val so `artist != null` smart-casts inside the matching branch
         // (Kotlin can't smart-cast through a property in a `when` clause).
         val artist = state.artist
+        // Show the error+retry branch even when a seed artist (name/image
+        // hint) exists but the real fetch failed - otherwise a failed load
+        // with a hint rendered a misleading empty "No releases" page.
+        val fetchFailedWithNothingToShow = state.error != null && state.tracks.isEmpty() &&
+            (artist == null || artist.albums.isEmpty())
         when {
             state.isLoading && artist == null -> {
                 Box(
@@ -204,7 +209,7 @@ fun ArtistDetailScreen(
                 ) { ContainedLoadingIndicator() }
             }
 
-            state.error != null && artist == null -> {
+            fetchFailedWithNothingToShow -> {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(innerPadding),
                     contentAlignment = Alignment.Center,

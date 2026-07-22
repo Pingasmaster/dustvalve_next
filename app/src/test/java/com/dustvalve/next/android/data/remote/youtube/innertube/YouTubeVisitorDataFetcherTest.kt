@@ -137,6 +137,29 @@ class YouTubeVisitorDataFetcherTest {
         assertThat(msg).contains("head=")
     }
 
+    @Test fun `retries the same URL when fallback equals primary (production default)`() = runTest {
+        // In production fallbackLandingUrl == landingUrl; the second attempt
+        // must still happen so transient failures recover. A != guard here
+        // used to skip it entirely.
+        val sameUrlFetcher = TestableFetcher(
+            client = OkHttpClient(),
+            primaryUrl = primary.url("/").toString(),
+            fallbackUrl = primary.url("/").toString(),
+            dispatcher = UnconfinedTestDispatcher(),
+        )
+        primary.enqueue(MockResponse().setBody("<html>transient degraded page</html>"))
+        primary.enqueue(
+            MockResponse().setBody(
+                """<script>ytcfg.set({"VISITOR_DATA":"second_try_vd"});</script>""",
+            ),
+        )
+
+        val cfg = sameUrlFetcher.get()
+        assertThat(cfg.visitorData).isEqualTo("second_try_vd")
+        assertThat(primary.requestCount).isEqualTo(2)
+        assertThat(fallback.requestCount).isEqualTo(0)
+    }
+
     @Test fun `falls back when primary returns non-2xx`() = runTest {
         primary.enqueue(MockResponse().setResponseCode(503))
         fallback.enqueue(

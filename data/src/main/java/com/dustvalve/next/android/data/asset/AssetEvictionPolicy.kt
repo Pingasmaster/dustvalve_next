@@ -1,9 +1,13 @@
 package com.dustvalve.next.android.data.asset
 
+import android.content.Context
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -18,7 +22,11 @@ import javax.inject.Singleton
  * eviction; this policy only governs `downloads` table rows.
  */
 @Singleton
-class AssetEvictionPolicy @Inject constructor(private val database: DustvalveNextDatabase, private val downloadDao: DownloadDao) {
+class AssetEvictionPolicy @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+    private val database: DustvalveNextDatabase,
+    private val downloadDao: DownloadDao,
+) {
 
     /** Evicts unpinned entries oldest-first until at least [targetBytes] freed. */
     suspend fun evict(targetBytes: Long) {
@@ -43,9 +51,29 @@ class AssetEvictionPolicy @Inject constructor(private val database: DustvalveNex
             for (entry in toEvict) downloadDao.delete(entry.trackId)
         }
         for (entry in toEvict) {
+            deleteByPath(entry.filePath)
+        }
+    }
+
+    /**
+     * Delete helper that handles both local file paths and the content://
+     * URIs used in dedicated-folder mode, where File(path).delete() is a
+     * silent no-op. Mirrors DownloadRepositoryImpl.deleteByPath.
+     */
+    private fun deleteByPath(path: String) {
+        if (path.isBlank()) return
+        if (path.startsWith("content://")) {
             try {
-                File(entry.filePath).delete()
-            } catch (_: Exception) {}
+                DocumentFile.fromSingleUri(context, path.toUri())?.delete()
+            } catch (e: Exception) {
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            }
+        } else {
+            try {
+                File(path).delete()
+            } catch (e: Exception) {
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            }
         }
     }
 }

@@ -30,6 +30,7 @@ import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
 // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
 // tests substitute it globally via Dispatchers.setMain, so qualifying
@@ -76,11 +77,31 @@ class PlaybackManager @Inject constructor(
     private val _playbackError = MutableStateFlow<PlaybackException?>(null)
     val playbackError: StateFlow<PlaybackException?> = _playbackError.asStateFlow()
 
+    /**
+     * Optional stream resolution hook installed by the PlayerViewModel.
+     * Consulted from skip/jump/auto-advance when a queue entry cannot be
+     * handed to ExoPlayer as-is: null/blank streamUrl, a YouTube watch-page
+     * URL that was never resolved, or a TTL-stale resolution flagged by
+     * [streamIsStale]. Returns a playable replacement track (same id, fresh
+     * streamUrl) or null when resolution failed.
+     */
+    var streamResolver: (suspend (Track) -> Track?)? = null
+
+    /**
+     * Optional staleness check installed by the PlayerViewModel (which keeps
+     * per-track resolve timestamps). True = the track's resolved stream URL is
+     * older than the freshness TTL and should be re-resolved before playback.
+     */
+    var streamIsStale: ((Track) -> Boolean)? = null
+
     fun clearPlaybackError() {
         _playbackError.value = null
     }
 
     private var positionUpdateJob: Job? = null
+
+    /** In-flight on-demand stream resolution for playTrack; superseded by any newer play intent. */
+    private var resolveJob: Job? = null
 
     /** Tracks whether a seek is in progress to avoid position update overwrite */
     @Volatile
@@ -95,6 +116,14 @@ class PlaybackManager @Inject constructor(
 
     /** Whether the PlaybackService has been started for this session */
     private var serviceStarted = false
+
+    /**
+     * Where the current track stood when [release] ran (service idle-stop or
+     * task removal). The queue survives release, so the next [play] re-prepares
+     * [resumeTrackId] and seeks back here instead of losing the session.
+     */
+    private var resumePositionMs = 0L
+    private var resumeTrackId: String? = null
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -154,6 +183,7 @@ class PlaybackManager @Inject constructor(
 
     init {
         player.addListener(playerListener)
+        queueManager.onCurrentTrackRemoved = ::handleCurrentTrackRemoved
     }
 
     private fun startPositionUpdates() {
@@ -185,12 +215,11 @@ class PlaybackManager @Inject constructor(
                 if (nextTrack != null) {
                     playTrack(nextTrack)
                 } else {
-                    // Wrap around to beginning of queue
-                    val currentQueue = queueManager.queue.value
-                    if (currentQueue.isNotEmpty()) {
-                        queueManager.setQueue(currentQueue, 0)
-                        playTrack(currentQueue.first())
-                    }
+                    // Wrap around to the beginning WITHOUT rebuilding the queue:
+                    // setQueue would null the pre-shuffle snapshot, silently
+                    // breaking shuffle-off after one full pass.
+                    val firstTrack = queueManager.resetToStart()
+                    if (firstTrack != null) playTrack(firstTrack)
                 }
             }
 
@@ -206,6 +235,26 @@ class PlaybackManager @Inject constructor(
         }
     }
 
+    /**
+     * Installed as [QueueManager.onCurrentTrackRemoved]: when the currently
+     * playing queue entry is removed, advance the actual player to the new
+     * current track (preserving play/pause state) instead of leaving the
+     * removed track audible while the flows already point at its successor.
+     */
+    private fun handleCurrentTrackRemoved(removed: Track, newCurrent: Track?) {
+        if (released) return
+        // Only react when the player is actually on the removed track; a
+        // pending playTrack may have swapped the media item already.
+        if (player.currentMediaItem?.mediaId != removed.id) return
+        if (newCurrent == null) {
+            stop()
+            return
+        }
+        val wasPlaying = player.isPlaying
+        playTrack(newCurrent)
+        if (!wasPlaying) player.pause()
+    }
+
     private fun ensureServiceStarted() {
         if (serviceStarted) return
         val intent = Intent(context, PlaybackService::class.java)
@@ -213,35 +262,105 @@ class PlaybackManager @Inject constructor(
         serviceStarted = true
     }
 
-    @OptIn(UnstableApi::class)
+    /** YouTube watch-page / short-link URLs are HTML pages, not media streams. */
+    private fun isWatchPageUrl(url: String): Boolean =
+        // Also matches music.youtube.com/watch and m.youtube.com/watch.
+        url.contains("youtube.com/watch") || url.contains("youtu.be/")
+
+    /**
+     * True when [track] cannot be handed to ExoPlayer as-is. Defense in depth:
+     * during the background-resolution window every not-yet-resolved YouTube
+     * entry still carries its watch-page URL in streamUrl, and the old
+     * isNullOrBlank-only guard let skip/jump/auto-advance feed ExoPlayer HTML.
+     */
+    private fun trackNeedsResolution(track: Track): Boolean {
+        val url = track.streamUrl
+        if (url.isNullOrBlank()) return true
+        if (isWatchPageUrl(url)) return true
+        if (!track.isLocal && streamIsStale?.invoke(track) == true) return true
+        return false
+    }
+
     fun playTrack(track: Track) {
         if (released) reinitialize()
-        val url = track.streamUrl
-        if (url.isNullOrBlank()) {
-            android.util.Log.w("PlaybackManager", "Cannot play track '${track.title}': streamUrl is null")
-            // One unresolvable track (region-blocked, deleted, failed
-            // pre-resolution) must not silently kill the rest of the queue:
-            // auto-advance to the next playable track, bounded by queue size
-            // so an all-unplayable queue can't loop forever.
-            var advanced = 0
-            val queueSize = queueManager.queue.value.size
-            while (advanced < queueSize) {
-                val next = queueManager.next() ?: break
-                advanced++
-                if (!next.streamUrl.isNullOrBlank()) {
-                    playTrack(next)
-                    return
-                }
-            }
-            _playbackState.value = Player.STATE_IDLE
-            _isPlaying.value = false
-            _playbackError.value = PlaybackException(
-                "No playable stream URL for '${track.title}'",
-                null,
-                PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
-            )
+        resolveJob?.cancel()
+        resolveJob = null
+        if (!trackNeedsResolution(track)) {
+            playResolvedTrack(track)
             return
         }
+        resolveJob = scope.launch {
+            resolveAndPlay(track)
+        }
+    }
+
+    /**
+     * Resolves [first] (and, if it stays unplayable, its successors) before
+     * playback. Preserves the long-standing bounded skip-unplayable behavior:
+     * one dead track (region-blocked, deleted, failed resolution) must not
+     * silently kill the rest of the queue, and the bound stops an
+     * all-unplayable queue from looping forever.
+     */
+    @OptIn(UnstableApi::class)
+    private suspend fun resolveAndPlay(first: Track) {
+        val startIndex = queueManager.currentIndex.value
+        var candidate = first
+        var advanced = 0
+        val queueSize = queueManager.queue.value.size
+        while (true) {
+            val playable = resolveCandidate(candidate)
+            if (playable != null) {
+                playResolvedTrack(playable)
+                return
+            }
+            android.util.Log.w("PlaybackManager", "Cannot play track '${candidate.title}': no playable stream URL")
+            if (advanced >= queueSize) break
+            candidate = queueManager.next() ?: break
+            advanced++
+        }
+        // Give-up branch: no playable successor anywhere. Put currentIndex back
+        // where this attempt started instead of leaving it walked to the queue
+        // end, surface the error, and keep the flows truthful to the audible
+        // state - the previously playing track (if any) is still sounding and
+        // must not be reported as IDLE/stopped.
+        if (startIndex >= 0 && startIndex != queueManager.currentIndex.value) {
+            queueManager.skipToIndex(startIndex)
+        }
+        _playbackError.value = PlaybackException(
+            "No playable stream URL for '${first.title}'",
+            null,
+            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
+        )
+        _isPlaying.value = player.isPlaying
+        _playbackState.value = player.playbackState
+    }
+
+    /**
+     * Returns a playable version of [track]: the track itself when its
+     * streamUrl is already good, the [streamResolver]'s fresh resolution
+     * (patched into the queue in-place) otherwise, or null when it cannot be
+     * made playable.
+     */
+    @Suppress("TooGenericExceptionCaught") // resolver hook runs arbitrary repository code
+    private suspend fun resolveCandidate(track: Track): Track? {
+        if (!trackNeedsResolution(track)) return track
+        val resolver = streamResolver ?: return null
+        val resolved = try {
+            resolver(track)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            android.util.Log.w("PlaybackManager", "Stream resolution failed for '${track.title}'", e)
+            null
+        }
+        val url = resolved?.streamUrl
+        if (resolved == null || url.isNullOrBlank() || isWatchPageUrl(url)) return null
+        queueManager.applyResolvedTracks(mapOf(resolved.id to resolved))
+        return resolved
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun playResolvedTrack(track: Track) {
+        val url = track.streamUrl ?: return
         ensureServiceStarted()
 
         // Reset seek flag so position updates resume immediately for the new track
@@ -279,6 +398,16 @@ class PlaybackManager @Inject constructor(
 
         player.setMediaItem(mediaItem)
         player.prepare()
+        // Resume-after-idle-stop: the service teardown preserved the queue and
+        // saved where playback stopped; the first re-prepare of that same track
+        // picks up at the saved position.
+        val resumeAt = resumePositionMs
+        if (resumeAt > 0L && track.id == resumeTrackId) {
+            player.seekTo(resumeAt)
+            _currentPosition.value = resumeAt
+        }
+        resumePositionMs = 0L
+        resumeTrackId = null
         player.play()
     }
 
@@ -290,7 +419,10 @@ class PlaybackManager @Inject constructor(
     }
 
     fun play() {
-        if (released) return
+        if (released) {
+            resumeAfterRelease()
+            return
+        }
         // After a PlaybackException ExoPlayer sits in STATE_IDLE and ignores
         // play() until prepare() is called again. Without this, the play
         // button silently did nothing forever after any error. prepare()
@@ -315,12 +447,10 @@ class PlaybackManager @Inject constructor(
                 }
 
                 RepeatMode.ALL -> {
-                    // Restart from the beginning of the queue
-                    val queue = queueManager.queue.value
-                    if (queue.isNotEmpty()) {
-                        queueManager.setQueue(queue, 0)
-                        playTrack(queue.first())
-                    }
+                    // Restart from the beginning of the queue, preserving the
+                    // shuffle snapshot (setQueue would null it).
+                    val firstTrack = queueManager.resetToStart()
+                    if (firstTrack != null) playTrack(firstTrack)
                     return
                 }
 
@@ -335,6 +465,17 @@ class PlaybackManager @Inject constructor(
         player.play()
     }
 
+    /**
+     * The service idle-stop released the player but preserved the queue:
+     * re-prepare the current track (at the saved position, via the resume
+     * fields consumed in playResolvedTrack) and restart the service. Without
+     * this, play() after an idle-stop was a silent no-op forever.
+     */
+    private fun resumeAfterRelease() {
+        val current = queueManager.currentTrack.value ?: return
+        playTrack(current)
+    }
+
     fun pause() {
         if (released) return
         player.pause()
@@ -342,6 +483,10 @@ class PlaybackManager @Inject constructor(
 
     fun stop() {
         if (released) return
+        resolveJob?.cancel()
+        resolveJob = null
+        resumePositionMs = 0L
+        resumeTrackId = null
         player.stop()
         player.clearMediaItems()
         _playbackError.value = null
@@ -353,7 +498,12 @@ class PlaybackManager @Inject constructor(
     }
 
     fun togglePlayPause() {
-        if (released) return
+        if (released) {
+            // After an idle-stop the player is released but the queue is
+            // intact - route to play(), which revives the session.
+            play()
+            return
+        }
         if (player.isPlaying) {
             pause()
         } else {
@@ -362,7 +512,7 @@ class PlaybackManager @Inject constructor(
     }
 
     fun skipToQueueIndex(index: Int) {
-        if (released) return
+        if (released) reinitialize()
         val track = queueManager.skipToIndex(index) ?: return
         playTrack(track)
     }
@@ -391,21 +541,19 @@ class PlaybackManager @Inject constructor(
     }
 
     fun skipNext() {
-        if (released) return
+        if (released) reinitialize()
         val nextTrack = queueManager.next()
         if (nextTrack != null) {
             playTrack(nextTrack)
         } else if (_repeatMode.value == RepeatMode.ALL) {
-            val queue = queueManager.queue.value
-            if (queue.isNotEmpty()) {
-                queueManager.setQueue(queue, 0)
-                playTrack(queue.first())
-            }
+            // Wrap without setQueue so the shuffle snapshot survives the pass.
+            val firstTrack = queueManager.resetToStart()
+            if (firstTrack != null) playTrack(firstTrack)
         }
     }
 
     fun skipPrevious() {
-        if (released) return
+        if (released) reinitialize()
         // If more than 3 seconds in, restart current track instead
         if (player.currentPosition > 3000L) {
             seekTo(0L)
@@ -478,9 +626,19 @@ class PlaybackManager @Inject constructor(
         serviceStarted = false
         stopPositionUpdates()
         handlingPlaybackEnded.set(false)
+        // Non-destructive teardown: the queue (preserved by QueueManager) plus
+        // these resume fields let play() restore the session after the service
+        // idle-stop. Capture BEFORE clearMediaItems resets the position.
+        resumeTrackId = player.currentMediaItem?.mediaId
+        resumePositionMs = player.currentPosition.coerceAtLeast(0L)
+        if (resumePositionMs == 0L) resumePositionMs = _currentPosition.value
         player.removeListener(playerListener)
         player.stop()
         player.clearMediaItems()
+        // Keep _currentPosition/_duration so the mini/full player still shows
+        // where playback stopped; only the transport state goes idle.
+        _isPlaying.value = false
+        _playbackState.value = Player.STATE_IDLE
         scope.cancel()
     }
 
@@ -497,12 +655,18 @@ class PlaybackManager @Inject constructor(
         seekInProgress = false
         handlingPlaybackEnded.set(false)
         player.addListener(playerListener)
-        _isPlaying.value = player.isPlaying
-        _playbackState.value = player.playbackState
-        _duration.value = player.duration.coerceAtLeast(0L)
-        _currentPosition.value = player.currentPosition.coerceAtLeast(0L)
-        if (player.isPlaying) {
-            startPositionUpdates()
+        if (player.mediaItemCount > 0) {
+            // Player still holds real state (e.g. service restart mid-session):
+            // mirror it into the flows.
+            _isPlaying.value = player.isPlaying
+            _playbackState.value = player.playbackState
+            _duration.value = player.duration.coerceAtLeast(0L)
+            _currentPosition.value = player.currentPosition.coerceAtLeast(0L)
+            if (player.isPlaying) {
+                startPositionUpdates()
+            }
         }
+        // else: keep the flows preserved by release() (last track position and
+        // duration) so the UI doesn't flash back to 0:00 after an idle-stop.
     }
 }

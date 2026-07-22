@@ -20,6 +20,10 @@ object CookieEncryption {
     private const val GCM_IV_LENGTH = 12
     private const val GCM_TAG_LENGTH = 128
 
+    // Synchronized: the check-then-generate below is not atomic. Two threads racing here
+    // could each generateKey() for the same alias; the second key silently replaces the
+    // first in the keystore, permanently orphaning anything encrypted with the first.
+    @Synchronized
     private fun getOrCreateKey(): SecretKey {
         val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         if (keyStore.containsAlias(KEY_ALIAS)) {

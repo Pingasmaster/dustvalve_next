@@ -43,39 +43,28 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
         isLenient = true
     }
 
-    suspend fun browse(browseId: String, params: String? = null): JsonElement {
-        val cfg = visitorDataFetcher.get()
-        return post(
-            endpoint = "browse?prettyPrint=false",
-            visitor = cfg,
-            body = buildJsonObject {
-                put("context", clientContext(cfg))
-                put("browseId", browseId)
-                if (params != null) put("params", params)
-            },
-        )
+    suspend fun browse(browseId: String, params: String? = null): JsonElement = postWithRetry(
+        endpoint = "browse?prettyPrint=false",
+    ) { cfg ->
+        buildJsonObject {
+            put("context", clientContext(cfg))
+            put("browseId", browseId)
+            if (params != null) put("params", params)
+        }
     }
 
-    suspend fun browseContinuation(continuation: String): JsonElement {
-        val cfg = visitorDataFetcher.get()
-        return post(
-            endpoint = "browse?prettyPrint=false&continuation=$continuation&type=next",
-            visitor = cfg,
-            body = buildJsonObject { put("context", clientContext(cfg)) },
-        )
-    }
+    suspend fun browseContinuation(continuation: String): JsonElement = postWithRetry(
+        endpoint = "browse?prettyPrint=false&continuation=$continuation&type=next",
+    ) { cfg -> buildJsonObject { put("context", clientContext(cfg)) } }
 
-    suspend fun search(query: String, params: String? = null): JsonElement {
-        val cfg = visitorDataFetcher.get()
-        return post(
-            endpoint = "search?prettyPrint=false",
-            visitor = cfg,
-            body = buildJsonObject {
-                put("context", clientContext(cfg))
-                put("query", query)
-                if (params != null) put("params", params)
-            },
-        )
+    suspend fun search(query: String, params: String? = null): JsonElement = postWithRetry(
+        endpoint = "search?prettyPrint=false",
+    ) { cfg ->
+        buildJsonObject {
+            put("context", clientContext(cfg))
+            put("query", query)
+            if (params != null) put("params", params)
+        }
     }
 
     /**
@@ -83,16 +72,33 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
      * carry the album link (`MUSIC_PAGE_TYPE_ALBUM` browseId) for music-tagged
      * videos; plain YouTube uploads come back without it.
      */
-    suspend fun next(videoId: String): JsonElement {
+    suspend fun next(videoId: String): JsonElement = postWithRetry(
+        endpoint = "next?prettyPrint=false",
+    ) { cfg ->
+        buildJsonObject {
+            put("context", clientContext(cfg))
+            put("videoId", videoId)
+        }
+    }
+
+    /**
+     * POSTs with the cached visitor config; on HTTP 400/401/403 (Google
+     * rotated the visitorData / clientVersion server-side) invalidates the
+     * cache and retries exactly once with a freshly scraped config. Any
+     * failure of the retry propagates - no retry loops.
+     */
+    private suspend fun postWithRetry(
+        endpoint: String,
+        buildBody: (YouTubeMusicVisitorDataFetcher.VisitorConfig) -> JsonObject,
+    ): JsonElement {
         val cfg = visitorDataFetcher.get()
-        return post(
-            endpoint = "next?prettyPrint=false",
-            visitor = cfg,
-            body = buildJsonObject {
-                put("context", clientContext(cfg))
-                put("videoId", videoId)
-            },
-        )
+        return try {
+            post(endpoint, cfg, buildBody(cfg))
+        } catch (_: StaleVisitorConfigException) {
+            visitorDataFetcher.invalidate()
+            val fresh = visitorDataFetcher.get()
+            post(endpoint, fresh, buildBody(fresh))
+        }
     }
 
     private suspend fun post(endpoint: String, visitor: YouTubeMusicVisitorDataFetcher.VisitorConfig, body: JsonObject): JsonElement =
@@ -118,9 +124,12 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
             okHttpClient.newCall(request).execute().use { response ->
                 val text = response.body.string()
                 if (!response.isSuccessful) {
-                    throw IllegalStateException(
-                        "Innertube POST /$endpoint failed: HTTP ${response.code} - ${text.take(200)}",
-                    )
+                    val message = "Innertube POST /$endpoint failed: HTTP ${response.code} - ${text.take(200)}"
+                    throw if (response.code in STALE_VISITOR_HTTP_CODES) {
+                        StaleVisitorConfigException(message)
+                    } else {
+                        IllegalStateException(message)
+                    }
                 }
                 if (text.isEmpty()) {
                     throw IllegalStateException("Innertube POST /$endpoint returned empty body")
@@ -128,6 +137,13 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
                 json.parseToJsonElement(text)
             }
         }
+
+    /**
+     * HTTP 400/401/403 marker: the cached visitorData / clientVersion is
+     * likely stale. Subclass of IllegalStateException so callers that only
+     * know the generic contract keep working when the retry also fails.
+     */
+    private class StaleVisitorConfigException(message: String) : IllegalStateException(message)
 
     private fun clientContext(visitor: YouTubeMusicVisitorDataFetcher.VisitorConfig): JsonObject = buildJsonObject {
         put(
@@ -146,5 +162,6 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
         private const val BASE_URL = "https://music.youtube.com/youtubei/v1"
         private const val CLIENT_NAME_CODE = "67"
         private val JSON_MEDIA_TYPE = "application/json".toMediaType()
+        private val STALE_VISITOR_HTTP_CODES = setOf(400, 401, 403)
     }
 }

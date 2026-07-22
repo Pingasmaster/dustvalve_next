@@ -64,6 +64,11 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
     fun start() {
         if (job?.isActive == true) return
         job = scope.launch {
+            // The cold-start sweep deletes stale .tmp partials (and orphaned
+            // finished files). Wait for it before enqueueing anything so it
+            // can't race - and delete - a fresh in-progress partial written
+            // by work we enqueue below.
+            downloadController.awaitColdStartPurge()
             combine(
                 settingsDataStore.autoDownloadFavorites.distinctUntilChanged(),
                 favoriteDao.getAllByType("track"),

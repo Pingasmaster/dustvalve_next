@@ -74,11 +74,15 @@ class DustvalveNextApplication :
         // DiagnosticsCollector, and ProfilingCaptureController before
         // Application.onCreate, so the cold-start critical path stays short.
         downloadNotificationCenter.ensureChannel()
-        // Drop partial .tmp files orphaned by a previous process death; the
-        // in-memory download queue that could have resumed them is gone.
+        // Drop partial .tmp files (+ resume sidecars) orphaned by a previous
+        // process death, then reconcile files no downloads row references.
+        // Runs async; startup enqueuers (the coordinator below) await it via
+        // DownloadController.awaitColdStartPurge so the sweep can't delete a
+        // fresh in-progress partial.
         downloadController.purgeStalePartialsOnColdStart()
         // Idempotent - observes the "Auto-download favorites" toggle and
         // enqueues downloads for any favorited tracks not already on disk.
+        // Internally waits for the cold-start sweep above to finish first.
         autoDownloadFavoritesCoordinator.start()
         // Observes the dedicated-folder toggle; when on, mirrors every user-
         // data table + DataStore to the folder. Cancels cleanly when off.

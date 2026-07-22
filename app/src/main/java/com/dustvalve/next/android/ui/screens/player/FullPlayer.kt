@@ -135,6 +135,7 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.player.QueueEntry
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.components.lists.MusicRow
@@ -212,7 +213,10 @@ fun FullPlayer(
     var showQueueSheet by remember { mutableStateOf(false) }
     var isCarouselMode by remember { mutableStateOf(false) }
     val albumSwipeOffsetX = remember { Animatable(0f) }
-    var upNextContextTrack by remember { mutableStateOf<Pair<Track, Int>?>(null) }
+    // Queue entry whose long-press context sheet (favorite / add-to-playlist /
+    // remove) is open, or null. Keyed by QueueEntry so the actions commit by
+    // uid against the live queue rather than a stale positional index.
+    var upNextContextEntry by remember { mutableStateOf<QueueEntry?>(null) }
     var showUpNextPlaylistSheet by remember { mutableStateOf(false) }
     val hapticFeedback = LocalHapticFeedback.current
 
@@ -1430,10 +1434,11 @@ fun FullPlayer(
         )
     }
 
-    // Up Next context menu bottom sheet
-    upNextContextTrack?.let { (contextTrack, contextQueueIndex) ->
+    // Up Next context menu bottom sheet (opened by long-pressing a queue row)
+    upNextContextEntry?.let { contextEntry ->
+        val contextTrack = contextEntry.track
         ModalBottomSheet(
-            onDismissRequest = { upNextContextTrack = null },
+            onDismissRequest = { upNextContextEntry = null },
         ) {
             Text(
                 text = contextTrack.title,
@@ -1458,7 +1463,7 @@ fun FullPlayer(
                 },
                 modifier = Modifier.clickable {
                     playerViewModel.toggleFavoriteById(contextTrack.id)
-                    upNextContextTrack = null
+                    upNextContextEntry = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             ) {
@@ -1493,8 +1498,8 @@ fun FullPlayer(
                     )
                 },
                 modifier = Modifier.clickable {
-                    playerViewModel.removeFromQueue(contextQueueIndex)
-                    upNextContextTrack = null
+                    playerViewModel.removeQueueEntry(contextEntry.uid)
+                    upNextContextEntry = null
                 },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             ) {
@@ -1515,38 +1520,42 @@ fun FullPlayer(
             onDismiss = { showUpNextPlaylistSheet = false },
             onPlaylistSelected = { playlistId ->
                 showUpNextPlaylistSheet = false
-                upNextContextTrack?.let { (ctxTrack, _) ->
-                    playerViewModel.addTrackToPlaylist(playlistId, ctxTrack.id)
+                upNextContextEntry?.let { entry ->
+                    playerViewModel.addTrackToPlaylist(playlistId, entry.track.id)
                 }
-                upNextContextTrack = null
+                upNextContextEntry = null
             },
             onCreatePlaylist = { name, shapeKey, iconUrl ->
                 showUpNextPlaylistSheet = false
-                upNextContextTrack?.let { (ctxTrack, _) ->
-                    playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, ctxTrack.id)
+                upNextContextEntry?.let { entry ->
+                    playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, entry.track.id)
                 }
-                upNextContextTrack = null
+                upNextContextEntry = null
             },
         )
     }
 
-    // Queue bottom sheet with pagination, swipe-to-delete, and drag reorder
+    // Queue bottom sheet with pagination, swipe-to-delete, and drag reorder.
+    // Consumes QueueEntry rows: uids are unique per queue slot, so duplicate
+    // Track.ids can't collide as LazyColumn keys, and every edit commits by
+    // uid resolved against the live queue instead of a composition-time index.
     if (showQueueSheet) {
+        val queueEntries by playerViewModel.queueEntries.collectAsStateWithLifecycle()
         val currentIndex = state.currentQueueIndex
-        val allUpNextTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
-            state.queue.subList(currentIndex + 1, state.queue.size)
+        val allUpNextEntries = if (currentIndex >= 0 && currentIndex < queueEntries.lastIndex) {
+            queueEntries.subList(currentIndex + 1, queueEntries.size)
         } else {
             emptyList()
         }
 
         var displayCount by remember(currentIndex) { mutableIntStateOf(25) }
-        val displayedTracks = allUpNextTracks.take(displayCount)
-        val hasMore = displayCount < allUpNextTracks.size
+        val displayedEntries = allUpNextEntries.take(displayCount)
+        val hasMore = displayCount < allUpNextEntries.size
         val queueListState = rememberLazyListState()
 
         // Pagination: load more when near bottom
         val currentHasMore by rememberUpdatedState(hasMore)
-        val currentDisplayedCount by rememberUpdatedState(displayedTracks.size)
+        val currentDisplayedCount by rememberUpdatedState(displayedEntries.size)
         LaunchedEffect(queueListState) {
             snapshotFlow {
                 val last = queueListState.layoutInfo.visibleItemsInfo.lastOrNull()
@@ -1573,20 +1582,25 @@ fun FullPlayer(
             containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Text(
-                text = stringResource(R.string.player_up_next_count, allUpNextTracks.size),
+                text = stringResource(R.string.player_up_next_count, allUpNextEntries.size),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
 
             Box(modifier = Modifier.fillMaxWidth()) {
                 ReorderableMusicList(
-                    items = displayedTracks,
-                    keyFn = { it.id },
+                    items = displayedEntries,
+                    keyFn = { it.uid },
                     onMove = { from, to ->
-                        playerViewModel.moveQueueItem(
-                            currentIndex + 1 + from,
-                            currentIndex + 1 + to,
-                        )
+                        // Map the drop indices to uids and commit by uid: the
+                        // uids are re-resolved against the live queue inside
+                        // moveQueueEntry, so a queue that shifted since this
+                        // composition can't misroute the move.
+                        val fromUid = displayedEntries.getOrNull(from)?.uid
+                        val toUid = displayedEntries.getOrNull(to)?.uid
+                        if (fromUid != null && toUid != null) {
+                            playerViewModel.moveQueueEntry(fromUid, toUid)
+                        }
                     },
                     lazyListState = queueListState,
                     modifier = Modifier.fillMaxWidth(),
@@ -1609,8 +1623,8 @@ fun FullPlayer(
                             Spacer(modifier = Modifier.height(28.dp))
                         }
                     },
-                ) { upNextIndex, queueTrack, isDragging, dragHandleModifier ->
-                    val queueIndex = currentIndex + 1 + upNextIndex
+                ) { upNextIndex, queueEntry, isDragging, dragHandleModifier ->
+                    val queueTrack = queueEntry.track
                     val isDownloaded = queueTrack.id in state.downloadedTrackIds || queueTrack.isLocal
                     val isCurrentTrack = state.currentTrack?.id == queueTrack.id
 
@@ -1618,7 +1632,7 @@ fun FullPlayer(
                     LaunchedEffect(dismissState.currentValue) {
                         if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
                             hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
-                            playerViewModel.removeFromQueue(queueIndex)
+                            playerViewModel.removeQueueEntry(queueEntry.uid)
                         }
                     }
 
@@ -1633,9 +1647,9 @@ fun FullPlayer(
                                         .fillMaxSize()
                                         .padding(
                                             top = if (upNextIndex == 0) 0.dp else 1.dp,
-                                            bottom = if (upNextIndex == displayedTracks.lastIndex) 0.dp else 1.dp,
+                                            bottom = if (upNextIndex == displayedEntries.lastIndex) 0.dp else 1.dp,
                                         )
-                                        .clip(segmentedItemShape(upNextIndex, displayedTracks.size))
+                                        .clip(segmentedItemShape(upNextIndex, displayedEntries.size))
                                         .background(MaterialTheme.colorScheme.errorContainer)
                                         .padding(horizontal = 20.dp),
                                     contentAlignment = Alignment.CenterEnd,
@@ -1651,16 +1665,17 @@ fun FullPlayer(
                     ) {
                         SegmentedListItem(
                             index = upNextIndex,
-                            count = displayedTracks.size,
+                            count = displayedEntries.size,
                             isDragging = isDragging,
                             contentPadding = PaddingValues(
                                 top = if (upNextIndex == 0) 0.dp else 1.dp,
-                                bottom = if (upNextIndex == displayedTracks.lastIndex) 0.dp else 1.dp,
+                                bottom = if (upNextIndex == displayedEntries.lastIndex) 0.dp else 1.dp,
                             ),
                         ) {
                             MusicRow(
                                 track = queueTrack,
-                                onClick = { playerViewModel.skipToQueueIndex(queueIndex) },
+                                onClick = { playerViewModel.playQueueEntry(queueEntry.uid) },
+                                onLongClick = { upNextContextEntry = queueEntry },
                                 isCurrentTrack = isCurrentTrack,
                                 showDownload = false,
                                 isDownloaded = isDownloaded,
@@ -1693,7 +1708,7 @@ fun FullPlayer(
                         }
                     }
                 }
-                if (displayedTracks.size > 15) {
+                if (displayedEntries.size > 15) {
                     FastScrollbar(
                         listState = queueListState,
                         modifier = Modifier.align(Alignment.CenterEnd),

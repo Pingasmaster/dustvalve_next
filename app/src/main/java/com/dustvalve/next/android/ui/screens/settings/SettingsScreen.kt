@@ -288,6 +288,19 @@ fun SettingsScreen(
                         viewModel.setLocalMusicUseMediaStore(true)
                     }
                 }
+                // Used only when the permission request came from flipping the
+                // Local source ON: a denial rolls the just-persisted enable
+                // back (mirrors LocalViewModel.onAudioPermissionDenied), so
+                // the toggle doesn't stay on with no way to scan anything.
+                val localEnableAudioPermissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission(),
+                ) { granted: Boolean ->
+                    if (granted) {
+                        viewModel.setLocalMusicUseMediaStore(true)
+                    } else {
+                        viewModel.setLocalMusicEnabled(false)
+                    }
+                }
                 val folderPickerLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocumentTree(),
                 ) { uri: Uri? ->
@@ -330,7 +343,7 @@ fun SettingsScreen(
                                 onCheckedChange = { enabled ->
                                     viewModel.setLocalMusicEnabled(enabled)
                                     if (enabled && state.localMusicUseMediaStore) {
-                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                                        localEnableAudioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
                                     } else if (enabled && !state.localMusicUseMediaStore && state.localMusicFolderUris.isEmpty()) {
                                         folderPickerLauncher.launch(null)
                                     }
@@ -783,7 +796,11 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Slider(
                                 value = sliderIndex.toFloat(),
-                                onValueChange = { sliderIndex = it.toInt() },
+                                // roundToInt, not toInt: tick values are float-lerped
+                                // (4.9999 truncates to 4 and lands on the wrong step).
+                                onValueChange = {
+                                    sliderIndex = it.roundToInt().coerceIn(0, storageLimitSteps.lastIndex)
+                                },
                                 onValueChangeFinished = {
                                     viewModel.setStorageLimit(storageLimitSteps[sliderIndex])
                                 },

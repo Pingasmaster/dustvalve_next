@@ -5,6 +5,7 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.data.remote.youtube.innertube.PlayerStreamInfo
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicSearchParser
@@ -36,6 +37,7 @@ class YouTubeMusicRepositoryImplTest {
     private lateinit var searchParser: YouTubeMusicSearchParser
     private lateinit var ytInnertube: YouTubeInnertubeClient
     private lateinit var ytPlayerParser: YouTubePlayerParser
+    private lateinit var albumResolver: YouTubeMusicAlbumResolver
     private lateinit var repo: YouTubeMusicRepositoryImpl
 
     private val emptyJson: JsonElement = buildJsonObject {}
@@ -57,12 +59,14 @@ class YouTubeMusicRepositoryImplTest {
         searchParser = mockk()
         ytInnertube = mockk()
         ytPlayerParser = mockk()
+        albumResolver = mockk()
         repo = YouTubeMusicRepositoryImpl(
             client,
             parser,
             searchParser,
             ytInnertube,
             ytPlayerParser,
+            albumResolver,
             homeCache = mockk(relaxed = true),
             ioDispatcher = UnconfinedTestDispatcher(),
         )
@@ -126,6 +130,38 @@ class YouTubeMusicRepositoryImplTest {
             "EgWKAQIgAWoMEA4QChADEAQQCRAF",
             "EgWKAQIIAWoMEA4QChADEAQQCRAF", // unknown falls back to songs
         ).inOrder()
+    }
+
+    @Test fun `lookupAlbumPlaylistForVideo resolves via next then the album resolver`() = runTest {
+        val nextJson = kotlinx.serialization.json.Json.parseToJsonElement(
+            """
+            {"contents":{"shelves":[{"browseEndpoint":{
+              "browseId":"MPREb_alb1",
+              "browseEndpointContextSupportedConfigs":{
+                "browseEndpointContextMusicConfig":{"pageType":"MUSIC_PAGE_TYPE_ALBUM"}
+              }
+            }}]}}
+            """.trimIndent(),
+        )
+        coEvery { client.next("vidvidvid12") } returns nextJson
+        coEvery { albumResolver.resolveAudioPlaylistId("MPREb_alb1") } returns "OLAK5uy_xyz"
+
+        assertThat(repo.lookupAlbumPlaylistForVideo("vidvidvid12"))
+            .isEqualTo("https://www.youtube.com/playlist?list=OLAK5uy_xyz")
+    }
+
+    @Test fun `lookupAlbumPlaylistForVideo returns null when next has no album context`() = runTest {
+        coEvery { client.next("vidvidvid12") } returns emptyJson
+        assertThat(repo.lookupAlbumPlaylistForVideo("vidvidvid12")).isNull()
+        coVerify(exactly = 0) { albumResolver.resolveAudioPlaylistId(any()) }
+    }
+
+    @Test fun `lookupAlbumPlaylistForVideo propagates transient failures instead of returning null`() = runTest {
+        // A null return means "definitively no album" and gets cached; a
+        // network failure must propagate so callers can retry later.
+        coEvery { client.next("vidvidvid12") } throws IllegalStateException("HTTP 500")
+        val ex = runCatching { repo.lookupAlbumPlaylistForVideo("vidvidvid12") }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
     }
 
     @Test fun `search returns parsed results`() = runTest {

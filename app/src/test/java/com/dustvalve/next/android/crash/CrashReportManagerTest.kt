@@ -86,6 +86,33 @@ class CrashReportManagerTest {
         assertThat(pendingFile.exists()).isFalse()
     }
 
+    @Test fun `sharePendingLog consumes the stored log but keeps the prompt for this session`() = runTest(dispatcher) {
+        crashDir.mkdirs()
+        pendingFile.writeText("stack")
+        manager.checkOnColdStart()
+        assertThat(manager.state.value).isInstanceOf(CrashReportManager.PromptState.Pending::class.java)
+
+        manager.sharePendingLog(context)
+
+        // Sharing counts as acting on the report: the on-disk log is gone so
+        // the NEXT launch never re-prompts for the same crash, while the
+        // in-memory report keeps the sheet usable for the rest of this session.
+        assertThat(pendingFile.exists()).isFalse()
+        assertThat(manager.state.value).isInstanceOf(CrashReportManager.PromptState.Pending::class.java)
+    }
+
+    @Test fun `openGitHubIssue consumes the stored log but keeps the prompt for this session`() = runTest(dispatcher) {
+        crashDir.mkdirs()
+        pendingFile.writeText("stack")
+        manager.checkOnColdStart()
+        assertThat(manager.state.value).isInstanceOf(CrashReportManager.PromptState.Pending::class.java)
+
+        manager.openGitHubIssue(context)
+
+        assertThat(pendingFile.exists()).isFalse()
+        assertThat(manager.state.value).isInstanceOf(CrashReportManager.PromptState.Pending::class.java)
+    }
+
     @Test fun `crash ANR and native crash are reportable`() {
         assertThat(CrashReportManager.isReportableReason(ApplicationExitInfo.REASON_CRASH)).isTrue()
         assertThat(CrashReportManager.isReportableReason(ApplicationExitInfo.REASON_CRASH_NATIVE)).isTrue()

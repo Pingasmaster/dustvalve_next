@@ -11,11 +11,21 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class PlaylistBundleManifest(
-    val version: Int = 1,
+    val version: Int = SUPPORTED_VERSION,
     val offline: Boolean,
     val playlist: PlaylistSnapshot,
     val entries: List<BundleEntry> = emptyList(),
-)
+) {
+    companion object {
+        /**
+         * Newest bundle format version this build can read. Import rejects
+         * manifests with a higher [version] (produced by a newer app) instead
+         * of silently mis-parsing them; bump when the format changes
+         * incompatibly.
+         */
+        const val SUPPORTED_VERSION = 1
+    }
+}
 
 @Serializable
 data class BundleEntry(

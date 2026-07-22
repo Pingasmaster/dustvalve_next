@@ -169,15 +169,19 @@ class RangeResumeDownloaderTest {
 
     @Test
     fun `gives up after max retries exhausted`() = runBlocking {
-        val tiny = ByteArray(1) { 0x42.toByte() }
-        // Five consecutive responses that advertise 10000 bytes but only send 1.
-        repeat(5) {
-            server.enqueue(
-                MockResponse()
+        // Every response advertises 10000 bytes but only sends 1, honoring the
+        // requested offset so each retry appends exactly one more byte. (A
+        // Content-Range start that ignored the requested offset would now trip
+        // the non-retryable mismatch check instead of exhausting retries.)
+        server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest): MockResponse {
+                val offset = request.getHeader("Range")!!
+                    .removePrefix("bytes=").removeSuffix("-").toLong()
+                return MockResponse()
                     .setResponseCode(206)
-                    .setHeader("Content-Range", "bytes 0-9999/10000")
-                    .setBody(Buffer().write(tiny)),
-            )
+                    .setHeader("Content-Range", "bytes $offset-9999/10000")
+                    .setBody(Buffer().write(ByteArray(1) { 0x42.toByte() }))
+            }
         }
 
         val out = ByteArrayOutputStream()
@@ -246,6 +250,91 @@ class RangeResumeDownloaderTest {
         assertThat(ex!!.message).contains("ignored Range on resume")
         // Nothing appended on top of the existing partial.
         assertThat(out.toByteArray().size).isEqualTo(0)
+    }
+
+    @Test
+    fun `206 resume starting at the wrong offset fails non-retryably`() = runBlocking {
+        // Resuming a 4000-byte partial, but the server's 206 body starts at 0.
+        // Appending it would duplicate the first 4000 bytes; the helper must
+        // fail with the restart-from-zero signal and must NOT retry (only one
+        // response is enqueued - a retry would hang the test).
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("Content-Range", "bytes 0-9999/10000")
+                .setBody(Buffer().write(ByteArray(10000))),
+        )
+        val out = ByteArrayOutputStream()
+        val ex = runCatching {
+            RangeResumeDownloader.stream(
+                client = client,
+                url = server.url("/x").toString(),
+                sink = out,
+                trackId = "wrong_start",
+                startOffset = 4000L,
+                maxRetries = 3,
+                backoffMillis = { 0L },
+            )
+        }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(RangeResumeDownloader.ResumeMismatchException::class.java)
+        assertThat(ex!!.message).contains("offset mismatch")
+        // Nothing appended on top of the existing partial.
+        assertThat(out.toByteArray()).isEmpty()
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `206 resume with a different total than recorded fails non-retryably`() = runBlocking {
+        // The sidecar recorded a 10000-byte resource, but the re-resolved URL
+        // now serves a 12000-byte payload (a different stream variant).
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("Content-Range", "bytes 4000-11999/12000")
+                .setBody(Buffer().write(ByteArray(8000))),
+        )
+        val out = ByteArrayOutputStream()
+        val ex = runCatching {
+            RangeResumeDownloader.stream(
+                client = client,
+                url = server.url("/x").toString(),
+                sink = out,
+                trackId = "wrong_total",
+                startOffset = 4000L,
+                maxRetries = 3,
+                expectedTotalBytes = 10000L,
+                backoffMillis = { 0L },
+            )
+        }.exceptionOrNull()
+
+        assertThat(ex).isInstanceOf(RangeResumeDownloader.ResumeMismatchException::class.java)
+        assertThat(ex!!.message).contains("total mismatch")
+        assertThat(out.toByteArray()).isEmpty()
+        assertThat(server.requestCount).isEqualTo(1)
+    }
+
+    @Test
+    fun `resume succeeds when the recorded total matches the response`() = runBlocking {
+        val total = 10000
+        val remainder = ByteArray(total - 4000) { (it and 0xFF).toByte() }
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("Content-Range", "bytes 4000-${total - 1}/$total")
+                .setBody(Buffer().write(remainder)),
+        )
+        val out = ByteArrayOutputStream()
+        val written = RangeResumeDownloader.stream(
+            client = client,
+            url = server.url("/x").toString(),
+            sink = out,
+            trackId = "matching_total",
+            startOffset = 4000L,
+            expectedTotalBytes = total.toLong(),
+        )
+        assertThat(written.toInt()).isEqualTo(total)
+        assertThat(out.toByteArray()).isEqualTo(remainder)
     }
 
     @Test

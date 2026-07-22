@@ -146,73 +146,157 @@ class PlaylistTransferRepository @Inject constructor(
         }
     }
 
-    /** Read a `.dvplaylist` ZIP from [inp] and create a new playlist. Returns the created playlist. */
+    /**
+     * Read a `.dvplaylist` ZIP from [inp] and create a new playlist. Returns the created playlist.
+     *
+     * Streams the archive entry-by-entry: only `manifest.json` and small
+     * metadata/cover entries are buffered in memory (each capped at
+     * [MAX_METADATA_ENTRY_BYTES]); audio entries are spilled straight to a
+     * temp directory and moved into place after the manifest is parsed, so an
+     * offline bundle of any size imports without OOM.
+     */
     suspend fun import(inp: InputStream, onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }): Playlist = withContext(ioDispatcher) {
-        val files = HashMap<String, ByteArray>()
-        var manifestJson: String? = null
-        ZipInputStream(inp.buffered()).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                val bytes = zip.readBytes()
-                if (entry.name == "manifest.json") {
-                    manifestJson = bytes.decodeToString()
-                } else {
-                    files[entry.name] = bytes
+        var tempDir: File? = null
+        fun tempDirOrCreate(): File = tempDir ?: File(context.cacheDir, "playlist_import_${System.nanoTime()}")
+            .also {
+                if (!it.mkdirs() && !it.isDirectory) {
+                    throw IllegalStateException("Cannot create import temp dir: ${it.absolutePath}")
                 }
-                zip.closeEntry()
-                entry = zip.nextEntry
+                tempDir = it
             }
-        }
-        val manifest = json.decodeFromString<PlaylistBundleManifest>(
-            manifestJson ?: throw IllegalStateException("Bundle missing manifest.json"),
-        )
 
-        val playlist = playlistRepository.createPlaylist(
-            name = manifest.playlist.name,
-            shapeKey = manifest.playlist.shapeKey,
-            iconUrl = manifest.playlist.iconUrl,
-        )
-        val total = manifest.entries.size
-        val trackEntities = ArrayList<com.dustvalve.next.android.data.local.db.entity.TrackEntity>(total)
+        try {
+            val smallFiles = HashMap<String, ByteArray>() // covers + misc small metadata
+            val audioFiles = HashMap<String, File>() // zip entry name -> spilled temp file
+            var manifestJson: String? = null
+            ZipInputStream(inp.buffered()).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    coroutineContext.ensureActive()
+                    val name = entry.name
+                    when {
+                        entry.isDirectory -> Unit
 
-        manifest.entries.forEachIndexed { index, bundleEntry ->
-            coroutineContext.ensureActive()
-            var snap = bundleEntry.track
-            if (manifest.offline) {
-                val audioBytes = bundleEntry.audioFile?.let { files[it] }
-                if (audioBytes != null) {
-                    val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
-                    val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
-                    val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
-                    val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
-                    val audio = File(dir, "$safeTrack.${format.extension}")
-                    audio.writeBytes(audioBytes)
-                    downloadDao.insert(
-                        DownloadEntity(
-                            trackId = snap.id,
-                            albumId = snap.albumId,
-                            filePath = audio.absolutePath,
-                            sizeBytes = audio.length(),
-                            format = format.key,
-                            pinned = true,
-                        ),
-                    )
-                }
-                // Persist the cover locally and point artUrl at it so covers show offline.
-                val coverBytes = bundleEntry.coverFile?.let { files[it] }
-                if (coverBytes != null) {
-                    val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
-                    cover.writeBytes(coverBytes)
-                    snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
+                        name == "manifest.json" -> {
+                            manifestJson = readEntryCapped(zip)?.decodeToString()
+                                ?: throw IllegalStateException(
+                                    "manifest.json exceeds $MAX_METADATA_ENTRY_BYTES bytes",
+                                )
+                        }
+
+                        name.startsWith("audio/") -> {
+                            // Temp names are index-based - zip entry names are
+                            // used only as map keys, never as filesystem paths.
+                            val spilled = File(tempDirOrCreate(), "audio_${audioFiles.size}")
+                            spilled.outputStream().use { out -> zip.copyTo(out) }
+                            audioFiles[name] = spilled
+                        }
+
+                        else -> {
+                            val bytes = readEntryCapped(zip)
+                            if (bytes != null) {
+                                smallFiles[name] = bytes
+                            } else {
+                                android.util.Log.w(
+                                    "PlaylistTransfer",
+                                    "Skipping oversized metadata entry: $name",
+                                )
+                            }
+                        }
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
                 }
             }
-            trackEntities.add(snap.toEntity())
-            onProgress(index + 1, total)
-        }
+            val manifest = json.decodeFromString<PlaylistBundleManifest>(
+                manifestJson ?: throw IllegalStateException("Bundle missing manifest.json"),
+            )
+            if (manifest.version > PlaylistBundleManifest.SUPPORTED_VERSION) {
+                throw IllegalStateException(
+                    "Bundle format version ${manifest.version} is newer than this app supports " +
+                        "(<= ${PlaylistBundleManifest.SUPPORTED_VERSION}); update the app to import it",
+                )
+            }
 
-        trackDao.insertAll(trackEntities)
-        playlistRepository.addTracksToPlaylist(playlist.id, manifest.entries.map { it.track.id })
-        playlist
+            val playlist = playlistRepository.createPlaylist(
+                name = manifest.playlist.name,
+                shapeKey = manifest.playlist.shapeKey,
+                iconUrl = manifest.playlist.iconUrl,
+            )
+            val total = manifest.entries.size
+            val trackEntities = ArrayList<com.dustvalve.next.android.data.local.db.entity.TrackEntity>(total)
+
+            manifest.entries.forEachIndexed { index, bundleEntry ->
+                coroutineContext.ensureActive()
+                var snap = bundleEntry.track
+                if (manifest.offline) {
+                    val audioTemp = bundleEntry.audioFile?.let { audioFiles[it] }
+                    if (audioTemp != null && audioTemp.isFile) {
+                        val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
+                        val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
+                        val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
+                        val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
+                        val audio = File(dir, "$safeTrack.${format.extension}")
+                        moveFile(audioTemp, audio)
+                        downloadDao.insert(
+                            DownloadEntity(
+                                trackId = snap.id,
+                                albumId = snap.albumId,
+                                filePath = audio.absolutePath,
+                                sizeBytes = audio.length(),
+                                format = format.key,
+                                pinned = true,
+                            ),
+                        )
+                    }
+                    // Persist the cover locally and point artUrl at it so covers show offline.
+                    val coverBytes = bundleEntry.coverFile?.let { smallFiles[it] }
+                    if (coverBytes != null) {
+                        val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
+                        cover.writeBytes(coverBytes)
+                        snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
+                    }
+                }
+                trackEntities.add(snap.toEntity())
+                onProgress(index + 1, total)
+            }
+
+            trackDao.insertAll(trackEntities)
+            playlistRepository.addTracksToPlaylist(playlist.id, manifest.entries.map { it.track.id })
+            playlist
+        } finally {
+            try {
+                tempDir?.deleteRecursively()
+            } catch (_: SecurityException) {
+                // Leftover temp files are reclaimed by the OS cache cleaner.
+            }
+        }
+    }
+
+    /**
+     * Reads the current ZIP entry fully into memory, or returns null once it
+     * exceeds [MAX_METADATA_ENTRY_BYTES] (the caller then skips it; ZipInputStream
+     * discards the remainder on closeEntry). Never trusts ZipEntry.size - it
+     * is attacker-controlled and often -1 for streamed archives.
+     */
+    private fun readEntryCapped(zip: ZipInputStream): ByteArray? {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(DEFAULT_COPY_BUFFER_BYTES)
+        while (true) {
+            val read = zip.read(buffer)
+            if (read == -1) break
+            if (out.size() + read > MAX_METADATA_ENTRY_BYTES) return null
+            out.write(buffer, 0, read)
+        }
+        return out.toByteArray()
+    }
+
+    private fun moveFile(src: File, dest: File) {
+        if (dest.exists()) dest.delete()
+        if (!src.renameTo(dest)) {
+            src.copyTo(dest, overwrite = true)
+            src.delete()
+        }
     }
 
     private fun openDownload(filePath: String): InputStream = if (filePath.startsWith("content://")) {
@@ -228,6 +312,17 @@ class PlaylistTransferRepository @Inject constructor(
             if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}")
             response.body.bytes()
         }
+    }
+
+    private companion object {
+        /**
+         * Per-entry in-memory cap for manifest/cover/metadata entries. Audio
+         * never counts against this - it streams to disk. 8 MB comfortably
+         * fits any real manifest or cover while bounding a hostile bundle.
+         */
+        const val MAX_METADATA_ENTRY_BYTES = 8 * 1024 * 1024
+
+        const val DEFAULT_COPY_BUFFER_BYTES = 8192
     }
 }
 

@@ -68,6 +68,23 @@ class DustvalveAlbumScraperTest {
         assertThat(album.tracks[1].trackNumber).isEqualTo(2)
     }
 
+    @Test fun `scrapeAlbum leaves artUrl empty when art_id is missing`() = runTest {
+        // Regression: art_id 0 (absent artwork) used to produce a hardcoded
+        // https://f4.bcbits.com/img/a0_10.jpg URL that 404s and got persisted.
+        val albumUrl = setup.url("/album/no-art")
+        val html = """<html><script>var TralbumData = {
+            "url":"$albumUrl",
+            "current":{"title":"No Art","artist":"A","band_id":1},
+            "trackinfo":[{"id":1,"title":"T","track_num":1,"duration":1.0}],
+            "art_id":0,"item_type":"album"
+        };</script></html>"""
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val album = scraper.scrapeAlbum(albumUrl)
+        assertThat(album.artUrl).isEmpty()
+        assertThat(album.tracks.single().artUrl).isEmpty()
+    }
+
     @Test fun `scrapeAlbum parses data-tralbum attribute fallback`() = runTest {
         val albumUrl = setup.url("/album/foo")
         val json = """{&quot;url&quot;:&quot;$albumUrl&quot;,&quot;current&quot;:{&quot;title&quot;:&quot;Via Attr&quot;,&quot;artist&quot;:&quot;Band&quot;,&quot;band_id&quot;:1},&quot;trackinfo&quot;:[],&quot;art_id&quot;:1,&quot;item_type&quot;:&quot;album&quot;}"""
