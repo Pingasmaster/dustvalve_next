@@ -23,12 +23,12 @@ import kotlin.coroutines.cancellation.CancellationException
  * SimpleCache - and its database - onto the cold-start path.
  */
 @Singleton
+@OptIn(UnstableApi::class)
 class MediaCacheClearerImpl @Inject constructor(
     private val simpleCache: dagger.Lazy<SimpleCache>,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MediaCacheClearer {
 
-    @OptIn(UnstableApi::class)
     @Suppress("TooGenericExceptionCaught")
     override suspend fun clearAll() = withContext(ioDispatcher) {
         val cache = simpleCache.get()

@@ -173,37 +173,7 @@ class PlaylistTransferRepository @Inject constructor(
                 var entry = zip.nextEntry
                 while (entry != null) {
                     coroutineContext.ensureActive()
-                    val name = entry.name
-                    when {
-                        entry.isDirectory -> Unit
-
-                        name == "manifest.json" -> {
-                            manifestJson = readEntryCapped(zip)?.decodeToString()
-                                ?: throw IllegalStateException(
-                                    "manifest.json exceeds $MAX_METADATA_ENTRY_BYTES bytes",
-                                )
-                        }
-
-                        name.startsWith("audio/") -> {
-                            // Temp names are index-based - zip entry names are
-                            // used only as map keys, never as filesystem paths.
-                            val spilled = File(tempDirOrCreate(), "audio_${audioFiles.size}")
-                            spilled.outputStream().use { out -> zip.copyTo(out) }
-                            audioFiles[name] = spilled
-                        }
-
-                        else -> {
-                            val bytes = readEntryCapped(zip)
-                            if (bytes != null) {
-                                smallFiles[name] = bytes
-                            } else {
-                                android.util.Log.w(
-                                    "PlaylistTransfer",
-                                    "Skipping oversized metadata entry: $name",
-                                )
-                            }
-                        }
-                    }
+                    readBundleEntry(zip, entry, smallFiles, audioFiles, ::tempDirOrCreate) { manifestJson = it }
                     zip.closeEntry()
                     entry = zip.nextEntry
                 }
@@ -228,35 +198,7 @@ class PlaylistTransferRepository @Inject constructor(
 
             manifest.entries.forEachIndexed { index, bundleEntry ->
                 coroutineContext.ensureActive()
-                var snap = bundleEntry.track
-                if (manifest.offline) {
-                    val audioTemp = bundleEntry.audioFile?.let { audioFiles[it] }
-                    if (audioTemp != null && audioTemp.isFile) {
-                        val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
-                        val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
-                        val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
-                        val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
-                        val audio = File(dir, "$safeTrack.${format.extension}")
-                        moveFile(audioTemp, audio)
-                        downloadDao.insert(
-                            DownloadEntity(
-                                trackId = snap.id,
-                                albumId = snap.albumId,
-                                filePath = audio.absolutePath,
-                                sizeBytes = audio.length(),
-                                format = format.key,
-                                pinned = true,
-                            ),
-                        )
-                    }
-                    // Persist the cover locally and point artUrl at it so covers show offline.
-                    val coverBytes = bundleEntry.coverFile?.let { smallFiles[it] }
-                    if (coverBytes != null) {
-                        val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
-                        cover.writeBytes(coverBytes)
-                        snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
-                    }
-                }
+                val snap = materializeEntry(manifest.offline, bundleEntry, audioFiles, smallFiles)
                 trackEntities.add(snap.toEntity())
                 onProgress(index + 1, total)
             }
@@ -271,6 +213,91 @@ class PlaylistTransferRepository @Inject constructor(
                 // Leftover temp files are reclaimed by the OS cache cleaner.
             }
         }
+    }
+
+    /**
+     * Dispatches one ZIP entry: records the manifest text via [onManifest],
+     * spills audio payloads to index-named temp files under [tempDirOrCreate],
+     * keeps small metadata in memory, and skips oversized metadata entries.
+     */
+    private fun readBundleEntry(
+        zip: ZipInputStream,
+        entry: ZipEntry,
+        smallFiles: MutableMap<String, ByteArray>,
+        audioFiles: MutableMap<String, File>,
+        tempDirOrCreate: () -> File,
+        onManifest: (String) -> Unit,
+    ) {
+        val name = entry.name
+        when {
+            entry.isDirectory -> Unit
+
+            name == "manifest.json" -> onManifest(
+                readEntryCapped(zip)?.decodeToString()
+                    ?: throw IllegalStateException("manifest.json exceeds $MAX_METADATA_ENTRY_BYTES bytes"),
+            )
+
+            name.startsWith("audio/") -> {
+                // Temp names are index-based - zip entry names are used only as
+                // map keys, never as filesystem paths.
+                val spilled = File(tempDirOrCreate(), "audio_${audioFiles.size}")
+                spilled.outputStream().use { out -> zip.copyTo(out) }
+                audioFiles[name] = spilled
+            }
+
+            else -> {
+                val bytes = readEntryCapped(zip)
+                if (bytes != null) {
+                    smallFiles[name] = bytes
+                } else {
+                    android.util.Log.w("PlaylistTransfer", "Skipping oversized metadata entry: $name")
+                }
+            }
+        }
+    }
+
+    /**
+     * Turns one bundle entry into the [TrackSnapshot] to persist. For offline
+     * bundles it moves the spilled audio into the downloads layout (registering
+     * a pinned [DownloadEntity]) and writes the cover locally, repointing
+     * artUrl at it. Lightweight bundles return the snapshot unchanged.
+     */
+    private suspend fun materializeEntry(
+        offline: Boolean,
+        bundleEntry: BundleEntry,
+        audioFiles: Map<String, File>,
+        smallFiles: Map<String, ByteArray>,
+    ): TrackSnapshot {
+        var snap = bundleEntry.track
+        if (!offline) return snap
+
+        val audioTemp = bundleEntry.audioFile?.let { audioFiles[it] }
+        if (audioTemp != null && audioTemp.isFile) {
+            val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
+            val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
+            val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
+            val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
+            val audio = File(dir, "$safeTrack.${format.extension}")
+            moveFile(audioTemp, audio)
+            downloadDao.insert(
+                DownloadEntity(
+                    trackId = snap.id,
+                    albumId = snap.albumId,
+                    filePath = audio.absolutePath,
+                    sizeBytes = audio.length(),
+                    format = format.key,
+                    pinned = true,
+                ),
+            )
+        }
+        // Persist the cover locally and point artUrl at it so covers show offline.
+        val coverBytes = bundleEntry.coverFile?.let { smallFiles[it] }
+        if (coverBytes != null) {
+            val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
+            cover.writeBytes(coverBytes)
+            snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
+        }
+        return snap
     }
 
     /**

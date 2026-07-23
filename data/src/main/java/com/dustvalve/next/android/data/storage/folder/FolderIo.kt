@@ -3,6 +3,8 @@ package com.dustvalve.next.android.data.storage.folder
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import com.dustvalve.next.android.data.util.ignoringStorageFailures
+import com.dustvalve.next.android.data.util.orOnStorageFailure
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
@@ -54,18 +56,15 @@ object FolderIo {
     suspend fun quarantine(context: Context, treeUri: Uri, name: String, dispatcher: CoroutineDispatcher): Boolean =
         withContext(dispatcher) {
             val file = DedicatedFolderPaths.find(context, treeUri, name) ?: return@withContext false
-            try {
+            orOnStorageFailure(false) {
                 DedicatedFolderPaths.find(context, treeUri, "$name.corrupt")?.delete()
                 file.renameTo("$name.corrupt")
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                false
             }
         }
 
     private fun <T> writeJsonBlocking(context: Context, treeUri: Uri, name: String, serializer: KSerializer<T>, value: T) {
         val root = DedicatedFolderPaths.dustvalveRoot(context, treeUri)
-            ?: throw IOException("Dustvalve folder not accessible")
+            .orIoError("Dustvalve folder not accessible")
         val bytes = FolderSnapshotSerializer.json.encodeToString(serializer, value).toByteArray(Charsets.UTF_8)
         // Write via a tmp sibling then rename for atomicity on normal SAF
         // providers. The tmp name KEEPS the .json extension ("x.tmp.json"):
@@ -76,33 +75,20 @@ object FolderIo {
         // operate on the DocumentFile returned by createFile - never re-find
         // it by display name.
         val tmpName = tmpNameFor(name)
-        try {
-            root.findFile(tmpName)?.delete()
-        } catch (e: Exception) {
-            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-        }
+        ignoringStorageFailures { root.findFile(tmpName)?.delete() }
         val tmp = root.createFile(DedicatedFolderPaths.JSON_MIME, tmpName)
-            ?: throw IOException("Failed to create $tmpName")
+            .orIoError("Failed to create $tmpName")
         var renamed = false
         try {
-            context.contentResolver.openOutputStream(tmp.uri, "wt")?.use { it.write(bytes) }
-                ?: throw IOException("Failed to open output stream for $tmpName")
+            (context.contentResolver.openOutputStream(tmp.uri, "wt")?.use { it.write(bytes) })
+                .orIoError("Failed to open output stream for $tmpName")
 
             // Swap: drop the old target, then rename the fully-written tmp
             // over it. A crash in the gap leaves the target absent (treated
             // as no snapshot) with the complete tmp on disk - never a
             // half-truncated canonical file.
-            try {
-                root.findFile(name)?.delete()
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-            }
-            renamed = try {
-                tmp.renameTo(name)
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                false
-            }
+            ignoringStorageFailures { root.findFile(name)?.delete() }
+            renamed = orOnStorageFailure(false) { tmp.renameTo(name) }
             if (!renamed) {
                 // Provider genuinely doesn't support rename: create the
                 // target and write the fully-buffered bytes directly.
@@ -112,17 +98,16 @@ object FolderIo {
             // On successful rename tmp IS the target now; otherwise clean it
             // up on every path (fallback write, exception, ...).
             if (!renamed) {
-                try {
-                    tmp.delete()
-                } catch (e: Exception) {
-                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                }
+                ignoringStorageFailures { tmp.delete() }
             }
         }
     }
 
     /** "albums.json" -> "albums.tmp.json": tmp sibling name whose extension matches [DedicatedFolderPaths.JSON_MIME]. */
     private fun tmpNameFor(name: String): String = "${name.removeSuffix(".json")}.tmp.json"
+
+    /** Returns the receiver when present, otherwise fails the write with an [IOException] carrying [message]. */
+    private fun <T : Any> T?.orIoError(message: String): T = this ?: throw IOException(message)
 
     /**
      * Overwrite [name] with [bytes], reusing [existing] if present, otherwise creating it.

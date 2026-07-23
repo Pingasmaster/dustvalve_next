@@ -107,12 +107,21 @@ class DownloadControllerTest {
         val imagesDir = File(downloads, "images").also { it.mkdirs() }
         val oldMtime = System.currentTimeMillis() - 60L * 60L * 1000L
 
-        val kept = File(albumDir, "kept.mp3").also { it.writeBytes(ByteArray(4)); it.setLastModified(oldMtime) }
-        val orphan = File(albumDir, "orphan.mp3").also { it.writeBytes(ByteArray(4)); it.setLastModified(oldMtime) }
+        val kept = File(albumDir, "kept.mp3").also {
+            it.writeBytes(ByteArray(4))
+            it.setLastModified(oldMtime)
+        }
+        val orphan = File(albumDir, "orphan.mp3").also {
+            it.writeBytes(ByteArray(4))
+            it.setLastModified(oldMtime)
+        }
         val fresh = File(albumDir, "fresh.mp3").also { it.writeBytes(ByteArray(4)) }
         val partial = File(albumDir, "part.mp3.tmp").also { it.writeBytes(ByteArray(4)) }
         val sidecar = File(albumDir, "part.mp3.tmp.meta").also { it.writeText("{}") }
-        val image = File(imagesDir, "cover.jpg").also { it.writeBytes(ByteArray(4)); it.setLastModified(oldMtime) }
+        val image = File(imagesDir, "cover.jpg").also {
+            it.writeBytes(ByteArray(4))
+            it.setLastModified(oldMtime)
+        }
 
         coEvery { downloadDao.getAllSync() } returns listOf(
             DownloadEntity(trackId = "t1", albumId = "al1", filePath = kept.absolutePath, sizeBytes = 4L),
@@ -133,7 +142,10 @@ class DownloadControllerTest {
         val downloads = File(context.filesDir, "downloads")
         val albumDir = File(downloads, "al1").also { it.mkdirs() }
         val oldMtime = System.currentTimeMillis() - 60L * 60L * 1000L
-        val orphan = File(albumDir, "orphan.mp3").also { it.writeBytes(ByteArray(4)); it.setLastModified(oldMtime) }
+        val orphan = File(albumDir, "orphan.mp3").also {
+            it.writeBytes(ByteArray(4))
+            it.setLastModified(oldMtime)
+        }
         val partial = File(albumDir, "part.mp3.tmp").also { it.writeBytes(ByteArray(4)) }
         coEvery { downloadDao.getAllSync() } throws IllegalStateException("db not ready")
 

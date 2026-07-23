@@ -546,4 +546,9 @@
     <string name="crash_report_share_action">Поделиться журналом сбоя</string>
     <string name="crash_report_github_action">Создать issue на GitHub</string>
     <string name="crash_report_dismiss_action">Не сейчас</string>
+    <!-- Security-block + missing-playlist UI (added with default strings) -->
+    <string name="login_navigation_blocked">Заблокировано в целях безопасности: здесь может открыться только страница входа</string>
+    <string name="playlist_gone_title">Этот плейлист больше не существует</string>
+    <string name="playlist_gone_subtitle">Возможно, он был удалён из вашей библиотеки</string>
+    <string name="common_action_back">Назад</string>
 </resources>

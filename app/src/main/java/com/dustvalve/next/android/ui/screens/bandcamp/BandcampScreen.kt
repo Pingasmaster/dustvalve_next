@@ -1211,12 +1211,7 @@ private class StaggerAnimationTracker {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun StaggeredAnimatedItem(
-    index: Int,
-    itemKey: String,
-    tracker: StaggerAnimationTracker,
-    content: @Composable () -> Unit,
-) {
+private fun StaggeredAnimatedItem(index: Int, itemKey: String, tracker: StaggerAnimationTracker, content: @Composable () -> Unit) {
     // Lazy rows are recycled: without the hoisted [tracker] the enter
     // animation (and its delay) replayed on every recomposition of a recycled
     // row. Rows that already animated once render at full alpha immediately.

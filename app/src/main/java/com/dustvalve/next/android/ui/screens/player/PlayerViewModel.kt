@@ -314,11 +314,10 @@ class PlayerViewModel @Inject constructor(
      */
     private suspend fun resolveStreamOnDemand(track: Track): Track? {
         val resolved = try {
-            if (track.source == TrackSource.BANDCAMP &&
+            val staleBandcampStream = track.source == TrackSource.BANDCAMP &&
                 !track.streamUrl.isNullOrBlank() &&
-                isStreamResolutionStale(track) &&
-                downloadRepository.getDownloadInfo(track.id) == null
-            ) {
+                isStreamResolutionStale(track)
+            if (staleBandcampStream && downloadRepository.getDownloadInfo(track.id) == null) {
                 // resolveTrackForPlayback would hand back the same stale URL.
                 reResolveBandcampStream(track)
             } else {

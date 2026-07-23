@@ -68,7 +68,7 @@ class BandcampViewModelTest {
     @Test fun `category retry after failure clears the error and shows results`() = runTest(dispatcher) {
         var fail = true
         coEvery { discover.invoke(any(), any()) } answers {
-            if (fail) throw RuntimeException("network down") else DiscoverResult(listOf(mockk<Album>()))
+            if (fail) throw IllegalStateException("network down") else DiscoverResult(listOf(mockk<Album>()))
         }
         val vm = BandcampViewModel(discover, settings)
         vm.selectCategory("rock", "rock")

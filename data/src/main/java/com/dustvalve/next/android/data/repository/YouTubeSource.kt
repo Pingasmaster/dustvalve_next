@@ -102,7 +102,9 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
                 .takeLast(MIX_CURSOR_MAX_SEEN_IDS)
             val encodedNext = when (nextCursor) {
                 null -> null
+
                 is YouTubePlaylistParser.MixContinuation -> encodeMixCursor(nextCursor, deliveredIds)
+
                 // Unknown cursor type: pass through verbatim (repo will
                 // re-interpret it); dedupe degrades gracefully to none.
                 else -> nextCursor

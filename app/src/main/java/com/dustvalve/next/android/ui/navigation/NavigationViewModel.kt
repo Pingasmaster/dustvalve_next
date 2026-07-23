@@ -367,42 +367,65 @@ class NavigationViewModel @Inject constructor(
         // keeps that module untouched. Fields are URL-encoded so '|' is safe.
         internal fun encodeDestination(dest: NavDestination): String = when (dest) {
             NavDestination.LocalHome -> "local"
+
             NavDestination.BandcampHome -> "bandcampHome"
+
             NavDestination.YouTubeHome -> "youtubeHome"
+
             NavDestination.Library -> "library"
+
             NavDestination.Settings -> "settings"
+
             NavDestination.AccountLogin -> "accountLogin"
+
             NavDestination.YouTubeMusicLogin -> "ytmLogin"
+
             is NavDestination.AlbumDetail -> "album|" + enc(dest.url)
+
             is NavDestination.ArtistDetail ->
                 "artist|" + enc(dest.url) + "|" + enc(dest.sourceId) + "|" + enc(dest.name.orEmpty()) + "|" + enc(dest.imageUrl.orEmpty())
+
             is NavDestination.PlaylistDetail -> "playlist|" + enc(dest.playlistId)
+
             is NavDestination.CollectionDetail -> "collection|" + enc(dest.url) + "|" + enc(dest.sourceId) + "|" + enc(dest.name)
         }
 
+        // Numeric literals here are pipe-field indices, not magic numbers.
+        @Suppress("MagicNumber")
         internal fun decodeDestination(raw: String): NavDestination? = try {
             val parts = raw.split('|')
             when (parts[0]) {
                 "local" -> NavDestination.LocalHome
+
                 "bandcampHome" -> NavDestination.BandcampHome
+
                 "youtubeHome" -> NavDestination.YouTubeHome
+
                 "library" -> NavDestination.Library
+
                 "settings" -> NavDestination.Settings
+
                 "accountLogin" -> NavDestination.AccountLogin
+
                 "ytmLogin" -> NavDestination.YouTubeMusicLogin
+
                 "album" -> NavDestination.AlbumDetail(url = dec(parts[1]))
+
                 "artist" -> NavDestination.ArtistDetail(
                     url = dec(parts[1]),
                     sourceId = dec(parts[2]),
                     name = dec(parts[3]).takeIf { it.isNotEmpty() },
                     imageUrl = dec(parts[4]).takeIf { it.isNotEmpty() },
                 )
+
                 "playlist" -> NavDestination.PlaylistDetail(playlistId = dec(parts[1]))
+
                 "collection" -> NavDestination.CollectionDetail(
                     url = dec(parts[1]),
                     sourceId = dec(parts[2]),
                     name = dec(parts[3]),
                 )
+
                 else -> null
             }
         } catch (_: Exception) {

@@ -520,4 +520,9 @@
     <string name="crash_report_share_action">Condividi il log dell’arresto</string>
     <string name="crash_report_github_action">Apri una issue su GitHub</string>
     <string name="crash_report_dismiss_action">Non ora</string>
+    <!-- Security-block + missing-playlist UI (added with default strings) -->
+    <string name="login_navigation_blocked">Bloccato per sicurezza: solo il sito di accesso può aprirsi qui</string>
+    <string name="playlist_gone_title">Questa playlist non esiste più</string>
+    <string name="playlist_gone_subtitle">Potrebbe essere stata eliminata dalla tua libreria</string>
+    <string name="common_action_back">Indietro</string>
 </resources>

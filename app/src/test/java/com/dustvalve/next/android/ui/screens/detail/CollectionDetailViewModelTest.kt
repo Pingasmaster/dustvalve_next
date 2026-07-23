@@ -1,11 +1,11 @@
 package com.dustvalve.next.android.ui.screens.detail
 
+import androidx.room.withTransaction
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import androidx.room.withTransaction
 import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.Playlist

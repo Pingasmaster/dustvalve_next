@@ -263,8 +263,7 @@ class PlaybackManager @Inject constructor(
     }
 
     /** YouTube watch-page / short-link URLs are HTML pages, not media streams. */
-    private fun isWatchPageUrl(url: String): Boolean =
-        // Also matches music.youtube.com/watch and m.youtube.com/watch.
+    private fun isWatchPageUrl(url: String): Boolean = // Also matches music.youtube.com/watch and m.youtube.com/watch.
         url.contains("youtube.com/watch") || url.contains("youtu.be/")
 
     /**
@@ -314,8 +313,11 @@ class PlaybackManager @Inject constructor(
                 return
             }
             android.util.Log.w("PlaybackManager", "Cannot play track '${candidate.title}': no playable stream URL")
-            if (advanced >= queueSize) break
-            candidate = queueManager.next() ?: break
+            // A single break keeps this within detekt's jump budget: stop once
+            // the bound is hit or the queue has no further successor to try.
+            val nextCandidate = if (advanced >= queueSize) null else queueManager.next()
+            if (nextCandidate == null) break
+            candidate = nextCandidate
             advanced++
         }
         // Give-up branch: no playable successor anywhere. Put currentIndex back

@@ -159,10 +159,7 @@ open class YouTubeInnertubeClient @Inject constructor(
      * the same richGrid shape as page 1 - an MWEB continuation for a WEB
      * browse parses to zero tracks.
      */
-    suspend fun browseContinuation(
-        continuation: String,
-        client: YouTubeClient = YouTubeClient.MWEB_NO_AUTH,
-    ): JsonElement = postWithRetry(
+    suspend fun browseContinuation(continuation: String, client: YouTubeClient = YouTubeClient.MWEB_NO_AUTH): JsonElement = postWithRetry(
         client = client,
         endpointPath = "browse",
         queryParams = "&continuation=$continuation&type=next",

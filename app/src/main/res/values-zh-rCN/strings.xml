@@ -520,4 +520,9 @@
     <string name="crash_report_share_action">分享崩溃日志</string>
     <string name="crash_report_github_action">在 GitHub 上提交 issue</string>
     <string name="crash_report_dismiss_action">暂不</string>
+    <!-- Security-block + missing-playlist UI (added with default strings) -->
+    <string name="login_navigation_blocked">出于安全考虑已阻止：此处仅可打开登录网站</string>
+    <string name="playlist_gone_title">此播放列表已不存在</string>
+    <string name="playlist_gone_subtitle">它可能已从您的音乐库中删除</string>
+    <string name="common_action_back">返回</string>
 </resources>

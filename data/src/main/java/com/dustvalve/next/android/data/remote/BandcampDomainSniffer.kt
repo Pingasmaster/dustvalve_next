@@ -145,8 +145,7 @@ class BandcampDomainSniffer @Inject constructor(
          * True only for bandcamp.com or *.bandcamp.com hosts; a plain endsWith
          * check would also accept lookalikes such as "evilbandcamp.com".
          */
-        private fun isBandcampHost(host: String): Boolean =
-            host == "bandcamp.com" || host.endsWith(".bandcamp.com")
+        private fun isBandcampHost(host: String): Boolean = host == "bandcamp.com" || host.endsWith(".bandcamp.com")
 
         private fun hostOf(url: String?): String? = url?.let {
             try {

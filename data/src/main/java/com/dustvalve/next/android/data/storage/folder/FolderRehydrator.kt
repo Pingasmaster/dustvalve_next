@@ -16,6 +16,8 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
+import com.dustvalve.next.android.data.util.ignoringStorageFailures
+import com.dustvalve.next.android.data.util.orOnStorageFailure
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -59,11 +61,7 @@ class FolderRehydrator @Inject constructor(
 ) {
     suspend fun rehydrateAll() = withContext(ioDispatcher) {
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return@withContext
-        val uri = try {
-            uriStr.toUri()
-        } catch (_: Exception) {
-            return@withContext
-        }
+        val uri = orOnStorageFailure<android.net.Uri?>(null) { uriStr.toUri() } ?: return@withContext
 
         // Settings first so downstream reads pick up the user's prefs.
         readJsonOrQuarantine(uri, DedicatedFolderPaths.FILE_SETTINGS, SettingsFile.serializer())?.let { file ->
@@ -163,11 +161,9 @@ class FolderRehydrator @Inject constructor(
                 // Corrupt cache snapshot: quarantine + skip, keep the local
                 // cache. Never fail the whole boot over a cache file.
                 android.util.Log.w(TAG, "Corrupt ${DedicatedFolderPaths.FILE_METADATA_CACHE}, skipping: ${e.message}")
-                try {
+                ignoringStorageFailures {
                     DedicatedFolderPaths.findInCache(context, uri, DedicatedFolderPaths.FILE_METADATA_CACHE)
                         ?.renameTo("${DedicatedFolderPaths.FILE_METADATA_CACHE}.corrupt")
-                } catch (qe: Exception) {
-                    if (qe is kotlin.coroutines.cancellation.CancellationException) throw qe
                 }
                 null
             }

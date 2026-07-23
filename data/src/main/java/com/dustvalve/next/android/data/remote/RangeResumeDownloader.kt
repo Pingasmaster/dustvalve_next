@@ -4,9 +4,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import java.io.IOException
 import java.io.OutputStream
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.coroutines.coroutineContext
 
 /**
@@ -90,12 +90,7 @@ object RangeResumeDownloader {
         var attempt = 0
 
         while (true) {
-            val rangeHeader = "bytes=$bytesWritten-"
-            val request = Request.Builder()
-                .url(url)
-                .header("Range", rangeHeader)
-                .build()
-            val call = client.newCall(request)
+            val call = client.newCall(rangeRequest(url, bytesWritten))
             // Disposed after the attempt so handlers (and their captured calls)
             // don't accumulate on the job across retries.
             val cancelHook = coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
@@ -103,82 +98,23 @@ object RangeResumeDownloader {
             }
             try {
                 call.execute().use { response ->
-                    if (!response.isSuccessful && response.code != 206) {
-                        throw IOException("HTTP ${response.code} for track: $trackId")
-                    }
                     val gotPartial = response.code == 206
                     if (gotPartial) serverHonorsRange = true
-                    if (bytesWritten > 0L && !gotPartial) {
-                        // Mid-flight retry, server returned 200 (ignored Range).
-                        // Sink already holds bytesWritten of valid content; the
-                        // response body would restart at byte 0, so appending
-                        // would corrupt. Surface as hard failure.
-                        throw IOException(
-                            "CDN ignored Range on resume (HTTP 200); " +
-                                "cannot append $bytesWritten of partial content",
-                        )
-                    }
-                    if (gotPartial && bytesWritten > 0L) {
-                        // A 206 whose body doesn't start exactly where our
-                        // partial ends would splice mismatched content. Parse
-                        // "bytes <start>-<end>/<total>" and demand
-                        // start == bytesWritten; a missing/unparseable header
-                        // on a 206 is protocol-broken and treated the same.
-                        val start = response.header("Content-Range")
-                            ?.substringAfter("bytes ", "")
-                            ?.substringBefore('-')
-                            ?.trim()
-                            ?.toLongOrNull()
-                        if (start != bytesWritten) {
-                            throw ResumeMismatchException(
-                                "Resume offset mismatch for track $trackId: " +
-                                    "requested $bytesWritten, Content-Range starts at ${start ?: "unknown"}",
-                            )
-                        }
-                    }
+                    checkResponseStatus(response, trackId)
+                    checkResumeAlignment(response, bytesWritten, gotPartial, trackId)
                     if (expectedTotal == null) {
-                        val cr = response.header("Content-Range")
-                            ?.substringAfterLast('/')?.toLongOrNull()
-                        val cl = response.header("Content-Length")?.toLongOrNull()
-                        val knownTotal = expectedTotalBytes
-                        if (knownTotal != null && knownTotal > 0L) {
-                            val responseTotal = cr ?: cl?.let { it + bytesWritten }
-                            if (responseTotal != null && responseTotal != knownTotal) {
-                                throw ResumeMismatchException(
-                                    "Resume total mismatch for track $trackId: " +
-                                        "partial was cut from $knownTotal bytes, server now reports $responseTotal",
-                                )
-                            }
-                        }
-                        // On a 206, Content-Length is the *remaining* length -
-                        // prefer the total from Content-Range. On a from-zero
-                        // 200, Content-Length is the total. When resuming
-                        // without a Content-Range header we can't trust
-                        // Content-Length as the total, so leave it null.
-                        expectedTotal = cr ?: if (bytesWritten == 0L) cl else null
+                        expectedTotal = resolveExpectedTotal(response, bytesWritten, expectedTotalBytes, trackId)
                     }
-                    response.body.byteStream().use { input ->
-                        val buffer = ByteArray(8192)
-                        while (true) {
-                            val read = input.read(buffer)
-                            if (read == -1) break
-                            coroutineContext.ensureActive()
-                            sink.write(buffer, 0, read)
-                            bytesWritten += read
-                            onProgress?.invoke(bytesWritten, expectedTotal)
-                        }
+                    // bytesWritten is updated per chunk (not just on return) so a
+                    // mid-stream failure resumes from the real offset on retry.
+                    copyResponseBody(response, sink, bytesWritten) { written ->
+                        bytesWritten = written
+                        onProgress?.invoke(written, expectedTotal)
                     }
                 }
-                val expected = expectedTotal
-                if (expected != null && expected > 0L && bytesWritten < expected) {
-                    // CDN closed the stream before sending the whole body.
-                    throw IOException(
-                        "Stream ended at $bytesWritten / $expected bytes for track: $trackId",
-                    )
-                }
+                requireStreamComplete(bytesWritten, expectedTotal, trackId)
                 break
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            } catch (e: IOException) {
                 // Non-retryable restart-from-zero signal: retrying would hit
                 // the same mismatched payload again. Propagate unwrapped so
                 // callers can discard the partial and start over.
@@ -199,12 +135,104 @@ object RangeResumeDownloader {
             }
         }
 
-        if (bytesWritten == 0L) throw IOException("Empty download for track: $trackId")
-        val expected = expectedTotal
-        if (expected != null && expected > 0L && bytesWritten != expected) {
+        requireNonEmpty(bytesWritten, trackId)
+        requireExpectedSize(bytesWritten, expectedTotal, trackId)
+        return bytesWritten
+    }
+
+    private fun rangeRequest(url: String, bytesWritten: Long): Request = Request.Builder()
+        .url(url)
+        .header("Range", "bytes=$bytesWritten-")
+        .build()
+
+    /** A non-2xx, non-206 status can never carry a usable body. */
+    private fun checkResponseStatus(response: Response, trackId: String) {
+        if (!response.isSuccessful && response.code != 206) {
+            throw IOException("HTTP ${response.code} for track: $trackId")
+        }
+    }
+
+    /**
+     * Guards resume safety: a mid-flight 200 (Range ignored) would restart the
+     * body at byte 0, and a 206 whose Content-Range start does not equal the
+     * bytes already held would splice two payloads. Both corrupt the file.
+     */
+    private fun checkResumeAlignment(response: Response, bytesWritten: Long, gotPartial: Boolean, trackId: String) {
+        if (bytesWritten > 0L && !gotPartial) {
             throw IOException(
-                "Size mismatch: expected $expected but wrote $bytesWritten for track: $trackId",
+                "CDN ignored Range on resume (HTTP 200); " +
+                    "cannot append $bytesWritten of partial content",
             )
+        }
+        if (gotPartial && bytesWritten > 0L) {
+            val start = response.header("Content-Range")
+                ?.substringAfter("bytes ", "")
+                ?.substringBefore('-')
+                ?.trim()
+                ?.toLongOrNull()
+            if (start != bytesWritten) {
+                throw ResumeMismatchException(
+                    "Resume offset mismatch for track $trackId: " +
+                        "requested $bytesWritten, Content-Range starts at ${start ?: "unknown"}",
+                )
+            }
+        }
+    }
+
+    /**
+     * Resolves the expected total size from the first response's headers,
+     * throwing [ResumeMismatchException] when it contradicts a previously
+     * recorded total. On a 206 Content-Length is the *remaining* length, so the
+     * Content-Range total is preferred; a resume without Content-Range cannot
+     * trust Content-Length as the total and returns null.
+     */
+    private fun resolveExpectedTotal(response: Response, bytesWritten: Long, expectedTotalBytes: Long?, trackId: String): Long? {
+        val cr = response.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull()
+        val cl = response.header("Content-Length")?.toLongOrNull()
+        val knownTotal = expectedTotalBytes
+        if (knownTotal != null && knownTotal > 0L) {
+            val responseTotal = cr ?: cl?.let { it + bytesWritten }
+            if (responseTotal != null && responseTotal != knownTotal) {
+                throw ResumeMismatchException(
+                    "Resume total mismatch for track $trackId: " +
+                        "partial was cut from $knownTotal bytes, server now reports $responseTotal",
+                )
+            }
+        }
+        return cr ?: if (bytesWritten == 0L) cl else null
+    }
+
+    /** Streams the response body into [sink], reporting the running total via [onWritten] after every write. */
+    private suspend fun copyResponseBody(response: Response, sink: OutputStream, startBytes: Long, onWritten: (Long) -> Unit) {
+        var written = startBytes
+        response.body.byteStream().use { input ->
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                coroutineContext.ensureActive()
+                sink.write(buffer, 0, read)
+                written += read
+                onWritten(written)
+            }
+        }
+    }
+
+    /** The CDN closed the stream before the whole body arrived. */
+    private fun requireStreamComplete(bytesWritten: Long, expectedTotal: Long?, trackId: String) {
+        if (expectedTotal != null && expectedTotal > 0L && bytesWritten < expectedTotal) {
+            throw IOException("Stream ended at $bytesWritten / $expectedTotal bytes for track: $trackId")
+        }
+    }
+
+    private fun requireNonEmpty(bytesWritten: Long, trackId: String) {
+        if (bytesWritten == 0L) throw IOException("Empty download for track: $trackId")
+    }
+
+    /** Final size sanity: exact-match a known total, else reject an implausibly small totalless body. */
+    private fun requireExpectedSize(bytesWritten: Long, expectedTotal: Long?, trackId: String) {
+        if (expectedTotal != null && expectedTotal > 0L && bytesWritten != expectedTotal) {
+            throw IOException("Size mismatch: expected $expectedTotal but wrote $bytesWritten for track: $trackId")
         }
         if (expectedTotal == null && bytesWritten < 1024) {
             throw IOException(
@@ -212,6 +240,5 @@ object RangeResumeDownloader {
                     "Content-Length header for track: $trackId",
             )
         }
-        return bytesWritten
     }
 }

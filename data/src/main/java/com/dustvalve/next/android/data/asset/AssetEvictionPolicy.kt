@@ -7,6 +7,7 @@ import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
+import com.dustvalve.next.android.data.util.ignoringStorageFailures
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
@@ -63,17 +64,9 @@ class AssetEvictionPolicy @Inject constructor(
     private fun deleteByPath(path: String) {
         if (path.isBlank()) return
         if (path.startsWith("content://")) {
-            try {
-                DocumentFile.fromSingleUri(context, path.toUri())?.delete()
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-            }
+            ignoringStorageFailures { DocumentFile.fromSingleUri(context, path.toUri())?.delete() }
         } else {
-            try {
-                File(path).delete()
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-            }
+            ignoringStorageFailures { File(path).delete() }
         }
     }
 }

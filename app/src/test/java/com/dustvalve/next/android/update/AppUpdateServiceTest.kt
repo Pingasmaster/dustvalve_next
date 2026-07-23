@@ -345,16 +345,17 @@ class AppUpdateServiceTest {
 
     // --- helpers ------------------------------------------------------------
 
-    private fun testService(installed: String, trustAllDownloadUrls: Boolean = false): AppUpdateService =
-        object : AppUpdateService(client, context, testDispatcher) {
-            override val releasesUrl: String = server.url("/releases").toString()
-            override val installedVersion: String = installed
+    private fun testService(
+        installed: String,
+        trustAllDownloadUrls: Boolean = false,
+    ): AppUpdateService = object : AppUpdateService(client, context, testDispatcher) {
+        override val releasesUrl: String = server.url("/releases").toString()
+        override val installedVersion: String = installed
 
-            // MockWebServer serves from http://localhost, which the production
-            // allowlist rightly refuses; download tests opt in to trust it.
-            override fun isTrustedDownloadUrl(url: String): Boolean =
-                trustAllDownloadUrls || super.isTrustedDownloadUrl(url)
-        }
+        // MockWebServer serves from http://localhost, which the production
+        // allowlist rightly refuses; download tests opt in to trust it.
+        override fun isTrustedDownloadUrl(url: String): Boolean = trustAllDownloadUrls || super.isTrustedDownloadUrl(url)
+    }
 
     private fun release(
         tag: String,

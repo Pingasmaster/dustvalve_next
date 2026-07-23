@@ -174,7 +174,9 @@ fun AppNavigation(
                 // screens' PlayerViewModel/NavigationViewModel defaults still
                 // resolve to the activity-scoped shared instances.
                 is NavDestination.AlbumDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination))
+                    val storeKey = checkNotNull(detailStoreKey(destination)) {
+                        "detailStoreKey must be non-null for detail destination $destination"
+                    }
                     AlbumDetailScreen(
                         albumUrl = destination.url,
                         onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
@@ -184,7 +186,9 @@ fun AppNavigation(
                 }
 
                 is NavDestination.ArtistDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination))
+                    val storeKey = checkNotNull(detailStoreKey(destination)) {
+                        "detailStoreKey must be non-null for detail destination $destination"
+                    }
                     ArtistDetailScreen(
                         sourceId = destination.sourceId,
                         artistUrl = destination.url,
@@ -197,7 +201,9 @@ fun AppNavigation(
                 }
 
                 is NavDestination.PlaylistDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination))
+                    val storeKey = checkNotNull(detailStoreKey(destination)) {
+                        "detailStoreKey must be non-null for detail destination $destination"
+                    }
                     PlaylistDetailScreen(
                         playlistId = destination.playlistId,
                         onBack = { navViewModel.navigateBack() },
@@ -206,7 +212,9 @@ fun AppNavigation(
                 }
 
                 is NavDestination.CollectionDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination))
+                    val storeKey = checkNotNull(detailStoreKey(destination)) {
+                        "detailStoreKey must be non-null for detail destination $destination"
+                    }
                     CollectionDetailScreen(
                         sourceId = destination.sourceId,
                         collectionUrl = destination.url,

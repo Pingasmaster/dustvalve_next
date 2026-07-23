@@ -142,7 +142,7 @@ class CookieStoreTest {
         // armed forever; every subsequent save/load then timed out and was
         // silently skipped.
         val spySettings = spyk(settings)
-        every { spySettings.authCookies } returns flow { throw RuntimeException("boom") }
+        every { spySettings.authCookies } returns flow { throw IllegalStateException("boom") }
         val failingStore = CookieStore(spySettings, Dispatchers.IO)
 
         val cookie = Cookie.Builder()

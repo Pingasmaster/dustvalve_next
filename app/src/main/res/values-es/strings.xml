@@ -520,4 +520,9 @@
     <string name="crash_report_share_action">Compartir registro de fallos</string>
     <string name="crash_report_github_action">Abrir un issue en GitHub</string>
     <string name="crash_report_dismiss_action">Ahora no</string>
+    <!-- Security-block + missing-playlist UI (added with default strings) -->
+    <string name="login_navigation_blocked">Bloqueado por seguridad: solo el sitio de inicio de sesión puede abrirse aquí</string>
+    <string name="playlist_gone_title">Esta lista de reproducción ya no existe</string>
+    <string name="playlist_gone_subtitle">Es posible que se haya eliminado de tu biblioteca</string>
+    <string name="common_action_back">Atrás</string>
 </resources>

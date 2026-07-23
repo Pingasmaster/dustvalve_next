@@ -8,6 +8,8 @@ import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
+import com.dustvalve.next.android.data.util.ignoringStorageFailures
+import com.dustvalve.next.android.data.util.orOnStorageFailure
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -135,23 +137,16 @@ class StorageMigrator @Inject constructor(
             val targetDir = File(StoragePaths.downloadsDir(context), d.albumId).also { it.mkdirs() }
             val fileName = srcUri.lastPathSegment?.substringAfterLast('/') ?: "${d.trackId}.bin"
             val targetFile = File(targetDir, fileName)
-            val copied = try {
+            val copied = orOnStorageFailure(false) {
                 context.contentResolver.openInputStream(srcUri)?.use { input ->
                     targetFile.outputStream().use { input.copyTo(it, 8192) }
                     true
                 } ?: false
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                false
             }
             if (!copied) {
                 failedCopies++
                 // Don't leave a truncated partial file behind.
-                try {
-                    targetFile.delete()
-                } catch (e: Exception) {
-                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                }
+                ignoringStorageFailures { targetFile.delete() }
                 continue
             }
             downloadDao.insert(d.copy(filePath = targetFile.absolutePath))

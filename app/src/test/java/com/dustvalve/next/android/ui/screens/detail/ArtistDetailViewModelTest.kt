@@ -211,7 +211,7 @@ class ArtistDetailViewModelTest {
         val url = "https://youtube.com/channel/UC1"
         var fail = true
         coEvery { ytSource.getArtist(url) } coAnswers {
-            if (fail) throw RuntimeException("offline")
+            if (fail) throw IllegalStateException("offline")
             Artist(id = url, name = "Ch", url = url, imageUrl = null, bio = null, location = null, albums = emptyList())
         }
         coEvery { ytSource.getArtistTracks(url, continuation = null) } returns MusicCollection(
