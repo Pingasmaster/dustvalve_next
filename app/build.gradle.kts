@@ -27,8 +27,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 26
         targetSdk = 37
-        versionCode = 279
-        versionName = "0.5.1"
+        versionCode = 282
+        versionName = "0.5.4"
         versionNameSuffix = "-legacy"
         // Instrumentation (smoke + E2E) runs against the REAL app object
         // graph - no HiltTestApplication on device by design.
