@@ -520,4 +520,9 @@
     <string name="crash_report_share_action">Absturzprotokoll teilen</string>
     <string name="crash_report_github_action">GitHub-Issue erstellen</string>
     <string name="crash_report_dismiss_action">Jetzt nicht</string>
+    <!-- Security-block + missing-playlist UI (added with default strings) -->
+    <string name="login_navigation_blocked">Aus Sicherheitsgründen blockiert: Nur die Anmeldeseite kann hier geöffnet werden</string>
+    <string name="playlist_gone_title">Diese Playlist existiert nicht mehr</string>
+    <string name="playlist_gone_subtitle">Möglicherweise wurde sie aus deiner Bibliothek gelöscht</string>
+    <string name="common_action_back">Zurück</string>
 </resources>

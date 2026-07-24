@@ -92,4 +92,22 @@ class DustvalveDiscographyOfferTest {
         // substring match".
         assertThat(flag).isFalse()
     }
+
+    @Test fun `extractMeetsBuyFullDiscography false value is not confused by a later true-ish token`() {
+        // Regression: the value matcher used to scan the whole 32-char tail,
+        // so a "1" (or "true") belonging to the NEXT key flipped a false flag
+        // to true. The match must be anchored to the value right after the key.
+        val html = """<div data-band="{&quot;meets_buy_full_discography_criteria&quot;:false,&quot;x&quot;:1}"></div>"""
+        assertThat(artistScraper.extractMeetsBuyFullDiscography(html)).isFalse()
+    }
+
+    @Test fun `extractMeetsBuyFullDiscography accepts raw json true with space`() {
+        val html = """<script>{"meets_buy_full_discography_criteria": true}</script>"""
+        assertThat(artistScraper.extractMeetsBuyFullDiscography(html)).isTrue()
+    }
+
+    @Test fun `extractMeetsBuyFullDiscography accepts entity-encoded int 1`() {
+        val html = """<div data-band="{&quot;meets_buy_full_discography_criteria&quot;:1}"></div>"""
+        assertThat(artistScraper.extractMeetsBuyFullDiscography(html)).isTrue()
+    }
 }

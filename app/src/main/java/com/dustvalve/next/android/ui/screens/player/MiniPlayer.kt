@@ -1,6 +1,5 @@
 package com.dustvalve.next.android.ui.screens.player
 
-import android.graphics.Matrix
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.BoundsTransform
 import androidx.compose.animation.SharedTransitionScope
@@ -41,10 +40,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -55,15 +50,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.graphics.shapes.Morph
-import androidx.graphics.shapes.toPath
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.components.MorphShape
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.util.tick
 import com.dustvalve.next.android.ui.util.toggle
@@ -382,35 +375,5 @@ fun MiniPlayer(
                 )
             }
         }
-    }
-}
-
-/**
- * A shape that morphs between two RoundedPolygon states.
- * Rotation is handled externally via graphicsLayer.
- */
-private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val path = morph.toPath(progress = progress)
-
-        // Use graphics-shapes native bounds calculation
-        val bounds = morph.calculateBounds()
-        val pathWidth = bounds[2] - bounds[0] // right - left
-        val pathHeight = bounds[3] - bounds[1] // bottom - top
-        val centerX = (bounds[0] + bounds[2]) / 2f
-        val centerY = (bounds[1] + bounds[3]) / 2f
-
-        val matrix = Matrix()
-        if (pathWidth > 0f && pathHeight > 0f) {
-            matrix.postTranslate(-centerX, -centerY)
-            val scale = minOf(size.width / pathWidth, size.height / pathHeight)
-            matrix.postScale(scale, scale)
-            matrix.postTranslate(size.width / 2f, size.height / 2f)
-        } else {
-            matrix.postScale(size.width / 2f, size.height / 2f)
-            matrix.postTranslate(size.width / 2f, size.height / 2f)
-        }
-        path.transform(matrix)
-        return Outline.Generic(path.asComposePath())
     }
 }

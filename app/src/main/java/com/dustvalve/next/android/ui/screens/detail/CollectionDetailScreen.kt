@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.ui.screens.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,12 +48,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -64,7 +69,10 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
+import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.util.toggle
+import kotlinx.coroutines.launch
 
 /**
  * Source-agnostic playlist / collection detail screen. Loads via
@@ -236,23 +244,46 @@ fun CollectionDetailScreen(
                     // Hero cover. Name + track count live in the top-bar, so
                     // the hero is the bare artwork - matches AlbumDetailScreen.
                     item(key = "hero") {
+                        val heartMorph = rememberHeartMorphState()
+                        val heartScope = rememberCoroutineScope()
+                        val hapticFeedback = LocalHapticFeedback.current
+                        // Clip only while the morph is animating so the
+                        // resting hero stays full-bleed.
+                        val heartClipModifier = if (heartMorph.progress > 0f) {
+                            Modifier.clip(heartMorph.shape)
+                        } else {
+                            Modifier
+                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(1f)
-                                .animateItem(),
+                                .animateItem()
+                                // Double-tap the hero to toggle the collection
+                                // favorite - same heart morph as the player's
+                                // album art (and the other detail heroes).
+                                .pointerInput(collectionUrl) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            hapticFeedback.toggle(!state.isFavorite)
+                                            viewModel.toggleFavorite()
+                                            heartScope.launch { heartMorph.play() }
+                                        },
+                                    )
+                                },
                         ) {
                             if (!heroUrl.isNullOrBlank()) {
                                 AsyncImage(
                                     model = heroUrl,
                                     contentDescription = state.name,
-                                    modifier = Modifier.fillMaxSize(),
+                                    modifier = Modifier.fillMaxSize().then(heartClipModifier),
                                     contentScale = ContentScale.Crop,
                                 )
                             } else {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
+                                        .then(heartClipModifier)
                                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 )
                             }

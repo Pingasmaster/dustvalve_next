@@ -86,6 +86,35 @@ class YouTubeChannelParserTest {
         assertThat(page.tracks.first().duration).isEqualTo(3723f)
     }
 
+    @Test fun `prefers the selected tab over an earlier tab with a grid`() {
+        // tabRenderer.selected is a JSON boolean; comparing str("selected")
+        // to "true" made this preference dead code and the fallback (first
+        // tab with a grid) silently won.
+        val root = json.parseToJsonElement(
+            """
+            {"contents":{"twoColumnBrowseResultsRenderer":{"tabs":[
+              {"tabRenderer":{"selected":false,"content":{"richGridRenderer":{"contents":[
+                {"richItemRenderer":{"content":{"videoRenderer":{
+                  "videoId":"decoyvid001",
+                  "title":{"runs":[{"text":"Decoy From Unselected Tab"}]},
+                  "thumbnail":{"thumbnails":[]}
+                }}}}
+              ]}}}},
+              {"tabRenderer":{"selected":true,"content":{"richGridRenderer":{"contents":[
+                {"richItemRenderer":{"content":{"videoRenderer":{
+                  "videoId":"selectedvid1",
+                  "title":{"runs":[{"text":"From Selected Tab"}]},
+                  "thumbnail":{"thumbnails":[]}
+                }}}}
+              ]}}}}
+            ]}}}
+            """.trimIndent(),
+        )
+        val page = parser.parse(root, "UCabcdefghijklmnopqrstuv")
+        assertThat(page.tracks.map { it.id }).containsExactly("yt_selectedvid1")
+        assertThat(page.tracks.first().title).isEqualTo("From Selected Tab")
+    }
+
     @Test fun `empty channel returns empty page`() {
         val empty = json.parseToJsonElement("""{"contents":{}}""")
         val page = parser.parse(empty, "UC")

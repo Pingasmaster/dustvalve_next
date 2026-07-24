@@ -51,6 +51,7 @@ class YouTubeMusicRepositoryCacheTest {
             searchParser,
             ytClient,
             ytPlayerParser,
+            mockk(relaxed = true),
             homeCache,
             ioDispatcher = UnconfinedTestDispatcher(),
         )

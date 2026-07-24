@@ -583,6 +583,10 @@
     <string name="error_unknown_source">Unknown source: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">This source can’t show collections</string>
     <string name="error_load_page">Failed to load page</string>
+    <string name="login_navigation_blocked">Blocked for security: only the sign-in site can open here</string>
+    <string name="playlist_gone_title">This playlist no longer exists</string>
+    <string name="playlist_gone_subtitle">It may have been deleted from your library</string>
+    <string name="common_action_back">Back</string>
 
     <!-- ViewModel snackbar messages -->
     <string name="snackbar_downloaded">Downloaded “<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”</string>

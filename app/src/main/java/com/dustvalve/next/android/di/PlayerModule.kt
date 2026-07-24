@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
 import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
@@ -41,8 +40,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import java.io.File
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -75,28 +72,13 @@ object PlayerModule {
         @MediaHttp okHttpClient: OkHttpClient,
         simpleCache: SimpleCache,
     ): ExoPlayer {
-        // ExoPlayer.Builder.build() must run on the main thread.
-        // Use Handler.post + CountDownLatch instead of runBlocking(Dispatchers.Main)
-        // to avoid potential deadlock with the coroutine dispatcher.
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            var result: ExoPlayer? = null
-            var error: Exception? = null
-            val latch = CountDownLatch(1)
-            Handler(Looper.getMainLooper()).post {
-                try {
-                    result = buildExoPlayer(context, okHttpClient, simpleCache)
-                } catch (e: Exception) {
-                    error = e
-                } finally {
-                    latch.countDown()
-                }
-            }
-            if (!latch.await(10, TimeUnit.SECONDS)) {
-                throw IllegalStateException("ExoPlayer initialization timed out")
-            }
-            error?.let { throw it }
-            return result ?: throw IllegalStateException("ExoPlayer initialization failed")
-        }
+        // Built directly on whatever thread Dagger resolves this dependency:
+        // setLooper(mainLooper) in buildExoPlayer pins the player's application
+        // thread to main, which Media3 supports from any construction thread.
+        // The previous post-to-main + CountDownLatch approach blocked inside
+        // Dagger's DoubleCheck lock while waiting on the main thread - if the
+        // main thread was itself entering the same DI graph, that deadlocked
+        // (10 s frozen main thread, then IllegalStateException).
         return buildExoPlayer(context, okHttpClient, simpleCache)
     }
 
@@ -139,6 +121,9 @@ object PlayerModule {
             )
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
+            // Pin the player's application thread to the main looper so
+            // Builder.build() is legal off-main (see provideExoPlayer).
+            .setLooper(Looper.getMainLooper())
             .build()
 
         // Audio offload is DISABLED on the legacy branch (Android 8-16).

@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
@@ -19,7 +20,9 @@ import javax.inject.Singleton
  *
  * Pagination cursors are the same opaque [Any] tokens the underlying
  * [YouTubeRepository] returns in its `page` parameter - passed through
- * verbatim.
+ * verbatim, EXCEPT for Mix collections, whose cursor is a string that also
+ * encodes the already-delivered videoIds (see [encodeMixCursor]) so the
+ * repository's dedupe receives the seen set on every follow-up page.
  */
 @Singleton
 class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRepository) : MusicSource {
@@ -84,11 +87,28 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
         // are bounded.
         val playlistId = extractPlaylistId(url)
         if (playlistId != null && playlistId.startsWith("RD")) {
+            // The opaque cursor string this source hands out encodes BOTH the
+            // repository's /next continuation and the videoIds already
+            // delivered, so the parser's dedupe actually receives the seen
+            // set on every follow-up page (YT re-returns ~24 trailing items
+            // per /next page).
+            val (repoCursor, seenIds) = decodeMixCursor(continuation)
             val (tracks, title, nextCursor) = youtubeRepository.getMixPage(
                 mixUrl = url,
-                cursor = continuation,
-                seenVideoIds = emptySet(),
+                cursor = repoCursor,
+                seenVideoIds = seenIds.toSet(),
             )
+            val deliveredIds = (seenIds + tracks.map { it.id.removePrefix("yt_") })
+                .takeLast(MIX_CURSOR_MAX_SEEN_IDS)
+            val encodedNext = when (nextCursor) {
+                null -> null
+
+                is YouTubePlaylistParser.MixContinuation -> encodeMixCursor(nextCursor, deliveredIds)
+
+                // Unknown cursor type: pass through verbatim (repo will
+                // re-interpret it); dedupe degrades gracefully to none.
+                else -> nextCursor
+            }
             return MusicCollection(
                 id = url,
                 url = url,
@@ -96,8 +116,8 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
                 owner = "",
                 coverUrl = null,
                 tracks = tracks,
-                continuation = nextCursor,
-                hasMore = nextCursor != null && tracks.isNotEmpty(),
+                continuation = encodedNext,
+                hasMore = encodedNext != null && tracks.isNotEmpty(),
             )
         }
         // YouTubeRepository.getPlaylistTracks internally paginates to the end,
@@ -118,4 +138,62 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
 
     private fun extractPlaylistId(url: String): String? = Regex("[?&]list=([A-Za-z0-9_-]+)").find(url)?.groupValues?.getOrNull(1)
         ?: url.takeIf { it.matches(Regex("[A-Za-z0-9_-]+")) && it.length in 8..64 }
+
+    /**
+     * Mix cursor codec. Format:
+     * `lastVideoId:playlistIndex:params|id1,id2,...` - the part before `|`
+     * is the repository's MixContinuation, the part after is the ordered
+     * list of already-delivered videoIds (capped at the most recent
+     * [MIX_CURSOR_MAX_SEEN_IDS]). videoIds are `[A-Za-z0-9_-]`, so neither
+     * delimiter can collide; `params` goes last in the head because it is
+     * the only free-form field.
+     */
+    private fun encodeMixCursor(cursor: YouTubePlaylistParser.MixContinuation, seenIds: List<String>): String =
+        cursor.lastVideoId + MIX_CURSOR_FIELD_DELIMITER +
+            cursor.playlistIndex + MIX_CURSOR_FIELD_DELIMITER +
+            cursor.params.orEmpty() +
+            MIX_CURSOR_DELIMITER + seenIds.joinToString(MIX_CURSOR_ID_DELIMITER)
+
+    /**
+     * Inverse of [encodeMixCursor]. Legacy / foreign cursors degrade
+     * gracefully: a non-string token passes through verbatim with no seen
+     * ids; a string without the `|` delimiter is treated as head-only; an
+     * unparseable head restarts the mix (null repo cursor) while any seen
+     * ids still feed the dedupe.
+     */
+    private fun decodeMixCursor(continuation: Any?): Pair<Any?, List<String>> {
+        if (continuation == null) return null to emptyList()
+        if (continuation !is String) return continuation to emptyList()
+        val head = continuation.substringBefore(MIX_CURSOR_DELIMITER)
+        val seenIds = continuation.substringAfter(MIX_CURSOR_DELIMITER, missingDelimiterValue = "")
+            .split(MIX_CURSOR_ID_DELIMITER)
+            .filter { it.isNotBlank() }
+        val fields = head.split(MIX_CURSOR_FIELD_DELIMITER, limit = MIX_CURSOR_HEAD_FIELDS)
+        val index = fields.getOrNull(1)?.toIntOrNull()
+        val repoCursor = if (fields.size == MIX_CURSOR_HEAD_FIELDS && fields[0].isNotBlank() && index != null) {
+            YouTubePlaylistParser.MixContinuation(
+                lastVideoId = fields[0],
+                playlistIndex = index,
+                params = fields[2].takeIf { it.isNotBlank() },
+            )
+        } else {
+            null
+        }
+        return repoCursor to seenIds
+    }
+
+    private companion object {
+        const val MIX_CURSOR_DELIMITER = "|"
+        const val MIX_CURSOR_FIELD_DELIMITER = ":"
+        const val MIX_CURSOR_ID_DELIMITER = ","
+
+        /** lastVideoId, playlistIndex, params. */
+        const val MIX_CURSOR_HEAD_FIELDS = 3
+
+        /**
+         * Cap on remembered videoIds - plenty to cover YT's ~24-item
+         * re-return window many pages deep without growing unboundedly.
+         */
+        const val MIX_CURSOR_MAX_SEEN_IDS = 200
+    }
 }

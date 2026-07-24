@@ -130,6 +130,13 @@ class PlaybackService : MediaSessionService() {
         }
         perfHintSession = null
         serviceScope.cancel()
+        // Non-destructive teardown: onDestroy also runs for the idle-stop
+        // timer above and for system kills, and the UI talks to the
+        // PlaybackManager/QueueManager singletons directly (no binding keeps
+        // this service alive). release() therefore preserves the queue, the
+        // current track and the last position, so a >5-minute pause doesn't
+        // erase the session - the mini player stays populated and the next
+        // play() restarts the service and resumes where playback stopped.
         playbackManager.release()
         queueManager.release()
         // Remove the session before super.onDestroy() to prevent MediaSessionService's

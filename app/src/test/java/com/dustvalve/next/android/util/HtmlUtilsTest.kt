@@ -124,6 +124,17 @@ class HtmlUtilsTest {
         assertThat(HtmlUtils.decodeHtmlEntities("&amp;lt;")).isEqualTo("&lt;")
     }
 
+    @Test fun `decodeHtmlEntities decimal ampersand does not double decode`() {
+        // "&#38;quot;" encodes the literal text "&quot;" - it must NOT collapse
+        // further into a quote character (that corrupts data-tralbum JSON).
+        assertThat(HtmlUtils.decodeHtmlEntities("&#38;quot;")).isEqualTo("&quot;")
+    }
+
+    @Test fun `decodeHtmlEntities hex ampersand does not double decode`() {
+        // "&#x26;amp;" encodes the literal text "&amp;".
+        assertThat(HtmlUtils.decodeHtmlEntities("&#x26;amp;")).isEqualTo("&amp;")
+    }
+
     @Test fun `decodeHtmlEntities malformed numeric left alone`() {
         val out = HtmlUtils.decodeHtmlEntities("&#abc;")
         assertThat(out).isEqualTo("&#abc;")

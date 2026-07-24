@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -102,6 +103,18 @@ class DownloadNotificationCenter @Inject constructor(
     /** Reflects [DownloadController]'s global pause state into the notification. */
     fun setPaused(paused: Boolean) {
         state.update { it.copy(paused = paused) }
+    }
+
+    /**
+     * Re-posts the current snapshot as a regular (non-foreground)
+     * notification. Used by [DownloadService.onTimeout]: `stopForeground`
+     * removes the shared notification, and when the state was already paused
+     * beforehand no StateFlow change fires to bring it back - this does.
+     */
+    fun repostAfterForegroundTimeout() {
+        scope.launch {
+            refresh(state.value, settingsDataStore.downloadNotificationsEnabled.first())
+        }
     }
 
     /** Test-only window into the internal state. */

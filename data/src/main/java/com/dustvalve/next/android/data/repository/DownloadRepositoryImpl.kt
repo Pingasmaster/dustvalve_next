@@ -26,13 +26,19 @@ import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.MediaCacheClearer
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.download.isPauseCancellation
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import java.io.File
@@ -58,9 +64,50 @@ class DownloadRepositoryImpl @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
     private val notificationCenter: DownloadProgressReporter,
+    private val mediaCacheClearer: MediaCacheClearer,
     @param:ApplicationContext private val context: Context,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : DownloadRepository {
+
+    /**
+     * Sidecar persisted next to a partial `.tmp` file. On resume the recorded
+     * total size and source identity must still match the freshly re-resolved
+     * download URL - YouTube re-resolution can hand back a *different* stream
+     * variant for the same track, and appending its bytes onto a partial from
+     * another variant splices a corrupt file that still passes the size check.
+     */
+    @Serializable
+    internal data class ResumeMeta(val expectedTotalBytes: Long, val sourceIdentity: String)
+
+    private val metaJson = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Per-track single-flight guard. Several callers reach [downloadTrack]
+     * concurrently (playlist/album repositories, playlist transfer, the
+     * auto-download coordinator's serial queue); two writers appending into
+     * the same `.tmp` interleave into a corrupt file. Entries are
+     * ref-counted so the map cannot leak a mutex another waiter still holds.
+     */
+    private class TrackLock {
+        val mutex = Mutex()
+        var refs = 0
+    }
+
+    private val trackLocks = HashMap<String, TrackLock>()
+
+    private suspend fun <T> withTrackLock(trackId: String, block: suspend () -> T): T {
+        val lock = synchronized(trackLocks) {
+            trackLocks.getOrPut(trackId) { TrackLock() }.also { it.refs++ }
+        }
+        try {
+            return lock.mutex.withLock { block() }
+        } finally {
+            synchronized(trackLocks) {
+                lock.refs--
+                if (lock.refs == 0) trackLocks.remove(trackId)
+            }
+        }
+    }
 
     override suspend fun downloadAlbum(album: Album) {
         if (album.tracks.isEmpty()) {
@@ -113,13 +160,18 @@ class DownloadRepositoryImpl @Inject constructor(
     }
 
     override suspend fun downloadTrack(track: Track, formatOverride: AudioFormat?) = withContext(ioDispatcher) {
-        notificationCenter.trackStarted(track.id, track.title)
-        var success = false
-        try {
-            downloadTrackInner(track, formatOverride)
-            success = true
-        } finally {
-            notificationCenter.trackFinished(track.id, success)
+        // Serialize concurrent calls for the same track. The loser of the race
+        // waits, then short-circuits via the existing same-or-higher-quality
+        // check in downloadTrackInner once the winner has committed its file.
+        withTrackLock(track.id) {
+            notificationCenter.trackStarted(track.id, track.title)
+            var success = false
+            try {
+                downloadTrackInner(track, formatOverride)
+                success = true
+            } finally {
+                notificationCenter.trackFinished(track.id, success)
+            }
         }
     }
 
@@ -167,10 +219,10 @@ class DownloadRepositoryImpl @Inject constructor(
             ) {
                 return
             }
-            // Delete old lower-quality file before upgrading
-            try {
-                deleteByPath(existingDownload.filePath)
-            } catch (_: Exception) {}
+            // Quality upgrade: the old file is deleted only AFTER the
+            // replacement is fully committed (below). Deleting it up front
+            // left a phantom "downloaded" row pointing at nothing whenever
+            // the new download failed.
         }
 
         val safeAlbumId = NetworkUtils.sanitizeFileName(track.albumId)
@@ -208,6 +260,13 @@ class DownloadRepositoryImpl @Inject constructor(
             )
         }
 
+        // Now that the replacement is committed and the row updated, drop the
+        // superseded lower-quality file. Same-path replacements (e.g. mp3-128
+        // -> mp3-320 share the .mp3 name) were overwritten by the rename above.
+        if (existingDownload != null && existingDownload.filePath != finalPath) {
+            deleteByPath(existingDownload.filePath)
+        }
+
         storageTracker.notifyChanged()
     }
 
@@ -223,27 +282,74 @@ class DownloadRepositoryImpl @Inject constructor(
         }
         val targetFile = File(downloadDir, fileName)
         val tempFile = File(downloadDir, "$fileName.tmp")
+        val metaFile = File(downloadDir, "$fileName.tmp.meta")
+        val identity = resumeSourceIdentity(downloadUrl)
 
         // A leftover .tmp means a prior transfer was paused - resume from its
         // current length via an HTTP Range request (append mode) instead of
-        // restarting from 0.
-        val resumeFrom = if (tempFile.exists()) tempFile.length() else 0L
-        try {
-            FileOutputStream(tempFile, resumeFrom > 0L).use { out ->
-                streamWithResume(
+        // restarting from 0. Only append when the sidecar proves the partial
+        // came from the same source variant; a freshly re-resolved URL (e.g.
+        // a different YouTube itag) must restart from zero.
+        var resumeFrom = if (tempFile.exists()) tempFile.length() else 0L
+        var knownTotal: Long? = null
+        if (resumeFrom > 0L) {
+            val meta = readResumeMeta(metaFile)
+            if (meta == null || meta.sourceIdentity != identity) {
+                tempFile.delete()
+                metaFile.delete()
+                resumeFrom = 0L
+            } else {
+                knownTotal = meta.expectedTotalBytes
+            }
+        }
+
+        suspend fun transfer(offset: Long, expectedTotal: Long?) {
+            var metaPersisted = false
+            FileOutputStream(tempFile, offset > 0L).use { out ->
+                RangeResumeDownloader.stream(
+                    client = downloadClient,
                     url = downloadUrl,
-                    trackId = trackId,
                     sink = out,
-                    startOffset = resumeFrom,
+                    trackId = trackId,
+                    startOffset = offset,
+                    expectedTotalBytes = expectedTotal,
+                    onProgress = { written, total ->
+                        if (!metaPersisted && total != null && total > 0L) {
+                            metaPersisted = true
+                            writeResumeMeta(metaFile, ResumeMeta(total, identity))
+                        }
+                        notificationCenter.trackProgress(trackId, written, total)
+                    },
                 )
             }
+        }
+
+        try {
+            try {
+                transfer(resumeFrom, knownTotal)
+            } catch (e: RangeResumeDownloader.ResumeMismatchException) {
+                // The server no longer serves the payload the partial came
+                // from (offset or total drifted). Discard and restart clean -
+                // once; a second mismatch propagates as a real failure.
+                android.util.Log.w(
+                    "DownloadRepo",
+                    "Resume mismatch for $trackId; discarding partial and restarting from zero: ${e.message}",
+                )
+                tempFile.delete()
+                metaFile.delete()
+                transfer(0L, null)
+            }
         } catch (e: Exception) {
-            // Keep the partial on pause so resume can continue; delete on any
-            // real failure or cancel.
-            if (!e.isPauseCancellation()) tempFile.delete()
+            // Keep the partial (and its sidecar) on pause so resume can
+            // continue; delete both on any real failure or cancel.
+            if (!e.isPauseCancellation()) {
+                tempFile.delete()
+                metaFile.delete()
+            }
             throw e
         }
 
+        metaFile.delete()
         if (!tempFile.renameTo(targetFile)) {
             try {
                 tempFile.copyTo(targetFile, overwrite = true)
@@ -400,6 +506,41 @@ class DownloadRepositoryImpl @Inject constructor(
             onProgress = { written, total -> notificationCenter.trackProgress(trackId, written, total) },
         )
 
+    /**
+     * Stable identity of the *content* behind a download URL, persisted in the
+     * resume sidecar. googlevideo URLs rotate host/expiry/signature params on
+     * every resolve but keep serving the same bytes for a given `itag`; for
+     * everything else the URL minus its query is the best stable handle.
+     */
+    private fun resumeSourceIdentity(url: String): String {
+        val httpUrl = url.toHttpUrlOrNull() ?: return url.substringBefore('?')
+        val host = httpUrl.host
+        return if (host == "googlevideo.com" || host.endsWith(".googlevideo.com")) {
+            "itag=" + (httpUrl.queryParameter("itag") ?: "")
+        } else {
+            httpUrl.newBuilder().query(null).build().toString()
+        }
+    }
+
+    @Suppress("SwallowedException")
+    private fun readResumeMeta(metaFile: File): ResumeMeta? = try {
+        if (metaFile.exists()) metaJson.decodeFromString<ResumeMeta>(metaFile.readText()) else null
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        null
+    }
+
+    @Suppress("SwallowedException")
+    private fun writeResumeMeta(metaFile: File, meta: ResumeMeta) {
+        try {
+            metaFile.writeText(metaJson.encodeToString(ResumeMeta.serializer(), meta))
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            // Best-effort: without a sidecar the next attempt simply restarts
+            // from zero instead of resuming.
+        }
+    }
+
     override suspend fun isTrackDownloaded(trackId: String): Boolean = downloadDao.getByTrackId(trackId) != null
 
     override suspend fun getDownloadInfo(trackId: String): DownloadInfo? {
@@ -425,6 +566,12 @@ class DownloadRepositoryImpl @Inject constructor(
 
         // Delete the file, handling both local paths and SAF content URIs.
         deleteByPath(download.filePath)
+        // Drop any paused partial + resume sidecar for the same target so a
+        // later re-download starts clean.
+        if (!download.filePath.startsWith("content://") && download.filePath.isNotBlank()) {
+            deleteByPath(download.filePath + ".tmp")
+            deleteByPath(download.filePath + ".tmp.meta")
+        }
 
         downloadDao.delete(trackId)
         storageTracker.notifyChanged()
@@ -432,10 +579,11 @@ class DownloadRepositoryImpl @Inject constructor(
 
     override suspend fun clearAll() = withContext(ioDispatcher) {
         // Drop every DB row + every file under downloads/ (including the
-        // images subdir managed by Coil). ExoPlayer's media_cache lives in
-        // cacheDir/media_cache and is wiped here too - Media3's SimpleCache
-        // tolerates a directory wipe between sessions because we don't
-        // delete it while the cache is open.
+        // images subdir managed by Coil). ExoPlayer's media_cache is cleared
+        // through the live SimpleCache instance (MediaCacheClearer) - the
+        // @Singleton cache stays open for the whole process lifetime, and
+        // deleting its directory underneath it desyncs the index and surfaces
+        // CacheExceptions on the next playback.
         val all = downloadDao.getAllSync()
         for (row in all) {
             deleteByPath(row.filePath)
@@ -447,8 +595,14 @@ class DownloadRepositoryImpl @Inject constructor(
             com.dustvalve.next.android.data.asset.StoragePaths.imagesDir(context).deleteRecursively()
         } catch (_: Exception) {}
         try {
-            com.dustvalve.next.android.data.asset.StoragePaths.mediaCacheDir(context).deleteRecursively()
-        } catch (_: Exception) {}
+            mediaCacheClearer.clearAll()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Never fall back to deleteRecursively while the cache is open;
+            // stale cached media is harmless, a desynced index is not.
+            android.util.Log.w("DownloadRepo", "Media cache clear failed; skipping", e)
+        }
         storageTracker.notifyChanged()
     }
 }

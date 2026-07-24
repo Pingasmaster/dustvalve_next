@@ -116,7 +116,9 @@ class ArtistDetailViewModel @Inject constructor(
     fun load(sourceId: String, url: String, name: String? = null, imageUrl: String? = null) {
         val key = "$sourceId|$url"
         if (loadedKey == key && _uiState.value.artist != null) return
-        loadedKey = key
+        // loadedKey is only set on SUCCESS (end of the try block below). Setting
+        // it up-front made a failed fetch permanent: with a seeded artist hint the
+        // guard above short-circuited every retry for the VM's whole lifetime.
         nextPage = null
 
         // Seed with the caller-provided hint so the top bar isn't blank.
@@ -185,6 +187,7 @@ class ArtistDetailViewModel @Inject constructor(
                 } else {
                     _uiState.update { it.copy(isLoading = false) }
                 }
+                loadedKey = key
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {

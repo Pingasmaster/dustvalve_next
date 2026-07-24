@@ -394,7 +394,6 @@ dependencies {
     implementation(libs.coroutines.android)
 
     // Immutable collections (stable Compose params for List/Set types)
-    implementation(libs.collections.immutable)
 
     // Reorderable lists (drag & drop for LazyColumn / LazyRow)
     implementation(libs.reorderable)

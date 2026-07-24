@@ -96,4 +96,38 @@ class YouTubeYtcfgExtractorTest {
         assertThat(cfg).isNotNull()
         assertThat(cfg!!.clientVersion).isNull()
     }
+
+    @Test fun `hostile block with non-object INNERTUBE_CONTEXT continues to the next block`() {
+        // A wrong-typed field in one candidate must skip just that block -
+        // .jsonObject used to throw and abort the whole extraction.
+        val html = """
+            <script>ytcfg.set({"INNERTUBE_CONTEXT":"not_an_object"});</script>
+            <script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"good_after_hostile"}}});</script>
+        """.trimIndent()
+        val cfg = YouTubeYtcfgExtractor.extract(html)
+        assertThat(cfg).isNotNull()
+        assertThat(cfg!!.visitorData).isEqualTo("good_after_hostile")
+    }
+
+    @Test fun `hostile block with non-object client and array VISITOR_DATA is skipped`() {
+        val html = """
+            <script>ytcfg.set({"INNERTUBE_CONTEXT":{"client":"oops"},"VISITOR_DATA":["not","a","primitive"]});</script>
+            <script>ytcfg.set({"VISITOR_DATA":"vd_recovered"});</script>
+        """.trimIndent()
+        val cfg = YouTubeYtcfgExtractor.extract(html)
+        assertThat(cfg).isNotNull()
+        assertThat(cfg!!.visitorData).isEqualTo("vd_recovered")
+    }
+
+    @Test fun `non-primitive clientVersion fields degrade to null instead of failing the block`() {
+        val html = """
+            <script>
+            ytcfg.set({"VISITOR_DATA":"vd_x","INNERTUBE_CLIENT_VERSION":{"bad":1},"INNERTUBE_CONTEXT_CLIENT_VERSION":["2.0"]});
+            </script>
+        """.trimIndent()
+        val cfg = YouTubeYtcfgExtractor.extract(html)
+        assertThat(cfg).isNotNull()
+        assertThat(cfg!!.visitorData).isEqualTo("vd_x")
+        assertThat(cfg.clientVersion).isNull()
+    }
 }

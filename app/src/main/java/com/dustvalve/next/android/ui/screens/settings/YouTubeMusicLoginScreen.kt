@@ -20,12 +20,17 @@
 //   * settings.allowFileAccess / allowContentAccess /
 //     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs OFF.
 //   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
-//   * JavaScript enabled (Google's login form requires it) but only after
-//     the first navigation has resolved to an allowlisted host.
+//   * JavaScript enabled from the start (Google's login form requires it);
+//     the initial load is a hardcoded https allowlisted URL and every
+//     subsequent navigation is gated by shouldOverrideUrlLoading, so JS
+//     never runs on an off-allowlist origin.
 //   * No addJavascriptInterface.
-//   * WebViewClient.onReceivedSslError cancels.
-//   * On entry: cookies + WebStorage cleared so the captured cookie is
-//     guaranteed to originate from the user's fresh sign-in.
+//   * WebViewClient.onReceivedSslError cancels - the inherited default; no
+//     override weakens it.
+//   * On first entry per login flow: cookies + WebStorage cleared so the
+//     captured cookie is guaranteed to originate from the user's fresh
+//     sign-in. (Guarded by a saveable flag so config-change recreation
+//     doesn't wipe a login in progress.)
 //   * Cookie write-back validates Domain == .youtube.com / .google.com.
 //   * webViewRef.destroy() in DisposableEffect.onDispose.
 //
@@ -36,11 +41,15 @@
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.annotation.SuppressLint
+import android.os.Bundle
 import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -86,10 +95,17 @@ private const val AUTH_MARKER_COOKIE = "__Secure-3PAPISID"
 fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
+    // Cookie clearing must run once per login flow, NOT on every WebView
+    // recreation: mid-login loginHandled is still false, so keying the guard
+    // on it alone wiped an in-progress login on rotation.
+    var cookiesClearedOnce by rememberSaveable { mutableStateOf(false) }
+    // WebView back/forward state so rotation restores the in-progress flow.
+    val webViewStateBundle = rememberSaveable { Bundle() }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
     val loadErrorFallback = stringResource(R.string.error_load_page)
+    val blockedNavMsg = stringResource(R.string.login_navigation_blocked)
     val currentOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
 
     // Prevent screenshots/screen recordings on the login screen
@@ -103,6 +119,12 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
 
     DisposableEffect(Unit) {
         onDispose {
+            // Best-effort snapshot (onPageFinished already keeps the bundle
+            // current) before releasing native resources.
+            try {
+                webViewRef?.saveState(webViewStateBundle)
+            } catch (_: Exception) {
+            }
             webViewRef?.destroy()
             webViewRef = null
         }
@@ -137,23 +159,38 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
                         webViewRef = this
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
+                        // Explicit hardening (defaults vary across vendor WebView builds).
+                        settings.allowFileAccess = false
+                        settings.allowContentAccess = false
+                        settings.allowFileAccessFromFileURLs = false
+                        settings.allowUniversalAccessFromFileURLs = false
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                         // Google login requires third-party cookies
                         cookieManager.setAcceptThirdPartyCookies(this, true)
 
-                        // Clear YouTube/Google cookies on fresh entry so re-login starts clean
-                        if (!loginHandled) {
+                        // Clear YouTube/Google cookies + web storage once per login
+                        // flow - never on config-change recreation (that wiped
+                        // mid-login state).
+                        if (!loginHandled && !cookiesClearedOnce) {
+                            cookiesClearedOnce = true
                             clearDomainCookies(cookieManager, "https://youtube.com")
                             clearDomainCookies(cookieManager, "https://music.youtube.com")
                             clearDomainCookies(cookieManager, "https://google.com")
                             clearDomainCookies(cookieManager, "https://accounts.google.com")
                             cookieManager.flush()
+                            WebStorage.getInstance().deleteAllData()
                         }
 
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString() ?: return false
-                                // Allow Google and YouTube domains for the login flow
-                                if (!isAllowedHost(url)) return true
+                                // Allow Google and YouTube domains for the login flow;
+                                // anything else is blocked with feedback so an off-
+                                // allowlist redirect isn't a silent no-op.
+                                if (!isAllowedHost(url)) {
+                                    Toast.makeText(context, blockedNavMsg, Toast.LENGTH_SHORT).show()
+                                    return true
+                                }
                                 return false
                             }
 
@@ -161,6 +198,9 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
                                 super.onPageFinished(view, url)
                                 isPageLoading = false
                                 loadError = null
+                                // Keep the saved-state bundle current on every committed
+                                // navigation so rotation restores the in-progress flow.
+                                view?.saveState(webViewStateBundle)
                                 if (url != null && isYouTubeMusicPage(url)) {
                                     handleLoginIfNeeded(cookieManager)
                                 }
@@ -188,7 +228,12 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
                             }
                         }
 
-                        loadUrl(LOGIN_URL)
+                        if (webViewStateBundle.isEmpty) {
+                            loadUrl(LOGIN_URL)
+                        } else {
+                            // Recreation (e.g. rotation): resume the in-progress flow.
+                            restoreState(webViewStateBundle)
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxSize(),

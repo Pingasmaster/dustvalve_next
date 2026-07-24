@@ -122,6 +122,10 @@ class CollectionDetailViewModel @Inject constructor(
                 paginationCursor = collection.continuation
                 val isFav = favoriteDao.isFavorite(url)
                 val displayName = collection.name.ifBlank { nameHint }
+                // Name matching is DISPLAY-ONLY (drives the "already imported"
+                // affordance). It must never populate importedPlaylistId: that id
+                // authorizes deletion in toggleFavorite, and a user's own playlist
+                // may share the collection's name.
                 val existing = playlistDao.getPlaylistByName(displayName)
                 _uiState.update {
                     it.copy(
@@ -131,8 +135,7 @@ class CollectionDetailViewModel @Inject constructor(
                         isLoading = false,
                         hasMore = collection.hasMore,
                         isFavorite = isFav,
-                        isImported = existing != null,
-                        importedPlaylistId = existing?.id,
+                        isImported = existing != null || it.importedPlaylistId != null,
                     )
                 }
             } catch (e: Exception) {
@@ -209,8 +212,12 @@ class CollectionDetailViewModel @Inject constructor(
             try {
                 if (prev) {
                     favoriteDao.delete(url)
+                    // Delete ONLY the playlist this session imported (id captured in
+                    // importToLibrary). Never fall back to a name lookup: it could
+                    // resolve to - and destroy - an unrelated user playlist that
+                    // happens to share the collection's name. A leftover imported
+                    // playlist is acceptable; deleting a user playlist is not.
                     val playlistId = state.importedPlaylistId
-                        ?: playlistDao.getPlaylistByName(state.name)?.id
                     if (playlistId != null) {
                         playlistRepository.deletePlaylist(playlistId)
                         _uiState.update { it.copy(isImported = false, importedPlaylistId = null) }

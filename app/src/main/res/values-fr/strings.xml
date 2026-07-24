@@ -520,4 +520,9 @@
     <string name="crash_report_share_action">Partager le journal de plantage</string>
     <string name="crash_report_github_action">Ouvrir un ticket GitHub</string>
     <string name="crash_report_dismiss_action">Pas maintenant</string>
+    <!-- Security-block + missing-playlist UI (added with default strings) -->
+    <string name="login_navigation_blocked">Bloqué pour des raisons de sécurité : seul le site de connexion peut s’ouvrir ici</string>
+    <string name="playlist_gone_title">Cette playlist n’existe plus</string>
+    <string name="playlist_gone_subtitle">Elle a peut-être été supprimée de votre bibliothèque</string>
+    <string name="common_action_back">Retour</string>
 </resources>

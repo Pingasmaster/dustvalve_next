@@ -520,4 +520,9 @@
     <string name="crash_report_share_action">クラッシュログを共有</string>
     <string name="crash_report_github_action">GitHub で Issue を作成</string>
     <string name="crash_report_dismiss_action">今はしない</string>
+    <!-- Security-block + missing-playlist UI (added with default strings) -->
+    <string name="login_navigation_blocked">セキュリティのためブロックされました：ここで開けるのはサインインサイトのみです</string>
+    <string name="playlist_gone_title">このプレイリストは存在しません</string>
+    <string name="playlist_gone_subtitle">ライブラリから削除された可能性があります</string>
+    <string name="common_action_back">戻る</string>
 </resources>

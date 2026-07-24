@@ -77,6 +77,25 @@ class DownloadService : Service() {
         return START_NOT_STICKY
     }
 
+    /**
+     * Android 15+ caps dataSync foreground services at ~6h per day and crashes
+     * apps that are still foregrounded when the cap hits and don't stop here.
+     * Pause instead of dying: the controller keeps every `.tmp` partial, the
+     * notification center posts its regular (non-foreground) "downloads
+     * paused" card with a Resume action, and tapping Resume walks the normal
+     * [DownloadController.resume] path - which restarts this service once the
+     * FGS budget allows and continues from the partial's offset.
+     */
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        controller.pause()
+        notificationCenter.setForegroundOwned(false)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        // If the state was already paused, no StateFlow change fires to
+        // re-post the card stopForeground just removed - re-post explicitly.
+        notificationCenter.repostAfterForegroundTimeout()
+        stopSelf()
+    }
+
     override fun onDestroy() {
         notificationCenter.setForegroundOwned(false)
         scope.cancel()

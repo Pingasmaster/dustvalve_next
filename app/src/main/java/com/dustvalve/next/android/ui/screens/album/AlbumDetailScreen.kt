@@ -53,14 +53,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -78,8 +79,11 @@ import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
+import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
+import com.dustvalve.next.android.ui.util.toggle
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -95,6 +99,8 @@ fun AlbumDetailScreen(
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val hapticFeedback = LocalHapticFeedback.current
+    val heartMorph = rememberHeartMorphState()
+    val heartScope = rememberCoroutineScope()
     var showDeleteAlbumDialog by rememberSaveable { mutableStateOf(false) }
     var trackToDelete by remember { mutableStateOf<com.dustvalve.next.android.domain.model.Track?>(null) }
 
@@ -262,14 +268,26 @@ fun AlbumDetailScreen(
                                 contentDescription = album.title,
                                 modifier = Modifier
                                     .fillMaxSize()
+                                    // Clip only while the heart morph is
+                                    // animating so the resting hero stays
+                                    // full-bleed.
+                                    .then(
+                                        if (heartMorph.progress > 0f) {
+                                            Modifier.clip(heartMorph.shape)
+                                        } else {
+                                            Modifier
+                                        },
+                                    )
                                     // Double-tap the cover to toggle the album
                                     // favorite (single tap stays a no-op, so
-                                    // no added latency anywhere).
+                                    // no added latency anywhere) - same heart
+                                    // morph as the player's album art.
                                     .pointerInput(album.id) {
                                         detectTapGestures(
                                             onDoubleTap = {
-                                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                hapticFeedback.toggle(!album.isFavorite)
                                                 viewModel.toggleFavorite()
+                                                heartScope.launch { heartMorph.play() }
                                             },
                                         )
                                     },

@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,9 +77,12 @@ import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
+import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
+import com.dustvalve.next.android.ui.util.toggle
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -186,7 +190,41 @@ fun PlaylistDetailScreen(
                 )
             }
 
-            playlist != null -> {
+            // Playlist deleted underneath us (flow emitted null with no error):
+            // show an explicit dead-end state with a way back instead of a
+            // blank screen.
+            playlist == null -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                    ) {
+                        Text(
+                            text = stringResource(R.string.playlist_gone_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.playlist_gone_subtitle),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBack, shapes = ButtonDefaults.shapes()) {
+                            Text(stringResource(R.string.common_action_back))
+                        }
+                    }
+                }
+            }
+
+            else -> {
                 PlaylistContent(
                     playlist = playlist,
                     tracks = state.tracks,
@@ -422,16 +460,27 @@ private fun PlaylistContent(
 @Composable
 private fun PlaylistHero(playlist: Playlist, heroUrl: String?, onDoubleTap: (() -> Unit)? = null) {
     val hapticFeedback = LocalHapticFeedback.current
-    // Double-tap the hero to toggle the pin (the playlist "favorite").
+    val heartMorph = rememberHeartMorphState()
+    val heartScope = rememberCoroutineScope()
+    // Double-tap the hero to toggle the pin (the playlist "favorite"). The
+    // artwork morphs into a heart - same animation as the player's album art.
     val doubleTapModifier = if (onDoubleTap != null) {
         Modifier.pointerInput(playlist.id) {
             detectTapGestures(
                 onDoubleTap = {
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    hapticFeedback.toggle(!playlist.isPinned)
                     onDoubleTap()
+                    heartScope.launch { heartMorph.play() }
                 },
             )
         }
+    } else {
+        Modifier
+    }
+    // Clip only while the morph is animating so the resting hero stays
+    // full-bleed.
+    val heartClipModifier = if (heartMorph.progress > 0f) {
+        Modifier.clip(heartMorph.shape)
     } else {
         Modifier
     }
@@ -456,13 +505,14 @@ private fun PlaylistHero(playlist: Playlist, heroUrl: String?, onDoubleTap: (() 
             AsyncImage(
                 model = heroUrl,
                 contentDescription = playlist.name,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().then(heartClipModifier),
                 contentScale = ContentScale.Crop,
             )
         } else {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .then(heartClipModifier)
                     .background(containerColor),
                 contentAlignment = Alignment.Center,
             ) {

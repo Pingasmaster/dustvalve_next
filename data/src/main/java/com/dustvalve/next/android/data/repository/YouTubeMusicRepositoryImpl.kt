@@ -4,6 +4,7 @@ import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubeMusicHomeCacheEntity
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicSearchParser
@@ -31,6 +32,7 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
     private val searchParser: YouTubeMusicSearchParser,
     private val youtubeInnertubeClient: YouTubeInnertubeClient,
     private val youtubePlayerParser: YouTubePlayerParser,
+    private val albumResolver: YouTubeMusicAlbumResolver,
     private val homeCache: YouTubeMusicHomeCacheDao,
     @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) : YouTubeMusicRepository {
@@ -126,26 +128,19 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
      *   1. POST /next -> find the first `browseEndpoint` whose
      *      `browseEndpointContextMusicConfig.pageType == MUSIC_PAGE_TYPE_ALBUM`;
      *      short-circuit to null if the video has no YTM album context.
-     *   2. POST /browse with that `MPREb_...` id -> pluck the `audioPlaylistId`
-     *      (the `OLAK5uy_...` playlist the YTM UI uses for the album).
+     *   2. POST /browse with that `MPREb_...` id (via [YouTubeMusicAlbumResolver])
+     *      -> pluck the `audioPlaylistId` (the `OLAK5uy_...` playlist the YTM
+     *      UI uses for the album).
      * Returns a canonical youtube.com/playlist URL so callers can route
      * straight through the shared [com.dustvalve.next.android.data.repository.YouTubeSource]
-     * path. Any network or parse failure yields null - the caller treats that
-     * as "no album" and stores it idempotently.
+     * path. Null means the lookup COMPLETED and the video definitively has no
+     * YTM album; transient network / API failures (and cancellation) propagate
+     * so callers can retry later instead of caching a poisoned negative.
      */
     override suspend fun lookupAlbumPlaylistForVideo(videoId: String): String? {
-        val nextJson = try {
-            client.next(videoId)
-        } catch (_: Throwable) {
-            return null
-        }
+        val nextJson = client.next(videoId)
         val albumBrowseId = findAlbumBrowseId(nextJson) ?: return null
-        val browseJson = try {
-            client.browse(albumBrowseId)
-        } catch (_: Throwable) {
-            return null
-        }
-        val audioPlaylistId = findAudioPlaylistId(browseJson) ?: return null
+        val audioPlaylistId = albumResolver.resolveAudioPlaylistId(albumBrowseId) ?: return null
         return "https://www.youtube.com/playlist?list=$audioPlaylistId"
     }
 
@@ -172,21 +167,6 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
             }
 
             is JsonArray -> for (v in root) findAlbumBrowseId(v)?.let { return it }
-
-            else -> Unit
-        }
-        return null
-    }
-
-    private fun findAudioPlaylistId(root: JsonElement): String? {
-        when (root) {
-            is JsonObject -> {
-                (root["audioPlaylistId"] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() }
-                    ?.let { return it }
-                for (v in root.values) findAudioPlaylistId(v)?.let { return it }
-            }
-
-            is JsonArray -> for (v in root) findAudioPlaylistId(v)?.let { return it }
 
             else -> Unit
         }

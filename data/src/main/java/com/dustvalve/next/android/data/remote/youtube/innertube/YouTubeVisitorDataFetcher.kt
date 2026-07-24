@@ -68,29 +68,22 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
             )
         }
 
-        val fallback = if (fallbackLandingUrl != landingUrl) {
-            fetchLanding(fallbackLandingUrl).also { fb ->
-                fb.extract()?.let {
-                    return@withContext VisitorConfig(
-                        visitorData = it.visitorData,
-                        clientVersion = it.clientVersion ?: DEFAULT_CLIENT_VERSION,
-                    )
-                }
-            }
-        } else {
-            null
+        // Second attempt always runs, even when the fallback URL equals the
+        // primary (the production default): retrying the same URL covers
+        // transient failures. A != guard here used to disable the documented
+        // second attempt entirely.
+        val fallback = fetchLanding(fallbackLandingUrl)
+        fallback.extract()?.let {
+            return@withContext VisitorConfig(
+                visitorData = it.visitorData,
+                clientVersion = it.clientVersion ?: DEFAULT_CLIENT_VERSION,
+            )
         }
 
         throw IllegalStateException(
             "YouTube landing missing ytcfg.set block " +
                 "(primary=HTTP ${primary.status}, ${primary.body.length} B; " +
-                (
-                    if (fallback != null) {
-                        "fallback=HTTP ${fallback.status}, ${fallback.body.length} B; "
-                    } else {
-                        ""
-                    }
-                    ) +
+                "fallback=HTTP ${fallback.status}, ${fallback.body.length} B; " +
                 "head='${primary.body.take(120).replace('\n', ' ')}')",
         )
     }

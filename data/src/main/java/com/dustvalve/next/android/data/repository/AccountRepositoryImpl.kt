@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -52,9 +54,12 @@ class AccountRepositoryImpl @Inject constructor(private val settingsDataStore: S
             }
         }
 
-        // Extract all fields, defaulting to null if absent so stale data is cleared
-        val username = identityObj?.get("username")?.jsonPrimitive?.content
-        val avatarUrl = identityObj?.get("photo")?.jsonPrimitive?.content
+        // Extract all fields, defaulting to null if absent so stale data is cleared.
+        // The identity payload is server-controlled: a field that is an object/array
+        // instead of a primitive must degrade to null, not abort saveCookies after the
+        // cookies were already imported (which would leave the user looking logged out).
+        val username = (identityObj?.get("username") as? JsonPrimitive)?.contentOrNull
+        val avatarUrl = (identityObj?.get("photo") as? JsonPrimitive)?.contentOrNull
         val fanId = try {
             identityObj?.get("fan_id")?.jsonPrimitive?.long
         } catch (_: Exception) {

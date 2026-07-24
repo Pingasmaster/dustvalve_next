@@ -6,6 +6,15 @@
         <exclude domain="database" path="dustvalve_database" />
         <exclude domain="database" path="dustvalve_database-shm" />
         <exclude domain="database" path="dustvalve_database-wal" />
+        <!-- Bulk / device-local caches: multi-GB audio + image downloads and
+             diagnostic artifacts. Backing these up blows the ~25 MB Auto
+             Backup quota and restores orphan files on a new device. -->
+        <exclude domain="file" path="downloads" />
+        <exclude domain="file" path="crash" />
+        <exclude domain="file" path="diagnostics" />
+        <exclude domain="file" path="metrics" />
+        <exclude domain="file" path="profiles" />
+        <exclude domain="file" path="local_art" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="." />
@@ -13,5 +22,14 @@
         <exclude domain="database" path="dustvalve_database" />
         <exclude domain="database" path="dustvalve_database-shm" />
         <exclude domain="database" path="dustvalve_database-wal" />
+        <!-- Same bulk excludes as cloud-backup: device-to-device transfer
+             has no quota, but shipping stale download pools and diagnostics
+             to a new device still restores orphan files. -->
+        <exclude domain="file" path="downloads" />
+        <exclude domain="file" path="crash" />
+        <exclude domain="file" path="diagnostics" />
+        <exclude domain="file" path="metrics" />
+        <exclude domain="file" path="profiles" />
+        <exclude domain="file" path="local_art" />
     </device-transfer>
 </data-extraction-rules>

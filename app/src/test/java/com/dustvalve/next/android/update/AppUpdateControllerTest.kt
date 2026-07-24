@@ -7,8 +7,10 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -186,6 +188,28 @@ class AppUpdateControllerTest {
             cancelAndIgnoreRemainingEvents()
         }
         assertThat(controller.state.value).isEqualTo(UpdateUiState.Idle)
+    }
+
+    @Test fun `confirmDownload forwards the release sha256 to the service`() = runTest(dispatcher) {
+        val url = "https://github.com/x/releases/download/v9.9.9/dustvalve_next-future.apk"
+        val sha = "ab".repeat(32)
+        coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
+            versionName = "9.9.9",
+            apkDownloadUrl = url,
+            releaseNotes = "notes",
+            apkSha256 = sha,
+        )
+        every { service.downloadApk(any(), any()) } returns emptyFlow()
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
+        controller.checkSilently()
+        advanceUntilIdle()
+
+        controller.confirmDownload()
+        advanceUntilIdle()
+
+        // The digest travels Available -> downloadApk so the service can
+        // verify the bytes it wrote against the release asset's checksum.
+        verify { service.downloadApk(url, sha) }
     }
 
     @Test fun `dismiss moves Available state back to Idle`() = runTest(dispatcher) {

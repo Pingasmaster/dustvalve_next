@@ -5,6 +5,7 @@ import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.deleteByIds
 import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
@@ -138,8 +139,15 @@ class AlbumRepositoryImpl @Inject constructor(
         val result = if (contentChanged) {
             database.withTransaction {
                 albumDao.insert(album.toEntity())
-                trackDao.deleteByAlbumId(album.id)
+                // Diff instead of delete-all + reinsert: upsert the scraped
+                // tracks, then drop only rows that vanished from the album.
+                // A blanket deleteByAlbumId would cascade-delete the
+                // playlist_tracks rows of tracks that still exist.
                 trackDao.insertAll(album.tracks.map { it.toEntity() })
+                val staleTrackIds = trackDao.getByAlbumId(album.id)
+                    .map { it.id }
+                    .filter { it !in scrapedTrackIds }
+                trackDao.deleteByIds(staleTrackIds)
 
                 if (previousAutoDownload) {
                     albumDao.setAutoDownload(album.id, true)

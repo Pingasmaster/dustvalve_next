@@ -21,7 +21,9 @@ import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -182,6 +184,7 @@ class YouTubeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private var searchJob: Job? = null
+    private var loadMoreJob: Job? = null
     private var nextPage: Any? = null
     private var moodJob: Job? = null
     private var ytmHomeJob: Job? = null
@@ -220,6 +223,7 @@ class YouTubeViewModel @Inject constructor(
         if (_uiState.value.activeSource == source) return
         // Cancel in-flight search because the filter vocabulary changes between sources.
         searchJob?.cancel()
+        loadMoreJob?.cancel()
         nextPage = null
         _uiState.update {
             it.copy(
@@ -498,6 +502,7 @@ class YouTubeViewModel @Inject constructor(
     fun onQueryChange(query: String) {
         _uiState.update { it.copy(query = query) }
         searchJob?.cancel()
+        loadMoreJob?.cancel()
         if (query.isNotBlank()) {
             searchJob = viewModelScope.launch {
                 delay(400L)
@@ -519,6 +524,7 @@ class YouTubeViewModel @Inject constructor(
 
     fun onSearch() {
         searchJob?.cancel()
+        loadMoreJob?.cancel()
         val query = _uiState.value.query
         if (query.isNotBlank()) {
             saveRecentSearch(query)
@@ -555,15 +561,17 @@ class YouTubeViewModel @Inject constructor(
         val query = _uiState.value.query
         if (query.isNotBlank()) {
             searchJob?.cancel()
+            loadMoreJob?.cancel()
             searchJob = viewModelScope.launch { performSearch(query, resetResults = true) }
         }
     }
 
     fun loadMore() {
         if (_uiState.value.isLoading || !_uiState.value.hasMore) return
+        if (loadMoreJob?.isActive == true) return
         val query = _uiState.value.query
         if (query.isBlank()) return
-        viewModelScope.launch { performSearch(query, resetResults = false) }
+        loadMoreJob = viewModelScope.launch { performSearch(query, resetResults = false) }
     }
 
     fun clearError() {
@@ -571,6 +579,10 @@ class YouTubeViewModel @Inject constructor(
     }
 
     private suspend fun performSearch(query: String, resetResults: Boolean) {
+        // Generation snapshot: if the query/filter/source changed while this page
+        // was in flight, a stale page-2 must not append into the new results or
+        // overwrite nextPage. (Cancellation covers most cases; this closes the race.)
+        val generationAtStart = _uiState.value.searchGeneration
         _uiState.update { it.copy(isLoading = true, error = null) }
         try {
             val source = _uiState.value.activeSource
@@ -592,6 +604,9 @@ class YouTubeViewModel @Inject constructor(
                     results = youtubeMusicRepository.search(query = query, filter = uiFilter)
                     newNextPage = null
                 }
+            }
+            if (!resetResults && _uiState.value.searchGeneration != generationAtStart) {
+                return
             }
             nextPage = newNextPage
 
@@ -619,27 +634,33 @@ class YouTubeViewModel @Inject constructor(
 
     // -- Other -----------------------------------------------------------
 
-    fun importPlaylist(playlistUrl: String, name: String) {
-        viewModelScope.launch {
-            try {
-                val (tracks, _) = youtubeRepository.getPlaylistTracks(playlistUrl)
-                database.withTransaction {
-                    trackDao.insertAll(tracks.map { it.toEntity() })
-                    val playlist = playlistRepository.createPlaylist(name)
-                    playlistRepository.addTracksToPlaylist(playlist.id, tracks.map { it.id })
-                }
-                favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        error = UiText.StringResource(
-                            R.string.error_import_playlist,
-                            listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
-                        ),
-                    )
-                }
+    /**
+     * Import a playlist into the library. Runs in [viewModelScope] (so it
+     * survives the caller leaving composition) and returns a [Deferred] the UI
+     * can await to show the success snackbar only once the import actually
+     * completed - false means it failed (and [YouTubeUiState.error] was set).
+     */
+    fun importPlaylist(playlistUrl: String, name: String): Deferred<Boolean> = viewModelScope.async {
+        try {
+            val (tracks, _) = youtubeRepository.getPlaylistTracks(playlistUrl)
+            database.withTransaction {
+                trackDao.insertAll(tracks.map { it.toEntity() })
+                val playlist = playlistRepository.createPlaylist(name)
+                playlistRepository.addTracksToPlaylist(playlist.id, tracks.map { it.id })
             }
+            favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
+            true
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            _uiState.update {
+                it.copy(
+                    error = UiText.StringResource(
+                        R.string.error_import_playlist,
+                        listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
+                    ),
+                )
+            }
+            false
         }
     }
 

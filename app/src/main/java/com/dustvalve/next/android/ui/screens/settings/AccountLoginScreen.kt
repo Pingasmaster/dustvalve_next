@@ -24,13 +24,17 @@
 //     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs all OFF
 //     (defaults vary across vendor WebView builds; we set them explicitly).
 //   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
-//   * JavaScript enabled (required by the Bandcamp form) but ONLY after the
-//     first navigation has resolved to an allowlisted host.
+//   * JavaScript enabled from the start (required by the Bandcamp form); the
+//     initial load is a hardcoded https allowlisted URL and every subsequent
+//     navigation is gated by shouldOverrideUrlLoading, so JS never runs on an
+//     off-allowlist origin.
 //   * No addJavascriptInterface; no JS->native bridge of any kind.
-//   * WebViewClient.onReceivedSslError cancels (never proceeds).
-//   * On entry: CookieManager.removeAllCookies + WebStorage.deleteAllData
-//     to ensure the captured cookie originates from the user's fresh
-//     session, not a stale residual.
+//   * WebViewClient.onReceivedSslError cancels (never proceeds) - the
+//     inherited default; no override weakens it.
+//   * On first entry per login flow: bandcamp.com cookies expired +
+//     WebStorage.deleteAllData, so the captured cookie originates from the
+//     user's fresh session, not a stale residual. (Guarded by a saveable
+//     flag so config-change recreation doesn't wipe a login in progress.)
 //   * Cookies are read with CookieManager.getCookie("https://bandcamp.com")
 //     and Domain-scoped manually - we never persist cookies for subdomains
 //     we did not navigate to.
@@ -46,11 +50,15 @@
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.annotation.SuppressLint
+import android.os.Bundle
 import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -94,10 +102,17 @@ private val AUTH_COOKIE_NAMES = setOf("identity", "session", "client_id", "js_lo
 fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: () -> Unit, modifier: Modifier = Modifier) {
     val cookieManager = remember { CookieManager.getInstance() }
     var loginHandled by rememberSaveable { mutableStateOf(false) }
+    // Cookie expiry must run once per login flow, NOT on every WebView
+    // recreation: mid-login loginHandled is still false, so keying the guard
+    // on it alone wiped an in-progress login on rotation.
+    var cookiesClearedOnce by rememberSaveable { mutableStateOf(false) }
+    // WebView back/forward state so rotation restores the in-progress flow.
+    val webViewStateBundle = rememberSaveable { Bundle() }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var isPageLoading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
     val loadErrorFallback = stringResource(R.string.error_load_page)
+    val blockedNavMsg = stringResource(R.string.login_navigation_blocked)
     // Keep a stable reference to the latest callback to avoid stale lambda captures in WebView
     val currentOnLoginSuccess by rememberUpdatedState(onLoginSuccess)
 
@@ -112,6 +127,12 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
 
     DisposableEffect(Unit) {
         onDispose {
+            // Best-effort snapshot (onPageFinished already keeps the bundle
+            // current) before releasing native resources.
+            try {
+                webViewRef?.saveState(webViewStateBundle)
+            } catch (_: Exception) {
+            }
             webViewRef?.destroy()
             webViewRef = null
         }
@@ -146,9 +167,17 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
                         webViewRef = this
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
+                        // Explicit hardening (defaults vary across vendor WebView builds).
+                        settings.allowFileAccess = false
+                        settings.allowContentAccess = false
+                        settings.allowFileAccessFromFileURLs = false
+                        settings.allowUniversalAccessFromFileURLs = false
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
 
-                        // Only expire cookies on fresh entry, not on config change recreation
-                        if (!loginHandled) {
+                        // Only expire cookies + web storage once per login flow -
+                        // never on config-change recreation (that wiped mid-login state).
+                        if (!loginHandled && !cookiesClearedOnce) {
+                            cookiesClearedOnce = true
                             cookieManager.getCookie("https://bandcamp.com")
                                 ?.split(";")
                                 ?.forEach { cookie ->
@@ -161,24 +190,34 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
                                     }
                                 }
                             cookieManager.flush()
+                            WebStorage.getInstance().deleteAllData()
                         }
 
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                 val url = request?.url?.toString() ?: return false
-                                // Block navigation to non-Dustvalve domains
-                                if (!isDustvalveHost(url)) return true
-                                if (!url.contains("/login")) {
-                                    handleLoginIfNeeded(cookieManager)
+                                // Block navigation to non-Dustvalve domains - with
+                                // feedback, so an SSO/IdP redirect isn't a silent no-op.
+                                if (!isDustvalveHost(url)) {
+                                    Toast.makeText(context, blockedNavMsg, Toast.LENGTH_SHORT).show()
                                     return true
                                 }
-                                return false
+                                // Auxiliary auth pages (signup, forgot password, ...)
+                                // stay inside the WebView.
+                                if (isAuthFlowUrl(url)) return false
+                                // Any other Bandcamp page is the post-login redirect:
+                                // capture cookies instead of rendering it.
+                                handleLoginIfNeeded(cookieManager)
+                                return true
                             }
 
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 isPageLoading = false
                                 loadError = null
+                                // Keep the saved-state bundle current on every committed
+                                // navigation so rotation restores the in-progress flow.
+                                view?.saveState(webViewStateBundle)
                                 if (url != null && !url.contains("/login") && isDustvalveHost(url)) {
                                     handleLoginIfNeeded(cookieManager)
                                 }
@@ -208,7 +247,12 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
                             }
                         }
 
-                        loadUrl(LOGIN_URL)
+                        if (webViewStateBundle.isEmpty) {
+                            loadUrl(LOGIN_URL)
+                        } else {
+                            // Recreation (e.g. rotation): resume the in-progress flow.
+                            restoreState(webViewStateBundle)
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxSize(),
@@ -242,6 +286,24 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
 private fun isDustvalveHost(url: String): Boolean {
     val host = url.toUri().host ?: return false
     return host == "bandcamp.com" || host.endsWith(".bandcamp.com")
+}
+
+// Auxiliary auth pages that must render inside the WebView. Everything is
+// already host-gated to *.bandcamp.com before this check runs.
+private val AUTH_PATH_PREFIXES = listOf(
+    "/login",
+    "/signup",
+    "/forgot_password",
+    "/forgot-password",
+    "/password_reset",
+    "/password-reset",
+    "/recover",
+    "/oauth",
+)
+
+private fun isAuthFlowUrl(url: String): Boolean {
+    val path = url.toUri().path ?: return false
+    return AUTH_PATH_PREFIXES.any { prefix -> path == prefix || path.startsWith("$prefix/") }
 }
 
 private fun extractCookies(cookieManager: CookieManager, url: String): Map<String, String> {

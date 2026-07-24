@@ -203,6 +203,51 @@ class ArtistDetailViewModelTest {
         assertThat(state.hasMore).isFalse()
     }
 
+    @Test fun `failed load with a seeded hint surfaces the error and keeps retry working`() = runTest(dispatcher) {
+        val ytSource = sourceWith(
+            id = "youtube",
+            capabilities = setOf(SourceConcept.ARTIST, SourceConcept.ARTIST_TRACKS),
+        )
+        val url = "https://youtube.com/channel/UC1"
+        var fail = true
+        coEvery { ytSource.getArtist(url) } coAnswers {
+            if (fail) throw IllegalStateException("offline")
+            Artist(id = url, name = "Ch", url = url, imageUrl = null, bio = null, location = null, albums = emptyList())
+        }
+        coEvery { ytSource.getArtistTracks(url, continuation = null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Ch",
+            owner = "Ch",
+            coverUrl = null,
+            tracks = listOf(track("yt_1")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns ytSource
+        coEvery { favoriteDao.isFavorite(url) } returns false
+
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url, name = "Hint", imageUrl = "hint.jpg")
+        advanceUntilIdle()
+
+        // Seed hint is present but the fetch failed: the error must be exposed
+        // (the screen renders error+retry, not a bogus "No releases").
+        assertThat(vm.uiState.value.error).isNotNull()
+        assertThat(vm.uiState.value.artist?.name).isEqualTo("Hint")
+
+        // A later load() with the same key must NOT short-circuit on a key that
+        // never loaded successfully - retry has to refetch.
+        fail = false
+        vm.load(sourceId = "youtube", url = url, name = "Hint", imageUrl = "hint.jpg")
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertThat(state.error).isNull()
+        assertThat(state.artist?.name).isEqualTo("Ch")
+        assertThat(state.tracks.map { it.id }).containsExactly("yt_1")
+    }
+
     @Test fun `unknown sourceId surfaces a clear error`() = runTest(dispatcher) {
         every { sources["nope"] } returns null
 
