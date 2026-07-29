@@ -70,8 +70,11 @@ class DownloadRepositoryImplTest {
 
         database = mockk()
         mockkStatic("androidx.room.RoomDatabaseKt")
+        // withTransaction is an EXTENSION on RoomDatabase: mockkStatic sees the
+        // static RoomDatabaseKt.withTransaction(db, block), so arg 0 is the
+        // receiver and the block is arg 1.
         coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
-            firstArg<suspend () -> Any?>().invoke()
+            secondArg<suspend () -> Any?>().invoke()
         }
 
         downloadDao = mockk(relaxed = true)

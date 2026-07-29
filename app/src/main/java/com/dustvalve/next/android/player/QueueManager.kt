@@ -1,15 +1,10 @@
 package com.dustvalve.next.android.player
 
 import com.dustvalve.next.android.domain.model.Track
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.updateAndGet
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -29,25 +24,6 @@ private data class QueueState(val entries: List<QueueEntry> = emptyList(), val c
 @Singleton
 class QueueManager @Inject constructor() {
 
-    /**
-     * Permanent scope for derived StateFlows - never cancelled, since QueueManager is a singleton.
-     *
-     * The derived flows use [SharingStarted.Eagerly] so their `.value` always reflects
-     * the latest [_state]. [PlaybackManager] reads `queue.value` / `currentIndex.value`
-     * synchronously from ExoPlayer event callbacks; with [SharingStarted.WhileSubscribed],
-     * a cold flow would expose a stale value when no UI is observing.
-     */
-    // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
-    // tests substitute it globally via Dispatchers.setMain, so qualifying
-    // it would only add ceremony.
-    @Suppress("RawDispatchersUse")
-    private val flowScope = CoroutineScope(
-        SupervisorJob() + Dispatchers.Main.immediate +
-            kotlinx.coroutines.CoroutineExceptionHandler { _, throwable ->
-                android.util.Log.e("QueueManager", "Unhandled coroutine error", throwable)
-            },
-    )
-
     private val _state = MutableStateFlow(QueueState())
 
     /** Stores the original queue order before shuffle so it can be restored */
@@ -65,32 +41,52 @@ class QueueManager @Inject constructor() {
      */
     var onCurrentTrackRemoved: ((removed: Track, newCurrent: Track?) -> Unit)? = null
 
-    val entries: StateFlow<List<QueueEntry>> = createEntriesFlow()
+    // Derived views of [_state], republished SYNCHRONOUSLY by [publish] inside
+    // every mutator. They used to be stateIn(flowScope, Eagerly) projections,
+    // but a shared flow only forwards a new value once its collector coroutine
+    // is resumed by the dispatcher - so any caller that mutated the queue and
+    // read `.value` back inside the same main-thread block saw the PREVIOUS
+    // value. PlaybackManager does exactly that (skip-unplayable give-up branch
+    // reads currentIndex.value right after next()), so the projections must be
+    // plain MutableStateFlows written in the same call.
+    private val _entries = MutableStateFlow<List<QueueEntry>>(emptyList())
+    private val _queue = MutableStateFlow<List<Track>>(emptyList())
+    private val _currentIndex = MutableStateFlow(-1)
+    private val _currentTrack = MutableStateFlow<Track?>(null)
 
-    val queue: StateFlow<List<Track>> = createQueueFlow()
+    val entries: StateFlow<List<QueueEntry>> = _entries.asStateFlow()
 
-    val currentIndex: StateFlow<Int> = createCurrentIndexFlow()
+    val queue: StateFlow<List<Track>> = _queue.asStateFlow()
 
-    val currentTrack: StateFlow<Track?> = createCurrentTrackFlow()
+    val currentIndex: StateFlow<Int> = _currentIndex.asStateFlow()
 
-    private fun createEntriesFlow(): StateFlow<List<QueueEntry>> = _state.map { it.entries }
-        .stateIn(flowScope, SharingStarted.Eagerly, emptyList())
+    val currentTrack: StateFlow<Track?> = _currentTrack.asStateFlow()
 
-    private fun createQueueFlow(): StateFlow<List<Track>> = _state.map { s -> s.entries.map { it.track } }
-        .stateIn(flowScope, SharingStarted.Eagerly, emptyList())
+    /** Mirrors [state] into the derived flows; call after every [_state] write. */
+    private fun publish(state: QueueState) {
+        _entries.value = state.entries
+        _queue.value = state.entries.map { it.track }
+        _currentIndex.value = state.currentIndex
+        _currentTrack.value = state.entries.getOrNull(state.currentIndex)?.track
+    }
 
-    private fun createCurrentIndexFlow(): StateFlow<Int> = _state.map { it.currentIndex }
-        .stateIn(flowScope, SharingStarted.Eagerly, -1)
+    /** [MutableStateFlow.update] plus the synchronous [publish] of the result. */
+    private fun updateState(block: (QueueState) -> QueueState) {
+        publish(_state.updateAndGet(block))
+    }
 
-    private fun createCurrentTrackFlow(): StateFlow<Track?> = _state.map { it.entries.getOrNull(it.currentIndex)?.track }
-        .stateIn(flowScope, SharingStarted.Eagerly, null)
+    /** [MutableStateFlow.value] assignment plus the synchronous [publish]. */
+    private fun setState(state: QueueState) {
+        _state.value = state
+        publish(state)
+    }
 
     private fun entryOf(track: Track) = QueueEntry(uid = nextUid.getAndIncrement(), track = track)
 
     fun setQueue(tracks: List<Track>, startIndex: Int = 0) {
         originalQueue = null
         val newIndex = if (tracks.isNotEmpty()) startIndex.coerceIn(0, tracks.lastIndex) else -1
-        _state.value = QueueState(entries = tracks.map(::entryOf), currentIndex = newIndex)
+        setState(QueueState(entries = tracks.map(::entryOf), currentIndex = newIndex))
     }
 
     /**
@@ -100,8 +96,8 @@ class QueueManager @Inject constructor() {
      * favorite-state observer without breaking shuffle restore.
      */
     fun applyFavoriteIds(trackFavoriteIds: Set<String>) {
-        _state.update { s ->
-            if (s.entries.isEmpty()) return@update s
+        updateState { s ->
+            if (s.entries.isEmpty()) return@updateState s
             var changed = false
             val patched = s.entries.map { e ->
                 val newFav = e.track.id in trackFavoriteIds
@@ -141,8 +137,8 @@ class QueueManager @Inject constructor() {
             val merged = resolved.copy(isFavorite = e.track.isFavorite)
             return if (merged == e.track) e else e.copy(track = merged)
         }
-        _state.update { s ->
-            if (s.entries.isEmpty()) return@update s
+        updateState { s ->
+            if (s.entries.isEmpty()) return@updateState s
             var changed = false
             val patched = s.entries.map { e ->
                 val p = patch(e)
@@ -156,7 +152,7 @@ class QueueManager @Inject constructor() {
 
     fun addToQueue(track: Track) {
         originalQueue = null
-        _state.update { s ->
+        updateState { s ->
             val newEntries = s.entries + entryOf(track)
             val newIndex = if (s.currentIndex == -1 && newEntries.isNotEmpty()) 0 else s.currentIndex
             QueueState(entries = newEntries, currentIndex = newIndex)
@@ -165,7 +161,7 @@ class QueueManager @Inject constructor() {
 
     fun playNext(track: Track) {
         originalQueue = null
-        _state.update { s ->
+        updateState { s ->
             if (s.entries.isEmpty() || s.currentIndex < 0) {
                 QueueState(entries = listOf(entryOf(track)), currentIndex = 0)
             } else {
@@ -179,11 +175,11 @@ class QueueManager @Inject constructor() {
     fun removeFromQueue(index: Int) {
         var removedCurrent: Track? = null
         var successor: Track? = null
-        _state.update { s ->
+        updateState { s ->
             // Reset on each attempt: update{} may retry its lambda.
             removedCurrent = null
             successor = null
-            if (index !in s.entries.indices) return@update s
+            if (index !in s.entries.indices) return@updateState s
 
             // Clear the pre-shuffle snapshot: once the queue diverges from it,
             // restoring that order would discard the user's edits.
@@ -224,8 +220,8 @@ class QueueManager @Inject constructor() {
     }
 
     fun moveItem(from: Int, to: Int) {
-        _state.update { s ->
-            if (from !in s.entries.indices || to !in s.entries.indices) return@update s
+        updateState { s ->
+            if (from !in s.entries.indices || to !in s.entries.indices) return@updateState s
 
             // Same rationale as removeFromQueue: the shuffled order has been edited,
             // so the pre-shuffle snapshot is no longer the right thing to restore.
@@ -264,10 +260,10 @@ class QueueManager @Inject constructor() {
 
     fun next(): Track? {
         var result: Track? = null
-        _state.update { s ->
+        updateState { s ->
             if (s.entries.isEmpty()) {
                 result = null
-                return@update s
+                return@updateState s
             }
             val nextIndex = s.currentIndex + 1
             if (nextIndex in s.entries.indices) {
@@ -283,10 +279,10 @@ class QueueManager @Inject constructor() {
 
     fun previous(): Track? {
         var result: Track? = null
-        _state.update { s ->
+        updateState { s ->
             if (s.entries.isEmpty()) {
                 result = null
-                return@update s
+                return@updateState s
             }
             val prevIndex = s.currentIndex - 1
             if (prevIndex in s.entries.indices) {
@@ -312,10 +308,10 @@ class QueueManager @Inject constructor() {
 
     fun skipToIndex(index: Int): Track? {
         var result: Track? = null
-        _state.update { s ->
+        updateState { s ->
             if (index !in s.entries.indices) {
                 result = null
-                return@update s
+                return@updateState s
             }
             result = s.entries[index].track
             s.copy(currentIndex = index)
@@ -331,10 +327,10 @@ class QueueManager @Inject constructor() {
      */
     fun resetToStart(): Track? {
         var result: Track? = null
-        _state.update { s ->
+        updateState { s ->
             if (s.entries.isEmpty()) {
                 result = null
-                return@update s
+                return@updateState s
             }
             result = s.entries.first().track
             s.copy(currentIndex = 0)
@@ -343,10 +339,10 @@ class QueueManager @Inject constructor() {
     }
 
     fun shuffle() {
-        _state.update { s ->
-            if (s.entries.size <= 1) return@update s
+        updateState { s ->
+            if (s.entries.size <= 1) return@updateState s
 
-            val currentEntry = s.entries.getOrNull(s.currentIndex) ?: return@update s
+            val currentEntry = s.entries.getOrNull(s.currentIndex) ?: return@updateState s
 
             // Save original order for unshuffle
             if (originalQueue == null) {
@@ -366,7 +362,7 @@ class QueueManager @Inject constructor() {
         val saved = originalQueue ?: return
         originalQueue = null
 
-        _state.update { s ->
+        updateState { s ->
             val currentEntry = s.entries.getOrNull(s.currentIndex)
 
             // Match by uid, not track id: with duplicate ids in the queue only
@@ -385,7 +381,7 @@ class QueueManager @Inject constructor() {
     }
 
     fun clear() {
-        _state.value = QueueState()
+        setState(QueueState())
         originalQueue = null
     }
 
@@ -395,13 +391,13 @@ class QueueManager @Inject constructor() {
         // system service kills - clearing here silently erased the whole queue
         // and hid the mini player after any long pause. Explicit user intent to
         // drop the queue goes through [clear] (mini player swipe-down).
-        // flowScope is also NOT cancelled - derived StateFlows must remain
-        // alive so existing collectors (ViewModels, UI) continue receiving
-        // updates.
+        // The derived StateFlows are plain MutableStateFlows with no backing
+        // coroutine, so there is nothing to cancel and existing collectors
+        // (ViewModels, UI) keep receiving updates across a service restart.
     }
 
     fun reinitialize() {
-        // No-op: flowScope is permanent, derived flows are stable references and
-        // release() preserves the queue for exactly this restart path.
+        // No-op: the derived flows are stable references with no scope to
+        // restart, and release() preserves the queue for exactly this path.
     }
 }

@@ -10,6 +10,7 @@ import com.dustvalve.next.android.data.local.db.entity.TrackEntity
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.mockk
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -19,13 +20,16 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class PlaylistRepositoryImplTest : DbTestBase() {
 
-    private fun repo() = PlaylistRepositoryImpl(
+    // Extension on TestScope so the repository's ioDispatcher shares runTest's
+    // scheduler. A bare UnconfinedTestDispatcher() mints its OWN scheduler, and
+    // yield()ing across the two blows up as DispatchException mid-flow.
+    private fun TestScope.repo() = PlaylistRepositoryImpl(
         database = db,
         playlistDao = db.playlistDao(),
         trackDao = db.trackDao(),
         favoriteDao = db.favoriteDao(),
         downloadRepository = mockk<DownloadRepository>(relaxed = true),
-        ioDispatcher = UnconfinedTestDispatcher(),
+        ioDispatcher = UnconfinedTestDispatcher(testScheduler),
     )
 
     private fun track(id: String) = TrackEntity(

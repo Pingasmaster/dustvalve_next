@@ -1,8 +1,10 @@
 package com.dustvalve.next.android.crash
 
+import android.app.Activity
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
 import android.util.Log
@@ -116,7 +118,7 @@ class CrashReportManager @Inject constructor(
             putExtra(Intent.EXTRA_SUBJECT, SHARE_SUBJECT)
             putExtra(Intent.EXTRA_TEXT, pending.report.logText)
         }
-        activityContext.startActivity(Intent.createChooser(send, null))
+        activityContext.startActivityForReport(Intent.createChooser(send, null))
         consumePendingFile()
     }
 
@@ -131,7 +133,7 @@ class CrashReportManager @Inject constructor(
         val pending = (_state.value as? PromptState.Pending) ?: return
         val view = Intent(Intent.ACTION_VIEW, buildIssueUrl(pending.report.logText).toUri())
         try {
-            activityContext.startActivity(view)
+            activityContext.startActivityForReport(view)
             consumePendingFile()
         } catch (_: android.content.ActivityNotFoundException) {
             // No browser/URL handler on this device. The one button meant to
@@ -307,4 +309,17 @@ class CrashReportManager @Inject constructor(
                 "&body=" + URLEncoder.encode(body, Charsets.UTF_8.name())
         }
     }
+}
+
+/**
+ * Starts [intent] from a context that is normally an Activity, adding
+ * FLAG_ACTIVITY_NEW_TASK when it is not. The two callers are the crash-report
+ * buttons: the one control meant to REPORT a crash must never itself throw
+ * AndroidRuntimeException because a non-Activity context reached it.
+ */
+private fun Context.startActivityForReport(intent: Intent) {
+    var ctx: Context? = this
+    while (ctx is ContextWrapper && ctx !is Activity) ctx = ctx.baseContext
+    if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    startActivity(intent)
 }

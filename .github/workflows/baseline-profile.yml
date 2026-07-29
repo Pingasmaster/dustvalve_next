@@ -165,15 +165,66 @@ jobs:
             macrobenchmark/build/outputs/androidTest-results/
           if-no-files-found: warn
 
+      # Publishing the result is split into "push the branch" and "open the
+      # PR" on purpose. peter-evans/create-pull-request used to do both and
+      # failed the whole job with a bare "Unexpected error:" - no log line
+      # said whether generation, the commit, or PR creation had broken, and a
+      # perfectly good profile was thrown away with it. Pushing the branch
+      # only needs contents:write (always granted here); opening the PR
+      # additionally needs the org/repo setting "Allow GitHub Actions to
+      # create and approve pull requests", which this job cannot grant
+      # itself. So the push must not be hostage to the PR call: if PR
+      # creation is refused, warn with the compare link and keep the job
+      # green - the profiles are already on the branch, ready to review.
+      - name: Commit + push regenerated profiles to the bot branch
+        id: profiles
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Stage per file, not by pathspec: neither profile is tracked on
+          # master yet, so `git diff` would report "no change" for a brand new
+          # file and `git add <missing path>` would abort the whole step.
+          # The previous step already guarantees baseline-prof.txt exists and
+          # is non-empty; startup-prof.txt is best-effort.
+          git add -- app/src/release/baseline-prof.txt
+          if [ -s app/src/release/startup-prof.txt ]; then
+            git add -- app/src/release/startup-prof.txt
+          fi
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Regenerated profiles are identical to master - nothing to propose." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "chore(baseline-profile): regenerate from API 37 / Pixel 7a"
+          # Force-push: the branch is bot-owned and only ever carries the
+          # latest regeneration on top of the master it was generated from.
+          git push --force origin HEAD:refs/heads/bot/baseline-profile-regen
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "Pushed regenerated profiles to bot/baseline-profile-regen" \
+            >> "$GITHUB_STEP_SUMMARY"
+
       - name: Open PR with regenerated profiles
-        uses: peter-evans/create-pull-request@v8.1.1
-        with:
-          branch: bot/baseline-profile-regen
-          title: "chore(baseline-profile): regenerate baseline-prof.txt + startup-prof.txt"
-          commit-message: "chore(baseline-profile): regenerate from API 37 / Pixel 7a"
-          body: |
-            Automated regeneration via the baseline-profile CI workflow.
-            See app/src/release/ for the diff.
-          add-paths: |
-            app/src/release/baseline-prof.txt
-            app/src/release/startup-prof.txt
+        if: steps.profiles.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMPARE_URL: >-
+            ${{ github.server_url }}/${{ github.repository }}/compare/bot/baseline-profile-regen?expand=1
+        run: |
+          set -uo pipefail
+          open_pr=$(gh pr list --head bot/baseline-profile-regen --base master \
+            --state open --json number --jq '.[0].number // empty' || true)
+          if [ -n "$open_pr" ]; then
+            echo "PR #${open_pr} already open; the force-push above updated it." \
+              >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if gh pr create --base master --head bot/baseline-profile-regen \
+              --title "chore(baseline-profile): regenerate baseline-prof.txt + startup-prof.txt" \
+              --body "Automated regeneration via the baseline-profile CI workflow. See app/src/release/ for the diff."; then
+            exit 0
+          fi
+          echo "::warning title=Baseline profile PR::gh pr create was refused (most likely 'Allow GitHub Actions to create and approve pull requests' is off). The branch bot/baseline-profile-regen is pushed - open the PR manually: ${COMPARE_URL}"
+          echo "Branch pushed, but the PR could not be opened automatically: ${COMPARE_URL}" \
+            >> "$GITHUB_STEP_SUMMARY"

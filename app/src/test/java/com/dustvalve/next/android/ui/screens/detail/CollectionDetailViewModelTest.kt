@@ -204,8 +204,9 @@ class CollectionDetailViewModelTest {
     @Test fun `unfavoriting deletes only the playlist imported this session`() = runTest(dispatcher) {
         mockkStatic("androidx.room.RoomDatabaseKt")
         try {
+            // Extension function: arg 0 is the RoomDatabase receiver, arg 1 the block.
             coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
-                firstArg<suspend () -> Any?>().invoke()
+                secondArg<suspend () -> Any?>().invoke()
             }
             val url = "https://youtube.com/playlist?list=PL1"
             val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
