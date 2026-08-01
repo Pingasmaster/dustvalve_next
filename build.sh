@@ -2,6 +2,7 @@
 #
 # Usage:
 #   ./build.sh                    # bump version + clean + ktlintCheck + detekt + lintRelease + test + assemble
+#                                 # then one-shot NetBird APK HTTP serve at :8765/app-release.apk
 #   ./build.sh --clean            # gradle clean + remove APK + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
@@ -12,6 +13,10 @@
 #   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel7aApi37 + exit
 #   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
+#
+# After a successful full build, scripts/apk_http_serve.sh publishes
+# http://<netbird-fqdn>:8765/app-release.apk until the first complete download,
+# 10 minutes, or the next ./build.sh invocation - whichever happens first.
 #
 # The emulator tiers (--smoke/--e2e/--e2e-live) boot a Gradle Managed Device;
 # budget ~2 GB of RAM beyond the Gradle daemon. If the host QEMU cannot boot
@@ -27,6 +32,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# Any build.sh invocation stops a leftover one-shot APK HTTP serve from a
+# previous successful build (also stopped by first download or 10 min timeout).
+./scripts/apk_http_serve.sh stop || true
 
 # JEP 498 opt-in for every forked JVM (ktlint workers, Kotlin daemon):
 # kotlin-compiler-embeddable 2.2.x still uses sun.misc.Unsafe and JDK 25
@@ -216,3 +225,6 @@ fi
 rm -f "$ROOT_APK"
 cp "$GRADLE_APK" "$ROOT_APK"
 echo "Copied release APK to $ROOT_APK"
+
+# One-shot NetBird sideload URL (first download / 10 min / next build.sh).
+./scripts/apk_http_serve.sh start "$ROOT_APK"

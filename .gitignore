@@ -19,6 +19,8 @@ build/
 .cxx
 *.apk
 .build.lock
+.apk-http-serve.pid
+.apk-http-serve.log
 
 # Signing / secrets
 *.jks
