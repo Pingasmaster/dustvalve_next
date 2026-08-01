@@ -93,6 +93,7 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
@@ -234,6 +235,7 @@ fun BandcampScreen(
             onDismissRequest = { viewModel.dismissCategory() },
             containerColor = selectedCategoryColor,
             contentColor = Color.White,
+            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
         ) {
             Text(
                 text = state.selectedGenreName,
@@ -1031,9 +1033,10 @@ private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> 
         if (carouselAlbums.isNotEmpty()) {
             item(key = "carousel") {
                 val carouselState = rememberCarouselState { carouselAlbums.size }
+                val preferredItemWidth = LocalAdaptiveLayoutInfo.current.carouselItemWidth
                 HorizontalMultiBrowseCarousel(
                     state = carouselState,
-                    preferredItemWidth = 200.dp,
+                    preferredItemWidth = preferredItemWidth,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)

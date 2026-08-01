@@ -75,6 +75,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
+import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
@@ -249,238 +252,252 @@ fun AlbumDetailScreen(
             }
 
             album != null -> {
-                LazyColumn(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding),
-                    contentPadding = PaddingValues(bottom = 10.dp),
+                    contentAlignment = Alignment.TopCenter,
                 ) {
-                    // Hero album art with gradient overlay
-                    item(key = "album_art") {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .animateItem(),
-                        ) {
-                            AsyncImage(
-                                model = album.artUrl,
-                                contentDescription = album.title,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    // Clip only while the heart morph is
-                                    // animating so the resting hero stays
-                                    // full-bleed.
-                                    .then(
-                                        if (heartMorph.progress > 0f) {
-                                            Modifier.clip(heartMorph.shape)
-                                        } else {
-                                            Modifier
-                                        },
-                                    )
-                                    // Double-tap the cover to toggle the album
-                                    // favorite (single tap stays a no-op, so
-                                    // no added latency anywhere) - same heart
-                                    // morph as the player's album art.
-                                    .pointerInput(album.id) {
-                                        detectTapGestures(
-                                            onDoubleTap = {
-                                                hapticFeedback.toggle(!album.isFavorite)
-                                                viewModel.toggleFavorite()
-                                                heartScope.launch { heartMorph.play() }
-                                            },
-                                        )
-                                    },
-                                contentScale = ContentScale.Crop,
-                            )
-                        }
-                    }
-
-                    // Optional release date - name + artist live in the
-                    // LargeFlexibleTopAppBar above, so we drop the overlay
-                    // text and the artist link here. The "Artist" icon button
-                    // in the action group below handles navigation to the
-                    // artist page.
-                    album.releaseDate?.takeIf { it.isNotBlank() }?.let { date ->
-                        item(key = "album_release_date") {
-                            Text(
-                                text = date,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .adaptiveContentWidth(),
+                        contentPadding = PaddingValues(bottom = 10.dp),
+                    ) {
+                        // Hero album art with gradient overlay
+                        item(key = "album_art") {
+                            val adaptive = LocalAdaptiveLayoutInfo.current
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 4.dp)
                                     .animateItem(),
-                            )
-                        }
-                    }
-
-                    // Action bar - connected M3E button group, offset so its
-                    // vertical centre lands on the cover's bottom edge.
-                    item(key = "actions") {
-                        val allTracksDownloaded = album.tracks.isNotEmpty() &&
-                            album.tracks.all { it.id in state.downloadedTrackIds }
-                        AlbumActionBar(
-                            isFavorite = album.isFavorite,
-                            isDownloading = state.isDownloading,
-                            allTracksDownloaded = allTracksDownloaded,
-                            artistEnabled = album.artistUrl.isNotBlank(),
-                            hasTracks = album.tracks.isNotEmpty(),
-                            onPlayAll = {
-                                if (album.tracks.isNotEmpty()) {
-                                    playerViewModel.playAlbum(album.tracks, 0)
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .adaptiveHeroSize(adaptive.heroMaxSize)
+                                        .aspectRatio(1f),
+                                ) {
+                                    AsyncImage(
+                                        model = album.artUrl,
+                                        contentDescription = album.title,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            // Clip only while the heart morph is
+                                            // animating so the resting hero stays
+                                            // full-bleed.
+                                            .then(
+                                                if (heartMorph.progress > 0f) {
+                                                    Modifier.clip(heartMorph.shape)
+                                                } else {
+                                                    Modifier
+                                                },
+                                            )
+                                            // Double-tap the cover to toggle the album
+                                            // favorite (single tap stays a no-op, so
+                                            // no added latency anywhere) - same heart
+                                            // morph as the player's album art.
+                                            .pointerInput(album.id) {
+                                                detectTapGestures(
+                                                    onDoubleTap = {
+                                                        hapticFeedback.toggle(!album.isFavorite)
+                                                        viewModel.toggleFavorite()
+                                                        heartScope.launch { heartMorph.play() }
+                                                    },
+                                                )
+                                            },
+                                        contentScale = ContentScale.Crop,
+                                    )
                                 }
-                            },
-                            onShuffle = {
-                                if (album.tracks.isNotEmpty()) {
-                                    playerViewModel.playAlbum(album.tracks.shuffled(), 0)
-                                }
-                            },
-                            onToggleFavorite = { viewModel.toggleFavorite() },
-                            onDownload = {
-                                if (allTracksDownloaded) {
-                                    showDeleteAlbumDialog = true
-                                } else {
-                                    viewModel.downloadAlbum()
-                                }
-                            },
-                            onOpenArtist = { onArtistClick(album.artistUrl) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .offset(y = (-28).dp)
-                                .animateItem(),
-                        )
-                    }
-
-                    // About section (expandable)
-                    album.about?.let { about ->
-                        if (about.isNotBlank()) {
-                            item(key = "about") {
-                                ExpandableAbout(about = about)
                             }
                         }
-                    }
 
-                    // Track list header + segmented items
-                    if (album.tracks.isNotEmpty()) {
-                        item(key = "tracks_header") {
-                            Text(
-                                text = com.dustvalve.next.android.ui.util.tracksHeaderLabel(
-                                    trackCount = album.tracks.size,
-                                    totalDurationSec = album.tracks.sumOf { it.duration.toDouble() }.toLong(),
-                                ),
-                                style = MaterialTheme.typography.titleMediumEmphasized,
-                                modifier = Modifier
-                                    .padding(
-                                        start = 20.dp,
-                                        end = 20.dp,
-                                        top = 16.dp,
-                                        bottom = 4.dp,
-                                    )
-                                    .animateItem(),
-                            )
-                        }
-
-                        items(
-                            count = album.tracks.size,
-                            key = { album.tracks[it].id },
-                            contentType = { "album_track" },
-                        ) { index ->
-                            val track = album.tracks[index]
-                            val isCurrentTrack = playerState.currentTrack?.id == track.id
-                            val isTrackDownloaded = track.id in state.downloadedTrackIds
-
-                            SegmentedListItem(
-                                index = index,
-                                count = album.tracks.size,
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                                ),
-                            ) {
-                                MusicRow(
-                                    track = track,
-                                    onClick = {
-                                        playerViewModel.playAlbum(album.tracks, index)
-                                    },
-                                    isPlaying = isCurrentTrack && playerState.isPlaying,
-                                    isCurrentTrack = isCurrentTrack,
-                                    showFavorite = true,
-                                    onFavoriteClick = {
-                                        viewModel.toggleTrackFavorite(track.id)
-                                    },
-                                    showDownload = true,
-                                    onDownloadClick = {
-                                        if (isTrackDownloaded) {
-                                            trackToDelete = track
-                                        } else {
-                                            viewModel.downloadTrack(track)
-                                        }
-                                    },
-                                    isDownloading = track.id in state.downloadingTrackIds,
-                                    isDownloaded = isTrackDownloaded,
-                                    priceSuffix = state.trackPrices[track.id]?.let { formatPrice(it) },
+                        // Optional release date - name + artist live in the
+                        // LargeFlexibleTopAppBar above, so we drop the overlay
+                        // text and the artist link here. The "Artist" icon button
+                        // in the action group below handles navigation to the
+                        // artist page.
+                        album.releaseDate?.takeIf { it.isNotBlank() }?.let { date ->
+                            item(key = "album_release_date") {
+                                Text(
+                                    text = date,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 20.dp, vertical = 4.dp)
+                                        .animateItem(),
                                 )
                             }
                         }
-                    }
 
-                    // Bandcamp-only "Buy" split CTA - opens the album page in
-                    // the default browser. Trailing chevron exposes "Send as
-                    // a gift" and, when the artist offers a buy-full-
-                    // discography bundle, an "Buy full discography (price)"
-                    // option that switches the leading button to the bundle
-                    // price + URL.
-                    if (album.url.contains("bandcamp.com", ignoreCase = true)) {
-                        item(key = "buy_on_bandcamp") {
-                            val uriHandler = LocalUriHandler.current
-                            BuyOnBandcampSplitButton(
-                                albumPrice = album.price,
-                                singleTrackPrice = album.singleTrackPrice,
-                                albumUrl = album.url,
-                                discographyOffer = album.discographyOffer,
-                                onOpen = { uriHandler.openUri(it) },
-                                modifier = Modifier.animateItem(),
-                            )
-                        }
-                    }
-
-                    // Tags in contained surface
-                    if (album.tags.isNotEmpty()) {
-                        item(key = "tags") {
-                            Surface(
+                        // Action bar - connected M3E button group, offset so its
+                        // vertical centre lands on the cover's bottom edge.
+                        item(key = "actions") {
+                            val allTracksDownloaded = album.tracks.isNotEmpty() &&
+                                album.tracks.all { it.id in state.downloadedTrackIds }
+                            AlbumActionBar(
+                                isFavorite = album.isFavorite,
+                                isDownloading = state.isDownloading,
+                                allTracksDownloaded = allTracksDownloaded,
+                                artistEnabled = album.artistUrl.isNotBlank(),
+                                hasTracks = album.tracks.isNotEmpty(),
+                                onPlayAll = {
+                                    if (album.tracks.isNotEmpty()) {
+                                        playerViewModel.playAlbum(album.tracks, 0)
+                                    }
+                                },
+                                onShuffle = {
+                                    if (album.tracks.isNotEmpty()) {
+                                        playerViewModel.playAlbum(album.tracks.shuffled(), 0)
+                                    }
+                                },
+                                onToggleFavorite = { viewModel.toggleFavorite() },
+                                onDownload = {
+                                    if (allTracksDownloaded) {
+                                        showDeleteAlbumDialog = true
+                                    } else {
+                                        viewModel.downloadAlbum()
+                                    }
+                                },
+                                onOpenArtist = { onArtistClick(album.artistUrl) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                                    .padding(horizontal = 16.dp)
+                                    .offset(y = (-28).dp)
                                     .animateItem(),
-                                shape = MaterialTheme.shapes.extraLarge,
-                                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(20.dp),
+                            )
+                        }
+
+                        // About section (expandable)
+                        album.about?.let { about ->
+                            if (about.isNotBlank()) {
+                                item(key = "about") {
+                                    ExpandableAbout(about = about)
+                                }
+                            }
+                        }
+
+                        // Track list header + segmented items
+                        if (album.tracks.isNotEmpty()) {
+                            item(key = "tracks_header") {
+                                Text(
+                                    text = com.dustvalve.next.android.ui.util.tracksHeaderLabel(
+                                        trackCount = album.tracks.size,
+                                        totalDurationSec = album.tracks.sumOf { it.duration.toDouble() }.toLong(),
+                                    ),
+                                    style = MaterialTheme.typography.titleMediumEmphasized,
+                                    modifier = Modifier
+                                        .padding(
+                                            start = 20.dp,
+                                            end = 20.dp,
+                                            top = 16.dp,
+                                            bottom = 4.dp,
+                                        )
+                                        .animateItem(),
+                                )
+                            }
+
+                            items(
+                                count = album.tracks.size,
+                                key = { album.tracks[it].id },
+                                contentType = { "album_track" },
+                            ) { index ->
+                                val track = album.tracks[index]
+                                val isCurrentTrack = playerState.currentTrack?.id == track.id
+                                val isTrackDownloaded = track.id in state.downloadedTrackIds
+
+                                SegmentedListItem(
+                                    index = index,
+                                    count = album.tracks.size,
+                                    modifier = Modifier.animateItem(
+                                        fadeInSpec = null,
+                                        fadeOutSpec = null,
+                                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                    ),
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.detail_tags),
-                                        style = MaterialTheme.typography.titleMediumEmphasized,
-                                        modifier = Modifier.padding(bottom = 12.dp),
+                                    MusicRow(
+                                        track = track,
+                                        onClick = {
+                                            playerViewModel.playAlbum(album.tracks, index)
+                                        },
+                                        isPlaying = isCurrentTrack && playerState.isPlaying,
+                                        isCurrentTrack = isCurrentTrack,
+                                        showFavorite = true,
+                                        onFavoriteClick = {
+                                            viewModel.toggleTrackFavorite(track.id)
+                                        },
+                                        showDownload = true,
+                                        onDownloadClick = {
+                                            if (isTrackDownloaded) {
+                                                trackToDelete = track
+                                            } else {
+                                                viewModel.downloadTrack(track)
+                                            }
+                                        },
+                                        isDownloading = track.id in state.downloadingTrackIds,
+                                        isDownloaded = isTrackDownloaded,
+                                        priceSuffix = state.trackPrices[track.id]?.let { formatPrice(it) },
                                     )
-                                    AppFlowRow(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                                }
+                            }
+                        }
+
+                        // Bandcamp-only "Buy" split CTA - opens the album page in
+                        // the default browser. Trailing chevron exposes "Send as
+                        // a gift" and, when the artist offers a buy-full-
+                        // discography bundle, an "Buy full discography (price)"
+                        // option that switches the leading button to the bundle
+                        // price + URL.
+                        if (album.url.contains("bandcamp.com", ignoreCase = true)) {
+                            item(key = "buy_on_bandcamp") {
+                                val uriHandler = LocalUriHandler.current
+                                BuyOnBandcampSplitButton(
+                                    albumPrice = album.price,
+                                    singleTrackPrice = album.singleTrackPrice,
+                                    albumUrl = album.url,
+                                    discographyOffer = album.discographyOffer,
+                                    onOpen = { uriHandler.openUri(it) },
+                                    modifier = Modifier.animateItem(),
+                                )
+                            }
+                        }
+
+                        // Tags in contained surface
+                        if (album.tags.isNotEmpty()) {
+                            item(key = "tags") {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                        .animateItem(),
+                                    shape = MaterialTheme.shapes.extraLarge,
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(20.dp),
                                     ) {
-                                        album.tags.forEach { tag ->
-                                            Surface(
-                                                shape = AppShapes.Tag,
-                                                color = MaterialTheme.colorScheme.secondaryContainer,
-                                            ) {
-                                                Text(
-                                                    text = tag,
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                                                )
+                                        Text(
+                                            text = stringResource(R.string.detail_tags),
+                                            style = MaterialTheme.typography.titleMediumEmphasized,
+                                            modifier = Modifier.padding(bottom = 12.dp),
+                                        )
+                                        AppFlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            album.tags.forEach { tag ->
+                                                Surface(
+                                                    shape = AppShapes.Tag,
+                                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                                ) {
+                                                    Text(
+                                                        text = tag,
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -576,7 +593,7 @@ private fun AlbumActionBar(
             checked = isFavorite,
             onCheckedChange = { onToggleFavorite() },
             shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {
@@ -601,7 +618,7 @@ private fun AlbumActionBar(
             onCheckedChange = { onDownload() },
             enabled = !isDownloading,
             shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {
@@ -636,7 +653,7 @@ private fun AlbumActionBar(
 private val ActionBarSpacing = 8.dp
 
 /**
- * M3E SplitButtonLayout for Bandcamp's "Buy" CTA.
+ * M3E SplitButton for Bandcamp's "Buy" CTA.
  *
  * Leading button shows the active offer's formatted price + shopping-bag
  * icon; tapping opens that offer's URL in the user's browser. Trailing
@@ -687,7 +704,7 @@ private fun BuyOnBandcampSplitButton(
             .padding(vertical = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
-        androidx.compose.material3.SplitButtonLayout(
+        androidx.compose.material3.SplitButton(
             leadingButton = {
                 androidx.compose.material3.SplitButtonDefaults.LeadingButton(
                     onClick = { onOpen(activeUrl) },

@@ -458,6 +458,8 @@
     <string name="library_artist_label">Artist</string>
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_empty_subtitle">Your playlists and favorites will appear here</string>
+    <string name="library_select_item_title">Select an item</string>
+    <string name="library_select_item_subtitle">Choose a playlist, album, or artist from the list</string>
     <string name="library_delete_playlist_title">Delete playlist</string>
     <string name="library_delete_playlist_text">Delete “<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>”? This cannot be undone.</string>
     <string name="library_remove_title">Remove from library</string>

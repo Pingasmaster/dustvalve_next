@@ -72,6 +72,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.getPlaylistIconRes
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
@@ -225,36 +226,45 @@ fun PlaylistDetailScreen(
             }
 
             else -> {
-                PlaylistContent(
-                    playlist = playlist,
-                    tracks = state.tracks,
-                    currentTrackId = playerState.currentTrack?.id,
-                    isPlaying = playerState.isPlaying,
-                    isDownloading = state.isDownloading,
-                    downloadedTrackIds = state.downloadedTrackIds,
-                    autoDownloadFavorites = state.autoDownloadFavorites,
-                    onTrackClick = { tracks, index ->
-                        playerViewModel.playTrackInList(tracks, index)
-                    },
-                    onMoveTrack = { from, to ->
-                        viewModel.moveTrack(from, to)
-                    },
-                    onPlayAll = {
-                        if (state.tracks.isNotEmpty()) {
-                            playerViewModel.playTrackInList(state.tracks, 0)
-                        }
-                    },
-                    onShufflePlay = {
-                        if (state.tracks.isNotEmpty()) {
-                            playerViewModel.playTrackInList(state.tracks.shuffled(), 0)
-                        }
-                    },
-                    onDownloadAll = { viewModel.downloadAll() },
-                    onRemoveTrack = { trackId -> viewModel.removeTrack(trackId) },
-                    onTogglePin = { viewModel.togglePin() },
-                    listState = listState,
-                    modifier = Modifier.padding(paddingValues),
-                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    PlaylistContent(
+                        playlist = playlist,
+                        tracks = state.tracks,
+                        currentTrackId = playerState.currentTrack?.id,
+                        isPlaying = playerState.isPlaying,
+                        isDownloading = state.isDownloading,
+                        downloadedTrackIds = state.downloadedTrackIds,
+                        autoDownloadFavorites = state.autoDownloadFavorites,
+                        onTrackClick = { tracks, index ->
+                            playerViewModel.playTrackInList(tracks, index)
+                        },
+                        onMoveTrack = { from, to ->
+                            viewModel.moveTrack(from, to)
+                        },
+                        onPlayAll = {
+                            if (state.tracks.isNotEmpty()) {
+                                playerViewModel.playTrackInList(state.tracks, 0)
+                            }
+                        },
+                        onShufflePlay = {
+                            if (state.tracks.isNotEmpty()) {
+                                playerViewModel.playTrackInList(state.tracks.shuffled(), 0)
+                            }
+                        },
+                        onDownloadAll = { viewModel.downloadAll() },
+                        onRemoveTrack = { trackId -> viewModel.removeTrack(trackId) },
+                        onTogglePin = { viewModel.togglePin() },
+                        listState = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .adaptiveContentWidth(),
+                    )
+                }
             }
         }
     }
@@ -587,7 +597,7 @@ private fun PlaylistActionBar(
                 onCheckedChange = { if (!allTracksDownloaded) onDownload() },
                 enabled = hasTracks && !isDownloading && !allTracksDownloaded,
                 shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+                colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 modifier = Modifier.heightIn(min = 56.dp),
             ) {

@@ -67,6 +67,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
+import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
@@ -236,144 +239,160 @@ fun CollectionDetailScreen(
                     }
                 }
 
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize().padding(innerPadding),
-                    contentPadding = PaddingValues(bottom = 10.dp),
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.TopCenter,
                 ) {
-                    // Hero cover. Name + track count live in the top-bar, so
-                    // the hero is the bare artwork - matches AlbumDetailScreen.
-                    item(key = "hero") {
-                        val heartMorph = rememberHeartMorphState()
-                        val heartScope = rememberCoroutineScope()
-                        val hapticFeedback = LocalHapticFeedback.current
-                        // Clip only while the morph is animating so the
-                        // resting hero stays full-bleed.
-                        val heartClipModifier = if (heartMorph.progress > 0f) {
-                            Modifier.clip(heartMorph.shape)
-                        } else {
-                            Modifier
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(1f)
-                                .animateItem()
-                                // Double-tap the hero to toggle the collection
-                                // favorite - same heart morph as the player's
-                                // album art (and the other detail heroes).
-                                .pointerInput(collectionUrl) {
-                                    detectTapGestures(
-                                        onDoubleTap = {
-                                            hapticFeedback.toggle(!state.isFavorite)
-                                            viewModel.toggleFavorite()
-                                            heartScope.launch { heartMorph.play() }
-                                        },
-                                    )
-                                },
-                        ) {
-                            if (!heroUrl.isNullOrBlank()) {
-                                AsyncImage(
-                                    model = heroUrl,
-                                    contentDescription = state.name,
-                                    modifier = Modifier.fillMaxSize().then(heartClipModifier),
-                                    contentScale = ContentScale.Crop,
-                                )
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .adaptiveContentWidth(),
+                        contentPadding = PaddingValues(bottom = 10.dp),
+                    ) {
+                        // Hero cover. Name + track count live in the top-bar, so
+                        // the hero is the bare artwork - matches AlbumDetailScreen.
+                        item(key = "hero") {
+                            val adaptive = LocalAdaptiveLayoutInfo.current
+                            val heartMorph = rememberHeartMorphState()
+                            val heartScope = rememberCoroutineScope()
+                            val hapticFeedback = LocalHapticFeedback.current
+                            // Clip only while the morph is animating so the
+                            // resting hero stays full-bleed.
+                            val heartClipModifier = if (heartMorph.progress > 0f) {
+                                Modifier.clip(heartMorph.shape)
                             } else {
+                                Modifier
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItem()
+                                    // Double-tap the hero to toggle the collection
+                                    // favorite - same heart morph as the player's
+                                    // album art (and the other detail heroes).
+                                    .pointerInput(collectionUrl) {
+                                        detectTapGestures(
+                                            onDoubleTap = {
+                                                hapticFeedback.toggle(!state.isFavorite)
+                                                viewModel.toggleFavorite()
+                                                heartScope.launch { heartMorph.play() }
+                                            },
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .then(heartClipModifier)
-                                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                )
+                                        .adaptiveHeroSize(adaptive.heroMaxSize)
+                                        .aspectRatio(1f),
+                                ) {
+                                    if (!heroUrl.isNullOrBlank()) {
+                                        AsyncImage(
+                                            model = heroUrl,
+                                            contentDescription = state.name,
+                                            modifier = Modifier.fillMaxSize().then(heartClipModifier),
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .then(heartClipModifier)
+                                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                        )
+                                    }
+                                }
                             }
                         }
-                    }
 
-                    item(key = "actions") {
-                        val allDownloaded = state.tracks.isNotEmpty() &&
-                            state.tracks.all { it.id in state.downloadedTrackIds }
-                        CollectionActionBar(
-                            isFavorite = state.isFavorite,
-                            isDownloading = state.isDownloading,
-                            allTracksDownloaded = allDownloaded,
-                            hasTracks = state.tracks.isNotEmpty(),
-                            onPlayAll = {
-                                if (state.tracks.isNotEmpty()) {
-                                    playerViewModel.playAlbum(state.tracks, 0)
-                                }
-                            },
-                            onShuffle = {
-                                if (state.tracks.isNotEmpty()) {
-                                    playerViewModel.playAlbum(state.tracks.shuffled(), 0)
-                                }
-                            },
-                            onToggleFavorite = { viewModel.toggleFavorite() },
-                            onDownload = {
-                                if (allDownloaded) {
-                                    showDeleteDialog = true
-                                } else {
-                                    viewModel.downloadAll()
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .offset(y = (-28).dp)
-                                .animateItem(),
-                        )
-                    }
-
-                    if (state.tracks.isNotEmpty()) {
-                        item(key = "tracks_header") {
-                            Text(
-                                text = com.dustvalve.next.android.ui.util.tracksHeaderLabel(
-                                    trackCount = state.tracks.size,
-                                    totalDurationSec = state.tracks.sumOf { it.duration.toDouble() }.toLong(),
-                                ),
-                                style = MaterialTheme.typography.titleMediumEmphasized,
+                        item(key = "actions") {
+                            val allDownloaded = state.tracks.isNotEmpty() &&
+                                state.tracks.all { it.id in state.downloadedTrackIds }
+                            CollectionActionBar(
+                                isFavorite = state.isFavorite,
+                                isDownloading = state.isDownloading,
+                                allTracksDownloaded = allDownloaded,
+                                hasTracks = state.tracks.isNotEmpty(),
+                                onPlayAll = {
+                                    if (state.tracks.isNotEmpty()) {
+                                        playerViewModel.playAlbum(state.tracks, 0)
+                                    }
+                                },
+                                onShuffle = {
+                                    if (state.tracks.isNotEmpty()) {
+                                        playerViewModel.playAlbum(state.tracks.shuffled(), 0)
+                                    }
+                                },
+                                onToggleFavorite = { viewModel.toggleFavorite() },
+                                onDownload = {
+                                    if (allDownloaded) {
+                                        showDeleteDialog = true
+                                    } else {
+                                        viewModel.downloadAll()
+                                    }
+                                },
                                 modifier = Modifier
-                                    .padding(
-                                        start = 20.dp,
-                                        end = 20.dp,
-                                        top = 16.dp,
-                                        bottom = 4.dp,
-                                    )
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .offset(y = (-28).dp)
                                     .animateItem(),
                             )
                         }
-                        items(
-                            count = state.tracks.size,
-                            key = { state.tracks[it].id },
-                            contentType = { "collection_track" },
-                        ) { index ->
-                            val track = state.tracks[index]
-                            val isCurrent = playerState.currentTrack?.id == track.id
-                            SegmentedListItem(
-                                index = index,
-                                count = state.tracks.size,
-                                modifier = Modifier.animateItem(
-                                    fadeInSpec = null,
-                                    fadeOutSpec = null,
-                                    placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                                ),
-                            ) {
-                                MusicRow(
-                                    track = track,
-                                    onClick = { playerViewModel.playAlbum(state.tracks, index) },
-                                    isPlaying = isCurrent && playerState.isPlaying,
-                                    isCurrentTrack = isCurrent,
+
+                        if (state.tracks.isNotEmpty()) {
+                            item(key = "tracks_header") {
+                                Text(
+                                    text = com.dustvalve.next.android.ui.util.tracksHeaderLabel(
+                                        trackCount = state.tracks.size,
+                                        totalDurationSec = state.tracks.sumOf { it.duration.toDouble() }.toLong(),
+                                    ),
+                                    style = MaterialTheme.typography.titleMediumEmphasized,
+                                    modifier = Modifier
+                                        .padding(
+                                            start = 20.dp,
+                                            end = 20.dp,
+                                            top = 16.dp,
+                                            bottom = 4.dp,
+                                        )
+                                        .animateItem(),
                                 )
                             }
-                        }
-                        if (state.hasMore || state.isLoadingMore) {
-                            item(key = "loading_more") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) { ContainedLoadingIndicator() }
+                            items(
+                                count = state.tracks.size,
+                                key = { state.tracks[it].id },
+                                contentType = { "collection_track" },
+                            ) { index ->
+                                val track = state.tracks[index]
+                                val isCurrent = playerState.currentTrack?.id == track.id
+                                SegmentedListItem(
+                                    index = index,
+                                    count = state.tracks.size,
+                                    modifier = Modifier.animateItem(
+                                        fadeInSpec = null,
+                                        fadeOutSpec = null,
+                                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                                    ),
+                                ) {
+                                    MusicRow(
+                                        track = track,
+                                        onClick = { playerViewModel.playAlbum(state.tracks, index) },
+                                        isPlaying = isCurrent && playerState.isPlaying,
+                                        isCurrentTrack = isCurrent,
+                                    )
+                                }
+                            }
+                            if (state.hasMore || state.isLoadingMore) {
+                                item(key = "loading_more") {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) { ContainedLoadingIndicator() }
+                                }
                             }
                         }
                     }
@@ -441,7 +460,7 @@ private fun CollectionActionBar(
             checked = isFavorite,
             onCheckedChange = { onToggleFavorite() },
             shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {
@@ -462,7 +481,7 @@ private fun CollectionActionBar(
             onCheckedChange = { onDownload() },
             enabled = !isDownloading && hasTracks,
             shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {

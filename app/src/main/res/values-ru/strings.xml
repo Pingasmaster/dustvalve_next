@@ -420,6 +420,8 @@
     <string name="library_artist_label">Исполнитель</string>
     <string name="library_empty_title">Библиотека пуста</string>
     <string name="library_empty_subtitle">Здесь появятся твои плейлисты и избранное</string>
+    <string name="library_select_item_title">Выберите элемент</string>
+    <string name="library_select_item_subtitle">Выберите плейлист, альбом или исполнителя из списка</string>
     <string name="library_delete_playlist_title">Удалить плейлист</string>
     <string name="library_delete_playlist_text">Удалить «<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>»? Это действие нельзя отменить.</string>
     <string name="library_remove_title">Убрать из библиотеки</string>

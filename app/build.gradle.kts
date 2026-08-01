@@ -27,8 +27,8 @@ android {
         applicationId = "com.dustvalve.next.android"
         minSdk = 37
         targetSdk = 37
-        versionCode = 282
-        versionName = "0.5.4"
+        versionCode = 283
+        versionName = "0.5.5"
         // Instrumentation (smoke + E2E) runs against the REAL app object
         // graph - no HiltTestApplication on device by design.
         testInstrumentationRunner = "com.dustvalve.next.android.testing.DustvalveTestRunner"
@@ -324,6 +324,9 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.material3)
+    implementation(libs.material3.adaptive)
+    implementation(libs.material3.adaptive.layout)
+    implementation(libs.material3.adaptive.navigation)
     implementation(libs.compose.foundation)
     implementation(libs.compose.animation)
 

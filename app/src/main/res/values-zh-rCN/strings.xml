@@ -404,6 +404,8 @@
     <string name="library_artist_label">艺人</string>
     <string name="library_empty_title">你的音乐库是空的</string>
     <string name="library_empty_subtitle">你的播放列表和收藏将显示在这里</string>
+    <string name="library_select_item_title">选择一项</string>
+    <string name="library_select_item_subtitle">从列表中选择播放列表、专辑或艺人</string>
     <string name="library_delete_playlist_title">删除播放列表</string>
     <string name="library_delete_playlist_text">要删除“<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>”吗？此操作无法撤销。</string>
     <string name="library_remove_title">从音乐库移除</string>

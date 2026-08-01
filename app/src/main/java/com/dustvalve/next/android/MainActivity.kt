@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -43,9 +44,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -62,6 +63,8 @@ import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.ProvideAdaptiveLayout
 import com.dustvalve.next.android.ui.navigation.AppNavigation
 import com.dustvalve.next.android.ui.navigation.BottomNavBar
 import com.dustvalve.next.android.ui.navigation.BottomNavItem
@@ -342,7 +345,21 @@ private val MINI_BAR_HEIGHT = 66.dp
 // the same branching, so it is suppressed alongside LongMethod.
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
-private fun MainContent(
+private fun MainContent(accountRepository: AccountRepository, activity: MainActivity) {
+    ProvideAdaptiveLayout {
+        MainContentBody(
+            accountRepository = accountRepository,
+            activity = activity,
+        )
+    }
+}
+
+// Body is separated only so ProvideAdaptiveLayout can establish LocalAdaptiveLayoutInfo
+// before chrome reads it. ViewModels are obtained here via hiltViewModel() (same
+// activity-scoped instances) rather than forwarded from MainContent.
+@Composable
+@Suppress("LongMethod", "CyclomaticComplexMethod")
+private fun MainContentBody(
     accountRepository: AccountRepository,
     activity: MainActivity,
     playerViewModel: PlayerViewModel = hiltViewModel(),
@@ -352,6 +369,8 @@ private fun MainContent(
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
+    val adaptiveInfo = LocalAdaptiveLayoutInfo.current
+    val useNavRail = adaptiveInfo.useNavRail
 
     // Screen wake lock
     val isPlaying by remember {
@@ -402,9 +421,8 @@ private fun MainContent(
         playerViewModel.playTrack(track)
     }
 
-    // Adaptive layout: use NavigationRail on screens >= 600dp wide
-    val windowInfo = LocalWindowInfo.current
-    val useNavRail = windowInfo.containerDpSize.width >= 600.dp
+    // Adaptive chrome: NavigationRail on Medium+ (WindowSizeClass), bottom bar on Compact
+    // (metrics come from ProvideAdaptiveLayout / rememberAdaptiveLayoutInfo above).
 
     val miniVisible by remember {
         playerViewModel.uiState.map { it.isMiniPlayerVisible }.distinctUntilChanged()
@@ -647,7 +665,9 @@ private fun MainContent(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = dockDp),
+                            contentAlignment = Alignment.BottomCenter,
                         ) {
+                            val miniMax = adaptiveInfo.miniPlayerMaxWidth
                             MiniPlayer(
                                 sharedScope = sts,
                                 visScope = avScope,
@@ -655,7 +675,13 @@ private fun MainContent(
                                 onExpandClick = { navViewModel.expandPlayer() },
                                 onExpandSeek = onExpandSeek,
                                 onExpandSettle = onExpandSettle,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = if (miniMax == Dp.Unspecified) {
+                                    Modifier.fillMaxWidth()
+                                } else {
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .widthIn(max = miniMax)
+                                },
                             )
                         }
                     }

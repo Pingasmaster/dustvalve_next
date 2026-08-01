@@ -92,6 +92,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
@@ -1007,9 +1008,10 @@ private fun VideoHeroCard(item: SearchResult, onClick: () -> Unit, modifier: Mod
 @Composable
 private fun VideoCarousel(items: List<SearchResult>, onItemClick: (SearchResult) -> Unit) {
     val carouselState = rememberCarouselState { items.size }
+    val preferredItemWidth = LocalAdaptiveLayoutInfo.current.carouselItemWidth
     HorizontalMultiBrowseCarousel(
         state = carouselState,
-        preferredItemWidth = 240.dp,
+        preferredItemWidth = preferredItemWidth,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),

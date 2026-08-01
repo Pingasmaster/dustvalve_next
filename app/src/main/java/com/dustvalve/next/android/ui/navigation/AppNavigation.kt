@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.ui.TestTags
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
 import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
@@ -69,11 +70,14 @@ fun AppNavigation(
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val isForward by navViewModel.lastNavigationForward.collectAsStateWithLifecycle()
+    val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val currentDestination = backStack.lastOrNull() ?: NavDestination.LocalHome
     val coroutineScope = rememberCoroutineScope()
     val pendingLink by navViewModel.pendingLinkConfirmation.collectAsStateWithLifecycle()
     val linkSnackbarHostState = remember { SnackbarHostState() }
     val unsupportedMsg = stringResource(R.string.snackbar_unsupported_source)
+    val useLibraryDualPane =
+        LocalAdaptiveLayoutInfo.current.useDualPane && currentTab == BottomNavItem.LIBRARY
 
     // Surface "this link isn't from a supported source" regardless of which tab triggered it.
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -104,157 +108,165 @@ fun AppNavigation(
     val fadeSpec = MaterialTheme.motionScheme.slowEffectsSpec<Float>()
 
     Box(modifier = modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = currentDestination,
-            modifier = Modifier,
-            transitionSpec = {
-                if (isForward) {
-                    (fadeIn(animationSpec = fadeSpec) + slideInHorizontally(animationSpec = slideSpec) { it / 4 })
-                        .togetherWith(fadeOut(animationSpec = fadeSpec) + slideOutHorizontally(animationSpec = slideSpec) { -it / 4 })
-                } else {
-                    (fadeIn(animationSpec = fadeSpec) + slideInHorizontally(animationSpec = slideSpec) { -it / 4 })
-                        .togetherWith(fadeOut(animationSpec = fadeSpec) + slideOutHorizontally(animationSpec = slideSpec) { it / 4 })
-                }
-            },
-            label = "NavContent",
-        ) { destination ->
-            when (destination) {
-                is NavDestination.LocalHome -> LocalScreen(
-                    onExpandPlayer = { navViewModel.expandPlayer() },
-                )
-
-                is NavDestination.BandcampHome -> BandcampScreen(
-                    onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                    onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
-                    onOpenLink = { navViewModel.openLink(it) },
-                    onExpandPlayer = { navViewModel.expandPlayer() },
-                )
-
-                is NavDestination.YouTubeHome -> YouTubeScreen(
-                    onPlaylistClick = { url, name ->
-                        navViewModel.navigateTo(
-                            NavDestination.CollectionDetail(url = url, sourceId = "youtube", name = name),
-                        )
-                    },
-                    onArtistClick = { url, name, imageUrl ->
-                        navViewModel.navigateTo(
-                            NavDestination.ArtistDetail(
-                                url = url,
-                                sourceId = "youtube",
-                                name = name,
-                                imageUrl = imageUrl,
-                            ),
-                        )
-                    },
-                    onOpenLink = { navViewModel.openLink(it) },
-                    onExpandPlayer = { navViewModel.expandPlayer() },
-                )
-
-                is NavDestination.Library -> LibraryScreen(
-                    onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                    onArtistClick = { url ->
-                        val sourceId = if (url.contains("youtube.com") || url.contains("youtu.be")) {
-                            "youtube"
-                        } else {
-                            "bandcamp"
-                        }
-                        navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
-                    },
-                    onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
-                )
-
-                is NavDestination.Settings -> SettingsScreen(
-                    onBandcampLoginClick = { navViewModel.navigateTo(NavDestination.AccountLogin) },
-                    onYouTubeMusicLoginClick = { navViewModel.navigateTo(NavDestination.YouTubeMusicLogin) },
-                )
-
-                // Detail destinations: the detail ViewModel is resolved against a
-                // per-destination store owner (cleared once the destination leaves
-                // every back stack). Only the detail VM is scoped this way - the
-                // screens' PlayerViewModel/NavigationViewModel defaults still
-                // resolve to the activity-scoped shared instances.
-                is NavDestination.AlbumDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination)) {
-                        "detailStoreKey must be non-null for detail destination $destination"
+        if (useLibraryDualPane) {
+            LibraryListDetailHost(
+                backStack = backStack,
+                detailVmStores = detailVmStores,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            AnimatedContent(
+                targetState = currentDestination,
+                modifier = Modifier,
+                transitionSpec = {
+                    if (isForward) {
+                        (fadeIn(animationSpec = fadeSpec) + slideInHorizontally(animationSpec = slideSpec) { it / 4 })
+                            .togetherWith(fadeOut(animationSpec = fadeSpec) + slideOutHorizontally(animationSpec = slideSpec) { -it / 4 })
+                    } else {
+                        (fadeIn(animationSpec = fadeSpec) + slideInHorizontally(animationSpec = slideSpec) { -it / 4 })
+                            .togetherWith(fadeOut(animationSpec = fadeSpec) + slideOutHorizontally(animationSpec = slideSpec) { it / 4 })
                     }
-                    AlbumDetailScreen(
-                        albumUrl = destination.url,
-                        onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
-                        onBack = { navViewModel.navigateBack() },
-                        viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
+                },
+                label = "NavContent",
+            ) { destination ->
+                when (destination) {
+                    is NavDestination.LocalHome -> LocalScreen(
+                        onExpandPlayer = { navViewModel.expandPlayer() },
                     )
-                }
 
-                is NavDestination.ArtistDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination)) {
-                        "detailStoreKey must be non-null for detail destination $destination"
-                    }
-                    ArtistDetailScreen(
-                        sourceId = destination.sourceId,
-                        artistUrl = destination.url,
-                        artistNameHint = destination.name,
-                        artistImageHint = destination.imageUrl,
+                    is NavDestination.BandcampHome -> BandcampScreen(
                         onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                        onBack = { navViewModel.navigateBack() },
-                        viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
+                        onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
+                        onOpenLink = { navViewModel.openLink(it) },
+                        onExpandPlayer = { navViewModel.expandPlayer() },
                     )
-                }
 
-                is NavDestination.PlaylistDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination)) {
-                        "detailStoreKey must be non-null for detail destination $destination"
-                    }
-                    PlaylistDetailScreen(
-                        playlistId = destination.playlistId,
-                        onBack = { navViewModel.navigateBack() },
-                        viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
+                    is NavDestination.YouTubeHome -> YouTubeScreen(
+                        onPlaylistClick = { url, name ->
+                            navViewModel.navigateTo(
+                                NavDestination.CollectionDetail(url = url, sourceId = "youtube", name = name),
+                            )
+                        },
+                        onArtistClick = { url, name, imageUrl ->
+                            navViewModel.navigateTo(
+                                NavDestination.ArtistDetail(
+                                    url = url,
+                                    sourceId = "youtube",
+                                    name = name,
+                                    imageUrl = imageUrl,
+                                ),
+                            )
+                        },
+                        onOpenLink = { navViewModel.openLink(it) },
+                        onExpandPlayer = { navViewModel.expandPlayer() },
                     )
-                }
 
-                is NavDestination.CollectionDetail -> {
-                    val storeKey = checkNotNull(detailStoreKey(destination)) {
-                        "detailStoreKey must be non-null for detail destination $destination"
-                    }
-                    CollectionDetailScreen(
-                        sourceId = destination.sourceId,
-                        collectionUrl = destination.url,
-                        collectionName = destination.name,
-                        onBack = { navViewModel.navigateBack() },
-                        viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
-                    )
-                }
-
-                is NavDestination.YouTubeMusicLogin -> YouTubeMusicLoginScreen(
-                    onLoginSuccess = { cookies ->
-                        coroutineScope.launch {
-                            try {
-                                accountRepository.saveYouTubeMusicCookies(cookies)
-                            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
-                                throw e
-                            } catch (_: Exception) {
-                                // Cookie save failed - still navigate back
+                    is NavDestination.Library -> LibraryScreen(
+                        onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
+                        onArtistClick = { url ->
+                            val sourceId = if (url.contains("youtube.com") || url.contains("youtu.be")) {
+                                "youtube"
+                            } else {
+                                "bandcamp"
                             }
-                            navViewModel.navigateBack()
-                        }
-                    },
-                    onBack = { navViewModel.navigateBack() },
-                )
+                            navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
+                        },
+                        onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
+                    )
 
-                is NavDestination.AccountLogin -> AccountLoginScreen(
-                    onLoginSuccess = { cookies ->
-                        coroutineScope.launch {
-                            try {
-                                accountRepository.saveCookies(cookies)
-                            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
-                                throw e
-                            } catch (_: Exception) {
-                                // Cookie save failed - still navigate back
-                            }
-                            navViewModel.navigateBack()
+                    is NavDestination.Settings -> SettingsScreen(
+                        onBandcampLoginClick = { navViewModel.navigateTo(NavDestination.AccountLogin) },
+                        onYouTubeMusicLoginClick = { navViewModel.navigateTo(NavDestination.YouTubeMusicLogin) },
+                    )
+
+                    // Detail destinations: the detail ViewModel is resolved against a
+                    // per-destination store owner (cleared once the destination leaves
+                    // every back stack). Only the detail VM is scoped this way - the
+                    // screens' PlayerViewModel/NavigationViewModel defaults still
+                    // resolve to the activity-scoped shared instances.
+                    is NavDestination.AlbumDetail -> {
+                        val storeKey = checkNotNull(detailStoreKey(destination)) {
+                            "detailStoreKey must be non-null for detail destination $destination"
                         }
-                    },
-                    onBack = { navViewModel.navigateBack() },
-                )
+                        AlbumDetailScreen(
+                            albumUrl = destination.url,
+                            onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
+                            onBack = { navViewModel.navigateBack() },
+                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
+                        )
+                    }
+
+                    is NavDestination.ArtistDetail -> {
+                        val storeKey = checkNotNull(detailStoreKey(destination)) {
+                            "detailStoreKey must be non-null for detail destination $destination"
+                        }
+                        ArtistDetailScreen(
+                            sourceId = destination.sourceId,
+                            artistUrl = destination.url,
+                            artistNameHint = destination.name,
+                            artistImageHint = destination.imageUrl,
+                            onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
+                            onBack = { navViewModel.navigateBack() },
+                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
+                        )
+                    }
+
+                    is NavDestination.PlaylistDetail -> {
+                        val storeKey = checkNotNull(detailStoreKey(destination)) {
+                            "detailStoreKey must be non-null for detail destination $destination"
+                        }
+                        PlaylistDetailScreen(
+                            playlistId = destination.playlistId,
+                            onBack = { navViewModel.navigateBack() },
+                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
+                        )
+                    }
+
+                    is NavDestination.CollectionDetail -> {
+                        val storeKey = checkNotNull(detailStoreKey(destination)) {
+                            "detailStoreKey must be non-null for detail destination $destination"
+                        }
+                        CollectionDetailScreen(
+                            sourceId = destination.sourceId,
+                            collectionUrl = destination.url,
+                            collectionName = destination.name,
+                            onBack = { navViewModel.navigateBack() },
+                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
+                        )
+                    }
+
+                    is NavDestination.YouTubeMusicLogin -> YouTubeMusicLoginScreen(
+                        onLoginSuccess = { cookies ->
+                            coroutineScope.launch {
+                                try {
+                                    accountRepository.saveYouTubeMusicCookies(cookies)
+                                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    // Cookie save failed - still navigate back
+                                }
+                                navViewModel.navigateBack()
+                            }
+                        },
+                        onBack = { navViewModel.navigateBack() },
+                    )
+
+                    is NavDestination.AccountLogin -> AccountLoginScreen(
+                        onLoginSuccess = { cookies ->
+                            coroutineScope.launch {
+                                try {
+                                    accountRepository.saveCookies(cookies)
+                                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                                    throw e
+                                } catch (_: Exception) {
+                                    // Cookie save failed - still navigate back
+                                }
+                                navViewModel.navigateBack()
+                            }
+                        },
+                        onBack = { navViewModel.navigateBack() },
+                    )
+                }
             }
         }
 

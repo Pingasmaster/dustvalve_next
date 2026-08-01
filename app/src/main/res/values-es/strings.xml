@@ -404,6 +404,8 @@
     <string name="library_artist_label">Artista</string>
     <string name="library_empty_title">Tu biblioteca está vacía</string>
     <string name="library_empty_subtitle">Tus playlists y favoritos aparecerán aquí</string>
+    <string name="library_select_item_title">Selecciona un elemento</string>
+    <string name="library_select_item_subtitle">Elige una playlist, un álbum o un artista de la lista</string>
     <string name="library_delete_playlist_title">Eliminar playlist</string>
     <string name="library_delete_playlist_text">¿Eliminar “<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>”? Esta acción no se puede deshacer.</string>
     <string name="library_remove_title">Quitar de la biblioteca</string>

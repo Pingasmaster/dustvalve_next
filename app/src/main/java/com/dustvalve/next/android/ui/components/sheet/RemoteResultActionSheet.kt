@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 
 enum class RemoteItemKind { TRACK, ALBUM, PLAYLIST, ARTIST }
 
@@ -59,7 +60,11 @@ fun RemoteResultActionSheet(
 ) {
     val kind = result.type.toRemoteKind() ?: return
 
-    ModalBottomSheet(onDismissRequest = onDismiss, modifier = modifier) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+    ) {
         Text(
             text = result.name,
             style = MaterialTheme.typography.titleMedium,

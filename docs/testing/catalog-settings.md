@@ -188,7 +188,13 @@ Group 12: Navigation / app chrome (20) [JVM unless noted]
 - set-nav-back-pops-stack.
 - [ ] set-nav-predictive-back-player [E2E]: gesture scrubs collapse; cancel
   springs back.
-- set-nav-rail-adaptive: >=600dp -> SideNavRail replaces bottom bar.
+- set-nav-rail-adaptive: Medium+ WindowSizeClass -> SideNavRail replaces bottom
+  bar; Compact keeps ShortNavigationBar.
+- set-adaptive-content-width: Medium/Expanded center content with max width;
+  square heroes capped; artist discography uses GridCells.Adaptive.
+- set-library-list-detail: Expanded Library shows list | detail side by side.
+- set-player-supporting-pane: Expanded full player shows Up Next beside
+  now-playing; mini player width-capped on Medium+.
 - [ ] set-nav-mini-full-player-morph [E2E]: SharedTransition morph + velocity
   settle.
 - set-nav-deeplink-view / -send (first https URL extracted) / -unsupported

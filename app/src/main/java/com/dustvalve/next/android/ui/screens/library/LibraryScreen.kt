@@ -69,6 +69,8 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.LoadingOverlay
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
@@ -144,7 +146,7 @@ fun LibraryScreen(
         snackbarHost = {
             SnackbarHost(
                 hostState = snackbarHostState,
-                modifier = Modifier.padding(bottom = 80.dp),
+                modifier = Modifier.padding(bottom = 16.dp),
             )
         },
         floatingActionButton = {
@@ -193,29 +195,38 @@ fun LibraryScreen(
                     .padding(scaffoldPadding),
             )
         } else {
-            LibraryList(
-                items = state.libraryItems,
-                fullyDownloadedPlaylistIds = state.fullyDownloadedPlaylistIds,
-                onPlaylistClick = onPlaylistClick,
-                onAlbumClick = onAlbumClick,
-                onArtistClick = onArtistClick,
-                onPinPlaylist = { playlist ->
-                    viewModel.pinPlaylist(playlist.id, !playlist.isPinned)
-                },
-                onPinFavorite = { item ->
-                    val favoriteId = when (item) {
-                        is LibraryItem.AlbumItem -> item.favoriteId
-                        is LibraryItem.ArtistItem -> item.favoriteId
-                        else -> return@LibraryList
-                    }
-                    viewModel.pinFavorite(favoriteId, !item.isPinned)
-                },
-                onRenameClick = { playlist -> viewModel.showRenameDialog(playlist) },
-                onDeleteClick = { item -> viewModel.showDeleteDialog(item) },
-                onChangeShapeClick = { item -> viewModel.showShapeDialog(item) },
-                onExportClick = { playlist -> viewModel.requestExport(playlist) },
-                modifier = Modifier.padding(scaffoldPadding),
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(scaffoldPadding),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                LibraryList(
+                    items = state.libraryItems,
+                    fullyDownloadedPlaylistIds = state.fullyDownloadedPlaylistIds,
+                    onPlaylistClick = onPlaylistClick,
+                    onAlbumClick = onAlbumClick,
+                    onArtistClick = onArtistClick,
+                    onPinPlaylist = { playlist ->
+                        viewModel.pinPlaylist(playlist.id, !playlist.isPinned)
+                    },
+                    onPinFavorite = { item ->
+                        val favoriteId = when (item) {
+                            is LibraryItem.AlbumItem -> item.favoriteId
+                            is LibraryItem.ArtistItem -> item.favoriteId
+                            else -> return@LibraryList
+                        }
+                        viewModel.pinFavorite(favoriteId, !item.isPinned)
+                    },
+                    onRenameClick = { playlist -> viewModel.showRenameDialog(playlist) },
+                    onDeleteClick = { item -> viewModel.showDeleteDialog(item) },
+                    onChangeShapeClick = { item -> viewModel.showShapeDialog(item) },
+                    onExportClick = { playlist -> viewModel.requestExport(playlist) },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .adaptiveContentWidth(),
+                )
+            }
         }
     }
 
@@ -429,6 +440,7 @@ private fun LibraryList(
     menuItem?.let { item ->
         ModalBottomSheet(
             onDismissRequest = { menuItem = null },
+            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
         ) {
             Text(
                 text = item.name,

@@ -404,6 +404,8 @@
     <string name="library_artist_label">Künstler</string>
     <string name="library_empty_title">Deine Bibliothek ist leer</string>
     <string name="library_empty_subtitle">Deine Playlists und Favoriten erscheinen hier</string>
+    <string name="library_select_item_title">Element auswählen</string>
+    <string name="library_select_item_subtitle">Wähle eine Playlist, ein Album oder einen Künstler aus der Liste</string>
     <string name="library_delete_playlist_title">Playlist löschen</string>
     <string name="library_delete_playlist_text">“<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>” löschen? Das kann nicht rückgängig gemacht werden.</string>
     <string name="library_remove_title">Aus Bibliothek entfernen</string>

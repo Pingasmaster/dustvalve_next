@@ -89,6 +89,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.EmptyState
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.PastedLinkChip
@@ -623,6 +624,7 @@ fun LocalScreen(
     contextMenuTrack?.let { menuTrack ->
         ModalBottomSheet(
             onDismissRequest = { contextMenuTrack = null },
+            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
         ) {
             Text(
                 text = menuTrack.title,
@@ -771,6 +773,7 @@ fun LocalScreen(
                 enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
             ),
             containerColor = MaterialTheme.colorScheme.surface,
+            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
         ) {
             Text(
                 text = stringResource(R.string.local_sort_by),
@@ -841,6 +844,7 @@ fun LocalScreen(
         ModalBottomSheet(
             onDismissRequest = { showArtistSheet = false },
             containerColor = MaterialTheme.colorScheme.surface,
+            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
         ) {
             Text(
                 text = stringResource(R.string.local_filter_by_artist),
@@ -893,6 +897,7 @@ fun LocalScreen(
         ModalBottomSheet(
             onDismissRequest = { showAlbumSheet = false },
             containerColor = MaterialTheme.colorScheme.surface,
+            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
         ) {
             Text(
                 text = stringResource(R.string.local_filter_by_album),
@@ -945,6 +950,7 @@ fun LocalScreen(
         ModalBottomSheet(
             onDismissRequest = { showFolderSheet = false },
             containerColor = MaterialTheme.colorScheme.surface,
+            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
         ) {
             Text(
                 text = stringResource(R.string.local_filter_by_folder),

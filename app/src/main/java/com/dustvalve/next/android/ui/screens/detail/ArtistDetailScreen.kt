@@ -46,8 +46,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SplitButton
 import androidx.compose.material3.SplitButtonDefaults
-import androidx.compose.material3.SplitButtonLayout
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -79,6 +79,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.AlbumCard
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.lists.MusicRow
@@ -300,11 +302,11 @@ private fun AlbumGridLayout(
         artist.albums.all { it.id in state.downloadedAlbumIds }
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Adaptive(minSize = LocalAdaptiveLayoutInfo.current.gridMinSize),
         modifier = Modifier.fillMaxSize().padding(innerPadding),
         contentPadding = PaddingValues(bottom = 10.dp),
     ) {
-        item(key = "artist_hero", span = { GridItemSpan(2) }) {
+        item(key = "artist_hero", span = { GridItemSpan(maxLineSpan) }) {
             ArtistHero(
                 imageUrl = artist.imageUrl,
                 name = artist.name,
@@ -312,7 +314,7 @@ private fun AlbumGridLayout(
                 onDoubleTap = onToggleFavorite,
             )
         }
-        item(key = "actions", span = { GridItemSpan(2) }) {
+        item(key = "actions", span = { GridItemSpan(maxLineSpan) }) {
             ActionBar(
                 playPrimaryLabel = stringResource(R.string.common_play_mix),
                 playPrimaryIconRes = R.drawable.ic_shuffle,
@@ -332,12 +334,12 @@ private fun AlbumGridLayout(
             )
         }
         if (!artist.bio.isNullOrBlank()) {
-            item(key = "artist_bio", span = { GridItemSpan(2) }) {
+            item(key = "artist_bio", span = { GridItemSpan(maxLineSpan) }) {
                 ExpandableText(text = artist.bio.orEmpty(), collapsedMaxLines = 4)
             }
         }
         if (artist.hasDiscographyOffer) {
-            item(key = "buy_discography", span = { GridItemSpan(2) }) {
+            item(key = "buy_discography", span = { GridItemSpan(maxLineSpan) }) {
                 val uriHandler = LocalUriHandler.current
                 BuyDiscographySplitButton(
                     artistUrl = artist.url,
@@ -346,7 +348,7 @@ private fun AlbumGridLayout(
             }
         }
         if (artist.albums.isNotEmpty()) {
-            item(key = "discography_header", span = { GridItemSpan(2) }) {
+            item(key = "discography_header", span = { GridItemSpan(maxLineSpan) }) {
                 Text(
                     text = stringResource(R.string.detail_discography),
                     // Matches the tracks header on album/collection detail.
@@ -368,7 +370,7 @@ private fun AlbumGridLayout(
                 }
             }
         } else {
-            item(key = "no_albums", span = { GridItemSpan(2) }) {
+            item(key = "no_albums", span = { GridItemSpan(maxLineSpan) }) {
                 EmptyState(message = stringResource(R.string.detail_no_releases))
             }
         }
@@ -510,19 +512,31 @@ private fun ArtistHero(imageUrl: String?, name: String, isFavorite: Boolean, onD
                 Modifier
             },
         )
-    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).then(doubleTapModifier)) {
-        if (imageUrl != null) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = name,
-                modifier = artModifier,
-                contentScale = ContentScale.Crop,
-            )
-        } else {
-            Box(
-                modifier = artModifier
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            )
+    val adaptive = LocalAdaptiveLayoutInfo.current
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(doubleTapModifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .adaptiveHeroSize(adaptive.heroMaxSize)
+                .aspectRatio(1f),
+        ) {
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = name,
+                    modifier = artModifier,
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    modifier = artModifier
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                )
+            }
         }
     }
 }
@@ -585,7 +599,7 @@ private fun ActionBar(
             checked = isFavorite,
             onCheckedChange = { onToggleFavorite() },
             shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-            colors = ToggleButtonDefaults.tonalToggleButtonColors(),
+            colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {
@@ -637,7 +651,7 @@ private fun BuyDiscographySplitButton(artistUrl: String, onOpen: (String) -> Uni
         modifier = modifier.fillMaxWidth().padding(vertical = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
-        SplitButtonLayout(
+        SplitButton(
             leadingButton = {
                 SplitButtonDefaults.LeadingButton(
                     onClick = { onOpen(artistUrl) },

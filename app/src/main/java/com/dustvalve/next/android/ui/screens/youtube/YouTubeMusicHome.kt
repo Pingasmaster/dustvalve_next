@@ -73,6 +73,8 @@ import com.dustvalve.next.android.domain.model.Shelf
 import com.dustvalve.next.android.domain.model.SongItem
 import com.dustvalve.next.android.domain.model.TileItem
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.WidthSizeClass
 
 /**
  * YouTube Music home feed, rebuilt on Material 3 Expressive:
@@ -380,6 +382,12 @@ private fun ShelfHeader(title: String) {
 
 @Composable
 private fun QuickPicksPager(items: List<SongItem>, onPlay: (SongItem) -> Unit) {
+    val adaptive = LocalAdaptiveLayoutInfo.current
+    val pageWidth = when (adaptive.widthSizeClass) {
+        WidthSizeClass.Compact -> 316.dp
+        WidthSizeClass.Medium -> maxOf(316.dp, adaptive.carouselItemWidth)
+        WidthSizeClass.Expanded -> maxOf(316.dp, adaptive.carouselItemWidth) + 40.dp
+    }
     val pages = items.chunked(4)
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -394,7 +402,7 @@ private fun QuickPicksPager(items: List<SongItem>, onPlay: (SongItem) -> Unit) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLow,
                 shape = MaterialTheme.shapes.extraLarge,
-                modifier = Modifier.width(316.dp),
+                modifier = Modifier.width(pageWidth),
             ) {
                 Column(modifier = Modifier.padding(vertical = 6.dp)) {
                     page.forEach { song ->
@@ -462,9 +470,10 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
 @Composable
 private fun ImmersiveTileCarousel(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
     val carouselState = rememberCarouselState { items.size }
+    val preferredItemWidth = LocalAdaptiveLayoutInfo.current.carouselItemWidth
     HorizontalMultiBrowseCarousel(
         state = carouselState,
-        preferredItemWidth = 220.dp,
+        preferredItemWidth = preferredItemWidth,
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp),
@@ -531,6 +540,12 @@ private fun ImmersiveTileCarousel(items: List<TileItem>, onOpen: (TileItem) -> U
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TileCardRow(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
+    val adaptive = LocalAdaptiveLayoutInfo.current
+    val cardWidth = when (adaptive.widthSizeClass) {
+        WidthSizeClass.Compact -> 150.dp
+        WidthSizeClass.Medium -> adaptive.carouselItemWidth
+        WidthSizeClass.Expanded -> adaptive.carouselItemWidth + 40.dp
+    }
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -539,7 +554,7 @@ private fun TileCardRow(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
         items(items = items, key = { it.id }, contentType = { "tile_card" }) { tile ->
             Column(
                 modifier = Modifier
-                    .width(150.dp)
+                    .width(cardWidth)
                     .clickable { onOpen(tile) },
             ) {
                 MediaArt(
@@ -575,6 +590,12 @@ private fun TileCardRow(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun HeroTileRow(items: List<HeroItem>, onOpen: (HeroItem) -> Unit) {
+    val adaptive = LocalAdaptiveLayoutInfo.current
+    val cardWidth = when (adaptive.widthSizeClass) {
+        WidthSizeClass.Compact -> 150.dp
+        WidthSizeClass.Medium -> adaptive.carouselItemWidth
+        WidthSizeClass.Expanded -> adaptive.carouselItemWidth + 40.dp
+    }
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
@@ -587,7 +608,7 @@ private fun HeroTileRow(items: List<HeroItem>, onOpen: (HeroItem) -> Unit) {
         ) { hero ->
             Column(
                 modifier = Modifier
-                    .width(150.dp)
+                    .width(cardWidth)
                     .clickable { onOpen(hero) },
             ) {
                 MediaArt(

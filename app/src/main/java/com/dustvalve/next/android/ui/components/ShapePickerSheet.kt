@@ -42,6 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.theme.PlaylistShapeOptions
 import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
 
@@ -67,6 +68,7 @@ fun ShapePickerSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
         sheetState = sheetState,
+        sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
     ) {
         Column(
             modifier = Modifier

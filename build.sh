@@ -39,10 +39,40 @@ cd "$SCRIPT_DIR"
 # previous successful build (also stopped by first download or 10 min timeout).
 ./scripts/apk_http_serve.sh stop || true
 
+# Project toolchain is JDK 25 (gradle-daemon-jvm.properties). Prefer an
+# already-correct JAVA_HOME; otherwise pick a local JDK 25+ so the JEP 498
+# flag below does not kill an older launcher JVM still first on PATH
+# (Debian often defaults to 21).
+pick_java_home() {
+    local candidate ver
+    for candidate in \
+        "${JAVA_HOME:-}" \
+        /usr/lib/jvm/java-25-openjdk-amd64 \
+        /usr/lib/jvm/java-25-openjdk \
+        /usr/lib/jvm/jdk-25 \
+        /usr/lib/jvm/jdk-25* \
+        "$HOME/.jdks/jdk-25"; do
+        [[ -n "$candidate" && -x "$candidate/bin/java" ]] || continue
+        ver=$("$candidate/bin/java" -version 2>&1 | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | head -1)
+        if [[ -n "$ver" && "$ver" -ge 25 ]]; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+JAVA_HOME="$(pick_java_home)" || {
+    echo "JDK 25+ required; none found. Install openjdk-25-jdk or set JAVA_HOME." >&2
+    exit 1
+}
+export JAVA_HOME
+export PATH="$JAVA_HOME/bin:$PATH"
+
 # JEP 498 opt-in for every forked JVM (ktlint workers, Kotlin daemon):
 # kotlin-compiler-embeddable 2.2.x still uses sun.misc.Unsafe and JDK 25
 # warns otherwise. Remove once ktlint bundles a compiler without it.
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }--sun-misc-unsafe-memory-access=allow"
+export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"
 
 # Argument parsing
 DO_CLEAN_ONLY=0

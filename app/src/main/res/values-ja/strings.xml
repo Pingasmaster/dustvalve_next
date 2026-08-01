@@ -404,6 +404,8 @@
     <string name="library_artist_label">アーティスト</string>
     <string name="library_empty_title">ライブラリは空です</string>
     <string name="library_empty_subtitle">プレイリストとお気に入りがここに表示されます</string>
+    <string name="library_select_item_title">項目を選択</string>
+    <string name="library_select_item_subtitle">リストからプレイリスト、アルバム、またはアーティストを選んでください</string>
     <string name="library_delete_playlist_title">プレイリストを削除</string>
     <string name="library_delete_playlist_text">「<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>」を削除しますか？この操作は元に戻せません。</string>
     <string name="library_remove_title">ライブラリから削除</string>

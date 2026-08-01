@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +39,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -55,6 +57,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalToggleButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -78,7 +81,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.ToggleButtonDefaults
-import androidx.compose.material3.TonalToggleButton
 import androidx.compose.material3.carousel.HorizontalMultiBrowseCarousel
 import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -117,6 +119,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.graphics.shapes.Morph
@@ -128,6 +131,7 @@ import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.player.QueueEntry
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.MorphShape
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
@@ -170,6 +174,7 @@ fun FullPlayer(
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
     val track = state.currentTrack
     val snackbarHostState = remember { SnackbarHostState() }
+    val adaptive = LocalAdaptiveLayoutInfo.current
 
     // Snackbar handling
     val snackbarText = state.snackbarMessage?.asString()
@@ -267,6 +272,7 @@ fun FullPlayer(
                     androidx.compose.material3.SheetValue.Expanded,
                 ),
             ),
+            sheetMaxWidth = adaptive.sheetMaxWidth,
         ) {
             Column(
                 modifier = Modifier
@@ -420,7 +426,8 @@ fun FullPlayer(
                 } else {
                     0
                 }
-                if (state.currentTrack != null && upNextCount > 0) {
+                // Dual-pane Expanded always shows the queue side pane; hide the FAB.
+                if (!adaptive.useDualPane && state.currentTrack != null && upNextCount > 0) {
                     ExtendedFloatingActionButton(
                         onClick = { showQueueSheet = true },
                         icon = {
@@ -450,786 +457,829 @@ fun FullPlayer(
                 return@Scaffold
             }
 
-            Box(
+            // Expanded: player | Up Next side pane. Compact/Medium: single column.
+            Row(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Spacer(modifier = Modifier.height(86.dp))
-
-                    // Album art with single-tap play/pause and double-tap heart
-                    val albumArtShape = if (heartProgress.value > 0f) {
-                        MorphShape(heartMorph, heartProgress.value)
+                Box(
+                    modifier = if (adaptive.useDualPane) {
+                        Modifier
+                            .weight(0.62f)
+                            .fillMaxHeight()
                     } else {
-                        MorphShape(heartMorph, 0f)
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                        Modifier.fillMaxSize()
+                    },
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        // BackHandler to close carousel on back press
-                        BackHandler(enabled = isCarouselMode) {
-                            isCarouselMode = false
+                        Spacer(modifier = Modifier.height(86.dp))
+
+                        // Album art with single-tap play/pause and double-tap heart
+                        val albumArtShape = if (heartProgress.value > 0f) {
+                            MorphShape(heartMorph, heartProgress.value)
+                        } else {
+                            MorphShape(heartMorph, 0f)
                         }
-
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .aspectRatio(1f),
-                            contentAlignment = Alignment.Center,
+                        val artMax = adaptive.heroMaxSize
+                        val artCapped = artMax != Dp.Unspecified
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (artCapped) {
+                                Arrangement.Center
+                            } else {
+                                Arrangement.Start
+                            },
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            val currentIndex = state.currentQueueIndex
+                            // BackHandler to close carousel on back press
+                            BackHandler(enabled = isCarouselMode) {
+                                isCarouselMode = false
+                            }
 
-                            val carouselTransitionSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
-                            AnimatedContent(
-                                targetState = isCarouselMode,
-                                transitionSpec = {
-                                    fadeIn(animationSpec = carouselTransitionSpec) togetherWith
-                                        fadeOut(animationSpec = carouselTransitionSpec)
-                                },
-                                label = "albumArtCarousel",
-                            ) { carousel ->
-                                if (carousel) {
-                                    // Carousel mode: M3E HorizontalMultiBrowseCarousel (starts with current track)
-                                    val carouselTracks = if (currentIndex >= 0) {
-                                        state.queue.subList(currentIndex, minOf(currentIndex + 26, state.queue.size))
-                                    } else {
-                                        emptyList()
-                                    }
+                            Box(
+                                modifier = Modifier
+                                    .then(
+                                        if (artCapped) {
+                                            Modifier
+                                                .widthIn(max = artMax)
+                                                .fillMaxWidth()
+                                                .aspectRatio(1f)
+                                        } else {
+                                            Modifier
+                                                .weight(1f)
+                                                .aspectRatio(1f)
+                                        },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                val currentIndex = state.currentQueueIndex
 
-                                    if (carouselTracks.isNotEmpty()) {
-                                        val carouselState = rememberCarouselState { carouselTracks.size }
-                                        HorizontalMultiBrowseCarousel(
-                                            state = carouselState,
-                                            preferredItemWidth = 200.dp,
-                                            modifier = Modifier.fillMaxSize(),
-                                            itemSpacing = 8.dp,
-                                        ) { page ->
-                                            val carouselTrack = carouselTracks[page]
-                                            val carouselQueueIndex = currentIndex + page
-
-                                            Box(
-                                                modifier = Modifier
-                                                    .maskClip(AppShapes.SearchResultTrack)
-                                                    .aspectRatio(1f)
-                                                    .clickable {
-                                                        playerViewModel.skipToQueueIndex(carouselQueueIndex)
-                                                        isCarouselMode = false
-                                                    },
-                                            ) {
-                                                if (carouselTrack.artUrl.isNotBlank()) {
-                                                    AsyncImage(
-                                                        model = carouselTrack.artUrl,
-                                                        contentDescription = carouselTrack.title,
-                                                        contentScale = ContentScale.Crop,
-                                                        modifier = Modifier.fillMaxSize(),
-                                                    )
-                                                } else {
-                                                    TrackArtPlaceholder(
-                                                        modifier = Modifier.fillMaxSize(),
-                                                        iconSize = 48.dp,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    } else {
-                                        // No upcoming tracks - close carousel
-                                        LaunchedEffect(Unit) { isCarouselMode = false }
-                                    }
-                                } else {
-                                    // Normal mode: stacked covers + main album art
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        // Stacked background covers (up to 3 behind current)
-                                        val stackedTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
-                                            state.queue.subList(
-                                                currentIndex + 1,
-                                                minOf(currentIndex + 4, state.queue.size),
-                                            )
+                                val carouselTransitionSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+                                AnimatedContent(
+                                    targetState = isCarouselMode,
+                                    transitionSpec = {
+                                        fadeIn(animationSpec = carouselTransitionSpec) togetherWith
+                                            fadeOut(animationSpec = carouselTransitionSpec)
+                                    },
+                                    label = "albumArtCarousel",
+                                ) { carousel ->
+                                    if (carousel) {
+                                        // Carousel mode: M3E HorizontalMultiBrowseCarousel (starts with current track)
+                                        val carouselTracks = if (currentIndex >= 0) {
+                                            state.queue.subList(currentIndex, minOf(currentIndex + 26, state.queue.size))
                                         } else {
                                             emptyList()
                                         }
 
-                                        // Render stacked covers back-to-front
-                                        stackedTracks.reversed().forEachIndexed { reverseIndex, stackTrack ->
-                                            val stackIndex = stackedTracks.size - 1 - reverseIndex
-                                            val offsetX = ((stackIndex + 1) * 20).dp
-                                            val offsetY = (-(stackIndex + 1) * 24).dp
-                                            val stackScale = 1f - ((stackIndex + 1) * 0.06f)
-                                            val actualQueueIndex = currentIndex + 1 + stackIndex
+                                        if (carouselTracks.isNotEmpty()) {
+                                            val carouselState = rememberCarouselState { carouselTracks.size }
+                                            HorizontalMultiBrowseCarousel(
+                                                state = carouselState,
+                                                preferredItemWidth = adaptive.carouselItemWidth,
+                                                modifier = Modifier.fillMaxSize(),
+                                                itemSpacing = 8.dp,
+                                            ) { page ->
+                                                val carouselTrack = carouselTracks[page]
+                                                val carouselQueueIndex = currentIndex + page
 
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .zIndex(-((stackIndex + 1).toFloat()))
-                                                    .graphicsLayer {
-                                                        translationX = offsetX.toPx()
-                                                        translationY = offsetY.toPx()
-                                                        scaleX = stackScale
-                                                        scaleY = stackScale
-                                                        rotationZ = (stackIndex + 1) * 5f
-                                                        transformOrigin = TransformOrigin(1f, 0f)
+                                                Box(
+                                                    modifier = Modifier
+                                                        .maskClip(AppShapes.SearchResultTrack)
+                                                        .aspectRatio(1f)
+                                                        .clickable {
+                                                            playerViewModel.skipToQueueIndex(carouselQueueIndex)
+                                                            isCarouselMode = false
+                                                        },
+                                                ) {
+                                                    if (carouselTrack.artUrl.isNotBlank()) {
+                                                        AsyncImage(
+                                                            model = carouselTrack.artUrl,
+                                                            contentDescription = carouselTrack.title,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize(),
+                                                        )
+                                                    } else {
+                                                        TrackArtPlaceholder(
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            iconSize = 48.dp,
+                                                        )
                                                     }
-                                                    .clip(MorphShape(heartMorph, 0f))
-                                                    .clickable {
-                                                        playerViewModel.skipToQueueIndex(actualQueueIndex)
-                                                    },
-                                            ) {
-                                                if (stackTrack.artUrl.isNotBlank()) {
-                                                    AsyncImage(
-                                                        model = stackTrack.artUrl,
-                                                        contentDescription = stackTrack.title,
-                                                        contentScale = ContentScale.Crop,
-                                                        modifier = Modifier.fillMaxSize(),
-                                                    )
-                                                } else {
-                                                    TrackArtPlaceholder(
-                                                        modifier = Modifier.fillMaxSize(),
-                                                        iconSize = 48.dp,
-                                                    )
                                                 }
                                             }
-                                        }
-
-                                        // Main album art (on top)
-                                        val swipeSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
-                                        val albumArtGestureModifier = Modifier
-                                            .fillMaxSize()
-                                            .then(artShared)
-                                            .zIndex(1f)
-                                            .graphicsLayer {
-                                                translationX = albumSwipeOffsetX.value
-                                            }
-                                            .clip(albumArtShape)
-                                            .pointerInput(Unit) {
-                                                detectHorizontalDragGestures(
-                                                    onDragEnd = {
-                                                        val threshold = size.width * 0.3f
-                                                        if (albumSwipeOffsetX.value < -threshold) {
-                                                            scope.launch {
-                                                                albumSwipeOffsetX.animateTo(-size.width.toFloat(), swipeSpec)
-                                                                playerViewModel.onNext()
-                                                                albumSwipeOffsetX.snapTo(0f)
-                                                            }
-                                                        } else if (albumSwipeOffsetX.value > threshold) {
-                                                            scope.launch {
-                                                                albumSwipeOffsetX.animateTo(size.width.toFloat(), swipeSpec)
-                                                                playerViewModel.onPrevious()
-                                                                albumSwipeOffsetX.snapTo(0f)
-                                                            }
-                                                        } else {
-                                                            scope.launch { albumSwipeOffsetX.animateTo(0f, swipeSpec) }
-                                                        }
-                                                    },
-                                                    onDragCancel = {
-                                                        scope.launch { albumSwipeOffsetX.animateTo(0f, swipeSpec) }
-                                                    },
-                                                    onHorizontalDrag = { change, dragAmount ->
-                                                        change.consume()
-                                                        scope.launch { albumSwipeOffsetX.snapTo(albumSwipeOffsetX.value + dragAmount) }
-                                                    },
-                                                )
-                                            }
-                                            .pointerInput(Unit) {
-                                                detectTapGestures(
-                                                    onTap = {
-                                                        feedbackIsPlaying = state.isPlaying
-                                                        playerViewModel.onPlayPause()
-                                                        scope.launch {
-                                                            feedbackScale.snapTo(0f)
-                                                            showPlayPauseFeedback = true
-                                                            feedbackScale.animateTo(1f, feedbackSpec)
-                                                            delay(400L)
-                                                            feedbackScale.animateTo(0f, feedbackSpec)
-                                                            showPlayPauseFeedback = false
-                                                        }
-                                                    },
-                                                    onDoubleTap = {
-                                                        hapticFeedback.toggle(!track.isFavorite)
-                                                        playerViewModel.onToggleFavorite()
-                                                        scope.launch {
-                                                            heartProgress.animateTo(
-                                                                targetValue = 1f,
-                                                                animationSpec = heartInSpec,
-                                                            )
-                                                            delay(1000L)
-                                                            heartProgress.animateTo(
-                                                                targetValue = 0f,
-                                                                animationSpec = heartOutSpec,
-                                                            )
-                                                        }
-                                                    },
-                                                    onLongPress = {
-                                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        // Settings -> Debug -> "Show debug info":
-                                                        //   ON  -> long-press shows the debug sheet
-                                                        //   OFF -> long-press opens the cover carousel (default)
-                                                        if (state.albumCoverLongPressCarousel) {
-                                                            showDebugSheet = true
-                                                        } else {
-                                                            isCarouselMode = true
-                                                        }
-                                                    },
-                                                )
-                                            }
-                                        if (track.artUrl.isNotBlank()) {
-                                            AsyncImage(
-                                                model = track.artUrl,
-                                                contentDescription = track.albumTitle.ifEmpty {
-                                                    stringResource(R.string.player_cd_album_art)
-                                                },
-                                                contentScale = ContentScale.Crop,
-                                                modifier = albumArtGestureModifier,
-                                            )
                                         } else {
-                                            TrackArtPlaceholder(
-                                                modifier = albumArtGestureModifier,
-                                                iconSize = 64.dp,
-                                            )
+                                            // No upcoming tracks - close carousel
+                                            LaunchedEffect(Unit) { isCarouselMode = false }
                                         }
+                                    } else {
+                                        // Normal mode: stacked covers + main album art
+                                        Box(
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            // Stacked background covers (up to 3 behind current)
+                                            val stackedTracks = if (currentIndex >= 0 && currentIndex < state.queue.lastIndex) {
+                                                state.queue.subList(
+                                                    currentIndex + 1,
+                                                    minOf(currentIndex + 4, state.queue.size),
+                                                )
+                                            } else {
+                                                emptyList()
+                                            }
 
-                                        // Play/pause tap feedback overlay
-                                        if (showPlayPauseFeedback) {
-                                            Icon(
-                                                painter = painterResource(
-                                                    if (!feedbackIsPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause,
-                                                ),
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
-                                                modifier = Modifier
-                                                    .size(72.dp)
-                                                    .zIndex(2f)
-                                                    .graphicsLayer {
-                                                        scaleX = feedbackScale.value
-                                                        scaleY = feedbackScale.value
-                                                        alpha = feedbackScale.value
+                                            // Render stacked covers back-to-front
+                                            stackedTracks.reversed().forEachIndexed { reverseIndex, stackTrack ->
+                                                val stackIndex = stackedTracks.size - 1 - reverseIndex
+                                                val offsetX = ((stackIndex + 1) * 20).dp
+                                                val offsetY = (-(stackIndex + 1) * 24).dp
+                                                val stackScale = 1f - ((stackIndex + 1) * 0.06f)
+                                                val actualQueueIndex = currentIndex + 1 + stackIndex
+
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .zIndex(-((stackIndex + 1).toFloat()))
+                                                        .graphicsLayer {
+                                                            translationX = offsetX.toPx()
+                                                            translationY = offsetY.toPx()
+                                                            scaleX = stackScale
+                                                            scaleY = stackScale
+                                                            rotationZ = (stackIndex + 1) * 5f
+                                                            transformOrigin = TransformOrigin(1f, 0f)
+                                                        }
+                                                        .clip(MorphShape(heartMorph, 0f))
+                                                        .clickable {
+                                                            playerViewModel.skipToQueueIndex(actualQueueIndex)
+                                                        },
+                                                ) {
+                                                    if (stackTrack.artUrl.isNotBlank()) {
+                                                        AsyncImage(
+                                                            model = stackTrack.artUrl,
+                                                            contentDescription = stackTrack.title,
+                                                            contentScale = ContentScale.Crop,
+                                                            modifier = Modifier.fillMaxSize(),
+                                                        )
+                                                    } else {
+                                                        TrackArtPlaceholder(
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            iconSize = 48.dp,
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            // Main album art (on top)
+                                            val swipeSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+                                            val albumArtGestureModifier = Modifier
+                                                .fillMaxSize()
+                                                .then(artShared)
+                                                .zIndex(1f)
+                                                .graphicsLayer {
+                                                    translationX = albumSwipeOffsetX.value
+                                                }
+                                                .clip(albumArtShape)
+                                                .pointerInput(Unit) {
+                                                    detectHorizontalDragGestures(
+                                                        onDragEnd = {
+                                                            val threshold = size.width * 0.3f
+                                                            if (albumSwipeOffsetX.value < -threshold) {
+                                                                scope.launch {
+                                                                    albumSwipeOffsetX.animateTo(-size.width.toFloat(), swipeSpec)
+                                                                    playerViewModel.onNext()
+                                                                    albumSwipeOffsetX.snapTo(0f)
+                                                                }
+                                                            } else if (albumSwipeOffsetX.value > threshold) {
+                                                                scope.launch {
+                                                                    albumSwipeOffsetX.animateTo(size.width.toFloat(), swipeSpec)
+                                                                    playerViewModel.onPrevious()
+                                                                    albumSwipeOffsetX.snapTo(0f)
+                                                                }
+                                                            } else {
+                                                                scope.launch { albumSwipeOffsetX.animateTo(0f, swipeSpec) }
+                                                            }
+                                                        },
+                                                        onDragCancel = {
+                                                            scope.launch { albumSwipeOffsetX.animateTo(0f, swipeSpec) }
+                                                        },
+                                                        onHorizontalDrag = { change, dragAmount ->
+                                                            change.consume()
+                                                            scope.launch { albumSwipeOffsetX.snapTo(albumSwipeOffsetX.value + dragAmount) }
+                                                        },
+                                                    )
+                                                }
+                                                .pointerInput(Unit) {
+                                                    detectTapGestures(
+                                                        onTap = {
+                                                            feedbackIsPlaying = state.isPlaying
+                                                            playerViewModel.onPlayPause()
+                                                            scope.launch {
+                                                                feedbackScale.snapTo(0f)
+                                                                showPlayPauseFeedback = true
+                                                                feedbackScale.animateTo(1f, feedbackSpec)
+                                                                delay(400L)
+                                                                feedbackScale.animateTo(0f, feedbackSpec)
+                                                                showPlayPauseFeedback = false
+                                                            }
+                                                        },
+                                                        onDoubleTap = {
+                                                            hapticFeedback.toggle(!track.isFavorite)
+                                                            playerViewModel.onToggleFavorite()
+                                                            scope.launch {
+                                                                heartProgress.animateTo(
+                                                                    targetValue = 1f,
+                                                                    animationSpec = heartInSpec,
+                                                                )
+                                                                delay(1000L)
+                                                                heartProgress.animateTo(
+                                                                    targetValue = 0f,
+                                                                    animationSpec = heartOutSpec,
+                                                                )
+                                                            }
+                                                        },
+                                                        onLongPress = {
+                                                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            // Settings -> Debug -> "Show debug info":
+                                                            //   ON  -> long-press shows the debug sheet
+                                                            //   OFF -> long-press opens the cover carousel (default)
+                                                            if (state.albumCoverLongPressCarousel) {
+                                                                showDebugSheet = true
+                                                            } else {
+                                                                isCarouselMode = true
+                                                            }
+                                                        },
+                                                    )
+                                                }
+                                            if (track.artUrl.isNotBlank()) {
+                                                AsyncImage(
+                                                    model = track.artUrl,
+                                                    contentDescription = track.albumTitle.ifEmpty {
+                                                        stringResource(R.string.player_cd_album_art)
                                                     },
-                                            )
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = albumArtGestureModifier,
+                                                )
+                                            } else {
+                                                TrackArtPlaceholder(
+                                                    modifier = albumArtGestureModifier,
+                                                    iconSize = 64.dp,
+                                                )
+                                            }
+
+                                            // Play/pause tap feedback overlay
+                                            if (showPlayPauseFeedback) {
+                                                Icon(
+                                                    painter = painterResource(
+                                                        if (!feedbackIsPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause,
+                                                    ),
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
+                                                    modifier = Modifier
+                                                        .size(72.dp)
+                                                        .zIndex(2f)
+                                                        .graphicsLayer {
+                                                            scaleX = feedbackScale.value
+                                                            scaleY = feedbackScale.value
+                                                            alpha = feedbackScale.value
+                                                        },
+                                                )
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        } // end album art Box
+                            } // end album art Box
 
-                        // Inline volume slider (to the right of album art)
-                        if (state.showInlineVolumeSlider) {
-                            val inlineVolumeState = androidx.compose.material3.rememberSliderState(
-                                value = state.volumeLevel,
+                            // Inline volume slider (to the right of album art)
+                            if (state.showInlineVolumeSlider) {
+                                val inlineVolumeState = androidx.compose.material3.rememberSliderState(
+                                    value = state.volumeLevel,
+                                )
+                                LaunchedEffect(state.volumeLevel) {
+                                    if (!inlineVolumeState.isDragging) inlineVolumeState.value = state.volumeLevel
+                                }
+                                LaunchedEffect(Unit) {
+                                    snapshotFlow { inlineVolumeState.value }
+                                        .collect { playerViewModel.setVolume(it) }
+                                }
+                                // Tick once per volume step while the user is dragging.
+                                LaunchedEffect(inlineVolumeState) {
+                                    snapshotFlow { (inlineVolumeState.value * VOLUME_TICK_SEGMENTS).toInt() }
+                                        .distinctUntilChanged()
+                                        .collect { if (inlineVolumeState.isDragging) hapticFeedback.tick() }
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.height(240.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_volume_up),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    androidx.compose.material3.VerticalSlider(
+                                        state = inlineVolumeState,
+                                        modifier = Modifier.weight(1f),
+                                        topToBottom = false,
+                                        thumb = { sliderState ->
+                                            androidx.compose.material3.SliderDefaults.Thumb(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                isVertical = true,
+                                                thumbSize = androidx.compose.ui.unit.DpSize(44.dp, 4.dp),
+                                            )
+                                        },
+                                        track = { sliderState ->
+                                            androidx.compose.material3.SliderDefaults.Track(
+                                                sliderState = sliderState,
+                                                modifier = Modifier.width(40.dp),
+                                                trackCornerSize = 12.dp,
+                                            )
+                                        },
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_volume_down),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(24.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        } // end Row
+
+                        // Track title, artist, favorite, and download
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = track.title,
+                                style = MaterialTheme.typography.headlineSmallEmphasized,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            LaunchedEffect(state.volumeLevel) {
-                                if (!inlineVolumeState.isDragging) inlineVolumeState.value = state.volumeLevel
-                            }
-                            LaunchedEffect(Unit) {
-                                snapshotFlow { inlineVolumeState.value }
-                                    .collect { playerViewModel.setVolume(it) }
-                            }
-                            // Tick once per volume step while the user is dragging.
-                            LaunchedEffect(inlineVolumeState) {
-                                snapshotFlow { (inlineVolumeState.value * VOLUME_TICK_SEGMENTS).toInt() }
-                                    .distinctUntilChanged()
-                                    .collect { if (inlineVolumeState.isDragging) hapticFeedback.tick() }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.height(240.dp),
+                            Spacer(modifier = Modifier.height(4.dp))
+                            // Connected M3E ButtonGroup: Artist / Album / Favorite /
+                            // Download / Add-to-playlist. All icon-only (the artist
+                            // name is already in the title above), all ~40 dp tall to
+                            // match the previous FilledTonalToggleButton sizing. Spaced 8 dp
+                            // apart for visual breathing room - wider than the 2 dp
+                            // ButtonGroupDefaults.ConnectedSpaceBetween.
+                            val isTrackDownloaded = track.id in state.downloadedTrackIds
+                            val isDownloading = state.downloadingTrackId == track.id
+                            val isLocalTrack = track.isLocal
+                            val albumNavEnabled = track.albumUrl.isNotEmpty()
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                             ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_volume_up),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                androidx.compose.material3.VerticalSlider(
-                                    state = inlineVolumeState,
+                                // Artist navigation (icon-only - name is in the title above).
+                                // Stateless action: FilledTonalButton, not FilledTonalToggleButton,
+                                // so TalkBack announces "button" rather than "not selected".
+                                FilledTonalButton(
+                                    onClick = { onArtistClick(track) },
+                                    shape = ButtonGroupDefaults.connectedLeadingButtonShape,
+                                    enabled = track.artistUrl.isNotEmpty() || track.isLocal,
                                     modifier = Modifier.weight(1f),
-                                    topToBottom = false,
-                                    thumb = { sliderState ->
-                                        androidx.compose.material3.SliderDefaults.Thumb(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            isVertical = true,
-                                            thumbSize = androidx.compose.ui.unit.DpSize(44.dp, 4.dp),
-                                        )
+                                    contentPadding = PaddingValues(0.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_person),
+                                        contentDescription = stringResource(R.string.player_cd_open_artist),
+                                    )
+                                }
+                                // Album navigation (new). Disabled when the track has
+                                // no album page (streaming sources where it's not
+                                // canonical). Also stateless - same FilledTonalButton.
+                                FilledTonalButton(
+                                    onClick = { onAlbumClick(track) },
+                                    shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
+                                    enabled = albumNavEnabled,
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = PaddingValues(0.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_album),
+                                        contentDescription = stringResource(R.string.player_cd_open_album),
+                                    )
+                                }
+                                // Favorite toggle.
+                                FilledTonalToggleButton(
+                                    checked = track.isFavorite,
+                                    onCheckedChange = {
+                                        hapticFeedback.toggle(!track.isFavorite)
+                                        playerViewModel.onToggleFavorite()
                                     },
-                                    track = { sliderState ->
-                                        androidx.compose.material3.SliderDefaults.Track(
-                                            sliderState = sliderState,
-                                            modifier = Modifier.width(40.dp),
-                                            trackCornerSize = 12.dp,
-                                        )
+                                    shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(
+                                            if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
+                                        ),
+                                        contentDescription = stringResource(
+                                            if (track.isFavorite) {
+                                                R.string.player_cd_remove_from_favorites
+                                            } else {
+                                                R.string.player_cd_add_to_favorites
+                                            },
+                                        ),
+                                    )
+                                }
+                                // Download toggle (matches Favorite's interaction language).
+                                FilledTonalToggleButton(
+                                    checked = isTrackDownloaded || isLocalTrack,
+                                    onCheckedChange = {
+                                        if (isLocalTrack) return@FilledTonalToggleButton
+                                        if (isTrackDownloaded) {
+                                            showDeleteDownloadDialog = true
+                                        } else if (!isDownloading) {
+                                            playerViewModel.onDownloadTrack()
+                                        }
                                     },
+                                    enabled = !isDownloading && !isLocalTrack,
+                                    shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    if (isDownloading) {
+                                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
+                                    } else {
+                                        Icon(
+                                            painter = painterResource(
+                                                if (isTrackDownloaded || isLocalTrack) {
+                                                    R.drawable.ic_download_done
+                                                } else {
+                                                    R.drawable.ic_download
+                                                },
+                                            ),
+                                            contentDescription = stringResource(
+                                                when {
+                                                    isLocalTrack -> R.string.player_cd_local_file
+                                                    isTrackDownloaded -> R.string.player_cd_delete_download
+                                                    else -> R.string.player_cd_download_track
+                                                },
+                                            ),
+                                        )
+                                    }
+                                }
+                                // Add to playlist (new - opens the existing AddToPlaylistSheet).
+                                FilledTonalToggleButton(
+                                    checked = track.id in state.userPlaylistTrackIds,
+                                    onCheckedChange = { showPlaylistSheet = true },
+                                    shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_playlist_add),
+                                        contentDescription = stringResource(R.string.player_cd_add_to_playlist),
+                                    )
+                                }
+                            }
+                        }
+
+                        // Wavy seek bar - keyed to track so state resets on track change
+                        val trackId = track.id
+                        var isSeeking by remember(trackId) { mutableStateOf(false) }
+                        var seekPosition by remember(trackId) { mutableFloatStateOf(0f) }
+                        // Tracks the last scrub segment so we tick once per step, not per frame.
+                        var lastSeekStep by remember(trackId) { mutableIntStateOf(-1) }
+
+                        // Clear isSeeking once the player position catches up to the seek target
+                        SideEffect {
+                            if (isSeeking && state.duration > 0L) {
+                                val playerFraction = state.currentPosition.toFloat() / state.duration.toFloat()
+                                if ((playerFraction - seekPosition).let { it * it } < 0.001f) {
+                                    isSeeking = false
+                                }
+                            }
+                        }
+
+                        val sliderPosition = if (isSeeking) {
+                            seekPosition
+                        } else {
+                            if (state.duration > 0L) {
+                                state.currentPosition.toFloat() / state.duration.toFloat()
+                            } else {
+                                0f
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                                .then(
+                                    if (!state.isLoadingTrack) {
+                                        Modifier
+                                            .pointerInput(trackId) {
+                                                detectTapGestures { offset ->
+                                                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                                                    seekPosition = fraction
+                                                    val targetMs = (fraction * state.duration).toLong()
+                                                    playerViewModel.onSeek(targetMs)
+                                                    hapticFeedback.tick()
+                                                    lastSeekStep = -1
+                                                    // Keep showing seekPosition until player catches up
+                                                    isSeeking = true
+                                                }
+                                            }
+                                            .pointerInput(trackId) {
+                                                detectDragGestures(
+                                                    onDragEnd = {
+                                                        val targetMs = (seekPosition * state.duration).toLong()
+                                                        playerViewModel.onSeek(targetMs)
+                                                        lastSeekStep = -1
+                                                        // Keep showing seekPosition until player catches up
+                                                    },
+                                                    onDragCancel = {
+                                                        isSeeking = false
+                                                        lastSeekStep = -1
+                                                    },
+                                                ) { change, _ ->
+                                                    change.consume()
+                                                    val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                                                    isSeeking = true
+                                                    seekPosition = fraction
+                                                    // Tick once per scrub segment for a textured feel.
+                                                    val step = (fraction * SEEK_TICK_SEGMENTS).toInt()
+                                                    if (step != lastSeekStep) {
+                                                        hapticFeedback.tick()
+                                                        lastSeekStep = step
+                                                    }
+                                                }
+                                            }
+                                    } else {
+                                        Modifier
+                                    },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val barHeight = state.progressBarSizeDp.dp
+                            val isWavy = state.progressBarStyle == "wavy"
+                            if (state.isLoadingTrack) {
+                                if (isWavy) {
+                                    LinearWavyProgressIndicator(
+                                        modifier = Modifier.fillMaxWidth().height(barHeight),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                } else {
+                                    LinearProgressIndicator(
+                                        modifier = Modifier.fillMaxWidth().height(barHeight),
+                                        color = MaterialTheme.colorScheme.primary,
+                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                }
+                            } else if (isWavy) {
+                                LinearWavyProgressIndicator(
+                                    progress = { sliderPosition.coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth().height(barHeight),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    stroke = Stroke(width = barHeight.value),
+                                    trackStroke = Stroke(width = barHeight.value),
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_volume_down),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            } else {
+                                LinearProgressIndicator(
+                                    progress = { sliderPosition.coerceIn(0f, 1f) },
+                                    modifier = Modifier.fillMaxWidth().height(barHeight),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
                                 )
                             }
                         }
-                    } // end Row
 
-                    // Track title, artist, favorite, and download
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = track.title,
-                            style = MaterialTheme.typography.headlineSmallEmphasized,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
+                        // Time labels - reflect seek position during drag
+                        val displayPosition = if (state.isLoadingTrack) {
+                            null
+                        } else if (isSeeking) {
+                            (seekPosition * state.duration).toLong()
+                        } else {
+                            state.currentPosition
+                        }
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        // Connected M3E ButtonGroup: Artist / Album / Favorite /
-                        // Download / Add-to-playlist. All icon-only (the artist
-                        // name is already in the title above), all ~40 dp tall to
-                        // match the previous TonalToggleButton sizing. Spaced 8 dp
-                        // apart for visual breathing room - wider than the 2 dp
-                        // ButtonGroupDefaults.ConnectedSpaceBetween.
-                        val isTrackDownloaded = track.id in state.downloadedTrackIds
-                        val isDownloading = state.downloadingTrackId == track.id
-                        val isLocalTrack = track.isLocal
-                        val albumNavEnabled = track.albumUrl.isNotEmpty()
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(
+                                text = if (displayPosition != null) formatTime(displayPosition) else "--:--",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_POSITION),
+                            )
+                            val remaining = if (displayPosition != null) {
+                                (state.duration - displayPosition).coerceAtLeast(0L)
+                            } else {
+                                null
+                            }
+                            Text(
+                                text = if (remaining != null) "-${formatTime(remaining)}" else "--:--",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_DURATION),
+                            )
+                        }
+
+                        // Top control row: Previous / Play / Next
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            // Previous button
+                            OutlinedButton(
+                                onClick = {
+                                    hapticFeedback.tick()
+                                    playerViewModel.onPrevious()
+                                },
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_PREVIOUS),
+                                shapes = ButtonDefaults.shapes(),
+                                contentPadding = PaddingValues(0.dp),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_skip_previous),
+                                    contentDescription = stringResource(R.string.player_cd_previous),
+                                    modifier = Modifier.size(28.dp),
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(24.dp))
+
+                            // Play/Pause toggle button
+                            ToggleButton(
+                                checked = state.isPlaying,
+                                onCheckedChange = {
+                                    hapticFeedback.toggle(!state.isPlaying)
+                                    playerViewModel.onPlayPause()
+                                },
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_PLAY_PAUSE),
+                                colors = ToggleButtonDefaults.toggleButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                    checkedContentColor = MaterialTheme.colorScheme.onPrimary,
+                                ),
+                            ) {
+                                Icon(
+                                    painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
+                                    contentDescription = stringResource(
+                                        if (state.isPlaying) R.string.player_cd_pause else R.string.player_cd_play,
+                                    ),
+                                    modifier = Modifier.size(36.dp),
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(24.dp))
+
+                            // Next button
+                            OutlinedButton(
+                                onClick = {
+                                    hapticFeedback.tick()
+                                    playerViewModel.onNext()
+                                },
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_NEXT),
+                                shapes = ButtonDefaults.shapes(),
+                                contentPadding = PaddingValues(0.dp),
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_skip_next),
+                                    contentDescription = stringResource(R.string.player_cd_next),
+                                    modifier = Modifier.size(28.dp),
+                                )
+                            }
+                        }
+
+                        // Bottom control row: Shuffle | Repeat - same connected
+                        // ButtonGroup styling as the top action row above (8 dp gap,
+                        // connected leading/trailing shapes, weight(1f) per button,
+                        // ~40 dp tall). Repeat is tri-state (OFF/ON/ONE): checked is
+                        // "any-on", icon swaps to repeat_one when in ONE mode.
+                        // (Add-to-playlist lives in the top action ButtonGroup now.)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         ) {
-                            // Artist navigation (icon-only - name is in the title above).
-                            // Stateless action: FilledTonalButton, not TonalToggleButton,
-                            // so TalkBack announces "button" rather than "not selected".
-                            FilledTonalButton(
-                                onClick = { onArtistClick(track) },
-                                shape = ButtonGroupDefaults.connectedLeadingButtonShape,
-                                enabled = track.artistUrl.isNotEmpty() || track.isLocal,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(0.dp),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_person),
-                                    contentDescription = stringResource(R.string.player_cd_open_artist),
-                                )
-                            }
-                            // Album navigation (new). Disabled when the track has
-                            // no album page (streaming sources where it's not
-                            // canonical). Also stateless - same FilledTonalButton.
-                            FilledTonalButton(
-                                onClick = { onAlbumClick(track) },
-                                shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
-                                enabled = albumNavEnabled,
-                                modifier = Modifier.weight(1f),
-                                contentPadding = PaddingValues(0.dp),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_album),
-                                    contentDescription = stringResource(R.string.player_cd_open_album),
-                                )
-                            }
-                            // Favorite toggle.
-                            TonalToggleButton(
-                                checked = track.isFavorite,
+                            FilledTonalToggleButton(
+                                checked = state.shuffleEnabled,
                                 onCheckedChange = {
-                                    hapticFeedback.toggle(!track.isFavorite)
-                                    playerViewModel.onToggleFavorite()
+                                    hapticFeedback.toggle(!state.shuffleEnabled)
+                                    playerViewModel.onToggleShuffle()
                                 },
-                                shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
+                                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Icon(
-                                    painter = painterResource(
-                                        if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
-                                    ),
-                                    contentDescription = stringResource(
-                                        if (track.isFavorite) {
-                                            R.string.player_cd_remove_from_favorites
-                                        } else {
-                                            R.string.player_cd_add_to_favorites
-                                        },
-                                    ),
+                                    painter = painterResource(R.drawable.ic_shuffle),
+                                    contentDescription = stringResource(R.string.player_cd_shuffle),
                                 )
                             }
-                            // Download toggle (matches Favorite's interaction language).
-                            TonalToggleButton(
-                                checked = isTrackDownloaded || isLocalTrack,
+                            FilledTonalToggleButton(
+                                checked = state.repeatMode != RepeatMode.OFF,
                                 onCheckedChange = {
-                                    if (isLocalTrack) return@TonalToggleButton
-                                    if (isTrackDownloaded) {
-                                        showDeleteDownloadDialog = true
-                                    } else if (!isDownloading) {
-                                        playerViewModel.onDownloadTrack()
-                                    }
+                                    // Cycle OFF->ALL->ONE->OFF; only ONE->OFF is "turning off".
+                                    hapticFeedback.toggle(state.repeatMode != RepeatMode.ONE)
+                                    playerViewModel.onToggleRepeat()
                                 },
-                                enabled = !isDownloading && !isLocalTrack,
-                                shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                if (isDownloading) {
-                                    CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
-                                } else {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (isTrackDownloaded || isLocalTrack) {
-                                                R.drawable.ic_download_done
-                                            } else {
-                                                R.drawable.ic_download
-                                            },
-                                        ),
-                                        contentDescription = stringResource(
-                                            when {
-                                                isLocalTrack -> R.string.player_cd_local_file
-                                                isTrackDownloaded -> R.string.player_cd_delete_download
-                                                else -> R.string.player_cd_download_track
-                                            },
-                                        ),
-                                    )
-                                }
-                            }
-                            // Add to playlist (new - opens the existing AddToPlaylistSheet).
-                            TonalToggleButton(
-                                checked = track.id in state.userPlaylistTrackIds,
-                                onCheckedChange = { showPlaylistSheet = true },
                                 shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Icon(
-                                    painter = painterResource(R.drawable.ic_playlist_add),
-                                    contentDescription = stringResource(R.string.player_cd_add_to_playlist),
+                                    painter = painterResource(
+                                        when (state.repeatMode) {
+                                            RepeatMode.ONE -> R.drawable.ic_repeat_one
+                                            else -> R.drawable.ic_repeat
+                                        },
+                                    ),
+                                    contentDescription = stringResource(R.string.player_cd_repeat),
                                 )
                             }
                         }
+
+                        // Bottom spacer for FAB clearance
+                        Spacer(modifier = Modifier.height(80.dp))
                     }
 
-                    // Wavy seek bar - keyed to track so state resets on track change
-                    val trackId = track.id
-                    var isSeeking by remember(trackId) { mutableStateOf(false) }
-                    var seekPosition by remember(trackId) { mutableFloatStateOf(0f) }
-                    // Tracks the last scrub segment so we tick once per step, not per frame.
-                    var lastSeekStep by remember(trackId) { mutableIntStateOf(-1) }
-
-                    // Clear isSeeking once the player position catches up to the seek target
-                    SideEffect {
-                        if (isSeeking && state.duration > 0L) {
-                            val playerFraction = state.currentPosition.toFloat() / state.duration.toFloat()
-                            if ((playerFraction - seekPosition).let { it * it } < 0.001f) {
-                                isSeeking = false
-                            }
-                        }
-                    }
-
-                    val sliderPosition = if (isSeeking) {
-                        seekPosition
-                    } else {
-                        if (state.duration > 0L) {
-                            state.currentPosition.toFloat() / state.duration.toFloat()
-                        } else {
-                            0f
-                        }
-                    }
-
-                    Box(
+                    // Transparent overlay - collapse + volume icons. Doubles as the
+                    // swipe-down-to-collapse drag handle (inverse of the mini bar's
+                    // swipe-up-to-expand): a downward drag scrubs the host morph back
+                    // to the mini player, committed by velocity on release.
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(40.dp)
-                            .then(
-                                if (!state.isLoadingTrack) {
-                                    Modifier
-                                        .pointerInput(trackId) {
-                                            detectTapGestures { offset ->
-                                                val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                                seekPosition = fraction
-                                                val targetMs = (fraction * state.duration).toLong()
-                                                playerViewModel.onSeek(targetMs)
-                                                hapticFeedback.tick()
-                                                lastSeekStep = -1
-                                                // Keep showing seekPosition until player catches up
-                                                isSeeking = true
-                                            }
-                                        }
-                                        .pointerInput(trackId) {
-                                            detectDragGestures(
-                                                onDragEnd = {
-                                                    val targetMs = (seekPosition * state.duration).toLong()
-                                                    playerViewModel.onSeek(targetMs)
-                                                    lastSeekStep = -1
-                                                    // Keep showing seekPosition until player catches up
-                                                },
-                                                onDragCancel = {
-                                                    isSeeking = false
-                                                    lastSeekStep = -1
-                                                },
-                                            ) { change, _ ->
-                                                change.consume()
-                                                val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                                                isSeeking = true
-                                                seekPosition = fraction
-                                                // Tick once per scrub segment for a textured feel.
-                                                val step = (fraction * SEEK_TICK_SEGMENTS).toInt()
-                                                if (step != lastSeekStep) {
-                                                    hapticFeedback.tick()
-                                                    lastSeekStep = step
-                                                }
-                                            }
-                                        }
-                                } else {
-                                    Modifier
-                                },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        val barHeight = state.progressBarSizeDp.dp
-                        val isWavy = state.progressBarStyle == "wavy"
-                        if (state.isLoadingTrack) {
-                            if (isWavy) {
-                                LinearWavyProgressIndicator(
-                                    modifier = Modifier.fillMaxWidth().height(barHeight),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            .padding(horizontal = 4.dp)
+                            .pointerInput(expandDistancePx) {
+                                detectVerticalDragGestures(
+                                    onDragStart = {
+                                        collapseDy = 0f
+                                        collapseVelocityTracker.resetTracking()
+                                    },
+                                    onVerticalDrag = { change, dragAmount ->
+                                        change.consume()
+                                        collapseDy = (collapseDy + dragAmount).coerceAtLeast(0f)
+                                        collapseVelocityTracker.addPosition(change.uptimeMillis, change.position)
+                                        onCollapseSeek((1f - collapseDy / expandDistancePx).coerceIn(0f, 1f))
+                                    },
+                                    onDragCancel = {
+                                        onCollapseSeek(1f)
+                                        collapseDy = 0f
+                                    },
+                                    onDragEnd = {
+                                        onCollapseSettle(collapseVelocityTracker.calculateVelocity().y)
+                                        collapseDy = 0f
+                                    },
                                 )
-                            } else {
-                                LinearProgressIndicator(
-                                    modifier = Modifier.fillMaxWidth().height(barHeight),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            },
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(onClick = onCollapse, shapes = IconButtonDefaults.shapes()) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_keyboard_arrow_down),
+                                contentDescription = stringResource(R.string.player_cd_collapse),
+                            )
+                        }
+                        if (state.showVolumeButton) {
+                            IconButton(onClick = { showVolumeSheet = true }, shapes = IconButtonDefaults.shapes()) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_volume_up),
+                                    contentDescription = stringResource(R.string.player_cd_volume),
                                 )
                             }
-                        } else if (isWavy) {
-                            LinearWavyProgressIndicator(
-                                progress = { sliderPosition.coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth().height(barHeight),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                stroke = Stroke(width = barHeight.value),
-                                trackStroke = Stroke(width = barHeight.value),
-                            )
-                        } else {
-                            LinearProgressIndicator(
-                                progress = { sliderPosition.coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxWidth().height(barHeight),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            )
                         }
                     }
-
-                    // Time labels - reflect seek position during drag
-                    val displayPosition = if (state.isLoadingTrack) {
-                        null
-                    } else if (isSeeking) {
-                        (seekPosition * state.duration).toLong()
-                    } else {
-                        state.currentPosition
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Text(
-                            text = if (displayPosition != null) formatTime(displayPosition) else "--:--",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_POSITION),
-                        )
-                        val remaining = if (displayPosition != null) {
-                            (state.duration - displayPosition).coerceAtLeast(0L)
-                        } else {
-                            null
-                        }
-                        Text(
-                            text = if (remaining != null) "-${formatTime(remaining)}" else "--:--",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_DURATION),
-                        )
-                    }
-
-                    // Top control row: Previous / Play / Next
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        // Previous button
-                        OutlinedButton(
-                            onClick = {
-                                hapticFeedback.tick()
-                                playerViewModel.onPrevious()
-                            },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_PREVIOUS),
-                            shapes = ButtonDefaults.shapes(),
-                            contentPadding = PaddingValues(0.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_skip_previous),
-                                contentDescription = stringResource(R.string.player_cd_previous),
-                                modifier = Modifier.size(28.dp),
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(24.dp))
-
-                        // Play/Pause toggle button
-                        ToggleButton(
-                            checked = state.isPlaying,
-                            onCheckedChange = {
-                                hapticFeedback.toggle(!state.isPlaying)
-                                playerViewModel.onPlayPause()
-                            },
-                            modifier = Modifier
-                                .size(80.dp)
-                                .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_PLAY_PAUSE),
-                            colors = ToggleButtonDefaults.toggleButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                                checkedContainerColor = MaterialTheme.colorScheme.primary,
-                                checkedContentColor = MaterialTheme.colorScheme.onPrimary,
-                            ),
-                        ) {
-                            Icon(
-                                painter = painterResource(if (state.isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow),
-                                contentDescription = stringResource(
-                                    if (state.isPlaying) R.string.player_cd_pause else R.string.player_cd_play,
-                                ),
-                                modifier = Modifier.size(36.dp),
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(24.dp))
-
-                        // Next button
-                        OutlinedButton(
-                            onClick = {
-                                hapticFeedback.tick()
-                                playerViewModel.onNext()
-                            },
-                            modifier = Modifier
-                                .size(56.dp)
-                                .testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_NEXT),
-                            shapes = ButtonDefaults.shapes(),
-                            contentPadding = PaddingValues(0.dp),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_skip_next),
-                                contentDescription = stringResource(R.string.player_cd_next),
-                                modifier = Modifier.size(28.dp),
-                            )
-                        }
-                    }
-
-                    // Bottom control row: Shuffle | Repeat - same connected
-                    // ButtonGroup styling as the top action row above (8 dp gap,
-                    // connected leading/trailing shapes, weight(1f) per button,
-                    // ~40 dp tall). Repeat is tri-state (OFF/ON/ONE): checked is
-                    // "any-on", icon swaps to repeat_one when in ONE mode.
-                    // (Add-to-playlist lives in the top action ButtonGroup now.)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    ) {
-                        TonalToggleButton(
-                            checked = state.shuffleEnabled,
-                            onCheckedChange = {
-                                hapticFeedback.toggle(!state.shuffleEnabled)
-                                playerViewModel.onToggleShuffle()
-                            },
-                            shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_shuffle),
-                                contentDescription = stringResource(R.string.player_cd_shuffle),
-                            )
-                        }
-                        TonalToggleButton(
-                            checked = state.repeatMode != RepeatMode.OFF,
-                            onCheckedChange = {
-                                // Cycle OFF->ALL->ONE->OFF; only ONE->OFF is "turning off".
-                                hapticFeedback.toggle(state.repeatMode != RepeatMode.ONE)
-                                playerViewModel.onToggleRepeat()
-                            },
-                            shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    when (state.repeatMode) {
-                                        RepeatMode.ONE -> R.drawable.ic_repeat_one
-                                        else -> R.drawable.ic_repeat
-                                    },
-                                ),
-                                contentDescription = stringResource(R.string.player_cd_repeat),
-                            )
-                        }
-                    }
-
-                    // Bottom spacer for FAB clearance
-                    Spacer(modifier = Modifier.height(80.dp))
                 }
-
-                // Transparent overlay - collapse + volume icons. Doubles as the
-                // swipe-down-to-collapse drag handle (inverse of the mini bar's
-                // swipe-up-to-expand): a downward drag scrubs the host morph back
-                // to the mini player, committed by velocity on release.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp)
-                        .pointerInput(expandDistancePx) {
-                            detectVerticalDragGestures(
-                                onDragStart = {
-                                    collapseDy = 0f
-                                    collapseVelocityTracker.resetTracking()
-                                },
-                                onVerticalDrag = { change, dragAmount ->
-                                    change.consume()
-                                    collapseDy = (collapseDy + dragAmount).coerceAtLeast(0f)
-                                    collapseVelocityTracker.addPosition(change.uptimeMillis, change.position)
-                                    onCollapseSeek((1f - collapseDy / expandDistancePx).coerceIn(0f, 1f))
-                                },
-                                onDragCancel = {
-                                    onCollapseSeek(1f)
-                                    collapseDy = 0f
-                                },
-                                onDragEnd = {
-                                    onCollapseSettle(collapseVelocityTracker.calculateVelocity().y)
-                                    collapseDy = 0f
-                                },
-                            )
-                        },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(onClick = onCollapse, shapes = IconButtonDefaults.shapes()) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_keyboard_arrow_down),
-                            contentDescription = stringResource(R.string.player_cd_collapse),
+                if (adaptive.useDualPane) {
+                    Surface(
+                        modifier = Modifier
+                            .weight(0.38f)
+                            .fillMaxHeight(),
+                        color = MaterialTheme.colorScheme.surface,
+                    ) {
+                        UpNextQueuePane(
+                            currentQueueIndex = state.currentQueueIndex,
+                            currentTrackId = track.id,
+                            downloadedTrackIds = state.downloadedTrackIds,
+                            onEntryLongClick = { upNextContextEntry = it },
                         )
-                    }
-                    if (state.showVolumeButton) {
-                        IconButton(onClick = { showVolumeSheet = true }, shapes = IconButtonDefaults.shapes()) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_volume_up),
-                                contentDescription = stringResource(R.string.player_cd_volume),
-                            )
-                        }
                     }
                 }
             }
@@ -1265,6 +1315,7 @@ fun FullPlayer(
     if (showDebugSheet && track != null) {
         ModalBottomSheet(
             onDismissRequest = { showDebugSheet = false },
+            sheetMaxWidth = adaptive.sheetMaxWidth,
         ) {
             Text(
                 text = stringResource(R.string.player_playback_info),
@@ -1432,6 +1483,7 @@ fun FullPlayer(
         val contextTrack = contextEntry.track
         ModalBottomSheet(
             onDismissRequest = { upNextContextEntry = null },
+            sheetMaxWidth = adaptive.sheetMaxWidth,
         ) {
             Text(
                 text = contextTrack.title,
@@ -1529,38 +1581,11 @@ fun FullPlayer(
     }
 
     // Queue bottom sheet with pagination, swipe-to-delete, and drag reorder.
+    // Compact/Medium only: Expanded shows the side pane instead.
     // Consumes QueueEntry rows: uids are unique per queue slot, so duplicate
     // Track.ids can't collide as LazyColumn keys, and every edit commits by
     // uid resolved against the live queue instead of a composition-time index.
     if (showQueueSheet) {
-        val queueEntries by playerViewModel.queueEntries.collectAsStateWithLifecycle()
-        val currentIndex = state.currentQueueIndex
-        val allUpNextEntries = if (currentIndex >= 0 && currentIndex < queueEntries.lastIndex) {
-            queueEntries.subList(currentIndex + 1, queueEntries.size)
-        } else {
-            emptyList()
-        }
-
-        var displayCount by remember(currentIndex) { mutableIntStateOf(25) }
-        val displayedEntries = allUpNextEntries.take(displayCount)
-        val hasMore = displayCount < allUpNextEntries.size
-        val queueListState = rememberLazyListState()
-
-        // Pagination: load more when near bottom
-        val currentHasMore by rememberUpdatedState(hasMore)
-        val currentDisplayedCount by rememberUpdatedState(displayedEntries.size)
-        LaunchedEffect(queueListState) {
-            snapshotFlow {
-                val last = queueListState.layoutInfo.visibleItemsInfo.lastOrNull()
-                val totalCount = queueListState.layoutInfo.totalItemsCount
-                last != null && totalCount > 0 && last.index >= totalCount - 3
-            }.collect { nearEnd ->
-                if (nearEnd && currentHasMore && currentDisplayedCount > 0) {
-                    displayCount += 25
-                }
-            }
-        }
-
         ModalBottomSheet(
             onDismissRequest = { showQueueSheet = false },
             sheetState = androidx.compose.material3.rememberBottomSheetState(
@@ -1573,140 +1598,196 @@ fun FullPlayer(
             // Contrasts with the surfaceContainerLow segmented rows inside;
             // the M3 default (surfaceContainerLow) would swallow them.
             containerColor = MaterialTheme.colorScheme.surface,
+            sheetMaxWidth = adaptive.sheetMaxWidth,
         ) {
-            Text(
-                text = stringResource(R.string.player_up_next_count, allUpNextEntries.size),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            UpNextQueuePane(
+                currentQueueIndex = state.currentQueueIndex,
+                currentTrackId = state.currentTrack?.id,
+                downloadedTrackIds = state.downloadedTrackIds,
+                onEntryLongClick = { upNextContextEntry = it },
             )
+        }
+    }
+}
 
-            Box(modifier = Modifier.fillMaxWidth()) {
-                ReorderableMusicList(
-                    items = displayedEntries,
-                    keyFn = { it.uid },
-                    onMove = { from, to ->
-                        // Map the drop indices to uids and commit by uid: the
-                        // uids are re-resolved against the live queue inside
-                        // moveQueueEntry, so a queue that shifted since this
-                        // composition can't misroute the move.
-                        val fromUid = displayedEntries.getOrNull(from)?.uid
-                        val toUid = displayedEntries.getOrNull(to)?.uid
-                        if (fromUid != null && toUid != null) {
-                            playerViewModel.moveQueueEntry(fromUid, toUid)
-                        }
-                    },
-                    lazyListState = queueListState,
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    footer = {
-                        if (hasMore) {
-                            item(key = "queue_loading_more") {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp)
-                                        .animateItem(),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    ContainedLoadingIndicator()
-                                }
+/**
+ * Shared "Up Next" queue list used by the ModalBottomSheet (Compact/Medium)
+ * and the Expanded dual-pane supporting side. Length is intrinsic to the
+ * reorder/swipe/pagination/scrollbar UI (same body as the former inline sheet).
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+@Suppress("LongMethod")
+private fun UpNextQueuePane(
+    currentQueueIndex: Int,
+    currentTrackId: String?,
+    downloadedTrackIds: Set<String>,
+    onEntryLongClick: (QueueEntry) -> Unit,
+    modifier: Modifier = Modifier,
+    // Activity-scoped: same PlayerViewModel FullPlayer uses.
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    val queueEntries by playerViewModel.queueEntries.collectAsStateWithLifecycle()
+    val allUpNextEntries = if (currentQueueIndex >= 0 && currentQueueIndex < queueEntries.lastIndex) {
+        queueEntries.subList(currentQueueIndex + 1, queueEntries.size)
+    } else {
+        emptyList()
+    }
+
+    var displayCount by remember(currentQueueIndex) { mutableIntStateOf(25) }
+    val displayedEntries = allUpNextEntries.take(displayCount)
+    val hasMore = displayCount < allUpNextEntries.size
+    val queueListState = rememberLazyListState()
+
+    // Pagination: load more when near bottom
+    val currentHasMore by rememberUpdatedState(hasMore)
+    val currentDisplayedCount by rememberUpdatedState(displayedEntries.size)
+    LaunchedEffect(queueListState) {
+        snapshotFlow {
+            val last = queueListState.layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalCount = queueListState.layoutInfo.totalItemsCount
+            last != null && totalCount > 0 && last.index >= totalCount - 3
+        }.collect { nearEnd ->
+            if (nearEnd && currentHasMore && currentDisplayedCount > 0) {
+                displayCount += 25
+            }
+        }
+    }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Text(
+            text = stringResource(R.string.player_up_next_count, allUpNextEntries.size),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        )
+
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            ReorderableMusicList(
+                items = displayedEntries,
+                keyFn = { it.uid },
+                onMove = { from, to ->
+                    // Map the drop indices to uids and commit by uid: the
+                    // uids are re-resolved against the live queue inside
+                    // moveQueueEntry, so a queue that shifted since this
+                    // composition can't misroute the move.
+                    val fromUid = displayedEntries.getOrNull(from)?.uid
+                    val toUid = displayedEntries.getOrNull(to)?.uid
+                    if (fromUid != null && toUid != null) {
+                        playerViewModel.moveQueueEntry(fromUid, toUid)
+                    }
+                },
+                lazyListState = queueListState,
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                footer = {
+                    if (hasMore) {
+                        item(key = "queue_loading_more") {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp)
+                                    .animateItem(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                ContainedLoadingIndicator()
                             }
                         }
-                        item(key = "queue_bottom_spacer") {
-                            Spacer(modifier = Modifier.height(28.dp))
-                        }
-                    },
-                ) { upNextIndex, queueEntry, isDragging, dragHandleModifier ->
-                    val queueTrack = queueEntry.track
-                    val isDownloaded = queueTrack.id in state.downloadedTrackIds || queueTrack.isLocal
-                    val isCurrentTrack = state.currentTrack?.id == queueTrack.id
-
-                    val dismissState = rememberSwipeToDismissBoxState()
-                    LaunchedEffect(dismissState.currentValue) {
-                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
-                            playerViewModel.removeQueueEntry(queueEntry.uid)
-                        }
                     }
+                    item(key = "queue_bottom_spacer") {
+                        Spacer(modifier = Modifier.height(28.dp))
+                    }
+                },
+            ) { upNextIndex, queueEntry, isDragging, dragHandleModifier ->
+                val queueTrack = queueEntry.track
+                val isDownloaded = queueTrack.id in downloadedTrackIds || queueTrack.isLocal
+                val isCurrentTrack = currentTrackId == queueTrack.id
 
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        enableDismissFromStartToEnd = false,
-                        gesturesEnabled = !isDragging,
-                        backgroundContent = {
-                            if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(
-                                            top = if (upNextIndex == 0) 0.dp else 1.dp,
-                                            bottom = if (upNextIndex == displayedEntries.lastIndex) 0.dp else 1.dp,
-                                        )
-                                        .clip(segmentedItemShape(upNextIndex, displayedEntries.size))
-                                        .background(MaterialTheme.colorScheme.errorContainer)
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = Alignment.CenterEnd,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_delete),
-                                        contentDescription = stringResource(R.string.common_cd_delete),
-                                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                val dismissState = rememberSwipeToDismissBoxState()
+                LaunchedEffect(dismissState.currentValue) {
+                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
+                        playerViewModel.removeQueueEntry(queueEntry.uid)
+                    }
+                }
+
+                SwipeToDismissBox(
+                    state = dismissState,
+                    enableDismissFromStartToEnd = false,
+                    gesturesEnabled = !isDragging,
+                    backgroundContent = {
+                        if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(
+                                        top = if (upNextIndex == 0) 0.dp else 1.dp,
+                                        bottom = if (upNextIndex == displayedEntries.lastIndex) 0.dp else 1.dp,
                                     )
-                                }
+                                    .clip(segmentedItemShape(upNextIndex, displayedEntries.size))
+                                    .background(MaterialTheme.colorScheme.errorContainer)
+                                    .padding(horizontal = 20.dp),
+                                contentAlignment = Alignment.CenterEnd,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_delete),
+                                    contentDescription = stringResource(R.string.common_cd_delete),
+                                    tint = MaterialTheme.colorScheme.onErrorContainer,
+                                )
                             }
-                        },
-                    ) {
-                        SegmentedListItem(
-                            index = upNextIndex,
-                            count = displayedEntries.size,
-                            isDragging = isDragging,
-                            contentPadding = PaddingValues(
-                                top = if (upNextIndex == 0) 0.dp else 1.dp,
-                                bottom = if (upNextIndex == displayedEntries.lastIndex) 0.dp else 1.dp,
-                            ),
-                        ) {
-                            MusicRow(
-                                track = queueTrack,
-                                onClick = { playerViewModel.playQueueEntry(queueEntry.uid) },
-                                onLongClick = { upNextContextEntry = queueEntry },
-                                isCurrentTrack = isCurrentTrack,
-                                showDownload = false,
-                                isDownloaded = isDownloaded,
-                                dragHandle = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        if (isDownloaded) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_download_done),
-                                                contentDescription = stringResource(R.string.common_cd_downloaded),
-                                                modifier = Modifier.size(18.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                        Box(
-                                            modifier = Modifier
-                                                .size(48.dp)
-                                                .then(dragHandleModifier),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.ic_drag_handle),
-                                                contentDescription = stringResource(R.string.common_cd_reorder),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(24.dp),
-                                            )
-                                        }
-                                    }
-                                },
-                            )
                         }
+                    },
+                ) {
+                    SegmentedListItem(
+                        index = upNextIndex,
+                        count = displayedEntries.size,
+                        isDragging = isDragging,
+                        contentPadding = PaddingValues(
+                            top = if (upNextIndex == 0) 0.dp else 1.dp,
+                            bottom = if (upNextIndex == displayedEntries.lastIndex) 0.dp else 1.dp,
+                        ),
+                    ) {
+                        MusicRow(
+                            track = queueTrack,
+                            onClick = { playerViewModel.playQueueEntry(queueEntry.uid) },
+                            onLongClick = { onEntryLongClick(queueEntry) },
+                            isCurrentTrack = isCurrentTrack,
+                            showDownload = false,
+                            isDownloaded = isDownloaded,
+                            dragHandle = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (isDownloaded) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_download_done),
+                                            contentDescription = stringResource(R.string.common_cd_downloaded),
+                                            modifier = Modifier.size(18.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .then(dragHandleModifier),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_drag_handle),
+                                            contentDescription = stringResource(R.string.common_cd_reorder),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(24.dp),
+                                        )
+                                    }
+                                }
+                            },
+                        )
                     }
                 }
-                if (displayedEntries.size > 15) {
-                    FastScrollbar(
-                        listState = queueListState,
-                        modifier = Modifier.align(Alignment.CenterEnd),
-                    )
-                }
+            }
+            if (displayedEntries.size > 15) {
+                FastScrollbar(
+                    listState = queueListState,
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                )
             }
         }
     }
