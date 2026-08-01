@@ -1,5 +1,13 @@
 # Dustvalve Next - agent guidelines
 
+## Suppressions and allowlists
+
+Prefer fixing the root cause over `@Suppress`, lint `ignore`/`disable`,
+detekt baselines, ktlint disables, or allowlists. If suppression is the
+real choice: stop, explain why a fix is not viable, and ask the user
+before adding or expanding it (unless they already authorized that path).
+See also Cursor rule `android-ask-before-suppress`.
+
 ## Workflow tests - run before shipping behavior changes
 
 Four automated tiers (see docs/testing/README.md):
@@ -65,5 +73,5 @@ two lists in sync):
   (asserts the localized middle-dot separator),
   `YouTubeMusicSearchParser.kt` + `YouTubeMusicSearchParserTest.kt`
   (YouTube Music sends a literal bullet separator),
-  `GenreSubTags.kt` (real Bandcamp tag slugs with accents).
+  `SubTag.kt` (real Bandcamp tag slugs with accents).
 - Binary assets (png/webp/jar/jks/...).

@@ -21,28 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
-import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
-
-enum class RemoteItemKind { TRACK, ALBUM, PLAYLIST, ARTIST }
-
-fun SearchResultType.toRemoteKind(): RemoteItemKind? = when (this) {
-    SearchResultType.TRACK,
-    SearchResultType.YOUTUBE_TRACK,
-    -> RemoteItemKind.TRACK
-
-    SearchResultType.ALBUM,
-    SearchResultType.YOUTUBE_ALBUM,
-    -> RemoteItemKind.ALBUM
-
-    SearchResultType.YOUTUBE_PLAYLIST -> RemoteItemKind.PLAYLIST
-
-    SearchResultType.ARTIST,
-    SearchResultType.YOUTUBE_ARTIST,
-    -> RemoteItemKind.ARTIST
-
-    SearchResultType.LOCAL_TRACK -> null
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable

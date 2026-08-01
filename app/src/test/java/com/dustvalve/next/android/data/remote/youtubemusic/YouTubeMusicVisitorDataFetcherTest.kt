@@ -182,7 +182,9 @@ class YouTubeMusicVisitorDataFetcherTest {
                     .name("SID").value("stale_session_value").domain(url.host).path("/")
                     .build(),
             )
-            override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {}
+            override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
+                // Read-only jar for this test; responses must not mutate cookies.
+            }
         }
         val clientWithJar = OkHttpClient.Builder().cookieJar(jar).build()
         val fetcher = TestableFetcher(

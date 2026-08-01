@@ -69,6 +69,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -750,6 +751,7 @@ private fun YouTubeSourceContent(
     onLoadMoreGenres: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val loadMoreGenres by rememberUpdatedState(onLoadMoreGenres)
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp),
@@ -847,7 +849,7 @@ private fun YouTubeSourceContent(
             if (!state.genresExhausted) {
                 item(key = "yt_genre_loader") {
                     LaunchedEffect(state.genreSections.size) {
-                        onLoadMoreGenres()
+                        loadMoreGenres()
                     }
                     Box(
                         modifier = Modifier

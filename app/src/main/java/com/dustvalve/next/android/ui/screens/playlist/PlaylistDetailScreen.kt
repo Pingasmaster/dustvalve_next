@@ -52,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -292,6 +293,7 @@ private fun PlaylistContent(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val trackCount = tracks.size
+    val removeTrack by rememberUpdatedState(onRemoveTrack)
 
     val allTracksDownloaded = tracks.isNotEmpty() &&
         tracks.all { it.id in downloadedTrackIds || it.isLocal }
@@ -425,7 +427,7 @@ private fun PlaylistContent(
             LaunchedEffect(dismissState.currentValue) {
                 if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
                     hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
-                    onRemoveTrack(track.id)
+                    removeTrack(track.id)
                 }
             }
             SwipeToDismissBox(

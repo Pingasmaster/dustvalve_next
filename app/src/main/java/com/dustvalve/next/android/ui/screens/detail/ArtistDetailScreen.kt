@@ -60,6 +60,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -392,6 +393,7 @@ private fun FlatTracksLayout(
     val listState = rememberLazyListState()
     val allDownloaded = state.tracks.isNotEmpty() &&
         state.tracks.all { it.id in state.downloadedTrackIds }
+    val loadMore by rememberUpdatedState(onLoadMore)
 
     // Trigger pagination when we're near the bottom.
     LaunchedEffect(listState, state.tracks.size, state.hasMore) {
@@ -401,7 +403,7 @@ private fun FlatTracksLayout(
             total > 0 && last >= total - 3
         }.collect { nearEnd ->
             if (nearEnd && state.hasMore && !state.isLoadingMore) {
-                onLoadMore()
+                loadMore()
             }
         }
     }
