@@ -23,10 +23,12 @@
 # modern system images (some bleeding-edge distros), run these tiers in CI
 # (check.yml: emulator-smoke / emulator-e2e) instead.
 #
-# IMPORTANT: Do NOT manually remove .build.lock unless you have user approval
-# and have confirmed no process is currently using it (check with `fuser
-# .build.lock` or `lsof .build.lock`). The lock ensures only one build or
-# clean runs at a time. Removing it without checking can corrupt builds.
+# IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
+# you have user approval and have confirmed no process is using it (check with
+# `fuser ~/.cache/android-apps/build.lock` or `lsof` on that path). The lock is
+# shared across dustvalve_next, calc, compass, and STT_premium so only one of
+# those builds/cleans runs at a time. Deleting the file while a holder is
+# alive can break flock (new openers get a new inode).
 #
 set -euo pipefail
 
@@ -69,15 +71,20 @@ for arg in "$@"; do
     esac
 done
 
-# Lock helper: acquire or exit
+# Global lock shared by dustvalve_next / calc / compass / STT_premium.
+# flock is held on FD 9 for the lifetime of this process; do not delete the
+# lockfile on exit (removing it while held lets another process open a new
+# inode and bypass the lock).
 acquire_lock() {
-    LOCKFILE="$SCRIPT_DIR/.build.lock"
+    local lock_dir="${XDG_CACHE_HOME:-$HOME/.cache}/android-apps"
+    mkdir -p "$lock_dir"
+    LOCKFILE="$lock_dir/build.lock"
     exec 9>"$LOCKFILE"
     if ! flock -n 9; then
-        echo "Another build or clean is already running. Exiting."
+        echo "Another Android app build/clean is already running" \
+            "(dustvalve_next/calc/compass/STT_premium share $LOCKFILE). Exiting."
         exit 1
     fi
-    trap 'rm -f "$LOCKFILE"' EXIT
 }
 
 # --clean: just run gradle clean and exit, do nothing else
