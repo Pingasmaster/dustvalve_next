@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -343,14 +344,20 @@ class PlaybackManager @Inject constructor(
      * (patched into the queue in-place) otherwise, or null when it cannot be
      * made playable.
      */
-    @Suppress("TooGenericExceptionCaught") // resolver hook runs arbitrary repository code
     private suspend fun resolveCandidate(track: Track): Track? {
         if (!trackNeedsResolution(track)) return track
         val resolver = streamResolver ?: return null
         val resolved = try {
             resolver(track)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            android.util.Log.w("PlaybackManager", "Stream resolution failed for '${track.title}'", e)
+            null
+        } catch (e: IllegalArgumentException) {
+            android.util.Log.w("PlaybackManager", "Stream resolution failed for '${track.title}'", e)
+            null
+        } catch (e: IllegalStateException) {
             android.util.Log.w("PlaybackManager", "Stream resolution failed for '${track.title}'", e)
             null
         }
@@ -384,7 +391,7 @@ class PlaybackManager @Inject constructor(
         if (track.artUrl.isNotBlank()) {
             try {
                 metadataBuilder.setArtworkUri(track.artUrl.toUri())
-            } catch (_: Exception) {
+            } catch (_: IllegalArgumentException) {
                 // Ignore malformed artwork URIs
             }
         }

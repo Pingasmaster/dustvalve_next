@@ -17,7 +17,6 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -50,20 +49,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ButtonGroupDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilledTonalToggleButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialShapes
@@ -86,7 +79,6 @@ import androidx.compose.material3.carousel.rememberCarouselState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -104,7 +96,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -128,7 +119,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
-import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.player.QueueEntry
 import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
@@ -147,10 +137,6 @@ import com.dustvalve.next.android.ui.util.toggle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-import java.util.Locale
-
-/** Number of haptic segments across the seek bar (~ticks per full-width scrub). */
-private const val SEEK_TICK_SEGMENTS = 40
 
 /** Number of haptic segments across a volume slider. */
 private const val VOLUME_TICK_SEGMENTS = 15
@@ -830,267 +816,29 @@ fun FullPlayer(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            // Connected M3E ButtonGroup: Artist / Album / Favorite /
-                            // Download / Add-to-playlist. All icon-only (the artist
-                            // name is already in the title above), all ~40 dp tall to
-                            // match the previous FilledTonalToggleButton sizing. Spaced 8 dp
-                            // apart for visual breathing room - wider than the 2 dp
-                            // ButtonGroupDefaults.ConnectedSpaceBetween.
-                            val isTrackDownloaded = track.id in state.downloadedTrackIds
-                            val isDownloading = state.downloadingTrackId == track.id
-                            val isLocalTrack = track.isLocal
-                            val albumNavEnabled = track.albumUrl.isNotEmpty()
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            ) {
-                                // Artist navigation (icon-only - name is in the title above).
-                                // Stateless action: FilledTonalButton, not FilledTonalToggleButton,
-                                // so TalkBack announces "button" rather than "not selected".
-                                FilledTonalButton(
-                                    onClick = { onArtistClick(track) },
-                                    shape = ButtonGroupDefaults.connectedLeadingButtonShape,
-                                    enabled = track.artistUrl.isNotEmpty() || track.isLocal,
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(0.dp),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_person),
-                                        contentDescription = stringResource(R.string.player_cd_open_artist),
-                                    )
-                                }
-                                // Album navigation (new). Disabled when the track has
-                                // no album page (streaming sources where it's not
-                                // canonical). Also stateless - same FilledTonalButton.
-                                FilledTonalButton(
-                                    onClick = { onAlbumClick(track) },
-                                    shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
-                                    enabled = albumNavEnabled,
-                                    modifier = Modifier.weight(1f),
-                                    contentPadding = PaddingValues(0.dp),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_album),
-                                        contentDescription = stringResource(R.string.player_cd_open_album),
-                                    )
-                                }
-                                // Favorite toggle.
-                                FilledTonalToggleButton(
-                                    checked = track.isFavorite,
-                                    onCheckedChange = {
-                                        hapticFeedback.toggle(!track.isFavorite)
-                                        playerViewModel.onToggleFavorite()
-                                    },
-                                    shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(
-                                            if (track.isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border,
-                                        ),
-                                        contentDescription = stringResource(
-                                            if (track.isFavorite) {
-                                                R.string.player_cd_remove_from_favorites
-                                            } else {
-                                                R.string.player_cd_add_to_favorites
-                                            },
-                                        ),
-                                    )
-                                }
-                                // Download toggle (matches Favorite's interaction language).
-                                FilledTonalToggleButton(
-                                    checked = isTrackDownloaded || isLocalTrack,
-                                    onCheckedChange = {
-                                        if (isLocalTrack) return@FilledTonalToggleButton
-                                        if (isTrackDownloaded) {
-                                            showDeleteDownloadDialog = true
-                                        } else if (!isDownloading) {
-                                            playerViewModel.onDownloadTrack()
-                                        }
-                                    },
-                                    enabled = !isDownloading && !isLocalTrack,
-                                    shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    if (isDownloading) {
-                                        CircularWavyProgressIndicator(modifier = Modifier.size(20.dp))
-                                    } else {
-                                        Icon(
-                                            painter = painterResource(
-                                                if (isTrackDownloaded || isLocalTrack) {
-                                                    R.drawable.ic_download_done
-                                                } else {
-                                                    R.drawable.ic_download
-                                                },
-                                            ),
-                                            contentDescription = stringResource(
-                                                when {
-                                                    isLocalTrack -> R.string.player_cd_local_file
-                                                    isTrackDownloaded -> R.string.player_cd_delete_download
-                                                    else -> R.string.player_cd_download_track
-                                                },
-                                            ),
-                                        )
-                                    }
-                                }
-                                // Add to playlist (new - opens the existing AddToPlaylistSheet).
-                                FilledTonalToggleButton(
-                                    checked = track.id in state.userPlaylistTrackIds,
-                                    onCheckedChange = { showPlaylistSheet = true },
-                                    shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_playlist_add),
-                                        contentDescription = stringResource(R.string.player_cd_add_to_playlist),
-                                    )
-                                }
-                            }
-                        }
-
-                        // Wavy seek bar - keyed to track so state resets on track change
-                        val trackId = track.id
-                        var isSeeking by remember(trackId) { mutableStateOf(false) }
-                        var seekPosition by remember(trackId) { mutableFloatStateOf(0f) }
-                        // Tracks the last scrub segment so we tick once per step, not per frame.
-                        var lastSeekStep by remember(trackId) { mutableIntStateOf(-1) }
-
-                        // Clear isSeeking once the player position catches up to the seek target
-                        SideEffect {
-                            if (isSeeking && state.duration > 0L) {
-                                val playerFraction = state.currentPosition.toFloat() / state.duration.toFloat()
-                                if ((playerFraction - seekPosition).let { it * it } < 0.001f) {
-                                    isSeeking = false
-                                }
-                            }
-                        }
-
-                        val sliderPosition = if (isSeeking) {
-                            seekPosition
-                        } else {
-                            if (state.duration > 0L) {
-                                state.currentPosition.toFloat() / state.duration.toFloat()
-                            } else {
-                                0f
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                                .then(
-                                    if (!state.isLoadingTrack) {
-                                        Modifier
-                                            .pointerInput(trackId) {
-                                                detectTapGestures { offset ->
-                                                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                                    seekPosition = fraction
-                                                    val targetMs = (fraction * state.duration).toLong()
-                                                    playerViewModel.onSeek(targetMs)
-                                                    hapticFeedback.tick()
-                                                    lastSeekStep = -1
-                                                    // Keep showing seekPosition until player catches up
-                                                    isSeeking = true
-                                                }
-                                            }
-                                            .pointerInput(trackId) {
-                                                detectDragGestures(
-                                                    onDragEnd = {
-                                                        val targetMs = (seekPosition * state.duration).toLong()
-                                                        playerViewModel.onSeek(targetMs)
-                                                        lastSeekStep = -1
-                                                        // Keep showing seekPosition until player catches up
-                                                    },
-                                                    onDragCancel = {
-                                                        isSeeking = false
-                                                        lastSeekStep = -1
-                                                    },
-                                                ) { change, _ ->
-                                                    change.consume()
-                                                    val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                                                    isSeeking = true
-                                                    seekPosition = fraction
-                                                    // Tick once per scrub segment for a textured feel.
-                                                    val step = (fraction * SEEK_TICK_SEGMENTS).toInt()
-                                                    if (step != lastSeekStep) {
-                                                        hapticFeedback.tick()
-                                                        lastSeekStep = step
-                                                    }
-                                                }
-                                            }
-                                    } else {
-                                        Modifier
-                                    },
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            val barHeight = state.progressBarSizeDp.dp
-                            val isWavy = state.progressBarStyle == "wavy"
-                            if (state.isLoadingTrack) {
-                                if (isWavy) {
-                                    LinearWavyProgressIndicator(
-                                        modifier = Modifier.fillMaxWidth().height(barHeight),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    )
-                                } else {
-                                    LinearProgressIndicator(
-                                        modifier = Modifier.fillMaxWidth().height(barHeight),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    )
-                                }
-                            } else if (isWavy) {
-                                LinearWavyProgressIndicator(
-                                    progress = { sliderPosition.coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth().height(barHeight),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    stroke = Stroke(width = barHeight.value),
-                                    trackStroke = Stroke(width = barHeight.value),
-                                )
-                            } else {
-                                LinearProgressIndicator(
-                                    progress = { sliderPosition.coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth().height(barHeight),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                )
-                            }
-                        }
-
-                        // Time labels - reflect seek position during drag
-                        val displayPosition = if (state.isLoadingTrack) {
-                            null
-                        } else if (isSeeking) {
-                            (seekPosition * state.duration).toLong()
-                        } else {
-                            state.currentPosition
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
-                            Text(
-                                text = if (displayPosition != null) formatTime(displayPosition) else "--:--",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_POSITION),
-                            )
-                            val remaining = if (displayPosition != null) {
-                                (state.duration - displayPosition).coerceAtLeast(0L)
-                            } else {
-                                null
-                            }
-                            Text(
-                                text = if (remaining != null) "-${formatTime(remaining)}" else "--:--",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_DURATION),
+                            FullPlayerTrackActionButtons(
+                                track = track,
+                                isTrackDownloaded = track.id in state.downloadedTrackIds,
+                                isDownloading = state.downloadingTrackId == track.id,
+                                isInUserPlaylist = track.id in state.userPlaylistTrackIds,
+                                onArtistClick = onArtistClick,
+                                onAlbumClick = onAlbumClick,
+                                onToggleFavorite = { playerViewModel.onToggleFavorite() },
+                                onRequestDeleteDownload = { showDeleteDownloadDialog = true },
+                                onDownloadTrack = { playerViewModel.onDownloadTrack() },
+                                onAddToPlaylist = { showPlaylistSheet = true },
                             )
                         }
+
+                        FullPlayerSeekBar(
+                            trackId = track.id,
+                            currentPosition = state.currentPosition,
+                            duration = state.duration,
+                            isLoadingTrack = state.isLoadingTrack,
+                            progressBarStyle = state.progressBarStyle,
+                            progressBarSizeDp = state.progressBarSizeDp,
+                            onSeek = { targetMs -> playerViewModel.onSeek(targetMs) },
+                        )
 
                         // Top control row: Previous / Play / Next
                         Row(
@@ -1167,52 +915,12 @@ fun FullPlayer(
                             }
                         }
 
-                        // Bottom control row: Shuffle | Repeat - same connected
-                        // ButtonGroup styling as the top action row above (8 dp gap,
-                        // connected leading/trailing shapes, weight(1f) per button,
-                        // ~40 dp tall). Repeat is tri-state (OFF/ON/ONE): checked is
-                        // "any-on", icon swaps to repeat_one when in ONE mode.
-                        // (Add-to-playlist lives in the top action ButtonGroup now.)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                        ) {
-                            FilledTonalToggleButton(
-                                checked = state.shuffleEnabled,
-                                onCheckedChange = {
-                                    hapticFeedback.toggle(!state.shuffleEnabled)
-                                    playerViewModel.onToggleShuffle()
-                                },
-                                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_shuffle),
-                                    contentDescription = stringResource(R.string.player_cd_shuffle),
-                                )
-                            }
-                            FilledTonalToggleButton(
-                                checked = state.repeatMode != RepeatMode.OFF,
-                                onCheckedChange = {
-                                    // Cycle OFF->ALL->ONE->OFF; only ONE->OFF is "turning off".
-                                    hapticFeedback.toggle(state.repeatMode != RepeatMode.ONE)
-                                    playerViewModel.onToggleRepeat()
-                                },
-                                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                Icon(
-                                    painter = painterResource(
-                                        when (state.repeatMode) {
-                                            RepeatMode.ONE -> R.drawable.ic_repeat_one
-                                            else -> R.drawable.ic_repeat
-                                        },
-                                    ),
-                                    contentDescription = stringResource(R.string.player_cd_repeat),
-                                )
-                            }
-                        }
+                        FullPlayerShuffleRepeatRow(
+                            shuffleEnabled = state.shuffleEnabled,
+                            repeatMode = state.repeatMode,
+                            onToggleShuffle = { playerViewModel.onToggleShuffle() },
+                            onToggleRepeat = { playerViewModel.onToggleRepeat() },
+                        )
 
                         // Bottom spacer for FAB clearance
                         Spacer(modifier = Modifier.height(80.dp))
@@ -1791,14 +1499,6 @@ private fun UpNextQueuePane(
             }
         }
     }
-}
-
-private fun formatTime(ms: Long): String {
-    val safeMs = ms.coerceAtLeast(0L)
-    val totalSeconds = safeMs / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return String.format(Locale.getDefault(), "%d:%02d", minutes, seconds)
 }
 
 @Composable

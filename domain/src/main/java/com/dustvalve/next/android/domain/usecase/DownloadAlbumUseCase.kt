@@ -36,7 +36,7 @@ class DownloadAlbumUseCase @Inject constructor(
                     downloadRepository.downloadTrack(track)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
+                } catch (e: IOException) {
                     // Best-effort: continue with the remaining tracks, then
                     // surface the aggregate failure below (mirrors
                     // downloadAlbumInner) so an all-failed playlist doesn't
@@ -80,7 +80,9 @@ class DownloadAlbumUseCase @Inject constructor(
                 resolved += albumRepository.getAlbumDetail(albumStub.url)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                errors.add(e)
+            } catch (e: IllegalArgumentException) {
                 errors.add(e)
             }
         }
@@ -95,7 +97,7 @@ class DownloadAlbumUseCase @Inject constructor(
                     downloadRepository.downloadAlbum(album)
                 } catch (e: CancellationException) {
                     throw e
-                } catch (e: Exception) {
+                } catch (e: IOException) {
                     errors.add(e)
                 }
             }

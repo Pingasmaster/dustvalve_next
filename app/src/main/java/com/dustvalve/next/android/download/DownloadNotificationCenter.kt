@@ -184,7 +184,6 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun refresh(snapshot: State, enabled: Boolean) {
         try {
             val hasWork = snapshot.activeTracks.isNotEmpty() ||
@@ -388,7 +387,6 @@ class DownloadNotificationCenter @Inject constructor(
         ).build()
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun logPromotionDiagnostics(built: Notification) {
         if (!BuildConfig.DEBUG) return
         try {
@@ -403,8 +401,12 @@ class DownloadNotificationCenter @Inject constructor(
                 "Live Update chip: hasPromotableCharacteristics=$promotable, " +
                     "canPostPromotedNotifications=$canPost, postedFlagPromotedOngoing=$postedFlag",
             )
-        } catch (e: Throwable) {
-            Log.d(TAG, "promotion diagnostics unavailable", e)
+        } catch (_: UnsupportedOperationException) {
+            Log.d(TAG, "promotion diagnostics unavailable")
+        } catch (_: NoSuchMethodError) {
+            Log.d(TAG, "promotion diagnostics unavailable")
+        } catch (_: NoClassDefFoundError) {
+            Log.d(TAG, "promotion diagnostics unavailable")
         }
     }
 

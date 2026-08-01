@@ -3,6 +3,7 @@ package com.dustvalve.next.android.util
 import android.content.Context
 import android.net.ConnectivityManager
 import java.net.URI
+import java.net.URISyntaxException
 
 object NetworkUtils {
 
@@ -22,7 +23,7 @@ object NetworkUtils {
             if (uri.scheme != "https") return false
             val host = uri.host ?: return false
             host.isNotEmpty() && host.contains('.')
-        } catch (e: Exception) {
+        } catch (_: URISyntaxException) {
             false
         }
     }
@@ -37,7 +38,7 @@ object NetworkUtils {
             if (uri.scheme != "https") return false
             val host = uri.host ?: return false
             DUSTVALVE_HOST_REGEX.matches(host)
-        } catch (e: Exception) {
+        } catch (_: URISyntaxException) {
             false
         }
     }

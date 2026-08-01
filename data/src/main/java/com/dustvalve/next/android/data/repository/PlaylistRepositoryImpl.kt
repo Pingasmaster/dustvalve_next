@@ -244,8 +244,9 @@ class PlaylistRepositoryImpl @Inject constructor(
         if (playlist?.autoDownload == true && !downloadRepository.isTrackDownloaded(trackId)) {
             try {
                 downloadRepository.downloadTrack(trackEntity.toDomain(false))
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (_: java.io.IOException) {
                 // Best-effort auto-download, ignore failures
             }
         }
@@ -268,8 +269,9 @@ class PlaylistRepositoryImpl @Inject constructor(
         tracksToDownload.forEach { track ->
             try {
                 downloadRepository.downloadTrack(track)
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (_: java.io.IOException) {
                 // Best-effort auto-download, ignore failures
             }
         }

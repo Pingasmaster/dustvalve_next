@@ -3,7 +3,7 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:BandcampScreen.kt:nearEnd &amp;&amp; currentState.hasMore &amp;&amp; !currentState.isLoading &amp;&amp; currentState.results.isNotEmpty()</ID>
-    <ID>ComplexCondition:DeepLinkRouter.kt:DeepLinkRouter$path.startsWith("/channel/") || path.startsWith("/@") || path.startsWith("/c/") || path.startsWith("/user/")</ID>
+    <ID>ComplexCondition:DeepLinkRouter.kt:DeepLinkRouter$path.startsWith(&quot;/channel/&quot;) || path.startsWith(&quot;/@&quot;) || path.startsWith(&quot;/c/&quot;) || path.startsWith(&quot;/user/&quot;)</ID>
     <ID>ComplexCondition:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$def != null &amp;&amp; def &gt; 0.0 &amp;&amp; albumPrice != null &amp;&amp; def != albumPrice.amount</ID>
     <ID>ComplexCondition:SearchViewModel.kt:SearchViewModel$resetResults &amp;&amp; localSearchEnabled.value &amp;&amp; (state.selectedType == null || isLocalFilter)</ID>
     <ID>ComplexCondition:YouTubeScreen.kt:nearEnd &amp;&amp; state.hasMore &amp;&amp; !state.isLoading &amp;&amp; state.results.isNotEmpty()</ID>
@@ -12,6 +12,7 @@
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@Composable private fun SearchResultItem</ID>
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>CyclomaticComplexMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
+    <ID>CyclomaticComplexMethod:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToFolder: Pair&lt;String, Long&gt;</ID>
     <ID>CyclomaticComplexMethod:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$suspend fun scrapeAlbum: Album</ID>
     <ID>CyclomaticComplexMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
     <ID>CyclomaticComplexMethod:DustvalveSearchScraper.kt:DustvalveSearchScraper$suspend fun search: List&lt;SearchResult&gt;</ID>
@@ -21,7 +22,7 @@
     <ID>CyclomaticComplexMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>CyclomaticComplexMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
     <ID>CyclomaticComplexMethod:MiniPlayer.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable fun MiniPlayer</ID>
-    <ID>CyclomaticComplexMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun SettingsScreen</ID>
+    <ID>CyclomaticComplexMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsSourcesSection</ID>
     <ID>CyclomaticComplexMethod:YouTubeScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun YouTubeScreen</ID>
     <ID>LargeClass:PlayerViewModel.kt:PlayerViewModel : ViewModel</ID>
     <ID>LargeClass:SettingsViewModel.kt:SettingsViewModel : ViewModel</ID>
@@ -31,6 +32,7 @@
     <ID>LongMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
     <ID>LongMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
     <ID>LongMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
+    <ID>LongMethod:FullPlayerControls.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun FullPlayerSeekBar</ID>
     <ID>LongMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>LongMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable private fun LibraryList</ID>
     <ID>LongMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
@@ -39,11 +41,15 @@
     <ID>LongMethod:PlaylistDetailScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable private fun PlaylistContent</ID>
     <ID>LongMethod:PlaylistEditSheet.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class, ) @Composable fun PlaylistEditSheet</ID>
     <ID>LongMethod:PlaylistListItem.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable fun PlaylistListItem</ID>
-    <ID>LongMethod:SettingsScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun SettingsScreen</ID>
+    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsAppearanceSection</ID>
+    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsConnectionsSection</ID>
+    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsSourcesSection</ID>
+    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsStorageSection</ID>
     <ID>LongMethod:YouTubeScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun YouTubeScreen</ID>
     <ID>LoopWithTooManyJumpStatements:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$for</ID>
     <ID>LoopWithTooManyJumpStatements:HtmlUtils.kt:HtmlUtils$while</ID>
     <ID>LoopWithTooManyJumpStatements:StorageMigrator.kt:StorageMigrator$for</ID>
+    <ID>LoopWithTooManyJumpStatements:YouTubeInnertubeClient.kt:YouTubeInnertubeClient$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubePlaylistParser.kt:YouTubePlaylistParser$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubeSearchParser.kt:YouTubeSearchParser$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubeYtcfgExtractor.kt:YouTubeYtcfgExtractor$for</ID>
@@ -102,59 +108,54 @@
     <ID>MagicNumber:YouTubeVisitorDataFetcher.kt:YouTubeVisitorDataFetcher$120</ID>
     <ID>MagicNumber:YouTubeVisitorDataFetcher.kt:YouTubeVisitorDataFetcher.LandingResponse$200</ID>
     <ID>MagicNumber:YouTubeVisitorDataFetcher.kt:YouTubeVisitorDataFetcher.LandingResponse$299</ID>
-    <ID>MaxLineLength:DustvalveAlbumScraperTest.kt:DustvalveAlbumScraperTest$val json = """{&amp;quot;url&amp;quot;:&amp;quot;$albumUrl&amp;quot;,&amp;quot;current&amp;quot;:{&amp;quot;title&amp;quot;:&amp;quot;Via Attr&amp;quot;,&amp;quot;artist&amp;quot;:&amp;quot;Band&amp;quot;,&amp;quot;band_id&amp;quot;:1},&amp;quot;trackinfo&amp;quot;:[],&amp;quot;art_id&amp;quot;:1,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;}"""</ID>
-    <ID>MaxLineLength:DustvalveArtistScraperTest.kt:DustvalveArtistScraperTest$"https://taylormooremusic.bandcamp.com/album/worlds-beyond-number-the-wizard-the-witch-and-the-wild-one-book-one-original-soundtrack"</ID>
-    <ID>MaxLineLength:DustvalveDownloadScraperTest.kt:DustvalveDownloadScraperTest$val json = """{&amp;quot;digital_items&amp;quot;:[{&amp;quot;title&amp;quot;:&amp;quot;A&amp;quot;,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;,&amp;quot;downloads&amp;quot;:{&amp;quot;flac&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/flac&amp;quot;,&amp;quot;size_mb&amp;quot;:200.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;mp3-320&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/mp3&amp;quot;,&amp;quot;size_mb&amp;quot;:60.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;unknown-format&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/other&amp;quot;,&amp;quot;size_mb&amp;quot;:10.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;}}}]}"""</ID>
-    <ID>MaxLineLength:DustvalveDownloadScraperTest.kt:DustvalveDownloadScraperTest$val json = """{&amp;quot;digital_items&amp;quot;:[{&amp;quot;title&amp;quot;:&amp;quot;A&amp;quot;,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;,&amp;quot;downloads&amp;quot;:{&amp;quot;flac&amp;quot;:{&amp;quot;url&amp;quot;:null,&amp;quot;size_mb&amp;quot;:0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;mp3-320&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;size_mb&amp;quot;:0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;}}}]}"""</ID>
-    <ID>MaxLineLength:PlaylistDao.kt:PlaylistDao$"UPDATE playlists SET name = :name, shapeKey = :shapeKey, iconUrl = :iconUrl, updatedAt = :updatedAt WHERE id = :playlistId AND isSystem = 0"</ID>
+    <ID>MaxLineLength:DustvalveAlbumScraperTest.kt:DustvalveAlbumScraperTest$val json = &quot;&quot;&quot;{&amp;quot;url&amp;quot;:&amp;quot;$albumUrl&amp;quot;,&amp;quot;current&amp;quot;:{&amp;quot;title&amp;quot;:&amp;quot;Via Attr&amp;quot;,&amp;quot;artist&amp;quot;:&amp;quot;Band&amp;quot;,&amp;quot;band_id&amp;quot;:1},&amp;quot;trackinfo&amp;quot;:[],&amp;quot;art_id&amp;quot;:1,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;}&quot;&quot;&quot;</ID>
+    <ID>MaxLineLength:DustvalveArtistScraperTest.kt:DustvalveArtistScraperTest$&quot;https://taylormooremusic.bandcamp.com/album/worlds-beyond-number-the-wizard-the-witch-and-the-wild-one-book-one-original-soundtrack&quot;</ID>
+    <ID>MaxLineLength:DustvalveDownloadScraperTest.kt:DustvalveDownloadScraperTest$val json = &quot;&quot;&quot;{&amp;quot;digital_items&amp;quot;:[{&amp;quot;title&amp;quot;:&amp;quot;A&amp;quot;,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;,&amp;quot;downloads&amp;quot;:{&amp;quot;flac&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/flac&amp;quot;,&amp;quot;size_mb&amp;quot;:200.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;mp3-320&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/mp3&amp;quot;,&amp;quot;size_mb&amp;quot;:60.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;unknown-format&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/other&amp;quot;,&amp;quot;size_mb&amp;quot;:10.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;}}}]}&quot;&quot;&quot;</ID>
+    <ID>MaxLineLength:DustvalveDownloadScraperTest.kt:DustvalveDownloadScraperTest$val json = &quot;&quot;&quot;{&amp;quot;digital_items&amp;quot;:[{&amp;quot;title&amp;quot;:&amp;quot;A&amp;quot;,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;,&amp;quot;downloads&amp;quot;:{&amp;quot;flac&amp;quot;:{&amp;quot;url&amp;quot;:null,&amp;quot;size_mb&amp;quot;:0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;mp3-320&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;size_mb&amp;quot;:0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;}}}]}&quot;&quot;&quot;</ID>
+    <ID>MaxLineLength:PlaylistDao.kt:PlaylistDao$&quot;UPDATE playlists SET name = :name, shapeKey = :shapeKey, iconUrl = :iconUrl, updatedAt = :updatedAt WHERE id = :playlistId AND isSystem = 0&quot;</ID>
     <ID>MaxLineLength:PlaylistDaoTest.kt:PlaylistDaoTest$private fun userPlaylist</ID>
-    <ID>MaxLineLength:YouTubeMusicVisitorDataFetcherTest.kt:YouTubeMusicVisitorDataFetcherTest$"""&lt;script&gt;ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"VD_VALUE_42","clientName":"WEB_REMIX"}},"INNERTUBE_CLIENT_VERSION":"1.20260999.99.99"});&lt;/script&gt;"""</ID>
-    <ID>MaxLineLength:YouTubeMusicVisitorDataFetcherTest.kt:YouTubeMusicVisitorDataFetcherTest$"""&lt;script&gt;ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"www_VD","clientName":"WEB"}},"INNERTUBE_CLIENT_VERSION":"2.20260424.01.00"});&lt;/script&gt;"""</ID>
-    <ID>MaxLineLength:YouTubeVisitorDataFetcherTest.kt:YouTubeVisitorDataFetcherTest$"""&lt;script&gt;ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"VD_VALUE_42","clientName":"WEB"}},"INNERTUBE_CLIENT_VERSION":"2.20260999.99.99"});&lt;/script&gt;"""</ID>
-    <ID>MaxLineLength:YouTubeYtcfgExtractorTest.kt:YouTubeYtcfgExtractorTest$val html = """&lt;script&gt;ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"vd_brace"}},"DEVICE":"cbr=Chrome; tricky }"});&lt;/script&gt;"""</ID>
-    <ID>MaxLineLength:YouTubeYtcfgExtractorTest.kt:YouTubeYtcfgExtractorTest$val html = """&lt;script&gt;ytcfg.set({"INNERTUBE_CONTEXT":{"client":{"visitorData":"vd_nested"}},"TIMING":{},"INNERTUBE_CLIENT_VERSION":"2.0"});&lt;/script&gt;"""</ID>
+    <ID>MaxLineLength:YouTubeMusicVisitorDataFetcherTest.kt:YouTubeMusicVisitorDataFetcherTest$&quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;VD_VALUE_42&quot;,&quot;clientName&quot;:&quot;WEB_REMIX&quot;}},&quot;INNERTUBE_CLIENT_VERSION&quot;:&quot;1.20260999.99.99&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>
+    <ID>MaxLineLength:YouTubeMusicVisitorDataFetcherTest.kt:YouTubeMusicVisitorDataFetcherTest$&quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;www_VD&quot;,&quot;clientName&quot;:&quot;WEB&quot;}},&quot;INNERTUBE_CLIENT_VERSION&quot;:&quot;2.20260424.01.00&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>
+    <ID>MaxLineLength:YouTubeVisitorDataFetcherTest.kt:YouTubeVisitorDataFetcherTest$&quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;VD_VALUE_42&quot;,&quot;clientName&quot;:&quot;WEB&quot;}},&quot;INNERTUBE_CLIENT_VERSION&quot;:&quot;2.20260999.99.99&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>
+    <ID>MaxLineLength:YouTubeYtcfgExtractorTest.kt:YouTubeYtcfgExtractorTest$val html = &quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;vd_brace&quot;}},&quot;DEVICE&quot;:&quot;cbr=Chrome; tricky }&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>
+    <ID>MaxLineLength:YouTubeYtcfgExtractorTest.kt:YouTubeYtcfgExtractorTest$val html = &quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;vd_nested&quot;}},&quot;TIMING&quot;:{},&quot;INNERTUBE_CLIENT_VERSION&quot;:&quot;2.0&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>
     <ID>MultipleEmitters:PlaylistDetailScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable private fun PlaylistContent</ID>
     <ID>NestedBlockDepth:YouTubeChannelParser.kt:YouTubeChannelParser$fun parseContinuation: ChannelPage</ID>
     <ID>NestedBlockDepth:YouTubePlaylistParser.kt:YouTubePlaylistParser$fun parse: PlaylistPage</ID>
     <ID>ParameterNaming:AddToPlaylistSheet.kt:onPlaylistSelected: (playlistId: String) -&gt; Unit</ID>
     <ID>ParameterNaming:BottomNavBar.kt:onItemSelected: (NavDestination) -&gt; Unit</ID>
+    <ID>ParameterNaming:SettingsScreen.kt:onSetAutoUpdateCheckEnabled: (Boolean) -&gt; Unit</ID>
+    <ID>ParameterNaming:SettingsScreen.kt:onSetSaveDataOnMetered: (Boolean) -&gt; Unit</ID>
+    <ID>ParameterNaming:SettingsScreen.kt:onSetSearchHistoryEnabled: (Boolean) -&gt; Unit</ID>
+    <ID>ParameterNaming:SettingsScreenSections.kt:onSetAutoUpdateCheckEnabled: (Boolean) -&gt; Unit</ID>
+    <ID>ParameterNaming:SettingsScreenSections.kt:onSetSaveDataOnMetered: (Boolean) -&gt; Unit</ID>
+    <ID>ParameterNaming:SettingsScreenSections.kt:onSetSearchHistoryEnabled: (Boolean) -&gt; Unit</ID>
     <ID>ParameterNaming:YouTubeMusicHome.kt:onChipSelected: (String?) -&gt; Unit</ID>
     <ID>ReturnCount:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$private fun extractArtistFromHtml: String?</ID>
     <ID>ReturnCount:HtmlUtils.kt:HtmlUtils$fun extractJsonFromScript: String?</ID>
     <ID>ReturnCount:HtmlUtils.kt:HtmlUtils$fun extractMetaContent: String?</ID>
     <ID>ReturnCount:PlayerViewModel.kt:PlayerViewModel$private suspend fun resolveTrackForPlayback: Track</ID>
     <ID>ReturnCount:YouTubeSearchParser.kt:YouTubeSearchParser$private fun parseRow: SearchResult?</ID>
-    <ID>SwallowedException:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$e: Exception</ID>
+    <ID>SwallowedException:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$e: IOException</ID>
     <ID>SwallowedException:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$e: IOException</ID>
-    <ID>SwallowedException:DustvalveStreamResolver.kt:DustvalveStreamResolver$e: Exception</ID>
-    <ID>SwallowedException:NetworkUtils.kt:NetworkUtils$e: Exception</ID>
     <ID>ThrowsCount:DownloadAlbumUseCase.kt:DownloadAlbumUseCase$suspend fun downloadArtist</ID>
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToFolder: Pair&lt;String, Long&gt;</ID>
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToInternal: Pair&lt;String, Long&gt;</ID>
     <ID>ThrowsCount:YouTubeMusicParser.kt:YouTubeMusicParser$fun parseHome: YouTubeMusicHomeFeed</ID>
     <ID>ThrowsCount:YouTubePlayerParser.kt:YouTubePlayerParser$fun parsePlayerStreamInfo: PlayerStreamInfo</ID>
     <ID>TooGenericExceptionCaught:AlbumDetailViewModel.kt:AlbumDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:AlbumRepositoryImpl.kt:AlbumRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ArtistDetailViewModel.kt:ArtistDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:ArtistRepositoryImpl.kt:ArtistRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:BandcampViewModel.kt:BandcampViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CollectionDetailViewModel.kt:CollectionDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:DownloadAlbumUseCase.kt:DownloadAlbumUseCase$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:DustvalveStreamResolver.kt:DustvalveStreamResolver$e: Exception</ID>
     <ID>TooGenericExceptionCaught:FolderMirror.kt:FolderMirror$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:LibraryViewModel.kt:LibraryViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:LocalMusicSyncWorker.kt:LocalMusicSyncWorker$e: Exception</ID>
     <ID>TooGenericExceptionCaught:LocalViewModel.kt:LocalViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NavigationViewModel.kt:NavigationViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:NetworkUtils.kt:NetworkUtils$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PlayerViewModel.kt:PlayerViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PlaylistDetailViewModel.kt:PlaylistDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:PlaylistRepositoryImpl.kt:PlaylistRepositoryImpl$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SearchViewModel.kt:SearchViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SettingsViewModel.kt:SettingsViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:YouTubeInnertubeClient.kt:YouTubeInnertubeClient$e: Exception</ID>
     <ID>TooGenericExceptionCaught:YouTubeViewModel.kt:YouTubeViewModel$e: Exception</ID>
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LocalViewModel.kt:LocalViewModel : ViewModel</ID>

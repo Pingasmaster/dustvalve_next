@@ -12,6 +12,7 @@ import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.remote.DustvalveArtistScraper
+import com.dustvalve.next.android.data.util.orOnRemoteFailure
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Artist
@@ -23,9 +24,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
 private val orderJson = Json { ignoreUnknownKeys = true }
 
@@ -64,11 +68,8 @@ class ArtistRepositoryImpl @Inject constructor(
                 return buildCachedArtist(cachedArtist, cleanUrl, url)
             }
             // Stale: try revalidate, fall back to stale cache offline
-            return try {
+            return orOnRemoteFailure(buildCachedArtist(cachedArtist, cleanUrl, url)) {
                 scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                buildCachedArtist(cachedArtist, cleanUrl, url)
             }
         }
 
@@ -95,10 +96,15 @@ class ArtistRepositoryImpl @Inject constructor(
             if (cachedArtist == null || didArtistChange(cachedArtist, fresh)) {
                 emit(fresh)
             }
-        } catch (e: Exception) {
-            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
             if (cachedArtist == null) throw e
             // Stale cache already emitted - swallow network error for offline use
+        } catch (e: SerializationException) {
+            if (cachedArtist == null) throw e
+        } catch (e: IllegalArgumentException) {
+            if (cachedArtist == null) throw e
         }
     }.flowOn(ioDispatcher)
 
@@ -114,7 +120,7 @@ class ArtistRepositoryImpl @Inject constructor(
         val orderedIds = cachedArtist.albumIdOrder?.let {
             try {
                 orderJson.decodeFromString<List<String>>(it)
-            } catch (_: Exception) {
+            } catch (_: SerializationException) {
                 null
             }
         }
@@ -180,9 +186,14 @@ class ArtistRepositoryImpl @Inject constructor(
                 try {
                     val fullAlbum = albumRepository.getAlbumDetail(albumStub.url)
                     downloadRepository.downloadAlbum(fullAlbum)
-                } catch (e: Exception) {
-                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: IOException) {
                     // Best-effort auto-download
+                } catch (_: SerializationException) {
+                    // Best-effort auto-download (scrape/parse failed)
+                } catch (_: IllegalArgumentException) {
+                    // Best-effort auto-download (bad URL/args)
                 }
             }
         }
@@ -194,7 +205,7 @@ class ArtistRepositoryImpl @Inject constructor(
         val storedAlbumIds = cachedEntity.albumIdOrder?.let {
             try {
                 orderJson.decodeFromString<List<String>>(it)
-            } catch (_: Exception) {
+            } catch (_: SerializationException) {
                 null
             }
         }

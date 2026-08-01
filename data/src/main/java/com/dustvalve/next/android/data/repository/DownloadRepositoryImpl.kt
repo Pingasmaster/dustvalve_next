@@ -37,6 +37,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
@@ -138,7 +139,7 @@ class DownloadRepositoryImpl @Inject constructor(
                     android.util.Log.w("DownloadRepo", "${errors.size} track(s) failed before cancellation: ${errors.first().message}")
                 }
                 throw e // Respect structured concurrency
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 errors.add(e)
             }
         }
@@ -339,13 +340,17 @@ class DownloadRepositoryImpl @Inject constructor(
                 metaFile.delete()
                 transfer(0L, null)
             }
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
             // Keep the partial (and its sidecar) on pause so resume can
             // continue; delete both on any real failure or cancel.
             if (!e.isPauseCancellation()) {
                 tempFile.delete()
                 metaFile.delete()
             }
+            throw e
+        } catch (e: IOException) {
+            tempFile.delete()
+            metaFile.delete()
             throw e
         }
 
@@ -354,7 +359,7 @@ class DownloadRepositoryImpl @Inject constructor(
             try {
                 tempFile.copyTo(targetFile, overwrite = true)
                 tempFile.delete()
-            } catch (e: Exception) {
+            } catch (e: IOException) {
                 targetFile.delete()
                 tempFile.delete()
                 throw IOException("Failed to copy download to target: ${e.message}")
@@ -405,10 +410,26 @@ class DownloadRepositoryImpl @Inject constructor(
                     sink = out,
                 )
             } ?: throw IOException("Failed to open output stream for $fileName")
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
             try {
                 newFile.delete()
-            } catch (_: Exception) {}
+            } catch (_: SecurityException) {
+            } catch (_: IllegalStateException) {
+            }
+            throw e
+        } catch (e: IOException) {
+            try {
+                newFile.delete()
+            } catch (_: SecurityException) {
+            } catch (_: IllegalStateException) {
+            }
+            throw e
+        } catch (e: SecurityException) {
+            try {
+                newFile.delete()
+            } catch (_: SecurityException) {
+            } catch (_: IllegalStateException) {
+            }
             throw e
         }
         return newFile.uri.toString() to size
@@ -422,7 +443,11 @@ class DownloadRepositoryImpl @Inject constructor(
                 val uri = path.toUri()
                 val doc = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)
                 doc?.exists() == true
-            } catch (_: Exception) {
+            } catch (_: SecurityException) {
+                false
+            } catch (_: IllegalArgumentException) {
+                false
+            } catch (_: IllegalStateException) {
                 false
             }
         } else {
@@ -437,11 +462,15 @@ class DownloadRepositoryImpl @Inject constructor(
             try {
                 val uri = path.toUri()
                 androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)?.delete()
-            } catch (_: Exception) {}
+            } catch (_: SecurityException) {
+            } catch (_: IllegalArgumentException) {
+            } catch (_: IllegalStateException) {
+            }
         } else {
             try {
                 File(path).delete()
-            } catch (_: Exception) {}
+            } catch (_: SecurityException) {
+            }
         }
     }
 
@@ -467,8 +496,13 @@ class DownloadRepositoryImpl @Inject constructor(
             }
             val url = urls[format] ?: return null
             Pair(url, format)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
+            null
+        } catch (_: IllegalArgumentException) {
+            null
+        } catch (_: IllegalStateException) {
             null
         }
     }
@@ -522,20 +556,22 @@ class DownloadRepositoryImpl @Inject constructor(
         }
     }
 
-    @Suppress("SwallowedException")
     private fun readResumeMeta(metaFile: File): ResumeMeta? = try {
         if (metaFile.exists()) metaJson.decodeFromString<ResumeMeta>(metaFile.readText()) else null
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: IOException) {
+        null
+    } catch (_: SerializationException) {
         null
     }
 
-    @Suppress("SwallowedException")
     private fun writeResumeMeta(metaFile: File, meta: ResumeMeta) {
         try {
             metaFile.writeText(metaJson.encodeToString(ResumeMeta.serializer(), meta))
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
             // Best-effort: without a sidecar the next attempt simply restarts
             // from zero instead of resuming.
         }
@@ -589,18 +625,24 @@ class DownloadRepositoryImpl @Inject constructor(
             deleteByPath(row.filePath)
             try {
                 downloadDao.delete(row.trackId)
-            } catch (_: Exception) {}
+            } catch (_: android.database.SQLException) {
+            } catch (_: IllegalStateException) {
+            }
         }
         try {
             com.dustvalve.next.android.data.asset.StoragePaths.imagesDir(context).deleteRecursively()
-        } catch (_: Exception) {}
+        } catch (_: IOException) {
+        } catch (_: SecurityException) {
+        }
         try {
             mediaCacheClearer.clearAll()
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             // Never fall back to deleteRecursively while the cache is open;
             // stale cached media is harmless, a desynced index is not.
+            android.util.Log.w("DownloadRepo", "Media cache clear failed; skipping", e)
+        } catch (e: IllegalStateException) {
             android.util.Log.w("DownloadRepo", "Media cache clear failed; skipping", e)
         }
         storageTracker.notifyChanged()

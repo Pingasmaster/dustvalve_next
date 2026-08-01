@@ -9,12 +9,14 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
 class DustvalveStreamResolver @Inject constructor(
@@ -56,9 +58,9 @@ class DustvalveStreamResolver @Inject constructor(
 
         val tralbumData = try {
             json.decodeFromString<DustvalveAlbumScraper.TralbumData>(tralbumJson)
-        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (_: SerializationException) {
             return@withContext null
         }
 

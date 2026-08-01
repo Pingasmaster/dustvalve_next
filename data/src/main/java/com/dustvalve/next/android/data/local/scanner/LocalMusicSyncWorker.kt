@@ -12,6 +12,8 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
+import kotlin.coroutines.cancellation.CancellationException
 
 @HiltWorker
 class LocalMusicSyncWorker @AssistedInject constructor(
@@ -23,7 +25,7 @@ class LocalMusicSyncWorker @AssistedInject constructor(
     override suspend fun doWork(): Result = try {
         localMusicRepository.scan()
         Result.success()
-    } catch (ce: kotlin.coroutines.cancellation.CancellationException) {
+    } catch (ce: CancellationException) {
         // Cancellation is the worker's normal stop signal; surface the
         // run-attempt breadcrumb + WorkInfo.stopReason before rethrowing so
         // the field log shows when WorkManager bailed us out and why
@@ -32,8 +34,14 @@ class LocalMusicSyncWorker @AssistedInject constructor(
         Log.w(TAG, "stopped (attempt=$runAttemptCount)")
         logStopReason()
         throw ce
-    } catch (e: Exception) {
-        if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+    } catch (e: IOException) {
+        Log.w(TAG, "scan failed; retrying", e)
+        Result.retry()
+    } catch (e: SecurityException) {
+        Log.w(TAG, "scan failed; retrying", e)
+        Result.retry()
+    } catch (e: IllegalStateException) {
+        Log.w(TAG, "scan failed; retrying", e)
         Result.retry()
     }
 

@@ -11,6 +11,7 @@ import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.remote.DustvalveAlbumScraper
+import com.dustvalve.next.android.data.util.orOnRemoteFailure
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
@@ -22,8 +23,11 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.serialization.SerializationException
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
 class AlbumRepositoryImpl @Inject constructor(
@@ -59,11 +63,8 @@ class AlbumRepositoryImpl @Inject constructor(
             }
             // Stale but has tracks: try revalidate, fall back to stale cache offline
             if (trackEntities.isNotEmpty()) {
-                return try {
+                return orOnRemoteFailure(buildCachedAlbum(cachedAlbum, trackEntities)) {
                     scrapeAndPersistAlbum(cleanUrl, cachedAlbum)
-                } catch (e: Exception) {
-                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                    buildCachedAlbum(cachedAlbum, trackEntities)
                 }
             }
         }
@@ -94,10 +95,15 @@ class AlbumRepositoryImpl @Inject constructor(
             // Always emit fresh data after a scrape - metadata (title, art, tags)
             // may have changed even if track IDs are identical
             emit(fresh)
-        } catch (e: Exception) {
-            if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
             if (cachedAlbum == null || trackDao.getByAlbumId(cachedAlbum.id).isEmpty()) throw e
             // Stale cache already emitted - swallow network error for offline use
+        } catch (e: SerializationException) {
+            if (cachedAlbum == null || trackDao.getByAlbumId(cachedAlbum.id).isEmpty()) throw e
+        } catch (e: IllegalArgumentException) {
+            if (cachedAlbum == null || trackDao.getByAlbumId(cachedAlbum.id).isEmpty()) throw e
         }
     }.flowOn(ioDispatcher)
 
@@ -188,8 +194,9 @@ class AlbumRepositoryImpl @Inject constructor(
             for (track in newTracks) {
                 try {
                     downloadRepository.downloadTrack(track)
-                } catch (e: Exception) {
-                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: IOException) {
                     // Best-effort auto-download
                 }
             }

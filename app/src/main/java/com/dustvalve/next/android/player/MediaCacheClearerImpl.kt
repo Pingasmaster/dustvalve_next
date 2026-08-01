@@ -29,7 +29,6 @@ class MediaCacheClearerImpl @Inject constructor(
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : MediaCacheClearer {
 
-    @Suppress("TooGenericExceptionCaught")
     override suspend fun clearAll() = withContext(ioDispatcher) {
         val cache = simpleCache.get()
         // Snapshot the key set: removeResource mutates the backing set.
@@ -38,7 +37,11 @@ class MediaCacheClearerImpl @Inject constructor(
                 cache.removeResource(key)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
+                android.util.Log.w(TAG, "Failed to remove cached resource $key", e)
+            } catch (e: IllegalStateException) {
+                android.util.Log.w(TAG, "Failed to remove cached resource $key", e)
+            } catch (e: IllegalArgumentException) {
                 android.util.Log.w(TAG, "Failed to remove cached resource $key", e)
             }
         }

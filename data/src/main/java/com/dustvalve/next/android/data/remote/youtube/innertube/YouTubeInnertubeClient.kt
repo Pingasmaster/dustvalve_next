@@ -14,6 +14,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -90,7 +91,13 @@ open class YouTubeInnertubeClient @Inject constructor(
                 // Caller cancellation must propagate, never be converted
                 // into a "failed across all clients" IllegalStateException.
                 throw e
-            } catch (e: Exception) {
+            } catch (e: IOException) {
+                lastError = "${client.clientName}: ${e.message}"
+                continue
+            } catch (e: IllegalStateException) {
+                lastError = "${client.clientName}: ${e.message}"
+                continue
+            } catch (e: IllegalArgumentException) {
                 lastError = "${client.clientName}: ${e.message}"
                 continue
             }

@@ -144,7 +144,6 @@ class DownloadController @Inject constructor(
      * app-internal downloads; SAF/folder mode restarts from 0 anyway. Call
      * from Application.onCreate.
      */
-    @Suppress("TooGenericExceptionCaught")
     fun purgeStalePartialsOnColdStart() {
         if (!coldStartPurgeStarted.compareAndSet(false, true)) return
         scope.launch {
@@ -156,7 +155,9 @@ class DownloadController @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: java.io.IOException) {
+                Log.w(TAG, "Cold-start downloads sweep failed", e)
+            } catch (e: SecurityException) {
                 Log.w(TAG, "Cold-start downloads sweep failed", e)
             } finally {
                 coldStartPurgeDone.complete(Unit)
@@ -195,7 +196,6 @@ class DownloadController @Inject constructor(
      * must not be swept), and any DB failure skips the pass entirely.
      * `content://` rows (SAF mode) point outside this tree and are ignored.
      */
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun reconcileOrphanFiles(downloads: File) {
         val known = try {
             downloadDao.getAllSync()
@@ -206,7 +206,10 @@ class DownloadController @Inject constructor(
                 .toHashSet()
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: android.database.SQLException) {
+            Log.w(TAG, "Skipping orphan-file reconcile; downloads query failed", e)
+            return
+        } catch (e: IllegalStateException) {
             Log.w(TAG, "Skipping orphan-file reconcile; downloads query failed", e)
             return
         }
@@ -339,7 +342,6 @@ class DownloadController @Inject constructor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun startServiceIfPossible() {
         // Downloads run on the controller scope regardless; the service only
         // keeps the process alive + hosts the foreground notification. A
@@ -348,8 +350,12 @@ class DownloadController @Inject constructor(
         // plain (non-FGS) notification the center already posts.
         try {
             ContextCompat.startForegroundService(context, Intent(context, DownloadService::class.java))
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not start DownloadService (likely background FGS limit); downloading without it", e)
+        } catch (e: android.app.ForegroundServiceStartNotAllowedException) {
+            Log.w(TAG, "Could not start DownloadService (FGS limit); downloading without it", e)
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Could not start DownloadService; downloading without it", e)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Could not start DownloadService; downloading without it", e)
         }
     }
 
@@ -387,16 +393,19 @@ class DownloadController @Inject constructor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private suspend fun runWork(work: DownloadWork) {
-        var failure: Throwable? = null
+        var failure: Exception? = null
         val job = scope.launch {
             try {
                 execute(work)
             } catch (e: CancellationException) {
                 failure = e
                 throw e
-            } catch (e: Throwable) {
+            } catch (e: java.io.IOException) {
+                failure = e
+            } catch (e: IllegalArgumentException) {
+                failure = e
+            } catch (e: IllegalStateException) {
                 failure = e
             }
         }
