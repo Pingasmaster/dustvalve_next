@@ -2,6 +2,8 @@ package com.dustvalve.next.android.data.local.scanner
 
 import android.content.ContentUris
 import android.content.Context
+import android.media.MediaMetadataRetriever
+import android.net.Uri
 import android.provider.MediaStore
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.deleteByIds
@@ -12,6 +14,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -91,22 +94,10 @@ class MediaStoreScanner @Inject constructor(
                     mediaId,
                 )
 
+                // First track seen for an album resolves art for the whole album:
+                // prefer embedded high-res cover, fall back to MediaStore albumart.
                 val artUrl = albumArtCache.getOrPut(albumId) {
-                    val artUri = ContentUris.withAppendedId(
-                        "content://media/external/audio/albumart".toUri(),
-                        albumId,
-                    )
-                    try {
-                        val stream = context.contentResolver.openInputStream(artUri)
-                        if (stream != null) {
-                            stream.close()
-                            artUri.toString()
-                        } else {
-                            ""
-                        }
-                    } catch (_: Exception) {
-                        ""
-                    }
+                    resolveAlbumArt(albumId, contentUri)
                 }
 
                 trackEntities.add(
@@ -162,5 +153,61 @@ class MediaStoreScanner @Inject constructor(
         )
     }
 
-    private fun String.toUri(): android.net.Uri = android.net.Uri.parse(this)
+    /**
+     * Prefer embedded cover art from a sample track (full-res APIC/covr) over
+     * MediaStore's often-downscaled albumart URI. Cache under local_art/ so
+     * Coil and the player get a stable file:// URL.
+     */
+    private fun resolveAlbumArt(albumId: Long, sampleTrackUri: Uri): String {
+        val artFile = File(context.filesDir, "local_art/local_ms_album_$albumId.jpg")
+        val embedded = readEmbeddedPicture(sampleTrackUri)
+        if (embedded != null && embedded.isNotEmpty()) {
+            try {
+                artFile.parentFile?.mkdirs()
+                if (!artFile.exists() || artFile.length() != embedded.size.toLong()) {
+                    artFile.writeBytes(embedded)
+                }
+                return Uri.fromFile(artFile).toString()
+            } catch (_: Exception) {
+                // Fall through to MediaStore albumart.
+            }
+        }
+        return mediaStoreAlbumArtUri(albumId)
+    }
+
+    private fun readEmbeddedPicture(trackUri: Uri): ByteArray? {
+        val mmr = MediaMetadataRetriever()
+        return try {
+            mmr.setDataSource(context, trackUri)
+            mmr.embeddedPicture
+        } catch (_: Exception) {
+            null
+        } finally {
+            try {
+                mmr.release()
+            } catch (_: Exception) {
+                // Ignore release errors
+            }
+        }
+    }
+
+    private fun mediaStoreAlbumArtUri(albumId: Long): String {
+        val artUri = ContentUris.withAppendedId(
+            "content://media/external/audio/albumart".toUri(),
+            albumId,
+        )
+        return try {
+            val stream = context.contentResolver.openInputStream(artUri)
+            if (stream != null) {
+                stream.close()
+                artUri.toString()
+            } else {
+                ""
+            }
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun String.toUri(): Uri = Uri.parse(this)
 }

@@ -126,7 +126,55 @@ class DustvalveArtistScraperTest {
 
         val artist = scraper.scrapeArtist(setup.url(""))
         assertThat(artist.albums).hasSize(1)
-        assertThat(artist.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a999_10.jpg")
+        assertThat(artist.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a999_0.jpg")
+    }
+
+    @Test fun `music-grid low-res thumbs are upgraded to lightbox tier`() = runTest {
+        val html = """
+            <html><body>
+              <p id="band-name-location"><span class="title">X</span></p>
+              <div id="music-grid">
+                <div class="music-grid-item">
+                  <a href="/album/one">
+                    <img src="https://f4.bcbits.com/img/a111_2.jpg"/>
+                    <p class="title">Album One</p>
+                  </a>
+                </div>
+              </div>
+            </body></html>
+        """.trimIndent()
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val artist = scraper.scrapeArtist(setup.url(""))
+        assertThat(artist.albums).hasSize(1)
+        assertThat(artist.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a111_0.jpg")
+    }
+
+    @Test fun `data-client-items upgrades existing low-res grid art`() = runTest {
+        val albumUrl = setup.url("/album/one")
+        val clientItemsJson =
+            """[{"type":"album","title":"Album One","artist":"A","art_id":42,"page_url":"$albumUrl","id":1}]"""
+        val encoded = clientItemsJson
+            .replace("&", "&amp;")
+            .replace("\"", "&quot;")
+        val html = """
+            <html><body>
+              <p id="band-name-location"><span class="title">X</span></p>
+              <ol data-client-items="$encoded"></ol>
+              <div id="music-grid">
+                <div class="music-grid-item">
+                  <a href="/album/one">
+                    <img src="https://f4.bcbits.com/img/a42_2.jpg"/>
+                    <p class="title">Album One</p>
+                  </a>
+                </div>
+              </div>
+            </body></html>
+        """.trimIndent()
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val artist = scraper.scrapeArtist(setup.url(""))
+        assertThat(artist.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a42_0.jpg")
     }
 
     @Test fun `bio strips peekaboo show-more overlay (Angine de Poitrine fixture)`() = runTest {
@@ -214,7 +262,7 @@ class DustvalveArtistScraperTest {
 
         val artist = scraper.scrapeArtist(setup.url("/album/single-thing"))
 
-        assertThat(artist.imageUrl).isEqualTo("https://f4.bcbits.com/img/0044448040_10.jpg")
+        assertThat(artist.imageUrl).isEqualTo("https://f4.bcbits.com/img/0044448040_0.jpg")
         assertThat(artist.imageUrl).doesNotContain("_21")
     }
 
@@ -240,7 +288,7 @@ class DustvalveArtistScraperTest {
         assertThat(album.url).isEqualTo(
             "https://taylormooremusic.bandcamp.com/album/worlds-beyond-number-the-wizard-the-witch-and-the-wild-one-book-one-original-soundtrack",
         )
-        assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a4206992803_5.jpg")
+        assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a4206992803_0.jpg")
         assertThat(album.artist).isEqualTo("Taylor Moore")
     }
 

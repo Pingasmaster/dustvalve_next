@@ -80,8 +80,8 @@ class YouTubeMusicJsonTest {
             }
             """.trimIndent(),
         )
-        // Largest = 544, but extractMusicThumbnail also normalizes to w544-h544 anyway
-        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=w720-h720-l90-rj")
+        // Largest by declared width, then canonical full-quality rewrite
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=w0-h0-l90-rj")
     }
 
     @Test fun `extractMusicThumbnail uses thumbnailRenderer fallback`() {
@@ -100,7 +100,7 @@ class YouTubeMusicJsonTest {
             }
             """.trimIndent(),
         )
-        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img=w720-h720")
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img=w0-h0")
     }
 
     @Test fun `extractMusicThumbnail uses bare thumbnail thumbnails fallback`() {
@@ -115,6 +115,58 @@ class YouTubeMusicJsonTest {
         )
         // No size suffix => stays as-is (no =wH-hH match to replace)
         assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img")
+    }
+
+    @Test fun `extractMusicThumbnail bumps iytimg sddefault to hq720`() {
+        val obj = json.parseToJsonElement(
+            """
+            {
+              "thumbnail": {
+                "thumbnails": [
+                  {"url":"https://i.ytimg.com/vi/abc/sddefault.jpg","width":400,"height":225}
+                ]
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThat(obj.extractMusicThumbnail())
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
+    }
+
+    @Test fun `extractMusicThumbnail bumps s576 avatars to s0 without keeping s1200`() {
+        val small = json.parseToJsonElement(
+            """
+            {
+              "thumbnail": {
+                "musicThumbnailRenderer": {
+                  "thumbnail": {
+                    "thumbnails": [
+                      {"url":"https://yt3.ggpht.com/x=s576-c-k","width":576,"height":576}
+                    ]
+                  }
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThat(small.extractMusicThumbnail()).isEqualTo("https://yt3.ggpht.com/x=s0-c-k")
+
+        val large = json.parseToJsonElement(
+            """
+            {
+              "thumbnail": {
+                "musicThumbnailRenderer": {
+                  "thumbnail": {
+                    "thumbnails": [
+                      {"url":"https://yt3.ggpht.com/x=s1200-c-k","width":1200,"height":1200}
+                    ]
+                  }
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThat(large.extractMusicThumbnail()).isEqualTo("https://yt3.ggpht.com/x=s0-c-k")
     }
 
     @Test fun `extractMusicThumbnail returns null when no thumbnails`() {

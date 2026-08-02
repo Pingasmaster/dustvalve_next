@@ -15,6 +15,7 @@ import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.ApplicationScope
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.player.QueueManager
+import com.dustvalve.next.android.util.ThumbnailUrls
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -49,13 +50,14 @@ class AlbumThemeManager @Inject constructor(
     }.stateIn(scope, SharingStarted.WhileSubscribed(5_000), null)
 
     private suspend fun extractSeedColor(artUrl: String): Color? {
-        seedCache.get(artUrl)?.let { return Color(it) }
+        val canonical = ThumbnailUrls.canonicalize(artUrl)
+        seedCache.get(canonical)?.let { return Color(it) }
 
         return withContext(ioDispatcher) {
             try {
                 val imageLoader = SingletonImageLoader.get(context)
                 val request = ImageRequest.Builder(context)
-                    .data(artUrl)
+                    .data(canonical)
                     .size(Size(128, 128))
                     .allowHardware(false)
                     .build()
@@ -69,7 +71,7 @@ class AlbumThemeManager @Inject constructor(
                     ?: palette.mutedSwatch
                     ?: return@withContext null
 
-                seedCache.put(artUrl, swatch.rgb)
+                seedCache.put(canonical, swatch.rgb)
                 Color(swatch.rgb)
             } catch (_: Exception) {
                 null

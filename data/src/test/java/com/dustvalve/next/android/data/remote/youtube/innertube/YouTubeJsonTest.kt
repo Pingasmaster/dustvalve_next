@@ -115,21 +115,54 @@ class YouTubeJsonTest {
             .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
     }
 
-    @Test fun `bumpYtThumbnailResolution upgrades first-frame hq1-3 to hqdefault`() {
+    @Test fun `bumpYtThumbnailResolution upgrades first-frame hq1-3 to hq720`() {
         assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/hq2.jpg"))
-            .isEqualTo("https://i.ytimg.com/vi/abc/hqdefault.jpg")
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
     }
 
-    @Test fun `bumpYtThumbnailResolution rewrites googleusercontent sN param`() {
+    @Test fun `bumpYtThumbnailResolution upgrades sddefault and mqdefault to hq720`() {
+        assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/sddefault.jpg?sqp=xx"))
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg?sqp=xx")
+        assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/mqdefault.jpg"))
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
+        assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/default.jpg"))
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
+    }
+
+    @Test fun `bumpYtThumbnailResolution upgrades hqdefault webp and custom suffixes`() {
+        assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi_webp/abc/hqdefault.webp"))
+            .isEqualTo("https://i.ytimg.com/vi_webp/abc/hq720.webp")
+        assertThat(bumpYtThumbnailResolution("https://i.ytimg.com/vi/abc/hqdefault_custom_1.jpg"))
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
+    }
+
+    @Test fun `bumpYtThumbnailResolution rewrites googleusercontent sN to s0`() {
         assertThat(
             bumpYtThumbnailResolution("https://yt3.googleusercontent.com/abc=s48-c-k-c0xff-no-rj"),
-        ).isEqualTo("https://yt3.googleusercontent.com/abc=s720-c-k-c0xff-no-rj")
+        ).isEqualTo("https://yt3.googleusercontent.com/abc=s0-c-k-c0xff-no-rj")
     }
 
-    @Test fun `bumpYtThumbnailResolution rewrites ggpht wN-hM param`() {
+    @Test fun `bumpYtThumbnailResolution canonicalizes s1200 to s0 for one cache key`() {
+        assertThat(bumpYtThumbnailResolution("https://yt3.googleusercontent.com/abc=s1200-c-k"))
+            .isEqualTo("https://yt3.googleusercontent.com/abc=s0-c-k")
+    }
+
+    @Test fun `bumpYtThumbnailResolution rewrites ggpht wN-hM to w0-h0`() {
         assertThat(
             bumpYtThumbnailResolution("https://yt4.ggpht.com/abc=w100-h100-p-k"),
-        ).isEqualTo("https://yt4.ggpht.com/abc=w720-h720-p-k")
+        ).isEqualTo("https://yt4.ggpht.com/abc=w0-h0-p-k")
+    }
+
+    @Test fun `bumpYtThumbnailResolution rewrites interleaved crop wN-c-hM to w0`() {
+        assertThat(
+            bumpYtThumbnailResolution("https://yt3.ggpht.com/abc=w120-c-h120-p-l90-rj"),
+        ).isEqualTo("https://yt3.ggpht.com/abc=w0-c-h0-p-l90-rj")
+    }
+
+    @Test fun `bumpYtThumbnailResolution canonicalizes landscape heroes to w0-h0`() {
+        assertThat(
+            bumpYtThumbnailResolution("https://yt3.ggpht.com/hero=w1920-h1080-l90-rj"),
+        ).isEqualTo("https://yt3.ggpht.com/hero=w0-h0-l90-rj")
     }
 
     @Test fun `bumpYtThumbnailResolution leaves unknown shapes untouched`() {

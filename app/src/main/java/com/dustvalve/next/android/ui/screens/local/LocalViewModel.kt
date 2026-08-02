@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
@@ -598,6 +599,8 @@ class LocalViewModel @Inject constructor(
     private suspend fun deleteDbRow(trackId: String) {
         try {
             trackDao.deleteByIdsChunk(listOf(trackId))
+            // SAF-mode covers live at local_art/<trackId>.jpg; drop the orphan.
+            File(appContext.filesDir, "local_art/$trackId.jpg").delete()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             reportDeleteFailure()

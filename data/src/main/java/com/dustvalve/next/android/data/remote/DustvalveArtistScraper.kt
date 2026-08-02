@@ -119,13 +119,13 @@ class DustvalveArtistScraper @Inject constructor(
             cleaned.text().trim().takeIf { it.isNotEmpty() }
         }
 
-        // Band photos are wrapped in an <a class="popupImage" href="..._10.jpg">
-        // (~480x480) around the small `<img class="band-photo" src="..._21.jpg">`
-        // (100-ish px). Prefer the popupImage href so we don't show a blurry
-        // thumbnail. Fall back to the small img src if the wrapper is missing.
-        val imageUrl = document.selectFirst("a.popupImage:has(img.band-photo)")?.attr("abs:href")?.takeIf { it.isNotBlank() }
+        // Band photos are wrapped in an <a class="popupImage" href="..._N.jpg">
+        // around the small `<img class="band-photo" src="..._21.jpg">`. Prefer
+        // the popupImage href, then upgrade to full-original `_0`.
+        val rawImageUrl = document.selectFirst("a.popupImage:has(img.band-photo)")?.attr("abs:href")?.takeIf { it.isNotBlank() }
             ?: document.selectFirst(".band-photo img")?.attr("abs:src")
             ?: document.selectFirst("img.band-photo")?.attr("abs:src")
+        val imageUrl = rawImageUrl?.let { NetworkUtils.upgradeBandcampArtUrl(it) }
 
         val location = document.selectFirst("#band-name-location .location")?.text()?.trim()
 
@@ -160,36 +160,40 @@ class DustvalveArtistScraper @Inject constructor(
             )
         }
 
-        // Fallback: parse data-client-items JSON for albums missing art URLs
-        val albumsMissingArt = albums.any { it.artUrl.isBlank() }
-        if (albumsMissingArt) {
-            val clientItemsRaw = document.selectFirst("ol[data-client-items]")
-                ?.attr("data-client-items")
-                ?.takeIf { it.isNotBlank() }
-                ?.let { HtmlUtils.decodeHtmlEntities(it) }
+        // Prefer full-original art: upgrade music-grid thumbs first, then
+        // overlay buildArtUrl from data-client-items whenever art_id is present
+        // (not only when art was blank - grid URLs are often low-res lazy thumbs).
+        for (i in albums.indices) {
+            if (albums[i].artUrl.isNotBlank()) {
+                albums[i] = albums[i].copy(
+                    artUrl = NetworkUtils.upgradeBandcampArtUrl(albums[i].artUrl),
+                )
+            }
+        }
 
-            if (clientItemsRaw != null) {
-                try {
-                    val clientItems = json.decodeFromString<List<ClientItem>>(clientItemsRaw)
-                    val artIdByUrl = clientItems
-                        .filter { it.artId > 0 && it.pageUrl.isNotBlank() }
-                        .associateBy(
-                            { normalizeUrl(it.pageUrl) },
-                            { NetworkUtils.buildArtUrl(it.artId) },
-                        )
+        val clientItemsRaw = document.selectFirst("ol[data-client-items]")
+            ?.attr("data-client-items")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { HtmlUtils.decodeHtmlEntities(it) }
 
-                    for (i in albums.indices) {
-                        if (albums[i].artUrl.isBlank()) {
-                            val normalizedUrl = normalizeUrl(albums[i].url)
-                            val matchedArt = artIdByUrl[normalizedUrl]
-                            if (matchedArt != null) {
-                                albums[i] = albums[i].copy(artUrl = matchedArt)
-                            }
-                        }
+        if (clientItemsRaw != null) {
+            try {
+                val clientItems = json.decodeFromString<List<ClientItem>>(clientItemsRaw)
+                val artIdByUrl = clientItems
+                    .filter { it.artId > 0 && it.pageUrl.isNotBlank() }
+                    .associateBy(
+                        { normalizeUrl(it.pageUrl) },
+                        { NetworkUtils.buildArtUrl(it.artId) },
+                    )
+
+                for (i in albums.indices) {
+                    val matchedArt = artIdByUrl[normalizeUrl(albums[i].url)]
+                    if (matchedArt != null) {
+                        albums[i] = albums[i].copy(artUrl = matchedArt)
                     }
-                } catch (_: Exception) {
-                    // JSON parsing failed - continue with whatever art URLs we have
                 }
+            } catch (_: Exception) {
+                // JSON parsing failed - continue with whatever art URLs we have
             }
         }
 
@@ -203,7 +207,12 @@ class DustvalveArtistScraper @Inject constructor(
                 val ogTitle = document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty()
                 // Bandcamp formats og:title as "Album Title, by Artist Name".
                 val albumTitle = ogTitle.substringBefore(", by ").trim().takeIf { it.isNotEmpty() } ?: "Untitled"
-                val albumArt = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
+                val rawOgArt = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
+                val albumArt = if (rawOgArt.isNotBlank()) {
+                    NetworkUtils.upgradeBandcampArtUrl(rawOgArt)
+                } else {
+                    ""
+                }
                 albums.add(
                     Album(
                         id = stableId(ogUrl),

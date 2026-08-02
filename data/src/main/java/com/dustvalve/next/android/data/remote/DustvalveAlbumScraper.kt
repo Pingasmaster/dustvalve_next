@@ -115,7 +115,7 @@ class DustvalveAlbumScraper @Inject constructor(
         val baseUrl = "${parsedUrl.protocol}://${parsedUrl.host}"
         val rawArtistUrl = tralbumData.current.bandUrl ?: baseUrl
         val artistUrl = if (NetworkUtils.isValidHttpsUrl(rawArtistUrl)) rawArtistUrl else baseUrl
-        // No art_id means no artwork; an unguarded a0_10.jpg URL would persist a 404.
+        // No art_id means no artwork; an unguarded a0_0.jpg URL would persist a 404.
         val artUrl = if (tralbumData.artId > 0) NetworkUtils.buildArtUrl(tralbumData.artId) else ""
 
         val albumId = stableId(tralbumData.url.ifEmpty { albumUrl })

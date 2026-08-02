@@ -20,6 +20,7 @@ import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.DownloadNotificationCenter
+import com.dustvalve.next.android.ui.image.ThumbnailCanonicalInterceptor
 import com.dustvalve.next.android.update.AppUpdateController
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -181,6 +182,10 @@ class DustvalveNextApplication :
                         cacheStrategy = { CacheControlCacheStrategy() },
                     ),
                 )
+                // Canonicalize Bandcamp / YouTube art URLs so every surface
+                // (search, queue, detail, player) hits one full-quality
+                // disk-cache key and never re-downloads the same cover.
+                add(ThumbnailCanonicalInterceptor())
             }
             .memoryCache {
                 MemoryCache.Builder()
@@ -194,9 +199,10 @@ class DustvalveNextApplication :
                 // it alongside audio. Coil manages its own LRU within the
                 // configured maxSizeBytes; pinned audio downloads are
                 // tracked in Room and not affected by Coil.
+                // Sized for full-original Bandcamp `_0` covers (~1-10 MB).
                 DiskCache.Builder()
                     .directory(StoragePaths.imagesDir(this))
-                    .maxSizeBytes(256L * 1024 * 1024)
+                    .maxSizeBytes(512L * 1024 * 1024)
                     .build()
             }
             .build()

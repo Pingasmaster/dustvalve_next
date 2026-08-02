@@ -44,8 +44,8 @@ class DustvalveDiscoverScraperTest {
         assertThat(r.cursor).isEqualTo("next-cursor")
         assertThat(r.albums).hasSize(3)
         assertThat(r.albums.map { it.title }).containsExactly("Album 1", "Album 3", "NoImage").inOrder()
-        assertThat(r.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a11_10.jpg")
-        assertThat(r.albums[1].artUrl).isEqualTo("https://f4.bcbits.com/img/a33_10.jpg")
+        assertThat(r.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a11_0.jpg")
+        assertThat(r.albums[1].artUrl).isEqualTo("https://f4.bcbits.com/img/a33_0.jpg")
         assertThat(r.albums[2].artUrl).isEqualTo("") // no image id
     }
 

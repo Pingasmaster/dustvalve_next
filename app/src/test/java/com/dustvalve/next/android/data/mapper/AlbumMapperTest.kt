@@ -19,7 +19,7 @@ class AlbumMapperTest {
         title = "Foo",
         artist = "Bar",
         artistUrl = "https://x.bandcamp.com",
-        artUrl = "https://f4.bcbits.com/img/a1_10.jpg",
+        artUrl = "https://f4.bcbits.com/img/a1_0.jpg",
         releaseDate = "2020-01-01",
         about = "About text",
         tracks = emptyList(),

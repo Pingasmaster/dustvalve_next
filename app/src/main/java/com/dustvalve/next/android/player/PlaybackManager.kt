@@ -14,6 +14,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.util.ThumbnailUrls
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -390,7 +391,10 @@ class PlaybackManager @Inject constructor(
 
         if (track.artUrl.isNotBlank()) {
             try {
-                metadataBuilder.setArtworkUri(track.artUrl.toUri())
+                // Canonical full-quality URL so MediaSession artwork matches
+                // the Coil disk-cache key used by every other surface.
+                val art = ThumbnailUrls.canonicalize(track.artUrl)
+                metadataBuilder.setArtworkUri(art.toUri())
             } catch (_: IllegalArgumentException) {
                 // Ignore malformed artwork URIs
             }

@@ -3,7 +3,6 @@ package com.dustvalve.next.android.data.remote.youtube.innertube
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -140,8 +139,9 @@ class YouTubeSearchParser @Inject constructor() {
             ?.path("collectionThumbnailViewModel")
             ?.path("primaryThumbnail")?.path("thumbnailViewModel")
             ?.path("image")?.path("sources")?.arr()
-            ?.maxByOrNull { (it as? JsonObject)?.get("width")?.toString()?.toIntOrNull() ?: 0 }
+            ?.maxByOrNull { it.int("width") ?: 0 }
             ?.str("url")
+            ?.let { bumpYtThumbnailResolution(it) }
         return SearchResult(
             type = SearchResultType.YOUTUBE_PLAYLIST,
             name = title,

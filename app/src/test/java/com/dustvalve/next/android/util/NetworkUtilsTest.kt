@@ -46,11 +46,44 @@ class NetworkUtilsTest {
     }
 
     @Test fun `buildArtUrl for positive id`() {
-        assertThat(NetworkUtils.buildArtUrl(12345L)).isEqualTo("https://f4.bcbits.com/img/a12345_10.jpg")
+        assertThat(NetworkUtils.buildArtUrl(12345L)).isEqualTo("https://f4.bcbits.com/img/a12345_0.jpg")
     }
 
     @Test fun `buildArtUrl for zero id`() {
-        assertThat(NetworkUtils.buildArtUrl(0L)).isEqualTo("https://f4.bcbits.com/img/a0_10.jpg")
+        assertThat(NetworkUtils.buildArtUrl(0L)).isEqualTo("https://f4.bcbits.com/img/a0_0.jpg")
+    }
+
+    @Test fun `upgradeBandcampArtUrl promotes all size tiers to full-original _0`() {
+        assertThat(NetworkUtils.upgradeBandcampArtUrl("https://f4.bcbits.com/img/a99_2.jpg"))
+            .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
+        assertThat(NetworkUtils.upgradeBandcampArtUrl("https://f4.bcbits.com/img/a99_5.jpg"))
+            .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
+        assertThat(NetworkUtils.upgradeBandcampArtUrl("https://f4.bcbits.com/img/a99_10.jpg"))
+            .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
+    }
+
+    @Test fun `upgradeBandcampArtUrl leaves full-original alone and rewrites PNG _1 to JPEG _0`() {
+        assertThat(NetworkUtils.upgradeBandcampArtUrl("https://f4.bcbits.com/img/a99_0.jpg"))
+            .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
+        assertThat(NetworkUtils.upgradeBandcampArtUrl("https://f4.bcbits.com/img/a99_1.png"))
+            .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
+    }
+
+    @Test fun `upgradeBandcampArtUrl leaves non-bcbits urls alone`() {
+        val url = "https://cdn.example.com/img/a99_2.jpg"
+        assertThat(NetworkUtils.upgradeBandcampArtUrl(url)).isEqualTo(url)
+    }
+
+    @Test fun `ThumbnailUrls canonicalize is idempotent for youtube and bandcamp`() {
+        val yt = "https://i.ytimg.com/vi/abc/hqdefault.jpg"
+        val ytCanon = ThumbnailUrls.canonicalize(yt)
+        assertThat(ytCanon).isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
+        assertThat(ThumbnailUrls.canonicalize(ytCanon)).isEqualTo(ytCanon)
+
+        val bc = "https://f4.bcbits.com/img/a42_2.jpg"
+        val bcCanon = ThumbnailUrls.canonicalize(bc)
+        assertThat(bcCanon).isEqualTo("https://f4.bcbits.com/img/a42_0.jpg")
+        assertThat(ThumbnailUrls.canonicalize(bcCanon)).isEqualTo(bcCanon)
     }
 
     @Test fun `sanitizeFileName keeps safe chars`() {

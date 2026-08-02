@@ -47,9 +47,9 @@ internal fun JsonElement.runsBrowseId(key: String): String? {
 }
 
 /**
- * YouTube (non-Music) thumbnail extraction. Picks the largest by width and
- * then rewrites the URL to request a higher-resolution variant when the URL
- * shape supports it - see [bumpYtThumbnailResolution].
+ * YouTube thumbnail extraction. Picks the largest by width and then rewrites
+ * the URL to the canonical full-quality variant - see
+ * [com.dustvalve.next.android.util.ThumbnailUrls.canonicalize].
  */
 internal fun JsonElement.extractThumbnail(): String? {
     val thumbnails = path("thumbnail")?.path("thumbnails")?.arr()
@@ -62,38 +62,9 @@ internal fun JsonElement.extractThumbnail(): String? {
 }
 
 /**
- * Request a higher-resolution thumbnail from YouTube / Google CDNs when the
- * URL shape advertises a size. Safe to call on any YouTube thumbnail string:
- * unrecognised shapes are returned unchanged.
- *
- * - `i.ytimg.com/vi/<id>/hqdefault.jpg` (480x360) -> `hq720.jpg` (1280x720)
- * - `i.ytimg.com/vi/<id>/hq1.jpg .. hq3.jpg` (first-frame thumbs, 120x90) ->
- *   `hqdefault.jpg` (480x360)
- * - Google avatar CDNs (`yt3.googleusercontent.com`, `lh3.googleusercontent.com`,
- *   `yt4.ggpht.com`, etc.) using `=sN-...` or `=wN-hM-...` params ->
- *   bump to 720. Other segments (crop, rounding, no-rj) are preserved.
- *
- * We deliberately do NOT promote `hqdefault.jpg` -> `maxresdefault.jpg` because
- * `maxresdefault` 404s for older / lower-tier uploads (`hq720` is always
- * present when the source is HD).
+ * Canonical full-quality YouTube / YT Music / Bandcamp thumbnail URL.
+ * Delegates to [com.dustvalve.next.android.util.ThumbnailUrls] so parsers and
+ * the Coil interceptor share one policy (one download, one disk-cache key).
  */
-internal fun bumpYtThumbnailResolution(url: String): String {
-    // i.ytimg.com paths
-    if (url.contains("/hq1.jpg") || url.contains("/hq2.jpg") || url.contains("/hq3.jpg")) {
-        return url
-            .replace("/hq1.jpg", "/hqdefault.jpg")
-            .replace("/hq2.jpg", "/hqdefault.jpg")
-            .replace("/hq3.jpg", "/hqdefault.jpg")
-    }
-    if (url.endsWith("/hqdefault.jpg") || url.contains("/hqdefault.jpg?")) {
-        return url.replace("/hqdefault.jpg", "/hq720.jpg")
-    }
-    // googleusercontent / ggpht avatar + album-art CDNs
-    if (url.contains("googleusercontent.com") || url.contains("ggpht.com")) {
-        val sRewritten = url.replace(Regex("=s\\d+(-[^=&]*)?"), "=s720$1")
-        if (sRewritten != url) return sRewritten
-        val whRewritten = url.replace(Regex("=w\\d+-h\\d+(-[^=&]*)?"), "=w720-h720$1")
-        if (whRewritten != url) return whRewritten
-    }
-    return url
-}
+internal fun bumpYtThumbnailResolution(url: String): String =
+    com.dustvalve.next.android.util.ThumbnailUrls.canonicalize(url)

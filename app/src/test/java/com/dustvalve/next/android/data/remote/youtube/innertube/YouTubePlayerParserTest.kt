@@ -44,7 +44,7 @@ class YouTubePlayerParserTest {
         assertThat(track.artist).isNotEmpty()
         assertThat(track.duration).isGreaterThan(0f)
         assertThat(track.streamUrl).isEqualTo("https://www.youtube.com/watch?v=jNQXAC9IVRw")
-        assertThat(track.artUrl).startsWith("http")
+        assertThat(track.artUrl).contains("hq720")
         assertThat(track.source).isEqualTo(TrackSource.YOUTUBE)
     }
 

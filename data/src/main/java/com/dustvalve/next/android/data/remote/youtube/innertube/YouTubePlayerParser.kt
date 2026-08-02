@@ -67,8 +67,9 @@ class YouTubePlayerParser @Inject constructor() {
         val title = details.str("title") ?: "Unknown"
         val artist = details.str("author") ?: "Unknown"
         val duration = (details.str("lengthSeconds")?.toFloatOrNull()) ?: 0f
-        val thumbs = details.path("thumbnail")?.path("thumbnails")?.arr() ?: emptyList<JsonElement>()
-        val art = thumbs.maxByOrNull { it.int("width") ?: 0 }?.str("url") ?: ""
+        // Prefer extractThumbnail so player/cache/download art gets the same
+        // HQ bump as search/list (hqdefault -> hq720, etc.).
+        val art = details.path("thumbnail")?.extractThumbnail().orEmpty()
         val channelId = details.str("channelId")
         val artistUrl = if (!channelId.isNullOrBlank()) {
             "https://www.youtube.com/channel/$channelId"

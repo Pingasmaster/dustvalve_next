@@ -45,9 +45,25 @@ object NetworkUtils {
 
     /**
      * Builds the art/image URL for a given Dustvalve art ID.
-     * Returns a URL in the format used by Dustvalve's CDN for album/artist artwork.
+     * Size `_0` is Bandcamp's full-original JPEG tier.
      */
-    fun buildArtUrl(artId: Long): String = "https://f4.bcbits.com/img/a${artId}_10.jpg"
+    fun buildArtUrl(artId: Long): String = "https://f4.bcbits.com/img/a${artId}_0.jpg"
+
+    /**
+     * Rewrites a Bandcamp CDN image URL to the full-original `_0` size.
+     * Leaves non-bcbits URLs and already-`_0` URLs unchanged. The `_1` PNG
+     * sibling can be tens of MB; rewrite it to the JPEG `_0` instead.
+     */
+    fun upgradeBandcampArtUrl(url: String): String {
+        if (!url.contains("bcbits.com/img/")) return url
+        val match = Regex("""_(\d+)\.(jpg|png|webp)""", RegexOption.IGNORE_CASE).find(url)
+            ?: return url
+        val size = match.groupValues[1].toIntOrNull() ?: return url
+        if (size == 0) return url
+        // Prefer the JPEG full-original over the giant PNG `_1` sibling.
+        val ext = if (size == 1) "jpg" else match.groupValues[2]
+        return url.replaceRange(match.range, "_0.$ext")
+    }
 
     /**
      * Sanitizes a file name by replacing any character not in [a-zA-Z0-9._-] with underscore.

@@ -45,7 +45,7 @@ class DustvalveCollectionScraperTest {
         // merch, non-https, and empty url filtered out -> 2 left
         assertThat(result.albums).hasSize(2)
         assertThat(result.albums.map { it.title }).containsExactly("Album 1", "Track 1").inOrder()
-        assertThat(result.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a11_10.jpg")
+        assertThat(result.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a11_0.jpg")
         assertThat(result.albums[0].purchaseInfo).isEqualTo(PurchaseInfo(100L, "a"))
         assertThat(result.albums[1].purchaseInfo).isNull()
         assertThat(result.hasMore).isTrue()

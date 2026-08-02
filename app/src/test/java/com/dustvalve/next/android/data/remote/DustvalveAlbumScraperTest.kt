@@ -60,7 +60,7 @@ class DustvalveAlbumScraperTest {
         assertThat(album.artist).isEqualTo("The Band")
         assertThat(album.releaseDate).isEqualTo("2020-01-01")
         assertThat(album.about).isEqualTo("A record")
-        assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a42_10.jpg")
+        assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a42_0.jpg")
         assertThat(album.tags).containsExactly("rock", "indie").inOrder()
         assertThat(album.tracks).hasSize(2)
         assertThat(album.tracks[0].title).isEqualTo("Track One")
@@ -70,7 +70,7 @@ class DustvalveAlbumScraperTest {
 
     @Test fun `scrapeAlbum leaves artUrl empty when art_id is missing`() = runTest {
         // Regression: art_id 0 (absent artwork) used to produce a hardcoded
-        // https://f4.bcbits.com/img/a0_10.jpg URL that 404s and got persisted.
+        // https://f4.bcbits.com/img/a0_0.jpg URL that 404s and got persisted.
         val albumUrl = setup.url("/album/no-art")
         val html = """<html><script>var TralbumData = {
             "url":"$albumUrl",
@@ -131,7 +131,7 @@ class DustvalveAlbumScraperTest {
 
         val album = scraper.scrapeAlbum(trackUrl)
         assertThat(album.title).isEqualTo("Redirected Album")
-        assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a2_10.jpg")
+        assertThat(album.artUrl).isEqualTo("https://f4.bcbits.com/img/a2_0.jpg")
     }
 
     @Test fun `scrapeAlbum redirect limit enforced`() = runTest {

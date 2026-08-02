@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.remote.youtubemusic
 
+import com.dustvalve.next.android.data.remote.youtube.innertube.bumpYtThumbnailResolution
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -29,10 +30,9 @@ internal fun JsonElement.extractMusicThumbnail(): String? {
         ?: path("thumbnail")?.path("thumbnails")?.arr()
         ?: return null
 
-    return thumbnails.maxByOrNull { it.path("width")?.jsonPrimitive?.content?.toIntOrNull() ?: 0 }
-        ?.str("url")
-        // Bump size. 720x720 is the sweet spot: big enough for full-screen
-        // players without being wastefully large. Preserves query params
-        // (`-l90-rj`, crop flags) that YT Music sets after the size token.
-        ?.replace(Regex("=w\\d+-h\\d+"), "=w720-h720")
+    val raw = thumbnails.maxByOrNull {
+        it.path("width")?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+    }?.str("url") ?: return null
+    // Canonical full-quality URL (shared with YouTube parsers + Coil).
+    return bumpYtThumbnailResolution(raw)
 }

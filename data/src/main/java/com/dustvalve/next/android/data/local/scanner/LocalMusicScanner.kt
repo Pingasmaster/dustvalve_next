@@ -209,14 +209,17 @@ class LocalMusicScanner @Inject constructor(
     }
 
     private fun extractCoverArt(mmr: MediaMetadataRetriever, trackId: String): String? {
-        val artBytes = mmr.embeddedPicture ?: return null
         val artFile = getCoverArtFile(trackId)
-        // Skip if art already cached (same track ID = same file)
-        if (artFile.exists() && artFile.length() > 0) {
-            return Uri.fromFile(artFile).toString()
+        val artBytes = mmr.embeddedPicture
+        if (artBytes == null) {
+            // Tag cleared / never had art: drop any stale cached file so a
+            // later re-tag cannot serve the old bytes forever.
+            if (artFile.exists()) artFile.delete()
+            return null
         }
         return try {
             artFile.parentFile?.mkdirs()
+            // Always rewrite so rescans pick up replaced embedded covers.
             artFile.writeBytes(artBytes)
             Uri.fromFile(artFile).toString()
         } catch (_: Exception) {
