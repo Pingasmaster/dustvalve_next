@@ -87,6 +87,16 @@ class PlayerViewModelResolveTest {
             .build()
         queueManager = QueueManager()
         playbackManager = PlaybackManager(player, queueManager, ApplicationProvider.getApplicationContext())
+        val resolveUseCase = com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase(
+            downloadRepository,
+            youtubeRepository,
+        )
+        val streamResolver = com.dustvalve.next.android.ui.screens.player.PlaybackStreamResolver(
+            youtubeRepository,
+            dustvalveStreamResolver,
+            downloadRepository,
+            resolveUseCase,
+        )
         viewModel = PlayerViewModel(
             playbackManager,
             queueManager,
@@ -97,8 +107,8 @@ class PlayerViewModelResolveTest {
             playlistRepository,
             favoriteDao,
             settingsDataStore,
-            youtubeRepository,
-            dustvalveStreamResolver,
+            resolveUseCase,
+            streamResolver,
             ApplicationProvider.getApplicationContext(),
         )
     }

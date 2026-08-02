@@ -664,7 +664,6 @@ private fun canPostPromotedNotifications(context: Context): Boolean = try {
     true
 }
 
-@Suppress("TooGenericExceptionCaught", "SwallowedException")
 private fun openLiveUpdatesSettings(context: Context) {
     // There is no dedicated promoted-notifications settings action in API 37;
     // the per-app "Live Updates" toggle lives in the app's notification
@@ -675,7 +674,7 @@ private fun openLiveUpdatesSettings(context: Context) {
                 .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
-    } catch (e: Exception) {
+    } catch (_: android.content.ActivityNotFoundException) {
         context.startActivity(
             Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,

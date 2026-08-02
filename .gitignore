@@ -54,3 +54,5 @@ log*.txt
 log*.md
 ideas
 .worktrees/
+.jdk25-home/
+dustvalve_next-future-mapping.txt

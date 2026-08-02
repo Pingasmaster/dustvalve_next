@@ -22,10 +22,8 @@
     <ID>CyclomaticComplexMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>CyclomaticComplexMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
     <ID>CyclomaticComplexMethod:MiniPlayer.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable fun MiniPlayer</ID>
-    <ID>CyclomaticComplexMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsSourcesSection</ID>
     <ID>CyclomaticComplexMethod:YouTubeScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun YouTubeScreen</ID>
     <ID>LargeClass:PlayerViewModel.kt:PlayerViewModel : ViewModel</ID>
-    <ID>LargeClass:SettingsViewModel.kt:SettingsViewModel : ViewModel</ID>
     <ID>LongMethod:AlbumDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun AlbumDetailScreen</ID>
     <ID>LongMethod:ArtistDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun ArtistDetailScreen</ID>
     <ID>LongMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
@@ -41,10 +39,6 @@
     <ID>LongMethod:PlaylistDetailScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable private fun PlaylistContent</ID>
     <ID>LongMethod:PlaylistEditSheet.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class, ) @Composable fun PlaylistEditSheet</ID>
     <ID>LongMethod:PlaylistListItem.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable fun PlaylistListItem</ID>
-    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsAppearanceSection</ID>
-    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsConnectionsSection</ID>
-    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsSourcesSection</ID>
-    <ID>LongMethod:SettingsScreenSections.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun SettingsStorageSection</ID>
     <ID>LongMethod:YouTubeScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun YouTubeScreen</ID>
     <ID>LoopWithTooManyJumpStatements:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$for</ID>
     <ID>LoopWithTooManyJumpStatements:HtmlUtils.kt:HtmlUtils$while</ID>
@@ -134,7 +128,6 @@
     <ID>ReturnCount:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$private fun extractArtistFromHtml: String?</ID>
     <ID>ReturnCount:HtmlUtils.kt:HtmlUtils$fun extractJsonFromScript: String?</ID>
     <ID>ReturnCount:HtmlUtils.kt:HtmlUtils$fun extractMetaContent: String?</ID>
-    <ID>ReturnCount:PlayerViewModel.kt:PlayerViewModel$private suspend fun resolveTrackForPlayback: Track</ID>
     <ID>ReturnCount:YouTubeSearchParser.kt:YouTubeSearchParser$private fun parseRow: SearchResult?</ID>
     <ID>SwallowedException:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$e: IOException</ID>
     <ID>SwallowedException:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$e: IOException</ID>

@@ -15,13 +15,14 @@ Four automated tiers (see docs/testing/README.md):
   real MainActivity under Robolectric). Run this after ANY change touching
   playback, navigation, or the provider screens.
 - `./build.sh --smoke` / `--e2e` / `--e2e-live` - Gradle Managed Device
-  suites (`pixel7aApi37`). If the host QEMU cannot boot modern images, rely
-  on the check.yml emulator-smoke / emulator-e2e CI jobs instead.
+  suites (`pixel7aApi37`). Requires KVM; run locally only.
 - `:shippedsmoke` - drives the APK as SHIPPED (release + proguard-rules.pro
   alone) through UiAutomator, covering the library minification the
   `-PtestReleaseBuild` lane cannot. NEVER pass `-PtestReleaseBuild` to it:
   that applies proguard-test-support.pro and defeats the whole point.
-  CI: emulator-smoke-shipped.
+  Local: `./build.sh --smoke-shipped`.
+- Baseline / macrobenchmark: `./build.sh --baseline-profile` and
+  `./build.sh --macrobenchmark` (no GitHub Actions; all gates are local).
 - Scenario backlog lives in docs/testing/catalog-*.md; new E2E tests must
   reference their catalog id.
 
@@ -55,8 +56,8 @@ arrows, ellipses, bullets, box-drawing characters, typographic quotes,
 or any other non-ASCII character. Use ASCII equivalents instead:
 `-`, `->`, `...`, `"`, `x`, `>=`, `~`.
 
-Enforced by `scripts/check_ascii.sh`: CI fails on violations (check.yml,
-"ASCII-only source check" step) and `./build.sh` prints a warning.
+Enforced by `scripts/check_ascii.sh`: `./build.sh` hard-fails on violations.
+No GitHub Actions workflows - all gates run locally via `./build.sh`.
 
 Documented exceptions (allowlisted in `scripts/check_ascii.sh`; keep the
 two lists in sync):

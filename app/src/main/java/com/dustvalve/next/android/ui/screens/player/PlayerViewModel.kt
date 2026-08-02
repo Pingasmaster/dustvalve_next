@@ -12,7 +12,6 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
@@ -21,8 +20,8 @@ import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueEntry
@@ -85,8 +84,8 @@ class PlayerViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
     private val favoriteDao: com.dustvalve.next.android.data.local.db.dao.FavoriteDao,
     private val settingsDataStore: SettingsDataStore,
-    private val youtubeRepository: YouTubeRepository,
-    private val dustvalveStreamResolver: DustvalveStreamResolver,
+    private val resolveTrackForPlaybackUseCase: ResolveTrackForPlaybackUseCase,
+    private val playbackStreamResolver: PlaybackStreamResolver,
     @param:ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -113,14 +112,6 @@ class PlayerViewModel @Inject constructor(
      * NEWER job just set (rapid double-tap race).
      */
     private var loadingGeneration = 0
-
-    /**
-     * trackId -> wall-clock ms when its remote stream URL was last resolved.
-     * Remote stream URLs (YouTube googlevideo, Bandcamp CDN) expire after a
-     * few hours; entries older than [STREAM_URL_TTL_MS] are re-resolved before
-     * playback instead of handing ExoPlayer a dead link. Main-thread only.
-     */
-    private val streamResolvedAtMs = HashMap<String, Long>()
 
     /**
      * One-shot auto-recovery guard: track ids that already got their single
@@ -174,8 +165,8 @@ class PlayerViewModel @Inject constructor(
         // the singletons outlive this activity-scoped ViewModel, and skip from
         // the media notification must keep resolving while the UI is closed
         // (the next MainActivity's ViewModel overwrites them).
-        playbackManager.streamIsStale = ::isStreamResolutionStale
-        playbackManager.streamResolver = { track -> resolveStreamOnDemand(track) }
+        playbackManager.streamIsStale = playbackStreamResolver::isResolutionStale
+        playbackManager.streamResolver = { track -> playbackStreamResolver.resolveOnDemand(track) }
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, Handler(Looper.getMainLooper()))
     }
 
@@ -230,10 +221,9 @@ class PlayerViewModel @Inject constructor(
 
     /**
      * One-shot automatic recovery from an expired stream URL: re-resolve the
-     * current track (YouTube via the repository, Bandcamp via
-     * [DustvalveStreamResolver]), patch the queue entry in place and retry
-     * playback at the position where it failed. Returns false when recovery is
-     * not applicable or failed - the caller then surfaces the normal error UI.
+     * current track, patch the queue entry in place and retry playback at the
+     * position where it failed. Returns false when recovery is not applicable
+     * or failed - the caller then surfaces the normal error UI.
      */
     private suspend fun tryAutoRecoverStream(error: PlaybackException): Boolean {
         val track = queueManager.currentTrack.value
@@ -245,7 +235,7 @@ class PlayerViewModel @Inject constructor(
         val resumeAt = playbackManager.currentPosition.value
         _extraState.update { it.copy(isLoadingTrack = true) }
         val fresh = try {
-            reResolveStream(track)
+            playbackStreamResolver.reResolve(track)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             null
@@ -257,77 +247,6 @@ class PlayerViewModel @Inject constructor(
         playbackManager.playTrack(fresh)
         if (resumeAt > 0L) playbackManager.seekTo(resumeAt)
         return true
-    }
-
-    /** Fetches a genuinely fresh stream URL, bypassing any cached/stale one. */
-    private suspend fun reResolveStream(track: Track): Track? = when (track.source) {
-        TrackSource.YOUTUBE -> {
-            // The queue entry's streamUrl now holds the (expired) resolved
-            // googlevideo URL, so rebuild the watch URL from the yt_<videoId>
-            // id - the same reconstruction resolveTrackForPlayback uses.
-            val videoId = track.id.removePrefix("yt_").takeIf { it.isNotBlank() && it != track.id }
-            videoId?.let {
-                val freshUrl = youtubeRepository.getStreamUrl("https://www.youtube.com/watch?v=$it")
-                recordStreamResolved(track.id)
-                track.copy(streamUrl = freshUrl)
-            }
-        }
-
-        TrackSource.BANDCAMP -> reResolveBandcampStream(track)
-
-        else -> null
-    }
-
-    private suspend fun reResolveBandcampStream(track: Track): Track? {
-        val pageUrl = track.albumUrl.takeIf { it.isNotBlank() } ?: track.bandcampTrackUrl
-        if (pageUrl.isNullOrBlank()) return null
-        // The resolver returns track.streamUrl untouched when it is set, so
-        // blank it to force a fresh album-page fetch.
-        val freshUrl = dustvalveStreamResolver.resolveStreamUrl(track.copy(streamUrl = null), pageUrl) ?: return null
-        recordStreamResolved(track.id)
-        return track.copy(streamUrl = freshUrl)
-    }
-
-    private fun recordStreamResolved(trackId: String) {
-        streamResolvedAtMs[trackId] = System.currentTimeMillis()
-    }
-
-    /**
-     * Installed as [PlaybackManager.streamIsStale]. Only tracks whose remote
-     * resolution timestamp we know can be stale; scrape-time Bandcamp URLs
-     * without a timestamp are played optimistically and covered by the
-     * error-path auto-recovery instead.
-     */
-    private fun isStreamResolutionStale(track: Track): Boolean {
-        val streamUrl = track.streamUrl
-        if (track.isLocal || streamUrl == null || !streamUrl.startsWith("http")) return false
-        val resolvedAt = streamResolvedAtMs[track.id] ?: return false
-        return System.currentTimeMillis() - resolvedAt > STREAM_URL_TTL_MS
-    }
-
-    /**
-     * Installed as [PlaybackManager.streamResolver]: runs the same resolution
-     * as the direct-tap path for entries that skip/auto-advance found
-     * unresolved or stale. Returns null when the track cannot be made
-     * playable, letting PlaybackManager's bounded skip-unplayable logic take
-     * over.
-     */
-    private suspend fun resolveStreamOnDemand(track: Track): Track? {
-        val resolved = try {
-            val staleBandcampStream = track.source == TrackSource.BANDCAMP &&
-                !track.streamUrl.isNullOrBlank() &&
-                isStreamResolutionStale(track)
-            if (staleBandcampStream && downloadRepository.getDownloadInfo(track.id) == null) {
-                // resolveTrackForPlayback would hand back the same stale URL.
-                reResolveBandcampStream(track)
-            } else {
-                resolveTrackForPlayback(track, updateState = false)
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
-        return resolved?.takeIf { !it.streamUrl.isNullOrBlank() }
     }
 
     // Reactively patch the queue's per-track isFavorite from the DB so
@@ -347,104 +266,30 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
-     * Resolves the best available stream URL for a track:
-     * 1. If downloaded locally at same-or-higher quality -> use local file
-     * 2. Otherwise -> use the track's stream URL (mp3-128)
-     *
-     * Also triggers a progressive background download if enabled.
+     * Resolves the best available stream URL for a track and applies UI
+     * source/format state when [updateState] is true.
      */
     private suspend fun resolveTrackForPlayback(track: Track, updateState: Boolean = true): Track {
-        // Local tracks already have a content:// URI - use as-is
-        if (track.isLocal) {
-            if (updateState) {
-                _extraState.update {
-                    it.copy(
-                        currentPlaybackFormat = null,
-                        currentSourcePath = track.streamUrl,
-                    )
-                }
-            }
-            return track
+        val result = resolveTrackForPlaybackUseCase(track, reportFailure = updateState)
+        if (result.recordedRemoteResolution) {
+            playbackStreamResolver.recordResolved(result.track.id)
         }
-
-        // YouTube tracks: check download first, then resolve stream URL live
-        if (track.source == TrackSource.YOUTUBE) {
-            val ytDownloadInfo = downloadRepository.getDownloadInfo(track.id)
-            if (ytDownloadInfo != null) {
-                if (updateState) {
-                    _extraState.update {
-                        it.copy(
-                            currentPlaybackFormat = ytDownloadInfo.format,
-                            currentSourcePath = ytDownloadInfo.filePath,
-                        )
-                    }
-                }
-                return track.copy(streamUrl = ytDownloadInfo.streamUri)
-            }
-            // Resolve stream URL from YouTube. Belt-and-braces: if the track
-            // arrived without a watch URL (older cached entries carried
-            // streamUrl = null) OR already carries a previously resolved (and
-            // possibly expired) googlevideo URL, reconstruct the watch URL
-            // from the yt_<videoId> id the same way DownloadRepositoryImpl
-            // does, instead of silently bailing with an unplayable track.
-            val watchUrl = track.streamUrl
-                ?.takeIf { it.contains("youtube.com/watch") || it.contains("youtu.be/") }
-                ?: track.id.removePrefix("yt_").takeIf { it.isNotBlank() && it != track.id }
-                    ?.let { "https://www.youtube.com/watch?v=$it" }
-            return try {
-                val streamUrl = youtubeRepository.getStreamUrl(watchUrl ?: return track.copy(streamUrl = null))
-                recordStreamResolved(track.id)
-                if (updateState) {
-                    _extraState.update {
-                        it.copy(currentPlaybackFormat = null, currentSourcePath = null)
-                    }
-                }
-                track.copy(streamUrl = streamUrl)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // Only surface the failure when resolving the track the user
-                // asked to play NOW. Background pre-resolution of the rest of
-                // the queue (updateState = false) must not raise a spurious
-                // "stream failed" snackbar over perfectly healthy playback.
-                if (updateState) {
-                    _extraState.update {
-                        it.copy(
-                            snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
-                            isSnackbarError = true,
-                        )
-                    }
-                }
-                // Return track with null streamUrl so callers skip playback
-                // instead of passing the YouTube watch page URL to ExoPlayer
-                track.copy(streamUrl = null)
-            }
-        }
-
-        // Check for existing local download
-        val downloadInfo = downloadRepository.getDownloadInfo(track.id)
-        if (downloadInfo != null && downloadInfo.format.qualityRank >= AudioFormat.MP3_128.qualityRank) {
-            // Already have a same-or-higher quality local file - use it
-            if (updateState) {
-                _extraState.update {
-                    it.copy(
-                        currentPlaybackFormat = downloadInfo.format,
-                        currentSourcePath = downloadInfo.filePath,
-                    )
-                }
-            }
-            return track.copy(streamUrl = downloadInfo.streamUri)
-        }
-
-        // No local download - use original stream URL (mp3-128)
         if (updateState) {
             _extraState.update {
-                it.copy(
-                    currentPlaybackFormat = AudioFormat.MP3_128,
-                    currentSourcePath = null,
+                var next = it.copy(
+                    currentPlaybackFormat = result.playbackFormat,
+                    currentSourcePath = result.sourcePath,
                 )
+                if (result.streamFailed) {
+                    next = next.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
+                        isSnackbarError = true,
+                    )
+                }
+                next
             }
         }
-        return track
+        return result.track
     }
 
     /**
@@ -1089,15 +934,5 @@ class PlayerViewModel @Inject constructor(
                 isSnackbarError = false,
             )
         }
-    }
-
-    companion object {
-        /**
-         * Freshness window for resolved remote stream URLs. YouTube googlevideo
-         * links expire after ~6 h and Bandcamp CDN tokens after a few hours;
-         * one hour is comfortably inside both, and a spurious re-resolve only
-         * costs one metadata request before playback.
-         */
-        private const val STREAM_URL_TTL_MS = 60L * 60L * 1000L
     }
 }

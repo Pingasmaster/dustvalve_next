@@ -20,11 +20,9 @@ import com.dustvalve.next.android.update.AppUpdateController
 import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -101,12 +99,28 @@ class SettingsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
-    private var scanJob: Job? = null
+    private val dedicatedFolder = DedicatedFolderSettingsCoordinator(
+        scope = viewModelScope,
+        uiState = _uiState,
+        storageMigrator = storageMigrator,
+        folderMirror = folderMirror,
+    )
+
+    private val localMusic = LocalMusicSettingsCoordinator(
+        scope = viewModelScope,
+        uiState = _uiState,
+        settingsDataStore = settingsDataStore,
+        localMusicRepository = localMusicRepository,
+    )
 
     init {
-        collectAccountState()
-        collectYtmAccountState()
-        collectCacheInfo()
+        SettingsUiCollectors(
+            scope = viewModelScope,
+            uiState = _uiState,
+            accountRepository = accountRepository,
+            storageTracker = storageTracker,
+            settingsDataStore = settingsDataStore,
+        ).start()
         // Mirror the process-wide update flow into our SettingsUiState so the
         // "Search for updates" row reflects whatever the cold-start silent
         // check (or an in-flight download) found.
@@ -120,187 +134,15 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(updateMessage = m) }
             }
         }
-        collectThemeMode()
-        collectDynamicColor()
-        collectStorageLimit()
-        collectAutoDownloadCollection()
-        collectAutoDownloadFutureContent()
-        collectDownloadFormat()
-        collectSaveDataOnMetered()
-        collectProgressiveDownload()
-        collectSeamlessQualityUpgrade()
-        collectDownloadNotificationsEnabled()
-        collectOledBlack()
-        collectAlbumArtTheme()
-        collectProgressBar()
-        collectLocalMusicEnabled()
-        collectLocalMusicFolderUris()
-        collectLocalMusicUseMediaStore()
-        collectBandcampEnabled()
-        collectYoutubeEnabled()
-        collectShowInlineVolumeSlider()
-        collectShowVolumeButton()
-        collectSearchHistoryEnabled()
-        collectYoutubeDefaultSource()
-        collectAutoUpdateCheckEnabled()
-        collectAlbumCoverLongPressCarousel()
-        collectKeepScreenOnInApp()
-        collectKeepScreenOnWhilePlaying()
-        collectKeepLocalSort()
-        collectKeepLocalFilters()
-        collectDedicatedFolder()
     }
 
-    private fun collectDedicatedFolder() {
-        viewModelScope.launch {
-            settingsDataStore.dedicatedFolderEnabled
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(dedicatedFolderEnabled = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.dedicatedFolderTreeUri
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(dedicatedFolderTreeUri = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.dedicatedFolderIncludeImageCache
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(dedicatedFolderIncludeImageCache = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.dedicatedFolderIncludeMetadataCache
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(dedicatedFolderIncludeMetadataCache = v) } }
-        }
-    }
+    fun enableDedicatedFolder(treeUri: String) = dedicatedFolder.enable(treeUri)
 
-    fun enableDedicatedFolder(treeUri: String) {
-        viewModelScope.launch {
-            try {
-                _uiState.update {
-                    it.copy(
-                        folderMigrationInProgress = true,
-                        folderMigrationProgress = 0f,
-                        folderMigrationMessage = null,
-                        folderMigrationError = null,
-                    )
-                }
-                val includeImages = _uiState.value.dedicatedFolderIncludeImageCache
-                val includeMetadata = _uiState.value.dedicatedFolderIncludeMetadataCache
-                // Suppression is held for the migration's actual duration
-                // (try/finally inside suppressed) - a slow SAF provider used
-                // to outrun the old fixed 60s window and let the mirror
-                // overwrite good snapshots mid-copy.
-                folderMirror.suppressed {
-                    storageMigrator.migrateToFolder(
-                        treeUriStr = treeUri,
-                        includeImages = includeImages,
-                        includeMetadata = includeMetadata,
-                    ) { p ->
-                        _uiState.update {
-                            it.copy(
-                                folderMigrationProgress = p.fraction,
-                                folderMigrationMessage = UiText.DynamicString(p.label),
-                            )
-                        }
-                    }
-                }
-                _uiState.update {
-                    it.copy(
-                        folderMigrationInProgress = false,
-                        folderMigrationProgress = 1f,
-                        folderMigrationMessage = UiText.StringResource(
-                            R.string.settings_dedicated_folder_migration_success,
-                        ),
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        folderMigrationInProgress = false,
-                        folderMigrationError = UiText.StringResource(
-                            R.string.settings_dedicated_folder_migration_failed,
-                            listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
-                        ),
-                    )
-                }
-            }
-        }
-    }
+    fun disableDedicatedFolder() = dedicatedFolder.disable()
 
-    fun disableDedicatedFolder() {
-        viewModelScope.launch {
-            try {
-                _uiState.update {
-                    it.copy(
-                        folderMigrationInProgress = true,
-                        folderMigrationProgress = 0f,
-                        folderMigrationMessage = null,
-                        folderMigrationError = null,
-                    )
-                }
-                // Hold suppression for the migration's actual duration, not
-                // a fixed 60s window (see enableDedicatedFolder).
-                folderMirror.suppressed {
-                    storageMigrator.migrateFromFolder { p ->
-                        _uiState.update {
-                            it.copy(
-                                folderMigrationProgress = p.fraction,
-                                folderMigrationMessage = UiText.DynamicString(p.label),
-                            )
-                        }
-                    }
-                }
-                _uiState.update {
-                    it.copy(
-                        folderMigrationInProgress = false,
-                        folderMigrationProgress = 1f,
-                        folderMigrationMessage = UiText.StringResource(
-                            R.string.settings_dedicated_folder_migration_reverted,
-                        ),
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        folderMigrationInProgress = false,
-                        folderMigrationError = UiText.StringResource(
-                            R.string.settings_dedicated_folder_migration_failed,
-                            listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
-                        ),
-                    )
-                }
-            }
-        }
-    }
+    fun setDedicatedFolderIncludeImageCache(enabled: Boolean) = dedicatedFolder.setIncludeImageCache(enabled)
 
-    fun setDedicatedFolderIncludeImageCache(enabled: Boolean) {
-        viewModelScope.launch {
-            try {
-                _uiState.update { it.copy(folderMigrationInProgress = true, folderMigrationProgress = 0.1f) }
-                storageMigrator.setIncludeImageCache(enabled)
-                _uiState.update { it.copy(folderMigrationInProgress = false, folderMigrationProgress = 1f) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(folderMigrationInProgress = false) }
-            }
-        }
-    }
-
-    fun setDedicatedFolderIncludeMetadataCache(enabled: Boolean) {
-        viewModelScope.launch {
-            try {
-                _uiState.update { it.copy(folderMigrationInProgress = true, folderMigrationProgress = 0.1f) }
-                storageMigrator.setIncludeMetadataCache(enabled)
-                _uiState.update { it.copy(folderMigrationInProgress = false, folderMigrationProgress = 1f) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(folderMigrationInProgress = false) }
-            }
-        }
-    }
+    fun setDedicatedFolderIncludeMetadataCache(enabled: Boolean) = dedicatedFolder.setIncludeMetadataCache(enabled)
 
     fun clearFolderMigrationMessage() {
         _uiState.update { it.copy(folderMigrationMessage = null) }
@@ -537,316 +379,17 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(ytmSignOutSuccess = false) }
     }
 
-    private fun collectAccountState() {
-        viewModelScope.launch {
-            accountRepository.getAccountState()
-                .catch { /* ignore collection errors */ }
-                .collect { state ->
-                    _uiState.update { it.copy(accountState = state) }
-                }
-        }
-    }
+    fun setLocalMusicEnabled(enabled: Boolean) = localMusic.setEnabled(enabled)
 
-    private fun collectYtmAccountState() {
-        viewModelScope.launch {
-            accountRepository.getYouTubeMusicAccountState()
-                .catch { /* ignore collection errors */ }
-                .collect { state ->
-                    _uiState.update { it.copy(ytmAccountState = state) }
-                }
-        }
-    }
+    fun setLocalMusicUseMediaStore(enabled: Boolean) = localMusic.setUseMediaStore(enabled)
 
-    private fun collectCacheInfo() {
-        viewModelScope.launch {
-            storageTracker.getCacheInfo()
-                .catch { /* ignore collection errors */ }
-                .collect { info ->
-                    _uiState.update { it.copy(cacheInfo = info) }
-                }
-        }
-    }
+    fun addLocalMusicFolder(uri: String) = localMusic.addFolder(uri)
 
-    private fun collectThemeMode() {
-        viewModelScope.launch {
-            settingsDataStore.themeMode
-                .catch { /* ignore collection errors */ }
-                .collect { mode ->
-                    _uiState.update { it.copy(themeMode = mode) }
-                }
-        }
-    }
+    fun removeLocalMusicFolder(uri: String) = localMusic.removeFolder(uri)
 
-    private fun collectDynamicColor() {
-        viewModelScope.launch {
-            settingsDataStore.dynamicColor
-                .catch { /* ignore collection errors */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(dynamicColor = enabled) }
-                }
-        }
-    }
+    fun rescanLocalMusic() = localMusic.rescan()
 
-    private fun collectAutoDownloadCollection() {
-        viewModelScope.launch {
-            settingsDataStore.autoDownloadCollection
-                .catch { /* ignore collection errors */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(autoDownloadCollection = enabled) }
-                }
-        }
-    }
-
-    private fun collectAutoDownloadFutureContent() {
-        viewModelScope.launch {
-            settingsDataStore.autoDownloadFutureContent
-                .catch { /* ignore collection errors */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(autoDownloadFutureContent = enabled) }
-                }
-        }
-    }
-
-    private fun collectDownloadFormat() {
-        viewModelScope.launch {
-            settingsDataStore.downloadFormat
-                .catch { /* ignore */ }
-                .collect { formatKey ->
-                    _uiState.update { it.copy(downloadFormat = formatKey) }
-                }
-        }
-    }
-
-    private fun collectSaveDataOnMetered() {
-        viewModelScope.launch {
-            settingsDataStore.saveDataOnMetered
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(saveDataOnMetered = enabled) }
-                }
-        }
-    }
-
-    private fun collectProgressiveDownload() {
-        viewModelScope.launch {
-            settingsDataStore.progressiveDownload
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(progressiveDownload = enabled) }
-                }
-        }
-    }
-
-    private fun collectSeamlessQualityUpgrade() {
-        viewModelScope.launch {
-            settingsDataStore.seamlessQualityUpgrade
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(seamlessQualityUpgrade = enabled) }
-                }
-        }
-    }
-
-    private fun collectDownloadNotificationsEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.downloadNotificationsEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(downloadNotificationsEnabled = enabled) }
-                }
-        }
-    }
-
-    private fun collectOledBlack() {
-        viewModelScope.launch {
-            settingsDataStore.oledBlack
-                .catch { /* ignore collection errors */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(oledBlack = enabled) }
-                }
-        }
-    }
-
-    private fun collectAlbumArtTheme() {
-        viewModelScope.launch {
-            settingsDataStore.albumArtTheme
-                .catch { /* ignore collection errors */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(albumArtTheme = enabled) }
-                }
-        }
-    }
-
-    private fun collectProgressBar() {
-        viewModelScope.launch {
-            settingsDataStore.progressBarStyle
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(progressBarStyle = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.progressBarSizeDp
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(progressBarSizeDp = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.autoDownloadFavorites
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(autoDownloadFavorites = v) } }
-        }
-    }
-
-    fun setLocalMusicEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            try {
-                settingsDataStore.setLocalMusicEnabled(enabled)
-                if (!enabled) {
-                    localMusicRepository.cancelSyncWork()
-                    localMusicRepository.clearAll()
-                    settingsDataStore.setLocalMusicUseMediaStore(true)
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
-    fun setLocalMusicUseMediaStore(enabled: Boolean) {
-        scanJob?.cancel()
-        scanJob = viewModelScope.launch {
-            try {
-                // Clear all existing local tracks before switching modes
-                localMusicRepository.clearAll()
-                settingsDataStore.setLocalMusicUseMediaStore(enabled)
-                if (enabled) {
-                    _uiState.update { it.copy(isScanning = true) }
-                    val result = localMusicRepository.scan()
-                    _uiState.update {
-                        it.copy(
-                            isScanning = false,
-                            scanMessage = UiText.PluralsResource(R.plurals.scan_found, result.total),
-                        )
-                    }
-                    localMusicRepository.scheduleSyncWork()
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        isScanning = false,
-                        scanMessage =
-                        e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
-                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf(UiText.StringResource(R.string.error_unknown))),
-                    )
-                }
-            }
-        }
-    }
-
-    fun addLocalMusicFolder(uri: String) {
-        scanJob?.cancel()
-        scanJob = viewModelScope.launch {
-            try {
-                localMusicRepository.addFolder(uri)
-                _uiState.update { it.copy(isScanning = true) }
-                val result = localMusicRepository.scan()
-                _uiState.update {
-                    it.copy(
-                        isScanning = false,
-                        scanMessage = UiText.PluralsResource(R.plurals.scan_found, result.total),
-                    )
-                }
-                localMusicRepository.scheduleSyncWork()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        isScanning = false,
-                        scanMessage =
-                        e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
-                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf(UiText.StringResource(R.string.error_unknown))),
-                    )
-                }
-            }
-        }
-    }
-
-    fun removeLocalMusicFolder(uri: String) {
-        viewModelScope.launch {
-            try {
-                localMusicRepository.removeFolder(uri)
-                val uris = _uiState.value.localMusicFolderUris - uri
-                if (uris.isEmpty()) {
-                    localMusicRepository.cancelSyncWork()
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
-    fun rescanLocalMusic() {
-        scanJob?.cancel()
-        scanJob = viewModelScope.launch {
-            try {
-                _uiState.update { it.copy(isScanning = true) }
-                val result = localMusicRepository.scan()
-                _uiState.update {
-                    it.copy(
-                        isScanning = false,
-                        scanMessage = UiText.PluralsResource(
-                            R.plurals.scan_found_detailed,
-                            result.total,
-                            listOf(result.total, result.added, result.removed),
-                        ),
-                    )
-                }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update {
-                    it.copy(
-                        isScanning = false,
-                        scanMessage =
-                        e.message?.let { UiText.StringResource(R.string.snackbar_scan_failed, listOf(it)) }
-                            ?: UiText.StringResource(R.string.snackbar_scan_failed, listOf(UiText.StringResource(R.string.error_unknown))),
-                    )
-                }
-            }
-        }
-    }
-
-    fun clearScanMessage() {
-        _uiState.update { it.copy(scanMessage = null) }
-    }
-
-    private fun collectLocalMusicEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.localMusicEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(localMusicEnabled = enabled) }
-                }
-        }
-    }
-
-    private fun collectLocalMusicFolderUris() {
-        viewModelScope.launch {
-            settingsDataStore.localMusicFolderUris
-                .catch { /* ignore */ }
-                .collect { uris ->
-                    _uiState.update { it.copy(localMusicFolderUris = uris) }
-                }
-        }
-    }
-
-    private fun collectLocalMusicUseMediaStore() {
-        viewModelScope.launch {
-            settingsDataStore.localMusicUseMediaStore
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(localMusicUseMediaStore = enabled) }
-                }
-        }
-    }
+    fun clearScanMessage() = localMusic.clearScanMessage()
 
     fun setBandcampEnabled(enabled: Boolean) {
         viewModelScope.launch {
@@ -1005,141 +548,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private fun collectBandcampEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.bandcampEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(bandcampEnabled = enabled) }
-                }
-        }
-    }
-
-    private fun collectYoutubeEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.youtubeEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(youtubeEnabled = enabled) }
-                }
-        }
-    }
-
-    private fun collectShowInlineVolumeSlider() {
-        viewModelScope.launch {
-            settingsDataStore.showInlineVolumeSlider
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(showInlineVolumeSlider = enabled) }
-                }
-        }
-    }
-
-    private fun collectShowVolumeButton() {
-        viewModelScope.launch {
-            settingsDataStore.showVolumeButton
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(showVolumeButton = enabled) }
-                }
-        }
-    }
-
-    private fun collectSearchHistoryEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.searchHistoryEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(searchHistoryEnabled = enabled) }
-                }
-        }
-        viewModelScope.launch {
-            settingsDataStore.searchHistoryBandcamp
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(searchHistoryBandcamp = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.searchHistoryYoutube
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(searchHistoryYoutube = v) } }
-        }
-        viewModelScope.launch {
-            settingsDataStore.searchHistoryLocal
-                .catch { /* ignore */ }
-                .collect { v -> _uiState.update { it.copy(searchHistoryLocal = v) } }
-        }
-    }
-
-    private fun collectYoutubeDefaultSource() {
-        viewModelScope.launch {
-            settingsDataStore.youtubeDefaultSource
-                .catch { /* ignore */ }
-                .collect { source ->
-                    _uiState.update { it.copy(youtubeDefaultSource = source) }
-                }
-        }
-    }
-
-    private fun collectAutoUpdateCheckEnabled() {
-        viewModelScope.launch {
-            settingsDataStore.autoUpdateCheckEnabled
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(autoUpdateCheckEnabled = enabled) }
-                }
-        }
-    }
-
-    private fun collectAlbumCoverLongPressCarousel() {
-        viewModelScope.launch {
-            settingsDataStore.albumCoverLongPressCarousel
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(albumCoverLongPressCarousel = enabled) }
-                }
-        }
-    }
-
-    private fun collectKeepScreenOnInApp() {
-        viewModelScope.launch {
-            settingsDataStore.keepScreenOnInApp
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(keepScreenOnInApp = enabled) }
-                }
-        }
-    }
-
-    private fun collectKeepScreenOnWhilePlaying() {
-        viewModelScope.launch {
-            settingsDataStore.keepScreenOnWhilePlaying
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(keepScreenOnWhilePlaying = enabled) }
-                }
-        }
-    }
-
-    private fun collectKeepLocalSort() {
-        viewModelScope.launch {
-            settingsDataStore.keepLocalSort
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(keepLocalSort = enabled) }
-                }
-        }
-    }
-
-    private fun collectKeepLocalFilters() {
-        viewModelScope.launch {
-            settingsDataStore.keepLocalFilters
-                .catch { /* ignore */ }
-                .collect { enabled ->
-                    _uiState.update { it.copy(keepLocalFilters = enabled) }
-                }
-        }
-    }
-
     fun setKeepLocalSort(enabled: Boolean) {
         viewModelScope.launch {
             try {
@@ -1157,44 +565,6 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }
-        }
-    }
-
-    private fun collectStorageLimit() {
-        viewModelScope.launch {
-            settingsDataStore.storageLimit
-                .catch { /* ignore collection errors */ }
-                .collect { bytes ->
-                    val index = bytesToSliderIndex(bytes)
-                    _uiState.update { it.copy(storageLimitIndex = index) }
-                }
-        }
-    }
-
-    companion object {
-        private val STORAGE_STEPS_BYTES = listOf(
-            100L * 1024 * 1024, // 100 MB
-            (0.5 * 1024 * 1024 * 1024).toLong(), // 500 MB
-            1L * 1024 * 1024 * 1024, // 1 GB
-            2L * 1024 * 1024 * 1024, // 2 GB
-            5L * 1024 * 1024 * 1024, // 5 GB
-            10L * 1024 * 1024 * 1024, // 10 GB
-            Long.MAX_VALUE, // Unlimited
-        )
-
-        private fun bytesToSliderIndex(bytes: Long): Int {
-            if (bytes == Long.MAX_VALUE) return STORAGE_STEPS_BYTES.lastIndex
-            // Find closest step
-            var closestIndex = 0
-            var closestDiff = Long.MAX_VALUE
-            for (i in 0 until STORAGE_STEPS_BYTES.size - 1) {
-                val diff = kotlin.math.abs(bytes - STORAGE_STEPS_BYTES[i])
-                if (diff < closestDiff) {
-                    closestDiff = diff
-                    closestIndex = i
-                }
-            }
-            return closestIndex
         }
     }
 }
