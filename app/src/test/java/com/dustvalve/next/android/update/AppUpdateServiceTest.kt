@@ -217,8 +217,8 @@ class AppUpdateServiceTest {
 
     @Test fun `picks the apk asset matching this build flavor when both ship`() = runTest {
         // Each release ships TWO apks side by side:
-        //   dustvalve_next.apk         -> compat (Android 8-16)
-        //   dustvalve_next-future.apk  -> future (Android 17)
+        //   app-release.apk         -> compat (Android 8-16)
+        //   app-release-future.apk  -> future (Android 17)
         // This build must get its own flavor's apk; otherwise the updater
         // silently cross-installs the wrong minSdk APK.
         val release = """
@@ -229,8 +229,8 @@ class AppUpdateServiceTest {
               "prerelease": true,
               "draft": false,
               "assets": [
-                {"name": "dustvalve_next.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next.apk"},
-                {"name": "dustvalve_next-future.apk", "browser_download_url": "https://releases.example/v1.2.3/dustvalve_next-future.apk"}
+                {"name": "app-release.apk", "browser_download_url": "https://releases.example/v1.2.3/app-release.apk"},
+                {"name": "app-release-future.apk", "browser_download_url": "https://releases.example/v1.2.3/app-release-future.apk"}
               ]
             }
         """.trimIndent()

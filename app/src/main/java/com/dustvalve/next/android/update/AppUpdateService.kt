@@ -124,8 +124,8 @@ open class AppUpdateService @Inject constructor(
 
         // Pre-alpha: every CI build ships as a GitHub prerelease, so we
         // MUST include them here. Drafts (unpublished) are still skipped.
-        // Each release ships TWO apks: dustvalve_next.apk (compat / Android
-        // 8-16) and dustvalve_next-future.apk (future / Android 17). Match
+        // Each release ships TWO apks: app-release.apk (compat / Android
+        // 8-16) and app-release-future.apk (future / Android 17). Match
         // ONLY the asset for this build's api flavor so installs never
         // cross-download. Releases without the matching asset are skipped.
         val apkAssetName = selectedApkAsset()
@@ -284,10 +284,10 @@ open class AppUpdateService @Inject constructor(
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
 
         /** GitHub-release asset for the future api flavor (Android 17 / minSdk 37). */
-        const val FUTURE_APK_ASSET = "dustvalve_next-future.apk"
+        const val FUTURE_APK_ASSET = "app-release-future.apk"
 
         /** GitHub-release asset for the compat api flavor (Android 8-16 / minSdk 26). */
-        const val COMPAT_APK_ASSET = "dustvalve_next.apk"
+        const val COMPAT_APK_ASSET = "app-release.apk"
 
         /**
          * APK asset name for the given product flavor (defaults to

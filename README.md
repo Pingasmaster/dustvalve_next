@@ -18,15 +18,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next.apk"><img src="./download.svg" alt="Download APK - Android 8.0 to Android 16 (stable default)" width="340"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/app-release.apk"><img src="./download.svg" alt="Download APK - Android 8.0 to Android 16 (stable default)" width="340"/></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><img src="./download-future.svg" alt="Download the secret future APK - Android 17 only" width="340"/></a>
+  <a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/app-release-future.apk"><img src="./download-future.svg" alt="Download the secret future APK - Android 17 only" width="340"/></a>
 </p>
 
 <p align="center">
-  <sub>Both APKs are built from <code>master</code> via product flavors (<code>compat</code> minSdk 26, <code>future</code> minSdk 37). The first button is the wide-compat APK. The second is the battery-optimized Android 17 build with audio offload (<a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a>).</sub>
+  <sub>Both APKs are built from <code>master</code> via product flavors (<code>compat</code> minSdk 26, <code>future</code> minSdk 37). The first button is the wide-compat APK. The second is the battery-optimized Android 17 build with audio offload (<a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/app-release-future.apk"><code>app-release-future.apk</code></a>).</sub>
 </p>
 
 ---
@@ -100,7 +100,7 @@ echo "your-password-here" > .password-signing-keys
 ./gradlew assembleRelease
 ```
 
-For devs who want to modify, fork and test the app, we have a build script which runs lint, assembles debug and release APKs, copies the release APK to the project root as `app-release.apk`, and auto-increments the version.
+For devs who want to modify, fork and test the app, we have a build script which runs lint, assembles debug and release APKs, copies both release APKs to the project root as `app-release.apk` (compat) and `app-release-future.apk` (future), and auto-increments the version.
 
 ```bash
 ./build.sh

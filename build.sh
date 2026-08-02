@@ -20,9 +20,9 @@
 #   ./build.sh --publish          # serve existing root APKs over NetBird HTTP + exit
 #
 # After a successful full build, scripts/apk_http_serve.sh publishes both
-# http://<netbird-fqdn>:8765/dustvalve_next-future.apk and
-# http://<netbird-fqdn>:8765/dustvalve_next.apk until both are downloaded once,
-# 10 minutes, or the next ./build.sh invocation - whichever happens first.
+# http://<netbird-fqdn>:8765/app-release.apk (compat, Android 8+) and
+# http://<netbird-fqdn>:8765/app-release-future.apk (future, Android 17) until
+# both are downloaded once, 10 minutes, or the next ./build.sh invocation.
 #
 # IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
 # you have user approval and have confirmed no process is using it (check with
@@ -71,10 +71,10 @@ DO_BASELINE_PROFILE=0
 DO_MACROBENCHMARK=0
 DO_PUBLISH=0
 
-ROOT_APK_FUTURE="dustvalve_next-future.apk"
-ROOT_MAPPING_FUTURE="dustvalve_next-future-mapping.txt"
-ROOT_APK_COMPAT="dustvalve_next.apk"
-ROOT_MAPPING_COMPAT="dustvalve_next-mapping.txt"
+ROOT_APK_COMPAT="app-release.apk"
+ROOT_MAPPING_COMPAT="app-release-mapping.txt"
+ROOT_APK_FUTURE="app-release-future.apk"
+ROOT_MAPPING_FUTURE="app-release-future-mapping.txt"
 for arg in "$@"; do
     case "$arg" in
         --clean)             DO_CLEAN_ONLY=1 ;;
@@ -115,14 +115,14 @@ acquire_lock() {
 GMD_GPU=(-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect)
 
 if [[ "$DO_PUBLISH" -eq 1 ]]; then
-    ./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE" "$ROOT_APK_COMPAT"
+    ./scripts/apk_http_serve.sh start "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"
     exit 0
 fi
 
 if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     acquire_lock
     ./gradlew clean
-    rm -f "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE" "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT"
+    rm -f "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT" "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE"
     echo "Clean complete."
     exit 0
 fi
@@ -284,19 +284,19 @@ if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
     [[ -f "$REPORT" ]] && echo "Dependency-analysis report: $REPORT"
 fi
 
-rm -f "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE" "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT"
-cp "$GRADLE_APK_FUTURE" "$ROOT_APK_FUTURE"
-echo "Copied future release APK to $ROOT_APK_FUTURE"
-if [[ -f "$GRADLE_MAPPING_FUTURE" ]]; then
-    cp "$GRADLE_MAPPING_FUTURE" "$ROOT_MAPPING_FUTURE"
-    echo "Copied future release mapping to $ROOT_MAPPING_FUTURE"
-fi
+rm -f "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT" "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE"
 cp "$GRADLE_APK_COMPAT" "$ROOT_APK_COMPAT"
 echo "Copied compat release APK to $ROOT_APK_COMPAT"
 if [[ -f "$GRADLE_MAPPING_COMPAT" ]]; then
     cp "$GRADLE_MAPPING_COMPAT" "$ROOT_MAPPING_COMPAT"
     echo "Copied compat release mapping to $ROOT_MAPPING_COMPAT"
 fi
+cp "$GRADLE_APK_FUTURE" "$ROOT_APK_FUTURE"
+echo "Copied future release APK to $ROOT_APK_FUTURE"
+if [[ -f "$GRADLE_MAPPING_FUTURE" ]]; then
+    cp "$GRADLE_MAPPING_FUTURE" "$ROOT_MAPPING_FUTURE"
+    echo "Copied future release mapping to $ROOT_MAPPING_FUTURE"
+fi
 
-# Serve both flavor APKs (future + compat).
-./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE" "$ROOT_APK_COMPAT"
+# Serve both flavor APKs (compat + future).
+./scripts/apk_http_serve.sh start "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"

@@ -55,5 +55,5 @@ log*.md
 ideas
 .worktrees/
 .jdk25-home/
-dustvalve_next-future-mapping.txt
-dustvalve_next-mapping.txt
+app-release-future-mapping.txt
+app-release-mapping.txt

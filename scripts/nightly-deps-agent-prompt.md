@@ -240,8 +240,8 @@ cd /home/user/dustvalve_next
 ```
 
 `build.sh` runs: `clean ktlintCheck detekt lintRelease assembleDebug
-assembleRelease testDebugUnitTest`, then copies the release APK
-to `dustvalve_next-future.apk` at the repo root and bumps
+assembleRelease testDebugUnitTest`, then copies the release APKs
+to `app-release.apk` / `app-release-future.apk` at the repo root and bumps
 `versionCode` / `versionName` in `app/build.gradle.kts`.
 
 If `./build.sh` fails, fix the issues:
@@ -268,7 +268,7 @@ attention" in the report and continue with what you can land.
 - ONE commit per successful run.
 - `git add` only the files you changed. Do NOT commit the
   `app/build/outputs/apk/release/` APK (it's already copied to
-  `dustvalve_next-future.apk` at the repo root by `build.sh`; that
+  `app-release.apk` / `app-release-future.apk` at the repo root by `build.sh`; that
   one IS expected to be committed if it's already in the repo).
 - Commit message format:
   ```

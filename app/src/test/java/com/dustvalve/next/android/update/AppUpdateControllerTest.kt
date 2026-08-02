@@ -191,7 +191,7 @@ class AppUpdateControllerTest {
     }
 
     @Test fun `confirmDownload forwards the release sha256 to the service`() = runTest(dispatcher) {
-        val url = "https://github.com/x/releases/download/v9.9.9/dustvalve_next-future.apk"
+        val url = "https://github.com/x/releases/download/v9.9.9/app-release-future.apk"
         val sha = "ab".repeat(32)
         coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
             versionName = "9.9.9",

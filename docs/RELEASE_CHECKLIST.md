@@ -10,8 +10,8 @@ green first; this list covers what CI cannot exercise.
 - [ ] `app/src/androidTest/resources/quarantine.txt` reviewed: every entry
       has an open issue; delist anything that passed 3 consecutive runs.
 - [ ] Version bumped (baseVersionCode + baseVersionName) on master; both
-      flavor APKs produced by `./build.sh` (dustvalve_next.apk +
-      dustvalve_next-future.apk).
+      flavor APKs produced by `./build.sh` (app-release.apk +
+      app-release-future.apk).
 
 ## Install matrix (real device)
 
