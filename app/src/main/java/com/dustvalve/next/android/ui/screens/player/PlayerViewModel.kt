@@ -226,12 +226,15 @@ class PlayerViewModel @Inject constructor(
      * or failed - the caller then surfaces the normal error UI.
      */
     private suspend fun tryAutoRecoverStream(error: PlaybackException): Boolean {
-        val track = queueManager.currentTrack.value
+        val track = queueManager.currentTrack.value ?: return false
         // Order matters: the one-shot guard (add) must only trip once the
         // failure is actually recoverable for this track.
-        val canRecover = track != null && !track.isLocal &&
-            isRecoverableStreamError(error) && autoRetriedTrackIds.add(track.id)
-        if (!canRecover || track == null) return false
+        if (track.isLocal ||
+            !isRecoverableStreamError(error) ||
+            !autoRetriedTrackIds.add(track.id)
+        ) {
+            return false
+        }
         val resumeAt = playbackManager.currentPosition.value
         _extraState.update { it.copy(isLoadingTrack = true) }
         val fresh = try {

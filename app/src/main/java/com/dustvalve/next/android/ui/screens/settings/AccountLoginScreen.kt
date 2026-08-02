@@ -20,9 +20,10 @@
 //     (everything off-allowlist is blocked, not just non-https).
 //   * FLAG_SECURE on the activity window - blocks screenshots / screen
 //     recording / RecentScreens preview of the auth page.
-//   * settings.allowFileAccess / allowContentAccess /
-//     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs all OFF
-//     (defaults vary across vendor WebView builds; we set them explicitly).
+//   * settings.allowFileAccess / allowContentAccess OFF (set explicitly;
+//     vendor defaults vary). allowFileAccessFromFileURLs /
+//     allowUniversalAccessFromFileURLs are deprecated (API 30+) and default
+//     to false on modern WebView - no replacement API; rely on that default.
 //   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
 //   * JavaScript enabled from the start (required by the Bandcamp form); the
 //     initial load is a hardcoded https allowlisted URL and every subsequent
@@ -168,10 +169,10 @@ fun AccountLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBack: ()
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         // Explicit hardening (defaults vary across vendor WebView builds).
+                        // allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs
+                        // are deprecated (API 30+); platform default is false.
                         settings.allowFileAccess = false
                         settings.allowContentAccess = false
-                        settings.allowFileAccessFromFileURLs = false
-                        settings.allowUniversalAccessFromFileURLs = false
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
 
                         // Only expire cookies + web storage once per login flow -

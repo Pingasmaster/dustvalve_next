@@ -8,6 +8,10 @@ import org.junit.Test
 class YouTubeMusicParserTest {
 
     private val parser = YouTubeMusicParser()
+    private val json = Json {
+        isLenient = true
+        ignoreUnknownKeys = true
+    }
 
     @Test fun `parseHome happy path 3 carousels`() {
         val feed = parser.parseHome(Fixtures.load("home_3_carousels.json"))
@@ -71,10 +75,7 @@ class YouTubeMusicParserTest {
         // A malformed shelf (non-object first carousel entry) must be
         // skipped; contents.first().jsonObject used to throw and kill the
         // whole home feed parse.
-        val root = Json {
-            isLenient = true
-            ignoreUnknownKeys = true
-        }.parseToJsonElement(
+        val root = json.parseToJsonElement(
             """
             {"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
               "sectionListRenderer":{"contents":[

@@ -17,8 +17,9 @@
 //     myaccount.google.com are permitted.
 //   * FLAG_SECURE on the activity window - blocks screen capture of the
 //     auth page.
-//   * settings.allowFileAccess / allowContentAccess /
-//     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs OFF.
+//   * settings.allowFileAccess / allowContentAccess OFF (set explicitly).
+//     allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs are
+//     deprecated (API 30+) and default to false - rely on that default.
 //   * settings.mixedContentMode = MIXED_CONTENT_NEVER_ALLOW.
 //   * JavaScript enabled from the start (Google's login form requires it);
 //     the initial load is a hardcoded https allowlisted URL and every
@@ -160,10 +161,10 @@ fun YouTubeMusicLoginScreen(onLoginSuccess: (Map<String, String>) -> Unit, onBac
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         // Explicit hardening (defaults vary across vendor WebView builds).
+                        // allowFileAccessFromFileURLs / allowUniversalAccessFromFileURLs
+                        // are deprecated (API 30+); platform default is false.
                         settings.allowFileAccess = false
                         settings.allowContentAccess = false
-                        settings.allowFileAccessFromFileURLs = false
-                        settings.allowUniversalAccessFromFileURLs = false
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                         // Google login requires third-party cookies
                         cookieManager.setAcceptThirdPartyCookies(this, true)
