@@ -23,15 +23,40 @@ android {
     // stays at the 37 major).
     compileSdkMinor = 1
 
+    // Shared by defaultConfig + future flavor offset. build.sh bumps this
+    // via sed on the defaultConfig assignment below; future re-reads it
+    // on the next Gradle configure.
+    val baseVersionCode = 287
+    val baseVersionName = "0.5.9"
+
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
-        minSdk = 37
         targetSdk = 37
-        versionCode = 286
-        versionName = "0.5.8"
+        versionCode = baseVersionCode
+        versionName = baseVersionName
         // Instrumentation (smoke + E2E) runs against the REAL app object
         // graph - no HiltTestApplication on device by design.
         testInstrumentationRunner = "com.dustvalve.next.android.testing.DustvalveTestRunner"
+    }
+
+    // Single codebase, two APKs: replaces the old legacy-android8 git branch.
+    // Shared code lives in src/main; power/notification/diagnostics seams
+    // that must diverge live in src/compat and src/future.
+    flavorDimensions += "api"
+    productFlavors {
+        create("compat") {
+            dimension = "api"
+            minSdk = 26
+            versionNameSuffix = "-legacy"
+            // Uses defaultConfig.versionCode (below future) so an Android 17
+            // user who somehow installed compat can still upgrade to future.
+        }
+        create("future") {
+            dimension = "api"
+            minSdk = 37
+            // Higher than compat so sideload/Play prefer this on API 37+.
+            versionCode = 1_000_000 + baseVersionCode
+        }
     }
 
     // Instrumentation normally tests the debug APK. -PtestReleaseBuild flips
@@ -150,6 +175,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_25
         targetCompatibility = JavaVersion.VERSION_25
+        // Required for compat (minSdk 26 + JVM 25). Harmless no-op on future
+        // for APIs already present on Android 17; R8 strips unused bits.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlin {
@@ -202,8 +230,8 @@ android {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
         // Gradle Managed Device for the smoke + E2E instrumentation suites.
-        // apiLevel MUST be >= minSdk (37); API 33 devices cannot install
-        // this APK (INSTALL_FAILED_OLDER_SDK).
+        // Targets the future flavor (minSdk 37); API 33 devices cannot install
+        // that APK (INSTALL_FAILED_OLDER_SDK).
         managedDevices {
             localDevices.register("pixel7aApi37") {
                 device = "Pixel 7a"
@@ -305,6 +333,8 @@ roborazzi {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
+
     // Project modules
     implementation(project(":core:common"))
     implementation(project(":core:model"))

@@ -76,6 +76,7 @@ import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
+import com.dustvalve.next.android.util.isAtLeastTiramisu
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -310,6 +311,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestNotificationPermissionIfNeeded() {
+        // POST_NOTIFICATIONS only exists on API 33+; below that notifications
+        // are granted at install time and the runtime prompt is a no-op.
+        // Flavor-safe gate: required for compat (minSdk 26), always true on future.
+        if (!isAtLeastTiramisu()) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED
         ) {

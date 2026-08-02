@@ -4,12 +4,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
 import android.os.Looper
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
-import androidx.media3.common.TrackSelectionParameters.AudioOffloadPreferences
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
@@ -25,6 +23,7 @@ import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.repository.LibraryRepository
+import com.dustvalve.next.android.player.AudioPowerPolicy
 import com.dustvalve.next.android.player.MediaSessionConstants
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueForwardingPlayer
@@ -73,6 +72,7 @@ object PlayerModule {
         // force-aborted every streamed track ~30s in (v0.5.0 regression).
         @MediaHttp okHttpClient: OkHttpClient,
         simpleCache: SimpleCache,
+        audioPowerPolicy: AudioPowerPolicy,
     ): ExoPlayer {
         // Built directly on whatever thread Dagger resolves this dependency:
         // setLooper(mainLooper) in buildExoPlayer pins the player's application
@@ -81,11 +81,16 @@ object PlayerModule {
         // Dagger's DoubleCheck lock while waiting on the main thread - if the
         // main thread was itself entering the same DI graph, that deadlocked
         // (10 s frozen main thread, then IllegalStateException).
-        return buildExoPlayer(context, okHttpClient, simpleCache)
+        return buildExoPlayer(context, okHttpClient, simpleCache, audioPowerPolicy)
     }
 
     @OptIn(UnstableApi::class)
-    private fun buildExoPlayer(context: Context, okHttpClient: OkHttpClient, simpleCache: SimpleCache): ExoPlayer {
+    private fun buildExoPlayer(
+        context: Context,
+        okHttpClient: OkHttpClient,
+        simpleCache: SimpleCache,
+        audioPowerPolicy: AudioPowerPolicy,
+    ): ExoPlayer {
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
@@ -128,38 +133,8 @@ object PlayerModule {
             .setLooper(Looper.getMainLooper())
             .build()
 
-        // Stream compressed audio straight to the DSP, bypassing the CPU.
-        // Speed change must stay off for offload to engage; the speed-control
-        // path re-enables CPU decoding dynamically if the user picks != 1.0x.
-        //
-        // KNOWN RISK (kept on this Android 17-only branch, REMOVED on
-        // legacy-android8): offloaded AudioTrack is a historical source of
-        // silent on-device playback failure - no audio, position frozen at
-        // 0:00, no PlaybackException - on buggy OEM HALs, and neither the JVM
-        // test tier (TestExoPlayerBuilder never touches the device sink) nor
-        // emulators (no offload support, PCM fallback) can see it. The v0.5.x
-        // "stuck at 0:00" reports on legacy devices trace here. If Android 17
-        // devices ever report the same signature, delete this block first.
-        val offloadPrefs = AudioOffloadPreferences.Builder()
-            .setAudioOffloadMode(AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED)
-            .setIsGaplessSupportRequired(true)
-            .setIsSpeedChangeSupportRequired(false)
-            .build()
-        // Player accessors must run on the application looper (main, set
-        // above). When built off-main, apply the preference via a fire-and-
-        // forget post - never a blocking wait, which is what made the old
-        // construction path deadlock-prone.
-        val applyOffloadPrefs = Runnable {
-            player.trackSelectionParameters = player.trackSelectionParameters
-                .buildUpon()
-                .setAudioOffloadPreferences(offloadPrefs)
-                .build()
-        }
-        if (Looper.myLooper() == Looper.getMainLooper()) {
-            applyOffloadPrefs.run()
-        } else {
-            Handler(Looper.getMainLooper()).post(applyOffloadPrefs)
-        }
+        // Flavor-specific: OffloadAudioPowerPolicy (future) or SafeAudioPowerPolicy (compat).
+        audioPowerPolicy.apply(player)
 
         return player
     }

@@ -12,6 +12,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.dustvalve.next.android.util.isAtLeastS
 import com.materialkolor.PaletteStyle
 import com.materialkolor.rememberDynamicColorScheme
 
@@ -33,7 +34,9 @@ fun DustvalveNextTheme(
             )
         }
 
-        dynamicColor -> {
+        // Material You dynamic color needs API 31+; older devices fall
+        // through to the static schemes below.
+        dynamicColor && isAtLeastS() -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }

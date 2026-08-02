@@ -124,19 +124,19 @@ open class AppUpdateService @Inject constructor(
 
         // Pre-alpha: every CI build ships as a GitHub prerelease, so we
         // MUST include them here. Drafts (unpublished) are still skipped.
-        // Each release ships TWO apks: dustvalve_next.apk (legacy-android8,
-        // Android 8-16) and dustvalve_next-future.apk (this modern build,
-        // Android 17). Match ONLY the future asset so Android 17 installs
-        // never download the legacy APK. Releases without the future asset
-        // are skipped: nothing to install.
+        // Each release ships TWO apks: dustvalve_next.apk (compat / Android
+        // 8-16) and dustvalve_next-future.apk (future / Android 17). Match
+        // ONLY the asset for this build's api flavor so installs never
+        // cross-download. Releases without the matching asset are skipped.
+        val apkAssetName = selectedApkAsset()
         val latest = releases.firstOrNull { release ->
-            !release.draft && release.assets.any { it.name == FUTURE_APK_ASSET }
+            !release.draft && release.assets.any { it.name == apkAssetName }
         } ?: return@withContext null
 
         val latestVersion = latest.tagName.removePrefix("v")
         if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
-        val apkAsset = latest.assets.first { it.name == FUTURE_APK_ASSET }
+        val apkAsset = latest.assets.first { it.name == apkAssetName }
         AvailableUpdate(
             versionName = latestVersion,
             apkDownloadUrl = apkAsset.browserDownloadUrl,
@@ -259,9 +259,12 @@ open class AppUpdateService @Inject constructor(
      * (no `<queries>` declared) may hide the installer from the query, in
      * which case the caller falls back to the pre-existing unpinned intent.
      */
+    // Int-flags overload is deprecated on API 33+ but is the only one that
+    // exists down to compat minSdk 26; ResolveInfoFlags is API 33-only.
     @SuppressLint("QueryPermissionsNeeded")
+    @Suppress("DEPRECATION")
     private fun resolveSystemInstallerPackage(intent: Intent): String? = context.packageManager
-        .queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()))
+        .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
         .firstOrNull { resolved ->
             val app = resolved.activityInfo?.applicationInfo ?: return@firstOrNull false
             app.flags and ApplicationInfo.FLAG_SYSTEM != 0
@@ -280,8 +283,26 @@ open class AppUpdateService @Inject constructor(
 
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
 
-        /** GitHub-release asset name produced by the `build-modern` workflow job (master -> Android 17 build). */
+        /** GitHub-release asset for the future api flavor (Android 17 / minSdk 37). */
         const val FUTURE_APK_ASSET = "dustvalve_next-future.apk"
+
+        /** GitHub-release asset for the compat api flavor (Android 8-16 / minSdk 26). */
+        const val COMPAT_APK_ASSET = "dustvalve_next.apk"
+
+        /**
+         * APK asset name for the given product flavor (defaults to
+         * [BuildConfig.FLAVOR]). "future" -> future APK; "compat" (and any
+         * other/empty value while flavors land) -> compat APK when the
+         * flavor string contains "compat", otherwise future.
+         */
+        fun selectedApkAsset(flavor: String = BuildConfig.FLAVOR): String {
+            val normalized = flavor.lowercase()
+            return if (normalized == "compat" || normalized.contains("compat")) {
+                COMPAT_APK_ASSET
+            } else {
+                FUTURE_APK_ASSET
+            }
+        }
 
         /**
          * True only for https URLs on GitHub-owned hosts. browser_download_url

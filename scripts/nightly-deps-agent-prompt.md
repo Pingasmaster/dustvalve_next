@@ -60,10 +60,13 @@ output but are **intentional** in this project. Do NOT fix:
 
 ### Other non-negotiable rules
 
-- **No SDK version guards on master.** Never wrap code in
-  `if (Build.VERSION.SDK_INT >= ...)`. Raise `minSdk` instead.
-  (The `legacy-android8` branch is the only exception; we're
-  on master.)
+- **SDK guards only in capability / flavor seams.** Do not sprinkle
+  `if (Build.VERSION.SDK_INT >= ...)` through ViewModels/screens.
+  Put API- or power-policy divergence in `app/src/compat` /
+  `app/src/future` (or a small capability type in `main` with
+  flavor-provided implementations). Shared `main` code stays
+  flavor-agnostic. The retired `legacy-android8` branch must not
+  be recreated.
 - **Material You 3 Expressive preferred.** Use the M3-Expressive
   motion / spring specs (`MotionScheme`), M3-Expressive
   shapes, dynamic color, M3 cards / buttons / sheets. Do NOT

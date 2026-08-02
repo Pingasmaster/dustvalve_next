@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <sub>The first button serves Android 8.0 to Android 16 from the <a href="https://github.com/Pingasmaster/dustvalve_next/tree/legacy-android8"><code>legacy-android8</code></a> branch. The second button is the battery-optimized, perf-focused, bleeding-edge stack build for <b>Android 17</b> only (<a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a>).</sub>
+  <sub>Both APKs are built from <code>master</code> via product flavors (<code>compat</code> minSdk 26, <code>future</code> minSdk 37). The first button is the wide-compat APK. The second is the battery-optimized Android 17 build with audio offload (<a href="https://github.com/Pingasmaster/dustvalve_next/releases/latest/download/dustvalve_next-future.apk"><code>dustvalve_next-future.apk</code></a>).</sub>
 </p>
 
 ---

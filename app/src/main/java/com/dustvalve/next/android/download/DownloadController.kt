@@ -350,9 +350,10 @@ class DownloadController @Inject constructor(
         // plain (non-FGS) notification the center already posts.
         try {
             ContextCompat.startForegroundService(context, Intent(context, DownloadService::class.java))
-        } catch (e: android.app.ForegroundServiceStartNotAllowedException) {
-            Log.w(TAG, "Could not start DownloadService (FGS limit); downloading without it", e)
         } catch (e: IllegalStateException) {
+            // Includes ForegroundServiceStartNotAllowedException (API 31+),
+            // which subclasses IllegalStateException - catch the base type so
+            // compat minSdk 26 never references the API 31 class name.
             Log.w(TAG, "Could not start DownloadService; downloading without it", e)
         } catch (e: SecurityException) {
             Log.w(TAG, "Could not start DownloadService; downloading without it", e)

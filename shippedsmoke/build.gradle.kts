@@ -42,6 +42,16 @@ android {
     defaultConfig {
         minSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // :app has an api flavor dimension; always exercise the future APK
+        // (Android 17 / offload / Live Updates) from this harness.
+        missingDimensionStrategy("api", "future")
+    }
+
+    flavorDimensions += "api"
+    productFlavors {
+        create("future") {
+            dimension = "api"
+        }
     }
 
     // A com.android.test module only gets a `debug` variant by default, and

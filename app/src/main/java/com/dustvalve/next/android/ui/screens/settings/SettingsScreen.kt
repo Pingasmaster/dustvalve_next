@@ -76,6 +76,7 @@ import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.update.AppUpdateDialog
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.util.displayNameRes
+import com.dustvalve.next.android.util.isAtLeastBaklava
 
 // Shared left-padding for every child toggle that appears under a parent
 // switch in the settings UI. Toggle rows go through SettingsToggleRow
@@ -657,11 +658,16 @@ internal fun LiveUpdatesPromptRow() {
 }
 
 @Suppress("TooGenericExceptionCaught", "SwallowedException")
-private fun canPostPromotedNotifications(context: Context): Boolean = try {
-    context.getSystemService(NotificationManager::class.java).canPostPromotedNotifications()
-} catch (e: Throwable) {
-    // API absent (pre-QPR1) - don't nag with a prompt that leads nowhere.
-    true
+private fun canPostPromotedNotifications(context: Context): Boolean {
+    // canPostPromotedNotifications is API 36+; below that the Live Updates
+    // prompt would deep-link nowhere, so treat as granted.
+    if (!isAtLeastBaklava()) return true
+    return try {
+        context.getSystemService(NotificationManager::class.java).canPostPromotedNotifications()
+    } catch (e: Throwable) {
+        // API absent (pre-QPR1) - don't nag with a prompt that leads nowhere.
+        true
+    }
 }
 
 private fun openLiveUpdatesSettings(context: Context) {

@@ -21,6 +21,7 @@ import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.util.LocaleCollation
+import com.dustvalve.next.android.util.isAtLeastR
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -555,11 +556,17 @@ class LocalViewModel @Inject constructor(
             deleteDbRow(trackId)
             return
         }
-        val sender = try {
-            MediaStore.createDeleteRequest(appContext.contentResolver, listOf(uri)).intentSender
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        // createDeleteRequest is API 30+; below that there is no consent
+        // IntentSender path and the delete simply fails.
+        val sender = if (!isAtLeastR()) {
             null
+        } else {
+            try {
+                MediaStore.createDeleteRequest(appContext.contentResolver, listOf(uri)).intentSender
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                null
+            }
         }
         if (sender != null) {
             _uiState.update {

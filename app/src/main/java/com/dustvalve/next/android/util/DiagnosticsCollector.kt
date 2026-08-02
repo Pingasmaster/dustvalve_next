@@ -12,8 +12,10 @@ import javax.inject.Singleton
 
 /**
  * Cold-start diagnostics: surfaces [ApplicationExitInfo] for past process
- * deaths that weren't the user closing the app. minSdk=37 on this app means
- * the ApplicationExitInfo API (added in API 30) is always available.
+ * deaths that weren't the user closing the app. ApplicationExitInfo is API
+ * 30+; on the compat flavor (minSdk 26) [collectOnColdStart] early-returns
+ * below API 30 so the call stays safe. Future flavor (minSdk 37) always
+ * takes the real path via [isAtLeastR].
  *
  * Pure logging + on-disk dump. No UI, no telemetry - the diagnostics file
  * lives under filesDir/diagnostics/exit-info-<timestamp>.txt and can be
@@ -40,11 +42,17 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
     /**
      * Best-effort: read the last few process exit reasons and dump the ones
      * newer than the watermark. Bounded to 5 entries so we don't spam
-     * logcat after a long uptime.
+     * logcat after a long uptime. No-op below API 30.
+     *
+     * ApplicationExitInfo accessors stay in this method (after [isAtLeastR])
+     * so NewApi lint sees the [ChecksSdkIntAtLeast] gate without needing
+     * [@androidx.annotation.RequiresApi] helpers that would trip
+     * ObsoleteSdkInt on the future flavor.
      */
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
     fun collectOnColdStart() {
         pruneStaleFiles()
+        if (!isAtLeastR()) return
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             val reasons = am.getHistoricalProcessExitReasons(context.packageName, PID_UNQUERIED, MAX_ENTRIES)
@@ -55,8 +63,19 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
             val newest = reasons.maxOfOrNull { it.timestamp } ?: 0L
             if (newest > watermark) writeWatermark(newest)
             if (interesting.isEmpty()) return
-            interesting.forEach { Log.w(TAG, it.compactLine()) }
-            writeDiagnosticsFile(interesting)
+            val lines = interesting.map { info ->
+                buildString {
+                    append("reason=").append(reasonName(info.reason))
+                    append(" importance=").append(info.importance)
+                    append(" pss=").append(info.pss)
+                    append(" rss=").append(info.rss)
+                    append(" timestamp=").append(info.timestamp)
+                    if (info.description != null) append(" description=").append(info.description)
+                    append(" process=").append(info.processName)
+                }
+            }
+            lines.forEach { Log.w(TAG, it) }
+            writeDiagnosticsFile(lines)
         } catch (se: SecurityException) {
             Log.w(TAG, "collectOnColdStart: missing GET_TASKS permission", se)
         } catch (iae: IllegalArgumentException) {
@@ -85,12 +104,12 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
         }
     }
 
-    private fun writeDiagnosticsFile(reasons: List<ApplicationExitInfo>) {
+    private fun writeDiagnosticsFile(lines: List<String>) {
         try {
             val dir = diagnosticsDir.apply { mkdirs() }
             val file = File(dir, "exit-info-${System.currentTimeMillis()}.txt")
             file.bufferedWriter().use { w ->
-                reasons.forEach { w.appendLine(it.compactLine()) }
+                lines.forEach { w.appendLine(it) }
             }
         } catch (io: IOException) {
             Log.w(TAG, "writeDiagnosticsFile failed", io)
@@ -117,16 +136,6 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
             .forEach { stale ->
                 if (!stale.delete()) Log.w(TAG, "failed to prune ${stale.absolutePath}")
             }
-    }
-
-    private fun ApplicationExitInfo.compactLine(): String = buildString {
-        append("reason=").append(reasonName(reason))
-        append(" importance=").append(importance)
-        append(" pss=").append(pss)
-        append(" rss=").append(rss)
-        append(" timestamp=").append(timestamp)
-        if (description != null) append(" description=").append(description)
-        append(" process=").append(processName)
     }
 
     private fun reasonName(reason: Int): String = when (reason) {

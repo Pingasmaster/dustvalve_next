@@ -33,14 +33,16 @@ a class needs with `ProviderStateRule` rather than assuming a starting state.
 ## Protected branches - DO NOT DELETE OR FORCE-PUSH
 
 When asked to clean up "dangling" branches, worktrees, or any other git
-state, the following branches are **legitimate and must never be erased**:
+state, the following branch is **legitimate and must never be erased**:
 
-- `master`     - the canonical default branch.
-- `legacy-android8` - the long-lived Android 8-16 backport branch that
-  ships as the **default APK** on every GitHub release.
+- `master` - the canonical default branch. Ships both APKs from one
+  tree via the `api` product-flavor dimension (`compat` = Android 8-16,
+  `future` = Android 17).
 
-They are NOT dangling, not orphaned, and not stale - even if a sweep
-finds no recent commits on them, that does NOT make them safe to delete.
+The old `legacy-android8` backport branch has been retired; do not
+recreate it. API-specific seams live in `app/src/compat` and
+`app/src/future`.
+
 Before deleting any branch whose name you are not 100% sure about,
 stop and ask the user.
 

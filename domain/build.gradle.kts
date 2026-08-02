@@ -13,7 +13,7 @@ android {
     // SDKs carry no behavior changes and cannot be targeted - targetSdk
     // stays at the 37 major).
     compileSdkMinor = 1
-    defaultConfig { minSdk = 37 }
+    defaultConfig { minSdk = 26 }
 
     lint {
         // Off-by-default check; must be enabled here so :app (checkDependencies

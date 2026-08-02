@@ -6,6 +6,7 @@ import android.content.pm.ServiceInfo
 import android.os.IBinder
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import com.dustvalve.next.android.util.isAtLeastQ
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -46,11 +47,20 @@ class DownloadService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         notificationCenter.setForegroundOwned(true)
-        startForeground(
-            DownloadNotificationCenter.NOTIFICATION_ID,
-            notificationCenter.currentForegroundNotification(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
-        )
+        // Typed startForeground + dataSync FGS type are API 29+; below that
+        // the 2-arg form is the only option (compat minSdk 26).
+        if (isAtLeastQ()) {
+            startForeground(
+                DownloadNotificationCenter.NOTIFICATION_ID,
+                notificationCenter.currentForegroundNotification(),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
+            )
+        } else {
+            startForeground(
+                DownloadNotificationCenter.NOTIFICATION_ID,
+                notificationCenter.currentForegroundNotification(),
+            )
+        }
         if (!observing) {
             observing = true
             scope.launch {

@@ -1,6 +1,5 @@
 package com.dustvalve.next.android.ui.screens.local
 
-import android.Manifest
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -100,6 +99,7 @@ import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.util.DeepLinkRouter
+import com.dustvalve.next.android.util.legacyAudioPermission
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -287,7 +287,7 @@ fun LocalScreen(
                                 Button(
                                     onClick = {
                                         viewModel.enableLocalMusic()
-                                        audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                                        audioPermissionLauncher.launch(legacyAudioPermission())
                                     },
                                     shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier

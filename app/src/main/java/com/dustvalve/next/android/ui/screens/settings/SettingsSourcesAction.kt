@@ -1,6 +1,5 @@
 package com.dustvalve.next.android.ui.screens.settings
 
-import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.components.AppButtonGroup
+import com.dustvalve.next.android.util.legacyAudioPermission
 
 /** Actions emitted by [SettingsSourcesSection]. */
 internal sealed interface SettingsSourcesAction {
@@ -170,11 +170,11 @@ internal fun SettingsSourcesSection(
                 state = state,
                 onAction = onAction,
                 onLocalEnableNeedsAudioPermission = {
-                    localEnableAudioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                    localEnableAudioPermissionLauncher.launch(legacyAudioPermission())
                 },
                 onLocalEnableNeedsFolder = { folderPickerLauncher.launch(null) },
                 onRequestAudioPermission = {
-                    audioPermissionLauncher.launch(Manifest.permission.READ_MEDIA_AUDIO)
+                    audioPermissionLauncher.launch(legacyAudioPermission())
                 },
                 onPickFolder = { folderPickerLauncher.launch(null) },
             )

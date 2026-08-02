@@ -68,8 +68,10 @@ DO_LIVE_NET=0
 DO_BASELINE_PROFILE=0
 DO_MACROBENCHMARK=0
 
-ROOT_APK="dustvalve_next-future.apk"
-ROOT_MAPPING="dustvalve_next-future-mapping.txt"
+ROOT_APK_FUTURE="dustvalve_next-future.apk"
+ROOT_MAPPING_FUTURE="dustvalve_next-future-mapping.txt"
+ROOT_APK_COMPAT="dustvalve_next.apk"
+ROOT_MAPPING_COMPAT="dustvalve_next-mapping.txt"
 for arg in "$@"; do
     case "$arg" in
         --clean)             DO_CLEAN_ONLY=1 ;;
@@ -110,7 +112,7 @@ GMD_GPU=(-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect)
 if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     acquire_lock
     ./gradlew clean
-    rm -f "$ROOT_APK" "$ROOT_MAPPING"
+    rm -f "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE" "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT"
     echo "Clean complete."
     exit 0
 fi
@@ -124,14 +126,14 @@ fi
 
 if [[ "$DO_WORKFLOW_TESTS" -eq 1 ]]; then
     acquire_lock
-    ./gradlew :app:testDebugUnitTest --tests 'com.dustvalve.next.android.workflow.*'
+    ./gradlew :app:testFutureDebugUnitTest --tests 'com.dustvalve.next.android.workflow.*'
     echo "Workflow tests complete."
     exit 0
 fi
 
 if [[ "$DO_LIVE_NET" -eq 1 ]]; then
     acquire_lock
-    DUSTVALVE_LIVE_NET=1 ./gradlew :app:testDebugUnitTest --tests '*Live*'
+    DUSTVALVE_LIVE_NET=1 ./gradlew :app:testFutureDebugUnitTest --tests '*Live*'
     echo "Live-network JVM smokes complete."
     exit 0
 fi
@@ -139,7 +141,7 @@ fi
 if [[ "$DO_SMOKE" -eq 1 ]]; then
     acquire_lock
     ./gradlew :app:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :app:pixel7aApi37DebugAndroidTest "${GMD_GPU[@]}" \
+    ./gradlew :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest
     ./scripts/assert_tests_ran.sh 1 app
     echo "Smoke suite complete."
@@ -149,7 +151,7 @@ fi
 if [[ "$DO_SMOKE_RELEASE" -eq 1 ]]; then
     acquire_lock
     ./gradlew :app:pixel7aApi37Setup -PtestReleaseBuild "${GMD_GPU[@]}"
-    ./gradlew :app:pixel7aApi37ReleaseAndroidTest -PtestReleaseBuild "${GMD_GPU[@]}"
+    ./gradlew :app:pixel7aApi37FutureReleaseAndroidTest -PtestReleaseBuild "${GMD_GPU[@]}"
     ./scripts/assert_tests_ran.sh 1 app
     echo "Release smoke suite complete."
     exit 0
@@ -158,7 +160,7 @@ fi
 if [[ "$DO_SMOKE_SHIPPED" -eq 1 ]]; then
     acquire_lock
     ./gradlew :shippedsmoke:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :shippedsmoke:pixel7aApi37ReleaseAndroidTest "${GMD_GPU[@]}"
+    ./gradlew :shippedsmoke:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}"
     ./scripts/assert_tests_ran.sh 1 shippedsmoke
     echo "Shipped-config smoke complete."
     exit 0
@@ -167,7 +169,7 @@ fi
 if [[ "$DO_E2E" -eq 1 ]]; then
     acquire_lock
     ./gradlew :app:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :app:pixel7aApi37DebugAndroidTest "${GMD_GPU[@]}" \
+    ./gradlew :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.dustvalve.next.android.testing.LiveNetwork
     ./scripts/assert_tests_ran.sh 1 app
     echo "Hermetic E2E suite complete."
@@ -178,7 +180,7 @@ if [[ "$DO_E2E_LIVE" -eq 1 ]]; then
     acquire_lock
     echo "WARNING: this suite hits the real Bandcamp and YouTube services." >&2
     ./gradlew :app:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :app:pixel7aApi37DebugAndroidTest "${GMD_GPU[@]}" \
+    ./gradlew :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
     ./scripts/assert_tests_ran.sh 1 app
     echo "Live E2E suite complete."
@@ -192,7 +194,7 @@ if [[ "$DO_BASELINE_PROFILE" -eq 1 ]]; then
         exit 1
     fi
     ./gradlew :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :baselineprofile:pixel7aApi37ReleaseAndroidTest "${GMD_GPU[@]}" \
+    ./gradlew :baselineprofile:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
     ./scripts/assert_tests_ran.sh 1 baselineprofile
     chmod +x ./scripts/install_baseline_profiles.sh
@@ -205,7 +207,7 @@ fi
 if [[ "$DO_MACROBENCHMARK" -eq 1 ]]; then
     acquire_lock
     ./gradlew :macrobenchmark:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :macrobenchmark:pixel7aApi37ReleaseAndroidTest "${GMD_GPU[@]}" \
+    ./gradlew :macrobenchmark:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
     ./scripts/assert_tests_ran.sh 1 macrobenchmark
     echo "Macrobenchmark complete (emulator numbers are advisory)."
@@ -216,29 +218,31 @@ acquire_lock
 
 ./scripts/check_ascii.sh
 
-GRADLE_APK="app/build/outputs/apk/release/app-release.apk"
-GRADLE_MAPPING="app/build/outputs/mapping/release/mapping.txt"
+GRADLE_APK_FUTURE="app/build/outputs/apk/future/release/app-future-release.apk"
+GRADLE_MAPPING_FUTURE="app/build/outputs/mapping/futureRelease/mapping.txt"
+GRADLE_APK_COMPAT="app/build/outputs/apk/compat/release/app-compat-release.apk"
+GRADLE_MAPPING_COMPAT="app/build/outputs/mapping/compatRelease/mapping.txt"
 BUILD_GRADLE="app/build.gradle.kts"
 
-CURRENT_CODE=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' "$BUILD_GRADLE" | head -1)
-CURRENT_NAME=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' "$BUILD_GRADLE" | head -1)
+CURRENT_CODE=$(sed -n 's/.*val baseVersionCode = \([0-9][0-9]*\).*/\1/p' "$BUILD_GRADLE" | head -1)
+CURRENT_NAME=$(sed -n 's/.*val baseVersionName = "\([^"]*\)".*/\1/p' "$BUILD_GRADLE" | head -1)
 
 if [[ -z "$CURRENT_CODE" || -z "$CURRENT_NAME" ]]; then
-    echo "ERROR: could not parse versionCode/versionName from $BUILD_GRADLE" >&2
+    echo "ERROR: could not parse baseVersionCode/baseVersionName from $BUILD_GRADLE" >&2
     exit 1
 fi
 
 NEW_CODE=$((CURRENT_CODE + 1))
 NEW_NAME=$(echo "$CURRENT_NAME" | awk -F. -v OFS=. '{$NF=$NF+1; print}')
 
-sed -i "s/versionCode = $CURRENT_CODE/versionCode = $NEW_CODE/" "$BUILD_GRADLE"
-sed -i "s/versionName = \"$CURRENT_NAME\"/versionName = \"$NEW_NAME\"/" "$BUILD_GRADLE"
+sed -i "s/val baseVersionCode = $CURRENT_CODE/val baseVersionCode = $NEW_CODE/" "$BUILD_GRADLE"
+sed -i "s/val baseVersionName = \"$CURRENT_NAME\"/val baseVersionName = \"$NEW_NAME\"/" "$BUILD_GRADLE"
 
 echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"
 
 revert_version_bump() {
-    sed -i "s/versionCode = $NEW_CODE/versionCode = $CURRENT_CODE/" "$BUILD_GRADLE"
-    sed -i "s/versionName = \"$NEW_NAME\"/versionName = \"$CURRENT_NAME\"/" "$BUILD_GRADLE"
+    sed -i "s/val baseVersionCode = $NEW_CODE/val baseVersionCode = $CURRENT_CODE/" "$BUILD_GRADLE"
+    sed -i "s/val baseVersionName = \"$NEW_NAME\"/val baseVersionName = \"$CURRENT_NAME\"/" "$BUILD_GRADLE"
     echo "Build failed: reverted version to $CURRENT_NAME ($CURRENT_CODE)." >&2
 }
 
@@ -246,13 +250,17 @@ GRADLE_TASKS=(
     clean
     ktlintCheck
     detekt
-    lintRelease
-    testDebugUnitTest
-    :macrobenchmark:assembleRelease
-    :baselineprofile:assembleRelease
-    :shippedsmoke:assembleRelease
-    assembleDebug
-    assembleRelease
+    lintCompatRelease
+    lintFutureRelease
+    testCompatDebugUnitTest
+    testFutureDebugUnitTest
+    :macrobenchmark:assembleFutureRelease
+    :baselineprofile:assembleFutureRelease
+    :shippedsmoke:assembleFutureRelease
+    assembleCompatDebug
+    assembleFutureDebug
+    assembleCompatRelease
+    assembleFutureRelease
 )
 
 if ! ./gradlew "${GRADLE_TASKS[@]}"; then
@@ -266,12 +274,19 @@ if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
     [[ -f "$REPORT" ]] && echo "Dependency-analysis report: $REPORT"
 fi
 
-rm -f "$ROOT_APK" "$ROOT_MAPPING"
-cp "$GRADLE_APK" "$ROOT_APK"
-echo "Copied release APK to $ROOT_APK"
-if [[ -f "$GRADLE_MAPPING" ]]; then
-    cp "$GRADLE_MAPPING" "$ROOT_MAPPING"
-    echo "Copied release mapping to $ROOT_MAPPING"
+rm -f "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE" "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT"
+cp "$GRADLE_APK_FUTURE" "$ROOT_APK_FUTURE"
+echo "Copied future release APK to $ROOT_APK_FUTURE"
+if [[ -f "$GRADLE_MAPPING_FUTURE" ]]; then
+    cp "$GRADLE_MAPPING_FUTURE" "$ROOT_MAPPING_FUTURE"
+    echo "Copied future release mapping to $ROOT_MAPPING_FUTURE"
+fi
+cp "$GRADLE_APK_COMPAT" "$ROOT_APK_COMPAT"
+echo "Copied compat release APK to $ROOT_APK_COMPAT"
+if [[ -f "$GRADLE_MAPPING_COMPAT" ]]; then
+    cp "$GRADLE_MAPPING_COMPAT" "$ROOT_MAPPING_COMPAT"
+    echo "Copied compat release mapping to $ROOT_MAPPING_COMPAT"
 fi
 
-./scripts/apk_http_serve.sh start "$ROOT_APK"
+# Serve the future APK by default (primary download for modern devices).
+./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE"

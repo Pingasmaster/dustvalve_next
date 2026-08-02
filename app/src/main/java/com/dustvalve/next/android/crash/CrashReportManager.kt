@@ -14,6 +14,7 @@ import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.ApplicationScope
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.update.AppUpdateService
+import com.dustvalve.next.android.util.isAtLeastR
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -217,40 +218,50 @@ class CrashReportManager @Inject constructor(
      * the app never nags on the next launch.
      */
     @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
-    private fun collectReportableExits(): List<String> = try {
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-        val watermark = try {
-            watermarkFile.readText().trim().toLong()
-        } catch (_: IOException) {
-            0L
-        } catch (_: NumberFormatException) {
-            0L
-        }
-        val records = am.getHistoricalProcessExitReasons(context.packageName, PID_UNQUERIED, MAX_EXIT_RECORDS)
-        val newest = records.maxOfOrNull { it.timestamp } ?: 0L
-        if (newest > watermark) {
-            try {
-                crashDir.mkdirs()
-                watermarkFile.writeText(newest.toString())
-            } catch (io: IOException) {
-                Log.w(TAG, "failed to advance exit-info watermark", io)
+    private fun collectReportableExits(): List<String> {
+        // ApplicationExitInfo is API 30+. Compat flavor supports API 26-29;
+        // below R there is nothing to query. Gate via flavor-safe helper so
+        // future (minSdk 37) does not trip ObsoleteSdkInt.
+        if (!isAtLeastR()) return emptyList()
+        return try {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val watermark = try {
+                watermarkFile.readText().trim().toLong()
+            } catch (_: IOException) {
+                0L
+            } catch (_: NumberFormatException) {
+                0L
             }
-        }
-        records
-            .filter { it.timestamp > watermark && isReportableReason(it.reason) }
-            .map { info ->
-                buildString {
-                    append("reason=").append(reasonName(info.reason))
-                    append(" timestamp=").append(info.timestamp)
-                    append(" importance=").append(info.importance)
-                    info.description?.let { append(" description=").append(it) }
+            val records = am.getHistoricalProcessExitReasons(
+                context.packageName,
+                PID_UNQUERIED,
+                MAX_EXIT_RECORDS,
+            )
+            val newest = records.maxOfOrNull { it.timestamp } ?: 0L
+            if (newest > watermark) {
+                try {
+                    crashDir.mkdirs()
+                    watermarkFile.writeText(newest.toString())
+                } catch (io: IOException) {
+                    Log.w(TAG, "failed to advance exit-info watermark", io)
                 }
             }
-    } catch (t: Throwable) {
-        // Robolectric / exotic OEM builds: exit-info is best-effort, the
-        // marker-file path above still works everywhere.
-        Log.w(TAG, "exit-info unavailable", t)
-        emptyList()
+            records
+                .filter { it.timestamp > watermark && isReportableReason(it.reason) }
+                .map { info ->
+                    buildString {
+                        append("reason=").append(reasonName(info.reason))
+                        append(" timestamp=").append(info.timestamp)
+                        append(" importance=").append(info.importance)
+                        info.description?.let { append(" description=").append(it) }
+                    }
+                }
+        } catch (t: Throwable) {
+            // Robolectric / exotic OEM builds: exit-info is best-effort, the
+            // marker-file path above still works everywhere.
+            Log.w(TAG, "exit-info unavailable", t)
+            emptyList()
+        }
     }
 
     private fun logHeader(): String = buildString {

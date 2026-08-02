@@ -53,7 +53,7 @@ class AppUpdateServiceTest {
         val update = svc.checkForUpdate()
         assertThat(update).isNotNull()
         assertThat(update!!.versionName).isEqualTo("0.3.50")
-        assertThat(update.apkDownloadUrl).endsWith("dustvalve_next-future.apk")
+        assertThat(update.apkDownloadUrl).endsWith(AppUpdateService.selectedApkAsset())
     }
 
     @Test fun `detects a newer stable release too`() = runTest {
@@ -115,7 +115,7 @@ class AppUpdateServiceTest {
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v0.3.60", prerelease = true, assetName = "source.zip"),
-                    release(tag = "v0.3.55", prerelease = true, assetName = "dustvalve_next-future.apk"),
+                    release(tag = "v0.3.55", prerelease = true, assetName = AppUpdateService.selectedApkAsset()),
                 ),
             ),
         )
@@ -203,12 +203,24 @@ class AppUpdateServiceTest {
         assertThat(svc.checkForUpdate()?.versionName).isEqualTo("1.0.0")
     }
 
-    @Test fun `picks dustvalve_next-future-apk when release also ships the legacy dustvalve_next-apk`() = runTest {
-        // Each release now ships TWO apks side by side:
-        //   dustvalve_next.apk         -> Android 8-16 build from legacy-android8
-        //   dustvalve_next-future.apk  -> Android 17 build from master (THIS apk)
-        // Master users MUST get the future apk; otherwise the updater silently
-        // downgrades them to the legacy build.
+    @Test fun `selectedApkAsset maps future and compat flavors`() {
+        assertThat(AppUpdateService.selectedApkAsset("future"))
+            .isEqualTo(AppUpdateService.FUTURE_APK_ASSET)
+        assertThat(AppUpdateService.selectedApkAsset("compat"))
+            .isEqualTo(AppUpdateService.COMPAT_APK_ASSET)
+        // Multi-dimension flavor names that still contain the api flavor.
+        assertThat(AppUpdateService.selectedApkAsset("freeCompat"))
+            .isEqualTo(AppUpdateService.COMPAT_APK_ASSET)
+        assertThat(AppUpdateService.selectedApkAsset("futureRelease"))
+            .isEqualTo(AppUpdateService.FUTURE_APK_ASSET)
+    }
+
+    @Test fun `picks the apk asset matching this build flavor when both ship`() = runTest {
+        // Each release ships TWO apks side by side:
+        //   dustvalve_next.apk         -> compat (Android 8-16)
+        //   dustvalve_next-future.apk  -> future (Android 17)
+        // This build must get its own flavor's apk; otherwise the updater
+        // silently cross-installs the wrong minSdk APK.
         val release = """
             {
               "tag_name": "v1.2.3",
@@ -226,10 +238,15 @@ class AppUpdateServiceTest {
         val svc = testService(installed = "1.0.0")
 
         val update = svc.checkForUpdate()
-        assertThat(update?.apkDownloadUrl).endsWith("dustvalve_next-future.apk")
+        assertThat(update?.apkDownloadUrl).endsWith(AppUpdateService.selectedApkAsset())
     }
 
-    @Test fun `skips release that only has the legacy dustvalve_next-apk (master never installs legacy)`() = runTest {
+    @Test fun `skips release that only has the other flavor apk`() = runTest {
+        val otherAsset = if (AppUpdateService.selectedApkAsset() == AppUpdateService.FUTURE_APK_ASSET) {
+            AppUpdateService.COMPAT_APK_ASSET
+        } else {
+            AppUpdateService.FUTURE_APK_ASSET
+        }
         val release = """
             {
               "tag_name": "v9.9.9",
@@ -238,7 +255,7 @@ class AppUpdateServiceTest {
               "prerelease": true,
               "draft": false,
               "assets": [
-                {"name": "dustvalve_next.apk", "browser_download_url": "https://releases.example/v9.9.9/dustvalve_next.apk"}
+                {"name": "$otherAsset", "browser_download_url": "https://releases.example/v9.9.9/$otherAsset"}
               ]
             }
         """.trimIndent()
@@ -254,12 +271,13 @@ class AppUpdateServiceTest {
         // have an APK. The buggy pre-fix code filtered the top one out (no
         // APK) AND the next one (prerelease) and returned null; the fix falls
         // through to the assetful prerelease.
+        val asset = AppUpdateService.selectedApkAsset()
         server.enqueue(
             MockResponse().setBody(
                 releasesJson(
                     release(tag = "v9.9.9", prerelease = false, assetName = null),
-                    release(tag = "v9.9.8", prerelease = true, assetName = "dustvalve_next-future.apk"),
-                    release(tag = "v9.9.7", prerelease = true, assetName = "dustvalve_next-future.apk"),
+                    release(tag = "v9.9.8", prerelease = true, assetName = asset),
+                    release(tag = "v9.9.7", prerelease = true, assetName = asset),
                 ),
             ),
         )
@@ -361,7 +379,7 @@ class AppUpdateServiceTest {
         tag: String,
         prerelease: Boolean = false,
         draft: Boolean = false,
-        assetName: String? = "dustvalve_next-future.apk",
+        assetName: String? = AppUpdateService.selectedApkAsset(),
         digest: String? = null,
     ): String {
         val assetsJson = if (assetName == null) {

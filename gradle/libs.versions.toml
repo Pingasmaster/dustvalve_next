@@ -1,5 +1,6 @@
 [versions]
 agp = "9.4.0-alpha07"
+desugar-jdk-libs = "2.1.5"
 kotlin = "2.4.20-Beta2"
 ksp = "2.3.10"
 hilt = "2.60.1"
@@ -54,6 +55,8 @@ slack-compose-lints = "1.5.3"
 dependency-analysis = "3.18.0"
 
 [libraries]
+# Core library desugaring (compat flavor: minSdk 26 + JVM 25 bytecode)
+desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
 # Compose
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
 compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "compose" }
