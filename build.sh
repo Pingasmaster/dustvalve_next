@@ -17,6 +17,7 @@
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
 #   ./build.sh --baseline-profile # regenerate baseline profiles via GMD
 #   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks
+#   ./build.sh --publish          # serve existing root APK over NetBird HTTP + exit
 #
 # After a successful full build, scripts/apk_http_serve.sh publishes
 # http://<netbird-fqdn>:8765/app-release.apk until the first complete download,
@@ -67,6 +68,7 @@ DO_E2E_LIVE=0
 DO_LIVE_NET=0
 DO_BASELINE_PROFILE=0
 DO_MACROBENCHMARK=0
+DO_PUBLISH=0
 
 ROOT_APK_FUTURE="dustvalve_next-future.apk"
 ROOT_MAPPING_FUTURE="dustvalve_next-future-mapping.txt"
@@ -86,10 +88,12 @@ for arg in "$@"; do
         --live-net)          DO_LIVE_NET=1 ;;
         --baseline-profile)  DO_BASELINE_PROFILE=1 ;;
         --macrobenchmark)    DO_MACROBENCHMARK=1 ;;
+        --publish)           DO_PUBLISH=1 ;;
         *)
             echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
                 "--workflow-tests, --smoke, --smoke-release, --smoke-shipped," \
-                "--e2e, --e2e-live, --live-net, --baseline-profile, --macrobenchmark)" >&2
+                "--e2e, --e2e-live, --live-net, --baseline-profile, --macrobenchmark," \
+                "--publish)" >&2
             exit 2
             ;;
     esac
@@ -108,6 +112,11 @@ acquire_lock() {
 }
 
 GMD_GPU=(-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect)
+
+if [[ "$DO_PUBLISH" -eq 1 ]]; then
+    ./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE"
+    exit 0
+fi
 
 if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     acquire_lock
