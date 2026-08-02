@@ -3,11 +3,12 @@
 #
 # Usage:
 #   scripts/apk_http_serve.sh stop
-#   scripts/apk_http_serve.sh start <apk-file>
+#   scripts/apk_http_serve.sh start <apk-file> [apk-file...]
 #
-# Serves http://<netbird-fqdn>:8765/app-release.apk until the first complete
-# download, 10 minutes, or the next build.sh invocation (stop) - whichever
-# happens first. Binds on the NetBird IP; advertises the stable DNS name.
+# Serves http://<netbird-fqdn>:8765/<basename> for each APK until every listed
+# APK has been downloaded once, 10 minutes, or the next build.sh invocation
+# (stop) - whichever happens first. Binds on the NetBird IP; advertises the
+# stable DNS name.
 #
 set -euo pipefail
 
@@ -62,18 +63,25 @@ stop_serve() {
 }
 
 start_serve() {
-    local apk="${1:-}"
-    if [[ -z "$apk" ]]; then
-        echo "Usage: $0 start <apk-file>" >&2
+    if [[ "$#" -lt 1 ]]; then
+        echo "Usage: $0 start <apk-file> [apk-file...]" >&2
         exit 2
     fi
-    if [[ "$apk" != /* ]]; then
-        apk="$ROOT_DIR/$apk"
-    fi
-    if [[ ! -f "$apk" ]]; then
-        echo "APK HTTP serve: skipped (APK missing: $apk)" >&2
-        return 0
-    fi
+
+    local -a apk_args=()
+    local -a url_names=()
+    local apk
+    for apk in "$@"; do
+        if [[ "$apk" != /* ]]; then
+            apk="$ROOT_DIR/$apk"
+        fi
+        if [[ ! -f "$apk" ]]; then
+            echo "APK HTTP serve: skipped (APK missing: $apk)" >&2
+            return 0
+        fi
+        apk_args+=(--apk "$apk")
+        url_names+=("$(basename "$apk")")
+    done
 
     local bind_host url_host
     bind_host="$(detect_netbird_ip)"
@@ -94,24 +102,32 @@ start_serve() {
         --host "$bind_host" \
         --url-host "$url_host" \
         --port "$PORT" \
-        --apk "$apk" \
+        "${apk_args[@]}" \
         --pidfile "$PIDFILE" \
         --timeout "$TIMEOUT_SEC" \
         >"$log" 2>&1 &
     disown || true
 
-    # Wait until pidfile exists or log shows bind failure.
+    # Wait until pidfile exists (python may need a beat to bind + write).
+    # Also accept a successful banner already in the log - pidfile write can
+    # race our poll under load.
     local i
-    for i in 1 2 3 4 5 6 7 8 9 10; do
+    for i in $(seq 1 50); do
         if [[ -f "$PIDFILE" ]]; then
+            break
+        fi
+        if grep -q "APK HTTP serve: http://" "$log" 2>/dev/null; then
             break
         fi
         sleep 0.1
     done
 
-    if [[ -f "$PIDFILE" ]]; then
-        echo "APK HTTP serve: http://${url_host}:${PORT}/app-release.apk"
-        echo "APK HTTP serve: stops after first download, ${TIMEOUT_SEC}s, or next ./build.sh."
+    if [[ -f "$PIDFILE" ]] || grep -q "APK HTTP serve: http://" "$log" 2>/dev/null; then
+        local name
+        for name in "${url_names[@]}"; do
+            echo "APK HTTP serve: http://${url_host}:${PORT}/${name}"
+        done
+        echo "APK HTTP serve: stops after all downloads, ${TIMEOUT_SEC}s, or next ./build.sh."
     else
         echo "APK HTTP serve: failed to start (see $log)" >&2
         if [[ -f "$log" ]]; then
@@ -126,10 +142,10 @@ case "$cmd" in
     stop) stop_serve ;;
     start)
         shift
-        start_serve "${1:-}"
+        start_serve "$@"
         ;;
     *)
-        echo "Usage: $0 {stop|start <apk-file>}" >&2
+        echo "Usage: $0 {stop|start <apk-file> [apk-file...]}" >&2
         exit 2
         ;;
 esac

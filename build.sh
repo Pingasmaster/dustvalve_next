@@ -2,10 +2,10 @@
 #
 # Usage:
 #   ./build.sh                    # bump version + clean + ASCII + ktlint + detekt + lint
-#                                 # + tests + assemble harnesses + assemble APK
-#                                 # then one-shot NetBird APK HTTP serve
-#                                 # (+ copy release mapping.txt next to the APK)
-#   ./build.sh --clean            # gradle clean + remove APK + exit
+#                                 # + tests + assemble harnesses + assemble APKs
+#                                 # then one-shot NetBird APK HTTP serve for both
+#                                 # (+ copy release mapping.txt next to the APKs)
+#   ./build.sh --clean            # gradle clean + remove APKs + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
 #   ./build.sh --workflow-tests   # Tier 1 JVM workflow tests only (fast) + exit
@@ -17,10 +17,11 @@
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
 #   ./build.sh --baseline-profile # regenerate baseline profiles via GMD
 #   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks
-#   ./build.sh --publish          # serve existing root APK over NetBird HTTP + exit
+#   ./build.sh --publish          # serve existing root APKs over NetBird HTTP + exit
 #
-# After a successful full build, scripts/apk_http_serve.sh publishes
-# http://<netbird-fqdn>:8765/app-release.apk until the first complete download,
+# After a successful full build, scripts/apk_http_serve.sh publishes both
+# http://<netbird-fqdn>:8765/dustvalve_next-future.apk and
+# http://<netbird-fqdn>:8765/dustvalve_next.apk until both are downloaded once,
 # 10 minutes, or the next ./build.sh invocation - whichever happens first.
 #
 # IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
@@ -114,7 +115,7 @@ acquire_lock() {
 GMD_GPU=(-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect)
 
 if [[ "$DO_PUBLISH" -eq 1 ]]; then
-    ./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE"
+    ./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE" "$ROOT_APK_COMPAT"
     exit 0
 fi
 
@@ -297,5 +298,5 @@ if [[ -f "$GRADLE_MAPPING_COMPAT" ]]; then
     echo "Copied compat release mapping to $ROOT_MAPPING_COMPAT"
 fi
 
-# Serve the future APK by default (primary download for modern devices).
-./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE"
+# Serve both flavor APKs (future + compat).
+./scripts/apk_http_serve.sh start "$ROOT_APK_FUTURE" "$ROOT_APK_COMPAT"
