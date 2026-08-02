@@ -37,25 +37,21 @@ object ThumbnailUrls {
             return url.replace(namedCustom, "/hq720.$1")
         }
 
-        // =sN -> =s0 (full original). Always rewrite so s48/s576/s1200 share
-        // one cache key.
-        val sRewritten = Regex("""=s(\d+)(-[^=&]*)?""").replace(url) { match ->
-            "=s0${match.groupValues[2]}"
+        // Prefer the first rewrite that changes the URL so every size token
+        // for the same image collapses to one disk-cache key.
+        val candidates = listOf(
+            Regex("""=s(\d+)(-[^=&]*)?""") to { m: MatchResult -> "=s0${m.groupValues[2]}" },
+            Regex("""=w(\d+)-c-h(\d+)(-[^=&]*)?""") to { m: MatchResult ->
+                "=w0-c-h0${m.groupValues[3]}"
+            },
+            Regex("""=w(\d+)-h(\d+)(-[^=&]*)?""") to { m: MatchResult ->
+                "=w0-h0${m.groupValues[3]}"
+            },
+        )
+        for ((pattern, replacement) in candidates) {
+            val rewritten = pattern.replace(url, replacement)
+            if (rewritten != url) return rewritten
         }
-        if (sRewritten != url) return sRewritten
-
-        // =wN-c-hM -> =w0-c-h0 (preserve trailing crop/round flags).
-        val whcRewritten = Regex("""=w(\d+)-c-h(\d+)(-[^=&]*)?""").replace(url) { match ->
-            "=w0-c-h0${match.groupValues[3]}"
-        }
-        if (whcRewritten != url) return whcRewritten
-
-        // =wN-hM -> =w0-h0.
-        val whRewritten = Regex("""=w(\d+)-h(\d+)(-[^=&]*)?""").replace(url) { match ->
-            "=w0-h0${match.groupValues[3]}"
-        }
-        if (whRewritten != url) return whRewritten
-
         return url
     }
 }

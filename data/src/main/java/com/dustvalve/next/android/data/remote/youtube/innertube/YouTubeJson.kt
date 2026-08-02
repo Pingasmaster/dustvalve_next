@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
+import com.dustvalve.next.android.util.ThumbnailUrls
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -66,5 +67,4 @@ internal fun JsonElement.extractThumbnail(): String? {
  * Delegates to [com.dustvalve.next.android.util.ThumbnailUrls] so parsers and
  * the Coil interceptor share one policy (one download, one disk-cache key).
  */
-internal fun bumpYtThumbnailResolution(url: String): String =
-    com.dustvalve.next.android.util.ThumbnailUrls.canonicalize(url)
+internal fun bumpYtThumbnailResolution(url: String): String = ThumbnailUrls.canonicalize(url)

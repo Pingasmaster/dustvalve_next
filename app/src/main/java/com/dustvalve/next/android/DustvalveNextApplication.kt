@@ -202,9 +202,14 @@ class DustvalveNextApplication :
                 // Sized for full-original Bandcamp `_0` covers (~1-10 MB).
                 DiskCache.Builder()
                     .directory(StoragePaths.imagesDir(this))
-                    .maxSizeBytes(512L * 1024 * 1024)
+                    .maxSizeBytes(COIL_DISK_CACHE_BYTES)
                     .build()
             }
             .build()
+    }
+
+    private companion object {
+        /** Coil disk cache budget for full-original covers (~1-10 MB each). */
+        private const val COIL_DISK_CACHE_BYTES = 512L * 1024L * 1024L
     }
 }

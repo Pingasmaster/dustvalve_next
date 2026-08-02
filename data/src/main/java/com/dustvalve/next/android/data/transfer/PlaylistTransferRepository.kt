@@ -335,20 +335,23 @@ class PlaylistTransferRepository @Inject constructor(
 
     private fun fetchBytes(url: String): ByteArray {
         if (url.startsWith("content://") || url.startsWith("file://")) {
-            val uri = url.toUri()
-            val stream = if (url.startsWith("file://")) {
-                File(uri.path ?: throw IllegalStateException("Bad file URI: $url")).inputStream()
-            } else {
-                context.contentResolver.openInputStream(uri)
-                    ?: throw IllegalStateException("Cannot open $url")
-            }
-            return stream.use { it.readBytes() }
+            return readLocalBytes(url)
         }
         val request = Request.Builder().url(url).build()
         return client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}")
             response.body.bytes()
         }
+    }
+
+    private fun readLocalBytes(url: String): ByteArray {
+        val uri = url.toUri()
+        val stream = if (url.startsWith("file://")) {
+            File(requireNotNull(uri.path) { "Bad file URI: $url" }).inputStream()
+        } else {
+            requireNotNull(context.contentResolver.openInputStream(uri)) { "Cannot open $url" }
+        }
+        return stream.use { it.readBytes() }
     }
 
     private companion object {
