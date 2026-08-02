@@ -17,7 +17,6 @@
 #   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel7aApi37 + exit
 #   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
-#   ./build.sh --baseline-profile # regenerate baseline profiles via GMD + exit
 #   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks
 #   ./build.sh --publish          # serve existing root APKs over NetBird HTTP + exit
 #
@@ -74,7 +73,6 @@ DO_SMOKE_SHIPPED=0
 DO_E2E=0
 DO_E2E_LIVE=0
 DO_LIVE_NET=0
-DO_BASELINE_PROFILE=0
 DO_MACROBENCHMARK=0
 DO_PUBLISH=0
 DO_DEBUG=0
@@ -95,14 +93,13 @@ for arg in "$@"; do
         --e2e)               DO_E2E=1 ;;
         --e2e-live)          DO_E2E_LIVE=1 ;;
         --live-net)          DO_LIVE_NET=1 ;;
-        --baseline-profile)  DO_BASELINE_PROFILE=1 ;;
         --macrobenchmark)    DO_MACROBENCHMARK=1 ;;
         --publish)           DO_PUBLISH=1 ;;
         --debug)             DO_DEBUG=1 ;;
         *)
             echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
                 "--workflow-tests, --smoke, --smoke-release, --smoke-shipped," \
-                "--e2e, --e2e-live, --live-net, --baseline-profile, --macrobenchmark," \
+                "--e2e, --e2e-live, --live-net, --macrobenchmark," \
                 "--publish, --debug)" >&2
             exit 2
             ;;
@@ -217,14 +214,6 @@ if [[ "$DO_E2E_LIVE" -eq 1 ]]; then
         -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
     ./scripts/assert_tests_ran.sh 1 app
     echo "Live E2E suite complete."
-    exit 0
-fi
-
-if [[ "$DO_BASELINE_PROFILE" -eq 1 ]]; then
-    acquire_lock
-    regenerate_baseline_profiles
-    echo "Baseline profile regeneration complete."
-    echo "Re-run ./build.sh (full release path) so assembleRelease packages them."
     exit 0
 fi
 

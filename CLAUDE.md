@@ -24,9 +24,9 @@ Four automated tiers (see docs/testing/README.md):
   `-PtestReleaseBuild` lane cannot. NEVER pass `-PtestReleaseBuild` to it:
   that applies proguard-test-support.pro and defeats the whole point.
   Local: `./build.sh --smoke-shipped`.
-- Baseline-only / macrobenchmark: `./build.sh --baseline-profile` and
-  `./build.sh --macrobenchmark` (baselines are already part of default
-  release builds; macrobenchmark is advisory only).
+- Baseline profiles regenerate on every default `./build.sh` release path
+  (skipped by `--debug`). Macrobenchmark stays opt-in / advisory:
+  `./build.sh --macrobenchmark`.
 - Scenario backlog lives in docs/testing/catalog-*.md; new E2E tests must
   reference their catalog id.
 
