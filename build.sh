@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 #
 # Usage:
-#   ./build.sh                    # bump version + clean + ASCII + ktlint + detekt + lint
-#                                 # + tests + assemble harnesses + assemble APKs
+#   ./build.sh                    # RELEASE path: regen baseline+startup profiles (GMD),
+#                                 # bump version, clean + ASCII + ktlint + detekt + lint
+#                                 # + tests + assemble harnesses + assemble APKs,
 #                                 # then one-shot NetBird APK HTTP serve for both
-#                                 # (+ copy release mapping.txt next to the APKs)
+#   ./build.sh --debug            # DEV path: same gates/assemble, but skip release-only
+#                                 # steps (baseline regen + version bump)
 #   ./build.sh --clean            # gradle clean + remove APKs + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
@@ -15,7 +17,7 @@
 #   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel7aApi37 + exit
 #   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
-#   ./build.sh --baseline-profile # regenerate baseline profiles via GMD
+#   ./build.sh --baseline-profile # regenerate baseline profiles via GMD + exit
 #   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks
 #   ./build.sh --publish          # serve existing root APKs over NetBird HTTP + exit
 #
@@ -23,6 +25,11 @@
 # http://<netbird-fqdn>:8765/app-release.apk (compat, Android 8+) and
 # http://<netbird-fqdn>:8765/app-release-future.apk (future, Android 17) until
 # both are downloaded once, 10 minutes, or the next ./build.sh invocation.
+#
+# User-facing speed: default builds ALWAYS regenerate baseline-prof.txt +
+# startup-prof.txt (needs KVM) so release APKs ship fresh AOT hints. R8
+# minify + resource shrink already run on assemble*Release. Macrobenchmark
+# only measures - it does not speed up users, so it stays opt-in.
 #
 # IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
 # you have user approval and have confirmed no process is using it (check with
@@ -70,6 +77,7 @@ DO_LIVE_NET=0
 DO_BASELINE_PROFILE=0
 DO_MACROBENCHMARK=0
 DO_PUBLISH=0
+DO_DEBUG=0
 
 ROOT_APK_COMPAT="app-release.apk"
 ROOT_MAPPING_COMPAT="app-release-mapping.txt"
@@ -90,11 +98,12 @@ for arg in "$@"; do
         --baseline-profile)  DO_BASELINE_PROFILE=1 ;;
         --macrobenchmark)    DO_MACROBENCHMARK=1 ;;
         --publish)           DO_PUBLISH=1 ;;
+        --debug)             DO_DEBUG=1 ;;
         *)
             echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
                 "--workflow-tests, --smoke, --smoke-release, --smoke-shipped," \
                 "--e2e, --e2e-live, --live-net, --baseline-profile, --macrobenchmark," \
-                "--publish)" >&2
+                "--publish, --debug)" >&2
             exit 2
             ;;
     esac
@@ -113,6 +122,20 @@ acquire_lock() {
 }
 
 GMD_GPU=(-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect)
+
+regenerate_baseline_profiles() {
+    if [[ ! -e /dev/kvm ]]; then
+        echo "ERROR: /dev/kvm missing; GMD baseline generation needs KVM." >&2
+        echo "Use ./build.sh --debug to skip baselines for a non-release build." >&2
+        exit 1
+    fi
+    ./gradlew :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
+    ./gradlew :baselineprofile:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
+        -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
+    ./scripts/assert_tests_ran.sh 1 baselineprofile
+    chmod +x ./scripts/install_baseline_profiles.sh
+    ./scripts/install_baseline_profiles.sh
+}
 
 if [[ "$DO_PUBLISH" -eq 1 ]]; then
     ./scripts/apk_http_serve.sh start "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"
@@ -199,18 +222,9 @@ fi
 
 if [[ "$DO_BASELINE_PROFILE" -eq 1 ]]; then
     acquire_lock
-    if [[ ! -e /dev/kvm ]]; then
-        echo "ERROR: /dev/kvm missing; GMD baseline generation needs KVM." >&2
-        exit 1
-    fi
-    ./gradlew :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :baselineprofile:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
-        -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
-    ./scripts/assert_tests_ran.sh 1 baselineprofile
-    chmod +x ./scripts/install_baseline_profiles.sh
-    ./scripts/install_baseline_profiles.sh
+    regenerate_baseline_profiles
     echo "Baseline profile regeneration complete."
-    echo "Re-run ./build.sh (full) so assembleRelease packages the new profiles."
+    echo "Re-run ./build.sh (full release path) so assembleRelease packages them."
     exit 0
 fi
 
@@ -234,27 +248,47 @@ GRADLE_APK_COMPAT="app/build/outputs/apk/compat/release/app-compat-release.apk"
 GRADLE_MAPPING_COMPAT="app/build/outputs/mapping/compatRelease/mapping.txt"
 BUILD_GRADLE="app/build.gradle.kts"
 
-CURRENT_CODE=$(sed -n 's/.*val baseVersionCode = \([0-9][0-9]*\).*/\1/p' "$BUILD_GRADLE" | head -1)
-CURRENT_NAME=$(sed -n 's/.*val baseVersionName = "\([^"]*\)".*/\1/p' "$BUILD_GRADLE" | head -1)
-
-if [[ -z "$CURRENT_CODE" || -z "$CURRENT_NAME" ]]; then
-    echo "ERROR: could not parse baseVersionCode/baseVersionName from $BUILD_GRADLE" >&2
-    exit 1
-fi
-
-NEW_CODE=$((CURRENT_CODE + 1))
-NEW_NAME=$(echo "$CURRENT_NAME" | awk -F. -v OFS=. '{$NF=$NF+1; print}')
-
-sed -i "s/val baseVersionCode = $CURRENT_CODE/val baseVersionCode = $NEW_CODE/" "$BUILD_GRADLE"
-sed -i "s/val baseVersionName = \"$CURRENT_NAME\"/val baseVersionName = \"$NEW_NAME\"/" "$BUILD_GRADLE"
-
-echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"
+VERSION_BUMPED=0
+CURRENT_CODE=""
+CURRENT_NAME=""
+NEW_CODE=""
+NEW_NAME=""
 
 revert_version_bump() {
+    if [[ "$VERSION_BUMPED" -ne 1 ]]; then
+        return 0
+    fi
     sed -i "s/val baseVersionCode = $NEW_CODE/val baseVersionCode = $CURRENT_CODE/" "$BUILD_GRADLE"
     sed -i "s/val baseVersionName = \"$NEW_NAME\"/val baseVersionName = \"$CURRENT_NAME\"/" "$BUILD_GRADLE"
     echo "Build failed: reverted version to $CURRENT_NAME ($CURRENT_CODE)." >&2
 }
+
+if [[ "$DO_DEBUG" -eq 1 ]]; then
+    echo "Debug build: skipping baseline profile regeneration and version bump."
+else
+    echo "Release build: regenerating baseline + startup profiles..."
+    if ! regenerate_baseline_profiles; then
+        exit 1
+    fi
+    echo "Baseline profiles installed under app/src/release/."
+
+    CURRENT_CODE=$(sed -n 's/.*val baseVersionCode = \([0-9][0-9]*\).*/\1/p' "$BUILD_GRADLE" | head -1)
+    CURRENT_NAME=$(sed -n 's/.*val baseVersionName = "\([^"]*\)".*/\1/p' "$BUILD_GRADLE" | head -1)
+
+    if [[ -z "$CURRENT_CODE" || -z "$CURRENT_NAME" ]]; then
+        echo "ERROR: could not parse baseVersionCode/baseVersionName from $BUILD_GRADLE" >&2
+        exit 1
+    fi
+
+    NEW_CODE=$((CURRENT_CODE + 1))
+    NEW_NAME=$(echo "$CURRENT_NAME" | awk -F. -v OFS=. '{$NF=$NF+1; print}')
+
+    sed -i "s/val baseVersionCode = $CURRENT_CODE/val baseVersionCode = $NEW_CODE/" "$BUILD_GRADLE"
+    sed -i "s/val baseVersionName = \"$CURRENT_NAME\"/val baseVersionName = \"$NEW_NAME\"/" "$BUILD_GRADLE"
+    VERSION_BUMPED=1
+
+    echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"
+fi
 
 GRADLE_TASKS=(
     clean

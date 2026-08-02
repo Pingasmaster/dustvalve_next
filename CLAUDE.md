@@ -11,6 +11,9 @@ See also Cursor rule `android-ask-before-suppress`.
 ## Workflow tests - run before shipping behavior changes
 
 Four automated tiers (see docs/testing/README.md):
+- `./build.sh` (default) - RELEASE path: regenerates baseline+startup profiles
+  (KVM), bumps version, then full lint/test/assemble. Use `./build.sh --debug`
+  for day-to-day builds (skips baselines + version bump).
 - `./build.sh --workflow-tests` - fast JVM regression net (real ExoPlayer +
   real MainActivity under Robolectric). Run this after ANY change touching
   playback, navigation, or the provider screens.
@@ -21,8 +24,9 @@ Four automated tiers (see docs/testing/README.md):
   `-PtestReleaseBuild` lane cannot. NEVER pass `-PtestReleaseBuild` to it:
   that applies proguard-test-support.pro and defeats the whole point.
   Local: `./build.sh --smoke-shipped`.
-- Baseline / macrobenchmark: `./build.sh --baseline-profile` and
-  `./build.sh --macrobenchmark` (no GitHub Actions; all gates are local).
+- Baseline-only / macrobenchmark: `./build.sh --baseline-profile` and
+  `./build.sh --macrobenchmark` (baselines are already part of default
+  release builds; macrobenchmark is advisory only).
 - Scenario backlog lives in docs/testing/catalog-*.md; new E2E tests must
   reference their catalog id.
 
