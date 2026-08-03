@@ -82,3 +82,103 @@ internal fun JsonElement.extractImageSources(): String? {
  * the Coil interceptor share one policy (one download, one disk-cache key).
  */
 internal fun bumpYtThumbnailResolution(url: String): String = ThumbnailUrls.canonicalize(url)
+
+/**
+ * Continuation token from either the legacy continuationItemRenderer or the
+ * modern continuationItemViewModel shape used by lockup-based feeds.
+ */
+internal fun JsonElement.extractContinuationToken(): String? {
+    path("continuationItemRenderer")
+        ?.path("continuationEndpoint")
+        ?.path("continuationCommand")
+        ?.str("token")
+        ?.let { return it }
+    return path("continuationItemViewModel")
+        ?.path("continuationCommand")
+        ?.path("innertubeCommand")
+        ?.path("continuationCommand")
+        ?.str("token")
+}
+
+/**
+ * Parsed fields from a LOCKUP_CONTENT_TYPE_VIDEO lockupViewModel (modern
+ * playlist rows and channel Videos-tab richItem content). Returns null for
+ * non-video lockups (albums, playlists, etc.).
+ */
+internal data class LockupVideo(
+    val videoId: String,
+    val title: String,
+    val artist: String,
+    val artistChannelId: String?,
+    val artUrl: String,
+    val durationSec: Float,
+)
+
+internal fun JsonElement.parseLockupVideo(): LockupVideo? {
+    if (str("contentType") != "LOCKUP_CONTENT_TYPE_VIDEO") return null
+    val videoId = str("contentId")
+        ?: path("rendererContext")
+            ?.path("commandContext")
+            ?.path("onTap")
+            ?.path("innertubeCommand")
+            ?.path("watchEndpoint")
+            ?.str("videoId")
+        ?: return null
+    val meta = path("metadata")?.path("lockupMetadataViewModel") ?: return null
+    val title = meta.path("title")?.str("content") ?: return null
+    val artist = meta.path("metadata")
+        ?.path("contentMetadataViewModel")
+        ?.path("metadataRows")?.arr()?.firstOrNull()
+        ?.path("metadataParts")?.arr()?.firstOrNull()
+        ?.path("text")?.str("content")
+        .orEmpty()
+    val artistChannelId = meta.path("image")
+        ?.path("decoratedAvatarViewModel")
+        ?.path("rendererContext")
+        ?.path("commandContext")
+        ?.path("onTap")
+        ?.path("innertubeCommand")
+        ?.path("browseEndpoint")
+        ?.str("browseId")
+    val artUrl = path("contentImage")
+        ?.path("thumbnailViewModel")
+        ?.extractImageSources()
+        ?: path("contentImage")
+            ?.path("collectionThumbnailViewModel")
+            ?.path("primaryThumbnail")
+            ?.path("thumbnailViewModel")
+            ?.extractImageSources()
+        ?: ""
+    val durationSec = path("contentImage")
+        ?.path("thumbnailViewModel")
+        ?.path("overlays")?.arr().orEmpty()
+        .asSequence()
+        .mapNotNull { overlay ->
+            overlay.path("thumbnailBottomOverlayViewModel")
+                ?.path("badges")?.arr()?.firstOrNull()
+                ?.path("thumbnailBadgeViewModel")
+                ?.str("text")
+        }
+        .firstOrNull()
+        ?.let { parseDurationText(it) }
+        ?: 0f
+    return LockupVideo(
+        videoId = videoId,
+        title = title,
+        artist = artist,
+        artistChannelId = artistChannelId,
+        artUrl = artUrl,
+        durationSec = durationSec,
+    )
+}
+
+/** Parses "h:mm:ss" / "m:ss" / "ss" duration badge text into total seconds. */
+internal fun parseDurationText(text: String): Float {
+    val parts = text.split(":").mapNotNull { it.toIntOrNull() }
+    if (parts.isEmpty()) return 0f
+    var total = 0
+    for (p in parts) total = total * SECONDS_PER_MINUTE + p
+    return total.toFloat()
+}
+
+private const val SECONDS_PER_MINUTE = 60

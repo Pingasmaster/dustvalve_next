@@ -61,7 +61,8 @@ exercised.
    that re-introduces the test-support keeps and defeats the point.
 
 Plus the opt-in JVM live smokes gated on `DUSTVALVE_LIVE_NET=1`
-(`./build.sh --live-net`) and the manual `docs/RELEASE_CHECKLIST.md`.
+(`LiveYtcfgFetcherSmokeTest` / `LiveProviderMetadataIntegrityTest` via
+`./build.sh --live-net`) and the manual `docs/RELEASE_CHECKLIST.md`.
 
 ## Scenario catalogs (the backlog)
 

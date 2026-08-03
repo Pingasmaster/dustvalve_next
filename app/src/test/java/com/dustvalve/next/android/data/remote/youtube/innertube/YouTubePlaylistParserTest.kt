@@ -80,6 +80,144 @@ class YouTubePlaylistParserTest {
         )
     }
 
+    @Test fun `parses modern lockupViewModel playlist rows with continuationItemViewModel`() {
+        // Catalog: yt-playlist-lockup-rows. Live MWEB/WEB playlist browse
+        // dropped playlistVideoRenderer for lockupViewModel; without this
+        // path CollectionDetail opens with title/cover but zero tracks.
+        val root = json.parseToJsonElement(
+            """
+            {
+              "header": {
+                "pageHeaderRenderer": {
+                  "pageTitle": "Lockup Playlist",
+                  "content": {
+                    "pageHeaderViewModel": {
+                      "heroImage": {
+                        "contentPreviewImageViewModel": {
+                          "image": {
+                            "sources": [
+                              {"url":"https://i.ytimg.com/vi/abc12345678/hq720.jpg","width":720,"height":404}
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "contents": {
+                "singleColumnBrowseResultsRenderer": {
+                  "tabs": [{
+                    "tabRenderer": {
+                      "content": {
+                        "sectionListRenderer": {
+                          "contents": [{
+                            "itemSectionRenderer": {
+                              "contents": [
+                                {
+                                  "lockupViewModel": {
+                                    "contentId": "vidlockup001",
+                                    "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+                                    "contentImage": {
+                                      "thumbnailViewModel": {
+                                        "image": {
+                                          "sources": [
+                                            {"url":"https://i.ytimg.com/vi/vidlockup001/hqdefault.jpg","width":480,"height":360}
+                                          ]
+                                        },
+                                        "overlays": [{
+                                          "thumbnailBottomOverlayViewModel": {
+                                            "badges": [{"thumbnailBadgeViewModel":{"text":"3:55"}}]
+                                          }
+                                        }]
+                                      }
+                                    },
+                                    "metadata": {
+                                      "lockupMetadataViewModel": {
+                                        "title": {"content": "Lockup Track"},
+                                        "metadata": {
+                                          "contentMetadataViewModel": {
+                                            "metadataRows": [{
+                                              "metadataParts": [{"text":{"content":"Lockup Artist"}}]
+                                            }]
+                                          }
+                                        },
+                                        "image": {
+                                          "decoratedAvatarViewModel": {
+                                            "rendererContext": {
+                                              "commandContext": {
+                                                "onTap": {
+                                                  "innertubeCommand": {
+                                                    "browseEndpoint": {"browseId":"UClockupartist01"}
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "continuationItemViewModel": {
+                                    "continuationCommand": {
+                                      "innertubeCommand": {
+                                        "continuationCommand": {"token":"LOCKUP_CONT"}
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }]
+                        }
+                      }
+                    }
+                  }]
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        val page = parser.parse(root, "PLlockup")
+        assertThat(page.title).isEqualTo("Lockup Playlist")
+        assertThat(page.coverUrl).contains("hq720")
+        assertThat(page.tracks).hasSize(1)
+        with(page.tracks.first()) {
+            assertThat(id).isEqualTo("yt_vidlockup001")
+            assertThat(title).isEqualTo("Lockup Track")
+            assertThat(artist).isEqualTo("Lockup Artist")
+            assertThat(artistUrl).isEqualTo("https://www.youtube.com/channel/UClockupartist01")
+            assertThat(duration).isEqualTo(235f)
+            assertThat(artUrl).contains("hq720")
+        }
+        assertThat(page.continuation).isEqualTo("LOCKUP_CONT")
+    }
+
+    @Test fun `parseContinuation walks lockupViewModel appendContinuationItems`() {
+        val cont = json.parseToJsonElement(
+            """
+            {"onResponseReceivedActions":[{"appendContinuationItemsAction":{"continuationItems":[
+              {"lockupViewModel":{
+                "contentId":"vidcontlock1",
+                "contentType":"LOCKUP_CONTENT_TYPE_VIDEO",
+                "contentImage":{"thumbnailViewModel":{"image":{"sources":[{"url":"https://i.ytimg.com/vi/vidcontlock1/hqdefault.jpg","width":120}]}}},
+                "metadata":{"lockupMetadataViewModel":{"title":{"content":"Cont Lockup"}}}
+              }},
+              {"continuationItemViewModel":{"continuationCommand":{"innertubeCommand":{
+                "continuationCommand":{"token":"NEXT_LOCKUP"}
+              }}}}
+            ]}}]}
+            """.trimIndent(),
+        )
+        val page = parser.parseContinuation(cont, "PL_X", startIndex = 22)
+        assertThat(page.tracks).hasSize(1)
+        assertThat(page.tracks.first().id).isEqualTo("yt_vidcontlock1")
+        assertThat(page.tracks.first().trackNumber).isEqualTo(22)
+        assertThat(page.continuation).isEqualTo("NEXT_LOCKUP")
+    }
+
     @Test fun `parseContinuation walks appendContinuationItemsAction`() {
         val cont = json.parseToJsonElement(
             """

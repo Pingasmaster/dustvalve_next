@@ -20,9 +20,11 @@ Code boundary notes:
   else youtubeRepository.getStreamUrl; failure -> snackbar_audio_stream_failed
   + streamUrl=null -> playback skipped (PlayerViewModel.kt:511).
 - Live gate pattern: assumeTrue(System.getenv("DUSTVALVE_LIVE_NET") == "1")
-  (LiveYtcfgFetcherSmokeTest.kt). Hermetic fixtures:
-  app/src/test/resources/fixtures/youtube/ + MockWebServer via
-  YouTubeInnertubeClient.baseUrlWww/baseUrlM overrides.
+  (LiveYtcfgFetcherSmokeTest.kt, LiveProviderMetadataIntegrityTest.kt).
+  Hermetic fixtures: app/src/test/resources/fixtures/youtube/ + MockWebServer
+  via YouTubeInnertubeClient.baseUrlWww/baseUrlM overrides.
+  Live metadata integrity (title/cover/tracks for playlists, OLAK albums,
+  channels, Bandcamp artists): `./build.sh --live-net`.
 
 Group 1: Deep links and link routing (22)
 - [ ] yt-deeplink-watch-url [emulator-E2E, live]: open watch URL externally ->
@@ -168,8 +170,9 @@ Group 4: Queue and context actions (7)
   snackbar_failed_load, queue unchanged.
 
 Group 5: Playlists, mixes, channels (9)
-- [ ] yt-playlist-open-detail [E2E + JVM, live/hermetic]: VL<id> MWEB browse,
-  title + tracks (fixture playlist_mweb.json).
+- [x] yt-playlist-open-detail [E2E + JVM, live/hermetic]: VL<id> MWEB browse,
+  title + tracks (fixture playlist_mweb.json + lockupViewModel hermetic +
+  LiveProviderMetadataIntegrityTest).
 - [ ] yt-playlist-pagination-cap [JVM, hermetic]: continuations followed, hard cap
   20 pages (~2k tracks).
 - [ ] yt-playlist-import [E2E, live]: import icon -> tracks inserted, local
@@ -182,12 +185,20 @@ Group 5: Playlists, mixes, channels (9)
   cache -> synchronous refetch.
 - [ ] yt-mix-radio-playlist [E2E + JVM, live/hermetic]: RD mix via /next,
   MixContinuation paging, seenVideoIds dedupe, empty page ends mix.
-- [ ] yt-channel-artist-page [E2E + JVM, live/hermetic]: getChannelVideos WEB
-  browse, paginated via ChannelPageToken (fixture channel_web_videos.json).
+- [x] yt-channel-artist-page [E2E + JVM, live/hermetic]: getChannelVideos WEB
+  browse, paginated via ChannelPageToken (fixture channel_web_videos.json +
+  lockupViewModel hermetic + live Veritasium).
 - [ ] yt-channel-album-unsupported [JVM, hermetic]: UnsupportedSourceOperation
   (youtube, ALBUM) -> graceful error, no crash.
-- [ ] yt-playlist-olak-album-as-playlist [JVM + E2E, hermetic/live]: OLAK5uy_
-  album playlist routes as PLAYLIST, opens and plays.
+- [x] yt-playlist-olak-album-as-playlist [JVM + E2E, hermetic/live]: OLAK5uy_
+  album playlist routes as PLAYLIST, opens and plays
+  (YouTubeRepositoryMprebAlbumTest + LiveProviderMetadataIntegrityTest).
+- [x] yt-playlist-lockup-rows [JVM, hermetic + live]: modern playlist browse
+  uses lockupViewModel (+ continuationItemViewModel) with title/cover/tracks.
+- [x] yt-channel-lockup-rows [JVM, hermetic + live]: Videos tab richItem wraps
+  lockupViewModel; avatar + track art preserved.
+- [x] yt-play-album-lookup-crossover [JVM, live]: song -> YTM /next MPREb ->
+  OLAK playlist with title/cover/tracks.
 
 Group 6: Downloads (11)
 - [ ] yt-download-manual [E2E, live]: download -> getDownloadableStream, file

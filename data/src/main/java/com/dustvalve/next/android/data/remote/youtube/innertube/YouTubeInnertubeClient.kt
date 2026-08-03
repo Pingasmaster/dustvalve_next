@@ -26,7 +26,9 @@ import javax.inject.Singleton
  *   /search              -> WEB_NO_AUTH
  *   /browse (channel)    -> WEB_NO_AUTH (richGridRenderer w/ videoRenderer)
  *   /browse (playlist)   -> MWEB_NO_AUTH on m.youtube.com
- *                           (only public client still emitting playlistVideoListRenderer)
+ *                           (lockupViewModel playlist rows; legacy
+ *                           playlistVideoListRenderer still accepted by
+ *                           the playlist parser)
  *   /next                -> MWEB_NO_AUTH on m.youtube.com
  *                           (videoWithContextRenderer; WEB now returns lockupViewModel)
  *   /browse (continuation) -> same client as the originating browse:
@@ -132,8 +134,9 @@ open class YouTubeInnertubeClient @Inject constructor(
 
     /**
      * Generic browse. For browseIds beginning with "VL" (playlist browse),
-     * routes via MWEB on m.youtube.com so we get playlistVideoListRenderer
-     * instead of the WEB-only lockupViewModel. All other browseIds use WEB.
+     * routes via MWEB on m.youtube.com so the response matches the playlist
+     * parser's expected single-column sectionList shape. All other browseIds
+     * use WEB.
      */
     suspend fun browse(browseId: String, params: String? = null): JsonElement {
         val client = if (browseId.startsWith("VL")) {

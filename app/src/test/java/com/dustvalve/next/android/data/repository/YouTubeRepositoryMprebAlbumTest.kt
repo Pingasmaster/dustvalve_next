@@ -158,6 +158,55 @@ class YouTubeRepositoryMprebAlbumTest {
         coVerify { videoCache.insertAllIgnore(any()) }
     }
 
+    @Test fun `MPREb album resolves via playlistId OLAK when audioPlaylistId is absent`() = runTest {
+        // Current WEB_REMIX album pages omit audioPlaylistId and only emit
+        // playlistId=OLAK5uy_... on the album shelf / header buttons.
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"contents":{"twoColumnBrowseResultsRenderer":{"secondaryContents":{
+                  "sectionListRenderer":{"contents":[{
+                    "musicShelfRenderer":{"contents":[{
+                      "musicResponsiveListItemRenderer":{
+                        "playlistItemData":{"playlistId":"OLAK5uy_fromPlaylistId"}
+                      }
+                    }]}
+                  }]}
+                }}}}
+                """.trimIndent(),
+            ),
+        )
+        server.enqueue(
+            MockResponse().setBody(
+                """
+                {"header":{"playlistHeaderRenderer":{"title":{"runs":[{"text":"Album Via PlaylistId"}]},
+                  "playlistHeaderBanner":{"heroPlaylistThumbnailRenderer":{"thumbnail":{"thumbnails":[
+                    {"url":"https://i9.ytimg.com/s_p/OLAK5uy_fromPlaylistId/maxresdefault.jpg","width":1200}
+                  ]}}}}},
+                 "contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
+                   "sectionListRenderer":{"contents":[{"itemSectionRenderer":{"contents":[
+                     {"lockupViewModel":{
+                       "contentId":"vidolak00001",
+                       "contentType":"LOCKUP_CONTENT_TYPE_VIDEO",
+                       "contentImage":{"thumbnailViewModel":{"image":{"sources":[
+                         {"url":"https://i.ytimg.com/vi/vidolak00001/hqdefault.jpg","width":480}
+                       ]}}},
+                       "metadata":{"lockupMetadataViewModel":{"title":{"content":"Song One"}}}
+                     }}
+                   ]}}]}
+                 }}}]}}}
+                """.trimIndent(),
+            ),
+        )
+
+        val result = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=MPREb_albumBrowse3")
+        assertThat(result.title).isEqualTo("Album Via PlaylistId")
+        assertThat(result.coverUrl).contains("OLAK5uy_fromPlaylistId")
+        assertThat(result.tracks.map { it.id }).containsExactly("yt_vidolak00001")
+        assertThat(server.takeRequest().body.readUtf8()).contains("MPREb_albumBrowse3")
+        assertThat(server.takeRequest().body.readUtf8()).contains("VLOLAK5uy_fromPlaylistId")
+    }
+
     @Test fun `album browse without an audioPlaylistId fails with a descriptive error`() = runTest {
         server.enqueue(MockResponse().setBody("""{"contents":{}}"""))
 

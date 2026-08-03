@@ -118,6 +118,53 @@ class YouTubeChannelParserTest {
         assertThat(page.tracks.first().title).isEqualTo("From Selected Tab")
     }
 
+    @Test fun `parses richItem lockupViewModel video rows`() {
+        // Catalog: yt-channel-lockup-rows. Videos tab richItemRenderer now
+        // wraps lockupViewModel instead of videoRenderer.
+        val root = json.parseToJsonElement(
+            """
+            {
+              "header": {"pageHeaderRenderer": {"pageTitle": "Lockup Channel"}},
+              "contents": {"twoColumnBrowseResultsRenderer": {"tabs": [{
+                "tabRenderer": {"selected": true, "content": {"richGridRenderer": {"contents": [
+                  {"richItemRenderer": {"content": {"lockupViewModel": {
+                    "contentId": "chanvid0001",
+                    "contentType": "LOCKUP_CONTENT_TYPE_VIDEO",
+                    "contentImage": {
+                      "thumbnailViewModel": {
+                        "image": {"sources": [
+                          {"url":"https://i.ytimg.com/vi/chanvid0001/hqdefault.jpg","width":480,"height":360}
+                        ]},
+                        "overlays": [{"thumbnailBottomOverlayViewModel": {
+                          "badges": [{"thumbnailBadgeViewModel": {"text": "12:34"}}]
+                        }}]
+                      }
+                    },
+                    "metadata": {"lockupMetadataViewModel": {
+                      "title": {"content": "Channel Lockup Video"}
+                    }}
+                  }}}},
+                  {"continuationItemRenderer": {"continuationEndpoint": {
+                    "continuationCommand": {"token": "CHAN_LOCKUP_CONT"}
+                  }}}
+                ]}}}
+              }]}}
+            }
+            """.trimIndent(),
+        )
+        val page = parser.parse(root, "UClockupchannel01")
+        assertThat(page.channelName).isEqualTo("Lockup Channel")
+        assertThat(page.tracks).hasSize(1)
+        with(page.tracks.first()) {
+            assertThat(id).isEqualTo("yt_chanvid0001")
+            assertThat(title).isEqualTo("Channel Lockup Video")
+            assertThat(artist).isEqualTo("Lockup Channel")
+            assertThat(duration).isEqualTo(754f)
+            assertThat(artUrl).contains("hq720")
+        }
+        assertThat(page.continuation).isEqualTo("CHAN_LOCKUP_CONT")
+    }
+
     @Test fun `empty channel returns empty page`() {
         val empty = json.parseToJsonElement("""{"contents":{}}""")
         val page = parser.parse(empty, "UC")

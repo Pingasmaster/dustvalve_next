@@ -8,8 +8,8 @@ import javax.inject.Singleton
 
 /**
  * Parses /browse?browseId=<channelId>&params=<videosTab> responses (WEB
- * client). The Videos tab uses richGridRenderer wrapping richItemRenderer,
- * each containing a videoRenderer.
+ * client). The Videos tab uses richGridRenderer wrapping richItemRenderer;
+ * each item is either a legacy videoRenderer or a modern lockupViewModel.
  */
 @Singleton
 class YouTubeChannelParser @Inject constructor() {
@@ -19,7 +19,7 @@ class YouTubeChannelParser @Inject constructor() {
     fun parse(root: JsonElement, channelId: String): ChannelPage {
         val channelName = extractChannelName(root)
         val avatarUrl = extractAvatarUrl(root)
-        val (gridContents, fromContinuation) = extractGridContents(root) to false
+        val gridContents = extractGridContents(root)
 
         val tracks = mutableListOf<Track>()
         var continuation: String? = null
@@ -27,16 +27,10 @@ class YouTubeChannelParser @Inject constructor() {
         for (entry in gridContents.orEmpty()) {
             val ric = entry.path("richItemRenderer")
             if (ric != null) {
-                val vr = ric.path("content")?.path("videoRenderer")
-                if (vr != null) {
-                    parseVideo(vr, channelId, channelName, tracks.size + 1)?.let { tracks += it }
-                }
+                parseRichItem(ric, channelId, channelName, tracks.size + 1)?.let { tracks += it }
                 continue
             }
-            entry.path("continuationItemRenderer")
-                ?.path("continuationEndpoint")?.path("continuationCommand")
-                ?.str("token")
-                ?.let { continuation = it }
+            entry.extractContinuationToken()?.let { continuation = it }
         }
         return ChannelPage(tracks, channelName, continuation, avatarUrl)
     }
@@ -53,16 +47,10 @@ class YouTubeChannelParser @Inject constructor() {
             for (entry in items) {
                 val ric = entry.path("richItemRenderer")
                 if (ric != null) {
-                    val vr = ric.path("content")?.path("videoRenderer")
-                    if (vr != null) {
-                        parseVideo(vr, channelId, channelName, startIndex + tracks.size)?.let { tracks += it }
-                    }
+                    parseRichItem(ric, channelId, channelName, startIndex + tracks.size)?.let { tracks += it }
                     continue
                 }
-                entry.path("continuationItemRenderer")
-                    ?.path("continuationEndpoint")?.path("continuationCommand")
-                    ?.str("token")
-                    ?.let { continuation = it }
+                entry.extractContinuationToken()?.let { continuation = it }
             }
         }
         return ChannelPage(tracks, channelName, continuation)
@@ -134,6 +122,16 @@ class YouTubeChannelParser @Inject constructor() {
             ?.path("contents")?.arr()
     }
 
+    private fun parseRichItem(ric: JsonElement, channelId: String, channelName: String?, trackNumber: Int): Track? {
+        ric.path("content")?.path("videoRenderer")?.let {
+            return parseVideo(it, channelId, channelName, trackNumber)
+        }
+        ric.path("content")?.path("lockupViewModel")?.let {
+            return parseLockupItem(it, channelId, channelName, trackNumber)
+        }
+        return null
+    }
+
     private fun parseVideo(vr: JsonElement, channelId: String, channelName: String?, trackNumber: Int): Track? {
         val videoId = vr.str("videoId") ?: return null
         val title = vr.runsText("title") ?: return null
@@ -141,7 +139,7 @@ class YouTubeChannelParser @Inject constructor() {
         val art = vr.extractThumbnail() ?: ""
         // YT WEB videoRenderer omits lengthSeconds; we have lengthText like "4:56".
         val lengthSec = vr.runsText("lengthText")
-            ?.let { parseLengthText(it) }
+            ?.let { parseDurationText(it) }
             ?: 0f
         return Track(
             id = "yt_$videoId",
@@ -158,12 +156,20 @@ class YouTubeChannelParser @Inject constructor() {
         )
     }
 
-    /** Parses "h:mm:ss" / "m:ss" / "ss" length text into total seconds. */
-    private fun parseLengthText(text: String): Float {
-        val parts = text.split(":").mapNotNull { it.toIntOrNull() }
-        if (parts.isEmpty()) return 0f
-        var total = 0
-        for (p in parts) total = total * 60 + p
-        return total.toFloat()
+    private fun parseLockupItem(lvm: JsonElement, channelId: String, channelName: String?, trackNumber: Int): Track? {
+        val lockup = lvm.parseLockupVideo() ?: return null
+        return Track(
+            id = "yt_${lockup.videoId}",
+            albumId = "yt_channel_$channelId",
+            title = lockup.title,
+            artist = channelName ?: lockup.artist,
+            artistUrl = "https://www.youtube.com/channel/$channelId",
+            trackNumber = trackNumber,
+            duration = lockup.durationSec,
+            streamUrl = "https://www.youtube.com/watch?v=${lockup.videoId}",
+            artUrl = lockup.artUrl,
+            albumTitle = "",
+            source = TrackSource.YOUTUBE,
+        )
     }
 }

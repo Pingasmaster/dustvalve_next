@@ -8,9 +8,9 @@ import javax.inject.Singleton
 
 /**
  * Parses /browse?browseId=VL<playlistId> responses (MWEB client). Walks
- * the playlistVideoListRenderer for items and surfaces the playlist title
- * from the page header. The continuation token is returned as the
- * [PlaylistPage.continuation] field.
+ * playlist rows in either the modern lockupViewModel shape or the legacy
+ * playlistVideoListRenderer / playlistVideoRenderer shape, and surfaces
+ * the playlist title + cover from the page header.
  *
  * Also parses /next responses for YouTube Mixes (auto-generated radio
  * playlists whose IDs start with `RD`). Mixes live under the watch-next
@@ -38,6 +38,17 @@ class YouTubePlaylistParser @Inject constructor() {
         for (section in sectionContents) {
             val isr = section.path("itemSectionRenderer") ?: continue
             for (item in isr.path("contents")?.arr().orEmpty()) {
+                // Modern MWEB/WEB: lockupViewModel rows live directly under
+                // itemSectionRenderer.contents (no playlistVideoListRenderer).
+                val lockup = item.path("lockupViewModel")
+                if (lockup != null) {
+                    parseLockupItem(lockup, playlistId, tracks.size + 1)?.let { tracks += it }
+                    continue
+                }
+
+                item.extractContinuationToken()?.let { continuation = it }
+
+                // Legacy: playlistVideoListRenderer wrapping playlistVideoRenderer.
                 val pvlr = item.path("playlistVideoListRenderer") ?: continue
                 for (entry in pvlr.path("contents")?.arr().orEmpty()) {
                     val pvr = entry.path("playlistVideoRenderer")
@@ -45,11 +56,7 @@ class YouTubePlaylistParser @Inject constructor() {
                         parseItem(pvr, playlistId, tracks.size + 1)?.let { tracks += it }
                         continue
                     }
-                    // Continuation row at the entry level
-                    entry.path("continuationItemRenderer")
-                        ?.path("continuationEndpoint")?.path("continuationCommand")
-                        ?.str("token")
-                        ?.let { continuation = it }
+                    entry.extractContinuationToken()?.let { continuation = it }
                 }
             }
         }
@@ -67,15 +74,17 @@ class YouTubePlaylistParser @Inject constructor() {
             val appended = action.path("appendContinuationItemsAction")
                 ?.path("continuationItems")?.arr().orEmpty()
             for (entry in appended) {
+                val lockup = entry.path("lockupViewModel")
+                if (lockup != null) {
+                    parseLockupItem(lockup, playlistId, startIndex + tracks.size)?.let { tracks += it }
+                    continue
+                }
                 val pvr = entry.path("playlistVideoRenderer")
                 if (pvr != null) {
                     parseItem(pvr, playlistId, startIndex + tracks.size)?.let { tracks += it }
                     continue
                 }
-                entry.path("continuationItemRenderer")
-                    ?.path("continuationEndpoint")?.path("continuationCommand")
-                    ?.str("token")
-                    ?.let { continuation = it }
+                entry.extractContinuationToken()?.let { continuation = it }
             }
         }
         return PlaylistPage(tracks, null, continuation)
@@ -85,6 +94,13 @@ class YouTubePlaylistParser @Inject constructor() {
         val header = root.path("header") ?: return null
         return header.path("playlistHeaderRenderer")?.runsText("title")
             ?: header.path("pageHeaderRenderer")?.str("pageTitle")
+            ?: header.path("pageHeaderRenderer")
+                ?.path("content")
+                ?.path("pageHeaderViewModel")
+                ?.path("title")
+                ?.path("dynamicTextViewModel")
+                ?.path("text")
+                ?.str("content")
             ?: header.path("musicDetailHeaderRenderer")?.runsText("title")
     }
 
@@ -156,6 +172,27 @@ class YouTubePlaylistParser @Inject constructor() {
             duration = durationSec,
             streamUrl = "https://www.youtube.com/watch?v=$videoId",
             artUrl = art,
+            albumTitle = "",
+            source = TrackSource.YOUTUBE,
+        )
+    }
+
+    private fun parseLockupItem(lvm: JsonElement, playlistId: String, trackNumber: Int): Track? {
+        val lockup = lvm.parseLockupVideo() ?: return null
+        val artistUrl = lockup.artistChannelId
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "https://www.youtube.com/channel/$it" }
+            .orEmpty()
+        return Track(
+            id = "yt_${lockup.videoId}",
+            albumId = "yt_playlist_$playlistId",
+            title = lockup.title,
+            artist = lockup.artist,
+            artistUrl = artistUrl,
+            trackNumber = trackNumber,
+            duration = lockup.durationSec,
+            streamUrl = "https://www.youtube.com/watch?v=${lockup.videoId}",
+            artUrl = lockup.artUrl,
             albumTitle = "",
             source = TrackSource.YOUTUBE,
         )

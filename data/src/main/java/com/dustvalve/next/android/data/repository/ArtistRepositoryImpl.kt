@@ -159,9 +159,10 @@ class ArtistRepositoryImpl @Inject constructor(
             }
         }
         val scrapedAlbumIds = artist.albums.map { it.id }
+        val cachedImageUrl = cachedArtist?.imageUrl
         val contentChanged = storedAlbumIds == null ||
             storedAlbumIds != scrapedAlbumIds ||
-            cachedArtist?.imageUrl != artist.imageUrl
+            cachedImageUrl != artist.imageUrl
 
         // Always upsert the artist row so imageUrl heals even when the
         // discography ID list is unchanged; fill blank album art without
