@@ -195,6 +195,8 @@ class LiveProviderMetadataIntegrityTest {
             playlistCache = playlistCache,
             youTubeMusicRepository = ytmRepo,
             albumResolver = albumResolver,
+            ytmClient = ytmClient,
+            ytmArtistParser = com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicArtistParser(),
             ioDispatcher = io,
         )
         val result: YouTubePlaylistResult = repo.getPlaylistTracks(
@@ -303,6 +305,8 @@ class LiveProviderMetadataIntegrityTest {
             playlistCache = playlistCache,
             youTubeMusicRepository = ytmRepo,
             albumResolver = albumResolver,
+            ytmClient = ytmClient,
+            ytmArtistParser = com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicArtistParser(),
             ioDispatcher = io,
         )
         // Stable public videos across age / channel types. Avoid region-locked
@@ -369,25 +373,47 @@ class LiveProviderMetadataIntegrityTest {
 
     @Test fun `live YTM artist Topic channel still yields avatar metadata`() = runTest {
         // Topic channels (common for YTM artists) often expose only a Home
-        // tab of album lockups - no Videos richGrid. Avatar + name must still
-        // populate ArtistDetail even when the track feed is empty.
+        // tab on WEB. Repository fallback uses YTM artist browse (Top songs +
+        // albums) or the linked official USER_CHANNEL Videos tab.
         val search = ytmClient.search(query = "Radiohead", params = ARTISTS_PARAMS)
         val artistIds = collectBrowseIds(search, pageTypeContains = "ARTIST").take(3)
         assumeTrue("YTM artist search returned no results", artistIds.isNotEmpty())
+        val videoCache = mockk<com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao>(relaxed = true)
+        val playlistCache = mockk<com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao>(relaxed = true)
+        coEvery { videoCache.getById(any()) } returns null
+        coEvery { videoCache.getByIds(any()) } returns emptyList()
+        coEvery { playlistCache.getById(any()) } returns null
+        val ytmRepo = mockk<com.dustvalve.next.android.domain.repository.YouTubeMusicRepository>(relaxed = true)
+        coEvery { ytmRepo.lookupAlbumPlaylistForVideo(any()) } returns null
+        val repo = YouTubeRepositoryImpl(
+            client = ytClient,
+            playerParser = com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser(),
+            searchParser = com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser(),
+            playlistParser = playlistParser,
+            channelParser = channelParser,
+            nextParser = com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeNextParser(),
+            videoCache = videoCache,
+            playlistCache = playlistCache,
+            youTubeMusicRepository = ytmRepo,
+            albumResolver = albumResolver,
+            ytmClient = ytmClient,
+            ytmArtistParser = com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicArtistParser(),
+            ioDispatcher = io,
+        )
         val failures = mutableListOf<String>()
         for (channelId in artistIds) {
-            val page = channelParser.parse(
-                ytClient.browse(channelId, params = VIDEOS_TAB_PARAMS),
-                channelId,
-            )
+            val page = repo.getChannelVideos("https://www.youtube.com/channel/$channelId")
             val problems = mutableListOf<String>()
             if (page.channelName.isNullOrBlank()) problems += "blank name"
             if (page.avatarUrl.isNullOrBlank()) problems += "blank avatar"
-            // Tracks may legitimately be empty on Topic-only channels.
+            if (page.tracks.isEmpty() && page.albums.isEmpty()) {
+                problems += "no songs and no albums"
+            }
             if (problems.isNotEmpty()) failures += "$channelId -> ${problems.joinToString()}"
             println(
                 "[LIVE] ytm-artist $channelId name='${page.channelName}' " +
-                    "avatar=${page.avatarUrl != null} tracks=${page.tracks.size}",
+                    "avatar=${page.avatarUrl != null} tracks=${page.tracks.size} " +
+                    "albums=${page.albums.size}",
             )
         }
         assertThat(failures).isEmpty()

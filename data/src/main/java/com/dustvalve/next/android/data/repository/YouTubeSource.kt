@@ -41,10 +41,8 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
     }
 
     /**
-     * Returns an Artist with metadata only; YT channel browse does not give
-     * us albums, so `albums` is empty. Callers pull the flat track feed via
-     * [getArtistTracks]. Avatar comes from the channel page header when
-     * present (search hints still win in the detail VM when non-null).
+     * Channel metadata plus optional YTM album tiles (Topic fallback). Flat
+     * tracks come from [getArtistTracks].
      */
     override suspend fun getArtist(url: String): Artist {
         val page = youtubeRepository.getChannelVideos(url, page = null)
@@ -55,7 +53,20 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
             imageUrl = page.avatarUrl,
             bio = null,
             location = null,
-            albums = emptyList(),
+            albums = page.albums.map { album ->
+                Album(
+                    id = album.browseId,
+                    url = "https://www.youtube.com/playlist?list=${album.browseId}",
+                    title = album.title,
+                    artist = page.channelName.orEmpty(),
+                    artistUrl = url,
+                    artUrl = album.artUrl,
+                    releaseDate = album.year,
+                    about = null,
+                    tracks = emptyList(),
+                    tags = emptyList(),
+                )
+            },
         )
     }
 

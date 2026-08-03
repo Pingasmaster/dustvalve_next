@@ -11,6 +11,8 @@ import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerPar
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicArtistParser
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
@@ -38,6 +40,8 @@ class YouTubeRepositoryImplTest {
     private lateinit var channelParser: YouTubeChannelParser
     private lateinit var nextParser: YouTubeNextParser
     private lateinit var albumResolver: YouTubeMusicAlbumResolver
+    private lateinit var ytmClient: YouTubeMusicInnertubeClient
+    private lateinit var ytmArtistParser: YouTubeMusicArtistParser
     private lateinit var playlistCacheMock: com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
     private lateinit var repo: YouTubeRepositoryImpl
 
@@ -51,6 +55,8 @@ class YouTubeRepositoryImplTest {
         channelParser = mockk()
         nextParser = mockk()
         albumResolver = mockk()
+        ytmClient = mockk()
+        ytmArtistParser = mockk()
         // Cache DAOs explicitly return null on lookup so the existing tests
         // (which assert the network/parser path) hit the cache-miss branch.
         val videoCacheMock = mockk<com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao>(relaxed = true)
@@ -66,6 +72,8 @@ class YouTubeRepositoryImplTest {
             playlistCache = playlistCacheMock,
             youTubeMusicRepository = ytmRepoMock,
             albumResolver = albumResolver,
+            ytmClient = ytmClient,
+            ytmArtistParser = ytmArtistParser,
             ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
@@ -264,6 +272,74 @@ class YouTubeRepositoryImplTest {
         assertThat(tracks2).hasSize(1)
         assertThat(name2).isEqualTo("C")
         assertThat(page2).isNull()
+    }
+
+    @Test fun `getChannelVideos falls back to YTM artist page when Videos tab is empty`() = runTest {
+        val topicId = "UCcccccccccccccccccccccc"
+        coEvery { client.browse(topicId, any()) } returns empty
+        every { channelParser.parse(empty, topicId) } returns YouTubeChannelParser.ChannelPage(
+            tracks = emptyList(),
+            channelName = "Radiohead - Topic",
+            continuation = null,
+            avatarUrl = "https://img/topic",
+        )
+        coEvery { ytmClient.browse(topicId) } returns empty
+        every { ytmArtistParser.parse(empty, topicId) } returns YouTubeMusicArtistParser.ArtistPage(
+            name = "Radiohead",
+            avatarUrl = "https://img/ytm",
+            songs = listOf(track("topsong0001")),
+            albums = listOf(
+                YouTubeMusicArtistParser.ArtistAlbum(
+                    browseId = "MPREb_album0001",
+                    title = "OK Computer",
+                    artUrl = "https://img/ok",
+                    year = "1997",
+                ),
+            ),
+            linkedChannelId = "UCdddddddddddddddddddddd",
+        )
+
+        val result = repo.getChannelVideos("https://www.youtube.com/channel/$topicId")
+        assertThat(result.channelName).isEqualTo("Radiohead")
+        assertThat(result.avatarUrl).isEqualTo("https://img/ytm")
+        assertThat(result.tracks.map { it.id }).containsExactly("yt_topsong0001")
+        assertThat(result.albums).hasSize(1)
+        assertThat(result.albums.first().browseId).isEqualTo("MPREb_album0001")
+        assertThat(result.nextPage).isNull()
+        coVerify(exactly = 0) { client.browse("UCdddddddddddddddddddddd", any()) }
+    }
+
+    @Test fun `getChannelVideos follows linked official channel when YTM has no songs`() = runTest {
+        val topicId = "UCeeeeeeeeeeeeeeeeeeeeee"
+        val linkedId = "UCffffffffffffffffffffff"
+        coEvery { client.browse(topicId, any()) } returns empty
+        every { channelParser.parse(empty, topicId) } returns YouTubeChannelParser.ChannelPage(
+            tracks = emptyList(),
+            channelName = "Artist - Topic",
+            continuation = null,
+            avatarUrl = "https://img/topic",
+        )
+        coEvery { ytmClient.browse(topicId) } returns empty
+        every { ytmArtistParser.parse(empty, topicId) } returns YouTubeMusicArtistParser.ArtistPage(
+            name = "Artist",
+            avatarUrl = "https://img/ytm",
+            songs = emptyList(),
+            albums = emptyList(),
+            linkedChannelId = linkedId,
+        )
+        coEvery { client.browse(linkedId, any()) } returns empty
+        every { channelParser.parse(empty, linkedId) } returns YouTubeChannelParser.ChannelPage(
+            tracks = listOf(track("official001")),
+            channelName = "Artist",
+            continuation = "LINK_C1",
+            avatarUrl = "https://img/official",
+        )
+
+        val result = repo.getChannelVideos("https://www.youtube.com/channel/$topicId")
+        assertThat(result.tracks.map { it.id }).containsExactly("yt_official001")
+        assertThat(result.channelName).isEqualTo("Artist - Topic")
+        assertThat(result.avatarUrl).isEqualTo("https://img/topic")
+        assertThat(result.nextPage).isNotNull()
     }
 
     @Test fun `search filters track results when filter is songs`() = runTest {

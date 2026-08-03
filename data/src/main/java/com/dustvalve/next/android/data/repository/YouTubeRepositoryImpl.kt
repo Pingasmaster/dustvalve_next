@@ -12,6 +12,8 @@ import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerPar
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicArtistParser
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.AudioFormat
@@ -19,6 +21,7 @@ import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.repository.YouTubeArtistAlbum
 import com.dustvalve.next.android.domain.repository.YouTubeChannelResult
 import com.dustvalve.next.android.domain.repository.YouTubePlaylistResult
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
@@ -51,12 +54,20 @@ class YouTubeRepositoryImpl @Inject constructor(
     private val playlistCache: YouTubePlaylistCacheDao,
     private val youTubeMusicRepository: com.dustvalve.next.android.domain.repository.YouTubeMusicRepository,
     private val albumResolver: YouTubeMusicAlbumResolver,
+    private val ytmClient: YouTubeMusicInnertubeClient,
+    private val ytmArtistParser: YouTubeMusicArtistParser,
     @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) : YouTubeRepository {
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val json = Json { ignoreUnknownKeys = true }
     private val stringListSerializer = ListSerializer(String.serializer())
+
+    /**
+     * Dedupes the ArtistDetail double-call (`getArtist` then
+     * `getArtistTracks`) so Topic fallback only hits the network once.
+     */
+    @Volatile private var lastChannelPage: Pair<String, YouTubeChannelResult>? = null
 
     private companion object {
         // Playlists may grow over time (uploader appends videos), so we
@@ -360,32 +371,95 @@ class YouTubeRepositoryImpl @Inject constructor(
             ?: throw IllegalArgumentException("Cannot extract channelId from $channelUrl")
         val token = page as? ChannelPageToken
         return if (token == null) {
-            val response = client.browse(channelId, params = VIDEOS_TAB_PARAMS)
-            val parsed = channelParser.parse(response, channelId)
-            YouTubeChannelResult(
-                tracks = parsed.tracks,
-                channelName = parsed.channelName,
-                nextPage = parsed.continuation?.let {
-                    ChannelPageToken(channelId, parsed.channelName, parsed.tracks.size, it, parsed.avatarUrl)
-                },
-                avatarUrl = parsed.avatarUrl,
-            )
+            lastChannelPage?.let { (cachedId, cached) ->
+                if (cachedId == channelId) return cached
+            }
+            val result = resolveChannelFirstPage(channelId)
+            lastChannelPage = channelId to result
+            result
         } else {
             // Channel browse runs on WEB; the continuation must too, or the
             // response comes back MWEB-shaped and parses to zero tracks
             // (silently truncating every channel to page 1).
             val response = client.browseContinuation(token.continuation, YouTubeClient.WEB_NO_AUTH)
-            val parsed = channelParser.parseContinuation(response, channelId, token.channelName, token.totalSoFar + 1)
+            val parsed = channelParser.parseContinuation(response, token.channelId, token.channelName, token.totalSoFar + 1)
             val newTotal = token.totalSoFar + parsed.tracks.size
             YouTubeChannelResult(
                 tracks = parsed.tracks,
                 channelName = token.channelName,
                 nextPage = parsed.continuation?.let {
-                    ChannelPageToken(channelId, token.channelName, newTotal, it, token.avatarUrl)
+                    ChannelPageToken(token.channelId, token.channelName, newTotal, it, token.avatarUrl)
                 },
                 avatarUrl = token.avatarUrl,
+                albums = emptyList(),
             )
         }
+    }
+
+    /**
+     * Videos tab first. When empty (Topic / music-only channels), fall back
+     * to YTM artist browse for Top songs + album shelves; if that still has
+     * no songs, follow the linked official USER_CHANNEL Videos tab.
+     */
+    private suspend fun resolveChannelFirstPage(channelId: String): YouTubeChannelResult {
+        val videosResponse = client.browse(channelId, params = VIDEOS_TAB_PARAMS)
+        val videos = channelParser.parse(videosResponse, channelId)
+        if (videos.tracks.isNotEmpty()) {
+            return YouTubeChannelResult(
+                tracks = videos.tracks,
+                channelName = videos.channelName,
+                nextPage = videos.continuation?.let {
+                    ChannelPageToken(channelId, videos.channelName, videos.tracks.size, it, videos.avatarUrl)
+                },
+                avatarUrl = videos.avatarUrl,
+            )
+        }
+
+        val ytmPage = runCatching {
+            ytmArtistParser.parse(ytmClient.browse(channelId), channelId)
+        }.getOrNull()
+
+        if (ytmPage != null && (ytmPage.songs.isNotEmpty() || ytmPage.albums.isNotEmpty())) {
+            return YouTubeChannelResult(
+                tracks = ytmPage.songs,
+                channelName = ytmPage.name ?: videos.channelName,
+                nextPage = null,
+                avatarUrl = ytmPage.avatarUrl ?: videos.avatarUrl,
+                albums = ytmPage.albums.map {
+                    YouTubeArtistAlbum(
+                        browseId = it.browseId,
+                        title = it.title,
+                        artUrl = it.artUrl,
+                        year = it.year,
+                    )
+                },
+            )
+        }
+
+        val linkedId = ytmPage?.linkedChannelId
+        if (ytmPage != null && !linkedId.isNullOrBlank() && linkedId != channelId) {
+            val linkedResponse = client.browse(linkedId, params = VIDEOS_TAB_PARAMS)
+            val linked = channelParser.parse(linkedResponse, linkedId)
+            if (linked.tracks.isNotEmpty()) {
+                return YouTubeChannelResult(
+                    tracks = linked.tracks,
+                    channelName = videos.channelName ?: linked.channelName ?: ytmPage.name,
+                    nextPage = linked.continuation?.let {
+                        ChannelPageToken(linkedId, linked.channelName, linked.tracks.size, it, linked.avatarUrl)
+                    },
+                    avatarUrl = videos.avatarUrl ?: ytmPage.avatarUrl ?: linked.avatarUrl,
+                    albums = emptyList(),
+                )
+            }
+        }
+
+        return YouTubeChannelResult(
+            tracks = emptyList(),
+            channelName = videos.channelName ?: ytmPage?.name,
+            nextPage = null,
+            avatarUrl = videos.avatarUrl ?: ytmPage?.avatarUrl,
+            albums = emptyList(),
+        )
     }
 
     /** Opaque page token for getChannelVideos pagination. */

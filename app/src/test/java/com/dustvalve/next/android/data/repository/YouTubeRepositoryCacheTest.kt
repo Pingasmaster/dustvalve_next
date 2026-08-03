@@ -69,6 +69,8 @@ class YouTubeRepositoryCacheTest {
         repo = YouTubeRepositoryImpl(
             client, playerParser, searchParser, playlistParser, channelParser, nextParser,
             videoCache, playlistCache, ytmRepo, albumResolver,
+            ytmClient = mockk(relaxed = true),
+            ytmArtistParser = mockk(relaxed = true),
             ioDispatcher = UnconfinedTestDispatcher(),
         )
     }

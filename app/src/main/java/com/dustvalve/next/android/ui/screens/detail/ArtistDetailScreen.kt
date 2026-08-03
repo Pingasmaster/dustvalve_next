@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -237,8 +239,14 @@ fun ArtistDetailScreen(
             }
 
             artist != null -> {
-                val renderFlatTracks = artist.albums.isEmpty() &&
-                    (state.tracks.isNotEmpty() || state.hasMore || sourceId != "bandcamp")
+                // YouTube Topic / YTM fallback may populate both Top songs and
+                // album tiles. Prefer the flat track feed when songs exist so
+                // Play All works; album chips still render above the list.
+                val renderFlatTracks = (sourceId == "youtube" && state.tracks.isNotEmpty()) ||
+                    (
+                        artist.albums.isEmpty() &&
+                            (state.tracks.isNotEmpty() || state.hasMore || sourceId != "bandcamp")
+                        )
                 if (renderFlatTracks) {
                     FlatTracksLayout(
                         state = state,
@@ -260,6 +268,7 @@ fun ArtistDetailScreen(
                         },
                         onLoadMore = viewModel::loadMore,
                         onTrackClick = { idx -> playerViewModel.playAlbum(state.tracks, idx) },
+                        onAlbumClick = onAlbumClick,
                     )
                 } else {
                     AlbumGridLayout(
@@ -388,6 +397,7 @@ private fun FlatTracksLayout(
     onDownload: () -> Unit,
     onLoadMore: () -> Unit,
     onTrackClick: (Int) -> Unit,
+    onAlbumClick: (String) -> Unit = {},
 ) {
     val artist = state.artist ?: return
     val listState = rememberLazyListState()
@@ -445,39 +455,89 @@ private fun FlatTracksLayout(
                 ExpandableText(text = artist.bio.orEmpty(), collapsedMaxLines = 4)
             }
         }
-        if (state.tracks.isEmpty() && !state.hasMore && !state.isLoading) {
-            item(key = "empty") { EmptyState(message = stringResource(R.string.detail_no_releases)) }
-        } else {
-            val count = state.tracks.size + if (state.hasMore) 1 else 0
-            items(
-                count = state.tracks.size,
-                key = { i -> state.tracks[i].id },
-                contentType = { "artist_track" },
-            ) { index ->
-                val track = state.tracks[index]
-                SegmentedListItem(
-                    index = index,
-                    count = count,
-                    modifier = Modifier.animateItem(
-                        fadeInSpec = null,
-                        fadeOutSpec = null,
-                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    ),
+        youtubeDiscographySection(artist = artist, onAlbumClick = onAlbumClick)
+        artistTracksSection(
+            state = state,
+            onTrackClick = onTrackClick,
+        )
+    }
+}
+
+private fun LazyListScope.youtubeDiscographySection(
+    artist: com.dustvalve.next.android.domain.model.Artist,
+    onAlbumClick: (String) -> Unit,
+) {
+    if (artist.albums.isEmpty()) return
+    item(key = "discography_header") {
+        Text(
+            text = stringResource(R.string.detail_discography),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 4.dp),
+        )
+    }
+    item(key = "discography_row") {
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(items = artist.albums, key = { "album_${it.id}" }) { album ->
+                Surface(
+                    modifier = Modifier.width(140.dp),
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
                 ) {
-                    MusicRow(
-                        track = track,
-                        onClick = { onTrackClick(index) },
+                    AlbumCard(
+                        album = album,
+                        onClick = { onAlbumClick(album.url) },
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
-            if (state.hasMore || state.isLoadingMore) {
-                item(key = "loading_more") {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) { ContainedLoadingIndicator() }
-                }
-            }
+        }
+    }
+    item(key = "tracks_header") {
+        Text(
+            text = stringResource(R.string.detail_tracks_label),
+            style = MaterialTheme.typography.titleMediumEmphasized,
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 4.dp),
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun LazyListScope.artistTracksSection(state: ArtistDetailUiState, onTrackClick: (Int) -> Unit) {
+    if (state.tracks.isEmpty() && !state.hasMore && !state.isLoading) {
+        item(key = "empty") { EmptyState(message = stringResource(R.string.detail_no_releases)) }
+        return
+    }
+    val count = state.tracks.size + if (state.hasMore) 1 else 0
+    items(
+        count = state.tracks.size,
+        key = { i -> state.tracks[i].id },
+        contentType = { "artist_track" },
+    ) { index ->
+        val track = state.tracks[index]
+        SegmentedListItem(
+            index = index,
+            count = count,
+            modifier = Modifier.animateItem(
+                fadeInSpec = null,
+                fadeOutSpec = null,
+                placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+            ),
+        ) {
+            MusicRow(
+                track = track,
+                onClick = { onTrackClick(index) },
+            )
+        }
+    }
+    if (state.hasMore || state.isLoadingMore) {
+        item(key = "loading_more") {
+            Box(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                contentAlignment = Alignment.Center,
+            ) { ContainedLoadingIndicator() }
         }
     }
 }

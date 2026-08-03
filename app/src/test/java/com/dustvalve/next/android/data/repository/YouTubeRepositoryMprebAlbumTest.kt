@@ -12,6 +12,7 @@ import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistP
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeSearchParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeVisitorDataFetcher
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
+import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicArtistParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicVisitorDataFetcher
 import com.google.common.truth.Truth.assertThat
@@ -84,6 +85,8 @@ class YouTubeRepositoryMprebAlbumTest {
             playlistCache = playlistCache,
             youTubeMusicRepository = mockk(relaxed = true),
             albumResolver = YouTubeMusicAlbumResolver(ytmClient),
+            ytmClient = ytmClient,
+            ytmArtistParser = YouTubeMusicArtistParser(),
             ioDispatcher = dispatcher,
         )
     }

@@ -210,7 +210,18 @@ fun AppNavigation(
                             artistUrl = destination.url,
                             artistNameHint = destination.name,
                             artistImageHint = destination.imageUrl,
-                            onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
+                            onAlbumClick = { url ->
+                                if (destination.sourceId == "youtube") {
+                                    navViewModel.navigateTo(
+                                        NavDestination.CollectionDetail(
+                                            url = url,
+                                            sourceId = "youtube",
+                                        ),
+                                    )
+                                } else {
+                                    navViewModel.navigateTo(NavDestination.AlbumDetail(url))
+                                }
+                            },
                             onBack = { navViewModel.navigateBack() },
                             viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
                         )

@@ -188,6 +188,10 @@ Group 5: Playlists, mixes, channels (9)
 - [x] yt-channel-artist-page [E2E + JVM, live/hermetic]: getChannelVideos WEB
   browse, paginated via ChannelPageToken (fixture channel_web_videos.json +
   lockupViewModel hermetic + live Veritasium).
+- [x] yt-topic-artist-ytm-browse [JVM, hermetic + live]: empty Videos tab falls
+  back to YTM artist page (Top songs + MPREb albums) or linked
+  MUSIC_PAGE_TYPE_USER_CHANNEL Videos tab
+  (YouTubeMusicArtistParserTest + LiveProviderMetadataIntegrityTest).
 - [ ] yt-channel-album-unsupported [JVM, hermetic]: UnsupportedSourceOperation
   (youtube, ALBUM) -> graceful error, no crash.
 - [x] yt-playlist-olak-album-as-playlist [JVM + E2E, hermetic/live]: OLAK5uy_

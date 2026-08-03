@@ -62,6 +62,33 @@ class YouTubeSourceTest {
         assertThat(artist.albums).isEmpty()
     }
 
+    @Test fun `getArtist maps YTM album tiles to playlist collection URLs`() = runTest {
+        coEvery {
+            ytRepo.getChannelVideos(channelUrl = "https://www.youtube.com/channel/UCtopic", page = null)
+        } returns YouTubeChannelResult(
+            tracks = emptyList(),
+            channelName = "Radiohead",
+            nextPage = null,
+            avatarUrl = "https://img/avatar",
+            albums = listOf(
+                com.dustvalve.next.android.domain.repository.YouTubeArtistAlbum(
+                    browseId = "MPREb_okcomputer01",
+                    title = "OK Computer",
+                    artUrl = "https://img/album",
+                    year = "1997",
+                ),
+            ),
+        )
+
+        val artist = source.getArtist("https://www.youtube.com/channel/UCtopic")
+        assertThat(artist.albums).hasSize(1)
+        assertThat(artist.albums.first().id).isEqualTo("MPREb_okcomputer01")
+        assertThat(artist.albums.first().url)
+            .isEqualTo("https://www.youtube.com/playlist?list=MPREb_okcomputer01")
+        assertThat(artist.albums.first().title).isEqualTo("OK Computer")
+        assertThat(artist.albums.first().artUrl).isEqualTo("https://img/album")
+    }
+
     @Test fun `getArtistTracks passes the opaque continuation through`() = runTest {
         val token = Any() // opaque page token
         val nextToken = Any()
