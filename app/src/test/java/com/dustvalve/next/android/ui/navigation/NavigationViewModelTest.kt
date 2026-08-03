@@ -198,6 +198,12 @@ class NavigationViewModelTest {
             NavDestination.ArtistDetail("https://youtube.com/channel/UC1", "youtube", null, null),
             NavDestination.PlaylistDetail("pl|1"),
             NavDestination.CollectionDetail("https://youtube.com/playlist?list=L", "youtube", "Mix | 2024"),
+            NavDestination.CollectionDetail(
+                url = "https://youtube.com/playlist?list=L2",
+                sourceId = "youtube",
+                name = "Covered",
+                coverUrl = "https://i.ytimg.com/vi/x/hq720.jpg",
+            ),
         )
         for (dest in destinations) {
             val decoded = NavigationViewModel.decodeDestination(NavigationViewModel.encodeDestination(dest))

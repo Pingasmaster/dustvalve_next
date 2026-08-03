@@ -91,7 +91,7 @@ class CollectionDetailViewModel @Inject constructor(
         }
     }
 
-    fun load(sourceId: String, url: String, nameHint: String) {
+    fun load(sourceId: String, url: String, nameHint: String, coverHint: String? = null) {
         val key = "$sourceId|$url"
         if (loadedKey == key && _uiState.value.tracks.isNotEmpty()) return
         loadedKey = key
@@ -100,6 +100,7 @@ class CollectionDetailViewModel @Inject constructor(
                 sourceId = sourceId,
                 collectionUrl = url,
                 name = nameHint,
+                coverUrl = coverHint,
                 isLoading = true,
                 error = null,
             )
@@ -130,7 +131,9 @@ class CollectionDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         name = displayName,
-                        coverUrl = collection.coverUrl,
+                        coverUrl = collection.coverUrl
+                            ?: coverHint
+                            ?: collection.tracks.firstOrNull()?.artUrl?.takeIf { art -> art.isNotBlank() },
                         tracks = collection.tracks,
                         isLoading = false,
                         hasMore = collection.hasMore,

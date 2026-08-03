@@ -169,6 +169,24 @@ class YouTubeMusicJsonTest {
         assertThat(large.extractMusicThumbnail()).isEqualTo("https://yt3.ggpht.com/x=s0-c-k")
     }
 
+    @Test fun `extractMusicThumbnail uses thumbnail image sources fallback`() {
+        val obj = json.parseToJsonElement(
+            """
+            {
+              "thumbnail": {
+                "image": {
+                  "sources": [
+                    {"url":"https://yt3.example/img=s100","width":100,"height":100},
+                    {"url":"https://yt3.example/img=s800","width":800,"height":800}
+                  ]
+                }
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=s0")
+    }
+
     @Test fun `extractMusicThumbnail returns null when no thumbnails`() {
         val obj = json.parseToJsonElement("""{"foo":1}""")
         assertThat(obj.extractMusicThumbnail()).isNull()

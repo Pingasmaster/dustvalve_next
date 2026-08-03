@@ -145,6 +145,7 @@ private fun LibraryDetailPane(
                 sourceId = destination.sourceId,
                 collectionUrl = destination.url,
                 collectionName = destination.name,
+                collectionCoverHint = destination.coverUrl,
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
             )

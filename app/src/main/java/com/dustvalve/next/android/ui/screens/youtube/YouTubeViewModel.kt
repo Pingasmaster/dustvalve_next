@@ -642,11 +642,11 @@ class YouTubeViewModel @Inject constructor(
      */
     fun importPlaylist(playlistUrl: String, name: String): Deferred<Boolean> = viewModelScope.async {
         try {
-            val (tracks, _) = youtubeRepository.getPlaylistTracks(playlistUrl)
+            val result = youtubeRepository.getPlaylistTracks(playlistUrl)
             database.withTransaction {
-                trackDao.insertAll(tracks.map { it.toEntity() })
+                trackDao.insertAll(result.tracks.map { it.toEntity() })
                 val playlist = playlistRepository.createPlaylist(name)
-                playlistRepository.addTracksToPlaylist(playlist.id, tracks.map { it.id })
+                playlistRepository.addTracksToPlaylist(playlist.id, result.tracks.map { it.id })
             }
             favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
             true
@@ -666,5 +666,5 @@ class YouTubeViewModel @Inject constructor(
 
     suspend fun getTrackInfo(videoUrl: String): Track = youtubeRepository.getTrackInfo(videoUrl)
 
-    suspend fun resolvePlaylistTracks(playlistUrl: String): List<Track> = youtubeRepository.getPlaylistTracks(playlistUrl).first
+    suspend fun resolvePlaylistTracks(playlistUrl: String): List<Track> = youtubeRepository.getPlaylistTracks(playlistUrl).tracks
 }

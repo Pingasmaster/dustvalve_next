@@ -20,6 +20,9 @@ class YouTubePlaylistParserTest {
         )
         assertThat(page.tracks).isNotEmpty()
         assertThat(page.title).isNotNull()
+        assertThat(page.coverUrl).isNotNull()
+        assertThat(page.coverUrl!!).contains("ytimg.com")
+        assertThat(page.coverUrl!!).contains("hq720")
         // First track sanity
         with(page.tracks.first()) {
             assertThat(id).startsWith("yt_")
@@ -42,6 +45,39 @@ class YouTubePlaylistParserTest {
             playlistId = "PLKBWcWelelBCDoz6LpsUd2Qj6dCl9OmMZ",
         )
         assertThat(page.title).isEqualTo("RICK ASTLEY SONG PLAYLIST.")
+    }
+
+    @Test fun `extracts cover from OLAK playlistHeaderBanner heroPlaylistThumbnailRenderer`() {
+        // YTM album audio playlists (OLAK5uy_...) use the legacy MWEB header
+        // shape: playlistHeaderBanner.heroPlaylistThumbnailRenderer, not the
+        // pageHeaderViewModel.heroImage path used by ordinary playlists.
+        val root = json.parseToJsonElement(
+            """
+            {
+              "header": {
+                "playlistHeaderRenderer": {
+                  "title": {"runs":[{"text":"Album Title"}]},
+                  "playlistHeaderBanner": {
+                    "heroPlaylistThumbnailRenderer": {
+                      "thumbnail": {
+                        "thumbnails": [
+                          {"url":"https://i9.ytimg.com/s_p/OLAK5uy_x/mqdefault.jpg?sqp=1","width":180,"height":180},
+                          {"url":"https://i9.ytimg.com/s_p/OLAK5uy_x/maxresdefault.jpg?sqp=1","width":1200,"height":1200}
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "contents": {}
+            }
+            """.trimIndent(),
+        )
+        val page = parser.parse(root, "OLAK5uy_x")
+        assertThat(page.title).isEqualTo("Album Title")
+        assertThat(page.coverUrl).isEqualTo(
+            "https://i9.ytimg.com/s_p/OLAK5uy_x/maxresdefault.jpg?sqp=1",
+        )
     }
 
     @Test fun `parseContinuation walks appendContinuationItemsAction`() {

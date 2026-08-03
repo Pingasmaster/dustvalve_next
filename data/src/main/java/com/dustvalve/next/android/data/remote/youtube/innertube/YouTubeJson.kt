@@ -63,6 +63,20 @@ internal fun JsonElement.extractThumbnail(): String? {
 }
 
 /**
+ * Page-header "image.sources" arrays (channel avatar, playlist hero). Same
+ * max-by-width + canonicalize policy as [extractThumbnail].
+ */
+internal fun JsonElement.extractImageSources(): String? {
+    val sources = path("image")?.path("sources")?.arr()
+        ?: path("sources")?.arr()
+        ?: return null
+    val raw = sources.maxByOrNull {
+        (it.path("width")?.jsonPrimitive?.content?.toIntOrNull() ?: 0)
+    }?.str("url") ?: return null
+    return bumpYtThumbnailResolution(raw)
+}
+
+/**
  * Canonical full-quality YouTube / YT Music / Bandcamp thumbnail URL.
  * Delegates to [com.dustvalve.next.android.util.ThumbnailUrls] so parsers and
  * the Coil interceptor share one policy (one download, one disk-cache key).

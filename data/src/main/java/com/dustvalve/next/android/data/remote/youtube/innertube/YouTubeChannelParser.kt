@@ -14,10 +14,11 @@ import javax.inject.Singleton
 @Singleton
 class YouTubeChannelParser @Inject constructor() {
 
-    data class ChannelPage(val tracks: List<Track>, val channelName: String?, val continuation: String?)
+    data class ChannelPage(val tracks: List<Track>, val channelName: String?, val continuation: String?, val avatarUrl: String? = null)
 
     fun parse(root: JsonElement, channelId: String): ChannelPage {
         val channelName = extractChannelName(root)
+        val avatarUrl = extractAvatarUrl(root)
         val (gridContents, fromContinuation) = extractGridContents(root) to false
 
         val tracks = mutableListOf<Track>()
@@ -37,7 +38,7 @@ class YouTubeChannelParser @Inject constructor() {
                 ?.str("token")
                 ?.let { continuation = it }
         }
-        return ChannelPage(tracks, channelName, continuation)
+        return ChannelPage(tracks, channelName, continuation, avatarUrl)
     }
 
     /** Continuation page parser - same shape as initial richGrid contents. */
@@ -71,6 +72,42 @@ class YouTubeChannelParser @Inject constructor() {
         val header = root.path("header") ?: return null
         return header.path("c4TabbedHeaderRenderer")?.str("title")
             ?: header.path("pageHeaderRenderer")?.str("pageTitle")
+    }
+
+    /**
+     * Channel avatar from the page header (preferred) or microformat fallback.
+     * Modern WEB responses use pageHeaderViewModel.image.sources; older ones
+     * use c4TabbedHeaderRenderer.avatar.thumbnails.
+     */
+    private fun extractAvatarUrl(root: JsonElement): String? {
+        val header = root.path("header")
+        val pageHeaderAvatar = header
+            ?.path("pageHeaderRenderer")
+            ?.path("content")
+            ?.path("pageHeaderViewModel")
+            ?.path("image")
+            ?.path("decoratedAvatarViewModel")
+            ?.path("avatar")
+            ?.path("avatarViewModel")
+            ?.extractImageSources()
+        if (pageHeaderAvatar != null) return pageHeaderAvatar
+
+        val legacyAvatar = header
+            ?.path("c4TabbedHeaderRenderer")
+            ?.path("avatar")
+            ?.extractThumbnail()
+        if (legacyAvatar != null) return legacyAvatar
+
+        val metadataAvatar = root.path("metadata")
+            ?.path("channelMetadataRenderer")
+            ?.path("avatar")
+            ?.extractThumbnail()
+        if (metadataAvatar != null) return metadataAvatar
+
+        return root.path("microformat")
+            ?.path("microformatDataRenderer")
+            ?.path("thumbnail")
+            ?.extractThumbnail()
     }
 
     /**

@@ -96,6 +96,35 @@ class CollectionDetailViewModelTest {
         assertThat(state.isFavorite).isFalse()
     }
 
+    @Test fun `load keeps coverHint when source returns no coverUrl`() = runTest(dispatcher) {
+        val url = "https://youtube.com/playlist?list=PL1"
+        val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
+        coEvery { source.getCollection(url, null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Chill Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("yt_1").copy(artUrl = "")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns source
+        coEvery { favoriteDao.isFavorite(url) } returns false
+        coEvery { playlistDao.getPlaylistByName("Chill Mix") } returns null
+
+        val vm = newVm()
+        vm.load(
+            sourceId = "youtube",
+            url = url,
+            nameHint = "Chill Mix",
+            coverHint = "https://hint/cover.jpg",
+        )
+        advanceUntilIdle()
+
+        assertThat(vm.uiState.value.coverUrl).isEqualTo("https://hint/cover.jpg")
+    }
+
     @Test fun `load surfaces error for unknown sourceId`() = runTest(dispatcher) {
         every { sources["nope"] } returns null
         val vm = newVm()

@@ -96,6 +96,7 @@ fun CollectionDetailScreen(
     collectionName: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    collectionCoverHint: String? = null,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
@@ -104,8 +105,8 @@ fun CollectionDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(sourceId, collectionUrl, collectionName) {
-        viewModel.load(sourceId, collectionUrl, collectionName)
+    LaunchedEffect(sourceId, collectionUrl, collectionName, collectionCoverHint) {
+        viewModel.load(sourceId, collectionUrl, collectionName, collectionCoverHint)
     }
 
     val snackbarText = state.snackbarMessage?.asString()
@@ -212,7 +213,7 @@ fun CollectionDetailScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = { viewModel.load(sourceId, collectionUrl, collectionName) },
+                            onClick = { viewModel.load(sourceId, collectionUrl, collectionName, collectionCoverHint) },
                             shapes = ButtonDefaults.shapes(),
                         ) { Text(stringResource(R.string.common_action_retry)) }
                     }

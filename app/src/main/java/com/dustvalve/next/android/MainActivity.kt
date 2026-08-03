@@ -632,7 +632,7 @@ private fun MainContentBody(
                                             url = track.artistUrl,
                                             sourceId = "youtube",
                                             name = track.artist,
-                                            imageUrl = null,
+                                            imageUrl = track.artUrl.takeIf { it.isNotBlank() },
                                         ),
                                     )
 

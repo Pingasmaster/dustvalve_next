@@ -387,7 +387,9 @@ class NavigationViewModel @Inject constructor(
 
             is NavDestination.PlaylistDetail -> "playlist|" + enc(dest.playlistId)
 
-            is NavDestination.CollectionDetail -> "collection|" + enc(dest.url) + "|" + enc(dest.sourceId) + "|" + enc(dest.name)
+            is NavDestination.CollectionDetail ->
+                "collection|" + enc(dest.url) + "|" + enc(dest.sourceId) + "|" +
+                    enc(dest.name) + "|" + enc(dest.coverUrl.orEmpty())
         }
 
         // Numeric literals here are pipe-field indices, not magic numbers.
@@ -424,6 +426,7 @@ class NavigationViewModel @Inject constructor(
                     url = dec(parts[1]),
                     sourceId = dec(parts[2]),
                     name = dec(parts[3]),
+                    coverUrl = parts.getOrNull(4)?.let { dec(it) }?.takeIf { it.isNotEmpty() },
                 )
 
                 else -> null

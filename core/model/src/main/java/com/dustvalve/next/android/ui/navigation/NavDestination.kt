@@ -28,5 +28,6 @@ sealed interface NavDestination {
     data class PlaylistDetail(val playlistId: String) : NavDestination
 
     /** Source-agnostic remote collection (YouTube playlist, etc.). */
-    data class CollectionDetail(val url: String, val sourceId: String = "youtube", val name: String = "") : NavDestination
+    data class CollectionDetail(val url: String, val sourceId: String = "youtube", val name: String = "", val coverUrl: String? = null) :
+        NavDestination
 }

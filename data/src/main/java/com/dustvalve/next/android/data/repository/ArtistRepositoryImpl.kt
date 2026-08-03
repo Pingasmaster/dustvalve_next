@@ -159,24 +159,28 @@ class ArtistRepositoryImpl @Inject constructor(
             }
         }
         val scrapedAlbumIds = artist.albums.map { it.id }
-        val contentChanged = storedAlbumIds == null || storedAlbumIds != scrapedAlbumIds
+        val contentChanged = storedAlbumIds == null ||
+            storedAlbumIds != scrapedAlbumIds ||
+            cachedArtist?.imageUrl != artist.imageUrl
 
-        val isFavorite = if (contentChanged) {
-            database.withTransaction {
-                artistDao.insert(artist.toEntity())
-                for (album in artist.albums) {
-                    albumDao.insertIfAbsent(album.toEntity())
+        // Always upsert the artist row so imageUrl heals even when the
+        // discography ID list is unchanged; fill blank album art without
+        // REPLACE-clobbering richer album rows.
+        val isFavorite = database.withTransaction {
+            artistDao.insert(artist.toEntity())
+            for (album in artist.albums) {
+                albumDao.insertIfAbsent(album.toEntity())
+                if (album.artUrl.isNotBlank()) {
+                    albumDao.fillBlankArtUrl(album.id, album.artUrl)
                 }
-                if (previousAutoDownload) {
-                    artistDao.setAutoDownload(artist.id, true)
-                }
-                favoriteDao.isFavorite(artist.id)
             }
-        } else {
-            // Content unchanged - just touch the timestamp
-            val cachedId = cachedArtist.id
-            artistDao.updateCachedAt(cachedId)
-            favoriteDao.isFavorite(cachedId)
+            if (previousAutoDownload) {
+                artistDao.setAutoDownload(artist.id, true)
+            }
+            if (!contentChanged) {
+                artistDao.updateCachedAt(artist.id)
+            }
+            favoriteDao.isFavorite(artist.id)
         }
 
         // Auto-download new albums if auto-download is enabled
@@ -210,7 +214,7 @@ class ArtistRepositoryImpl @Inject constructor(
             }
         }
         val freshAlbumIds = freshArtist.albums.map { it.id }
-        return storedAlbumIds != freshAlbumIds
+        return storedAlbumIds != freshAlbumIds || cachedEntity.imageUrl != freshArtist.imageUrl
     }
 
     override suspend fun setAutoDownload(artistId: String, autoDownload: Boolean) {

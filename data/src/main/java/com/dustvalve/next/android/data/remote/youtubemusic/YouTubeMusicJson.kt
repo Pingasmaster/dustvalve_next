@@ -28,6 +28,8 @@ internal fun JsonElement.extractMusicThumbnail(): String? {
         ?: path("thumbnailRenderer")?.path("musicThumbnailRenderer")
             ?.path("thumbnail")?.path("thumbnails")?.arr()
         ?: path("thumbnail")?.path("thumbnails")?.arr()
+        ?: path("thumbnail")?.path("image")?.path("sources")?.arr()
+        ?: path("image")?.path("sources")?.arr()
         ?: return null
 
     val raw = thumbnails.maxByOrNull {

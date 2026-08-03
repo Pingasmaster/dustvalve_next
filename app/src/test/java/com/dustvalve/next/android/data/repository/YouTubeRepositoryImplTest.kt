@@ -157,12 +157,14 @@ class YouTubeRepositoryImplTest {
             tracks = listOf(track("a")),
             title = "My Playlist",
             continuation = null,
+            coverUrl = "https://i.ytimg.com/vi/a/hq720.jpg",
         )
 
-        val (tracks, title) = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=PLabc")
+        val result = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=PLabc")
         assertThat(pid.captured).isEqualTo("VLPLabc")
-        assertThat(title).isEqualTo("My Playlist")
-        assertThat(tracks).hasSize(1)
+        assertThat(result.title).isEqualTo("My Playlist")
+        assertThat(result.tracks).hasSize(1)
+        assertThat(result.coverUrl).isEqualTo("https://i.ytimg.com/vi/a/hq720.jpg")
     }
 
     @Test fun `getPlaylistTracks paginates through continuations`() = runTest {

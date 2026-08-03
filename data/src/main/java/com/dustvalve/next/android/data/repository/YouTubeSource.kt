@@ -43,17 +43,16 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
     /**
      * Returns an Artist with metadata only; YT channel browse does not give
      * us albums, so `albums` is empty. Callers pull the flat track feed via
-     * [getArtistTracks]. `imageUrl` is unavailable from the channel browse
-     * endpoint used here; the caller should pass through the thumbnail it
-     * already has from the SearchResult that opened the artist screen.
+     * [getArtistTracks]. Avatar comes from the channel page header when
+     * present (search hints still win in the detail VM when non-null).
      */
     override suspend fun getArtist(url: String): Artist {
-        val (_, channelName, _) = youtubeRepository.getChannelVideos(url, page = null)
+        val page = youtubeRepository.getChannelVideos(url, page = null)
         return Artist(
             id = url,
-            name = channelName ?: "",
+            name = page.channelName ?: "",
             url = url,
-            imageUrl = null,
+            imageUrl = page.avatarUrl,
             bio = null,
             location = null,
             albums = emptyList(),
@@ -61,19 +60,19 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
     }
 
     override suspend fun getArtistTracks(url: String, continuation: Any?): MusicCollection {
-        val (tracks, channelName, nextPage) = youtubeRepository.getChannelVideos(
+        val page = youtubeRepository.getChannelVideos(
             channelUrl = url,
             page = continuation,
         )
         return MusicCollection(
             id = url,
             url = url,
-            name = channelName ?: "",
-            owner = channelName ?: "",
-            coverUrl = null,
-            tracks = tracks,
-            continuation = nextPage,
-            hasMore = nextPage != null && tracks.isNotEmpty(),
+            name = page.channelName ?: "",
+            owner = page.channelName ?: "",
+            coverUrl = page.avatarUrl,
+            tracks = page.tracks,
+            continuation = page.nextPage,
+            hasMore = page.nextPage != null && page.tracks.isNotEmpty(),
         )
     }
 
@@ -114,7 +113,7 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
                 url = url,
                 name = title,
                 owner = "",
-                coverUrl = null,
+                coverUrl = tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() },
                 tracks = tracks,
                 continuation = encodedNext,
                 hasMore = encodedNext != null && tracks.isNotEmpty(),
@@ -123,14 +122,15 @@ class YouTubeSource @Inject constructor(private val youtubeRepository: YouTubeRe
         // YouTubeRepository.getPlaylistTracks internally paginates to the end,
         // so we ignore the [continuation] arg - the returned collection is
         // always complete.
-        val (tracks, title) = youtubeRepository.getPlaylistTracks(url)
+        val result = youtubeRepository.getPlaylistTracks(url)
         return MusicCollection(
             id = url,
             url = url,
-            name = title,
+            name = result.title,
             owner = "",
-            coverUrl = null,
-            tracks = tracks,
+            coverUrl = result.coverUrl
+                ?: result.tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() },
+            tracks = result.tracks,
             continuation = null,
             hasMore = false,
         )

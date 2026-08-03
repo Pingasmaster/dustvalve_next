@@ -19,6 +19,8 @@ import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.repository.YouTubeChannelResult
+import com.dustvalve.next.android.domain.repository.YouTubePlaylistResult
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -206,7 +208,7 @@ class YouTubeRepositoryImpl @Inject constructor(
         return nextParser.parse(response)
     }
 
-    override suspend fun getPlaylistTracks(playlistUrl: String): Pair<List<Track>, String> {
+    override suspend fun getPlaylistTracks(playlistUrl: String): YouTubePlaylistResult {
         val extractedId = extractPlaylistId(playlistUrl)
             ?: throw IllegalArgumentException("Cannot extract playlistId from $playlistUrl")
 
@@ -237,17 +239,19 @@ class YouTubeRepositoryImpl @Inject constructor(
                             } catch (_: Throwable) {}
                         }
                     }
-                    return tracks to cached.title
+                    // Cache entity has no cover column yet; first-track art is
+                    // the best offline cover we can offer without a migration.
+                    val cover = tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() }
+                    return YouTubePlaylistResult(tracks, cached.title, cover)
                 }
             }
         }
 
         // Cache miss / partial cache: fetch synchronously.
-        val (freshTracks, title) = fetchAndCachePlaylist(
+        return fetchAndCachePlaylist(
             playlistId = resolveBrowsablePlaylistId(extractedId),
             aliasId = extractedId,
         )
-        return freshTracks to title
     }
 
     /**
@@ -268,7 +272,7 @@ class YouTubeRepositoryImpl @Inject constructor(
      * album id resolved to its OLAK playlist), the snapshot is stored under
      * BOTH keys so future opens of the album URL hit the cache directly.
      */
-    private suspend fun fetchAndCachePlaylist(playlistId: String, aliasId: String = playlistId): Pair<List<Track>, String> {
+    private suspend fun fetchAndCachePlaylist(playlistId: String, aliasId: String = playlistId): YouTubePlaylistResult {
         val response = client.browse("VL$playlistId")
         val first = playlistParser.parse(response, playlistId)
         val all = first.tracks.toMutableList()
@@ -285,6 +289,8 @@ class YouTubeRepositoryImpl @Inject constructor(
             safety += 1
         }
         val title = first.title ?: ""
+        val coverUrl = first.coverUrl
+            ?: all.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() }
 
         // Persist video + playlist snapshots. Best-effort. Videos use the
         // non-destructive bulk insert: these entities carry default
@@ -312,7 +318,7 @@ class YouTubeRepositoryImpl @Inject constructor(
                 )
             }
         } catch (_: Throwable) {}
-        return all to title
+        return YouTubePlaylistResult(all, title, coverUrl)
     }
 
     override suspend fun getMixPage(mixUrl: String, cursor: Any?, seenVideoIds: Set<String>): Triple<List<Track>, String, Any?> {
@@ -349,17 +355,20 @@ class YouTubeRepositoryImpl @Inject constructor(
         return Triple(page.tracks, page.title.orEmpty(), nextCursor)
     }
 
-    override suspend fun getChannelVideos(channelUrl: String, page: Any?): Triple<List<Track>, String?, Any?> {
+    override suspend fun getChannelVideos(channelUrl: String, page: Any?): YouTubeChannelResult {
         val channelId = extractChannelId(channelUrl)
             ?: throw IllegalArgumentException("Cannot extract channelId from $channelUrl")
         val token = page as? ChannelPageToken
         return if (token == null) {
             val response = client.browse(channelId, params = VIDEOS_TAB_PARAMS)
             val parsed = channelParser.parse(response, channelId)
-            Triple(
-                parsed.tracks,
-                parsed.channelName,
-                parsed.continuation?.let { ChannelPageToken(channelId, parsed.channelName, parsed.tracks.size, it) },
+            YouTubeChannelResult(
+                tracks = parsed.tracks,
+                channelName = parsed.channelName,
+                nextPage = parsed.continuation?.let {
+                    ChannelPageToken(channelId, parsed.channelName, parsed.tracks.size, it, parsed.avatarUrl)
+                },
+                avatarUrl = parsed.avatarUrl,
             )
         } else {
             // Channel browse runs on WEB; the continuation must too, or the
@@ -368,16 +377,25 @@ class YouTubeRepositoryImpl @Inject constructor(
             val response = client.browseContinuation(token.continuation, YouTubeClient.WEB_NO_AUTH)
             val parsed = channelParser.parseContinuation(response, channelId, token.channelName, token.totalSoFar + 1)
             val newTotal = token.totalSoFar + parsed.tracks.size
-            Triple(
-                parsed.tracks,
-                token.channelName,
-                parsed.continuation?.let { ChannelPageToken(channelId, token.channelName, newTotal, it) },
+            YouTubeChannelResult(
+                tracks = parsed.tracks,
+                channelName = token.channelName,
+                nextPage = parsed.continuation?.let {
+                    ChannelPageToken(channelId, token.channelName, newTotal, it, token.avatarUrl)
+                },
+                avatarUrl = token.avatarUrl,
             )
         }
     }
 
     /** Opaque page token for getChannelVideos pagination. */
-    private data class ChannelPageToken(val channelId: String, val channelName: String?, val totalSoFar: Int, val continuation: String)
+    private data class ChannelPageToken(
+        val channelId: String,
+        val channelName: String?,
+        val totalSoFar: Int,
+        val continuation: String,
+        val avatarUrl: String? = null,
+    )
 
     private fun extractVideoId(url: String): String? {
         val patterns = listOf(

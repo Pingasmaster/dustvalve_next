@@ -150,6 +150,27 @@ class DustvalveArtistScraperTest {
         assertThat(artist.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a111_0.jpg")
     }
 
+    @Test fun `data-client-items matches relative page_url to absolute grid href`() = runTest {
+        val html = """
+            <html><body>
+              <p id="band-name-location"><span class="title">X</span></p>
+              <ol data-client-items="[{&quot;type&quot;:&quot;album&quot;,&quot;title&quot;:&quot;Album One&quot;,&quot;artist&quot;:&quot;A&quot;,&quot;art_id&quot;:42,&quot;page_url&quot;:&quot;/album/one&quot;,&quot;id&quot;:1}]"></ol>
+              <div id="music-grid">
+                <div class="music-grid-item">
+                  <a href="/album/one">
+                    <p class="title">Album One</p>
+                  </a>
+                </div>
+              </div>
+            </body></html>
+        """.trimIndent()
+        setup.server.enqueue(MockResponse().setBody(html))
+
+        val artist = scraper.scrapeArtist(setup.url(""))
+        assertThat(artist.albums).hasSize(1)
+        assertThat(artist.albums[0].artUrl).isEqualTo("https://f4.bcbits.com/img/a42_0.jpg")
+    }
+
     @Test fun `data-client-items upgrades existing low-res grid art`() = runTest {
         val albumUrl = setup.url("/album/one")
         val clientItemsJson =

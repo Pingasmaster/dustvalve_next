@@ -179,15 +179,17 @@ class DustvalveArtistScraper @Inject constructor(
         if (clientItemsRaw != null) {
             try {
                 val clientItems = json.decodeFromString<List<ClientItem>>(clientItemsRaw)
-                val artIdByUrl = clientItems
+                // Bandcamp stores relative page_url ("/album/foo") while the
+                // music-grid yields absolute abs:href. Key by path so both match.
+                val artIdByPath = clientItems
                     .filter { it.artId > 0 && it.pageUrl.isNotBlank() }
                     .associateBy(
-                        { normalizeUrl(it.pageUrl) },
+                        { pathKey(it.pageUrl) },
                         { NetworkUtils.buildArtUrl(it.artId) },
                     )
 
                 for (i in albums.indices) {
-                    val matchedArt = artIdByUrl[normalizeUrl(albums[i].url)]
+                    val matchedArt = artIdByPath[pathKey(albums[i].url)]
                     if (matchedArt != null) {
                         albums[i] = albums[i].copy(artUrl = matchedArt)
                     }
@@ -286,6 +288,25 @@ class DustvalveArtistScraper @Inject constructor(
     }
 
     private fun normalizeUrl(url: String): String = url.trimEnd('/').substringBefore('?').substringBefore('#')
+
+    /**
+     * Path-only key for matching relative `data-client-items` page_url values
+     * against absolute music-grid hrefs (e.g. `/album/foo` ==
+     * `https://x.bandcamp.com/album/foo`).
+     */
+    private fun pathKey(url: String): String {
+        val cleaned = normalizeUrl(url)
+        return try {
+            val withScheme = if (cleaned.startsWith("http://") || cleaned.startsWith("https://")) {
+                cleaned
+            } else {
+                "https://bandcamp.local${if (cleaned.startsWith("/")) cleaned else "/$cleaned"}"
+            }
+            java.net.URI(withScheme).path.trimEnd('/').lowercase()
+        } catch (_: Exception) {
+            cleaned.lowercase()
+        }
+    }
 
     private fun stableId(input: String): String {
         val normalized = normalizeUrl(input)

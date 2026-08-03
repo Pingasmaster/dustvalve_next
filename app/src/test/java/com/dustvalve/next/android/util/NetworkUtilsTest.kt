@@ -49,8 +49,8 @@ class NetworkUtilsTest {
         assertThat(NetworkUtils.buildArtUrl(12345L)).isEqualTo("https://f4.bcbits.com/img/a12345_0.jpg")
     }
 
-    @Test fun `buildArtUrl for zero id`() {
-        assertThat(NetworkUtils.buildArtUrl(0L)).isEqualTo("https://f4.bcbits.com/img/a0_0.jpg")
+    @Test fun `buildArtUrl for zero id returns empty to avoid a0 404`() {
+        assertThat(NetworkUtils.buildArtUrl(0L)).isEmpty()
     }
 
     @Test fun `upgradeBandcampArtUrl promotes all size tiers to full-original _0`() {

@@ -33,6 +33,10 @@ interface AlbumDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIfAbsent(album: AlbumEntity)
 
+    /** Heal stub discography rows that were persisted without artwork. */
+    @Query("UPDATE albums SET artUrl = :artUrl WHERE id = :id AND (artUrl = '' OR artUrl IS NULL)")
+    suspend fun fillBlankArtUrl(id: String, artUrl: String)
+
     @Query("DELETE FROM albums WHERE id = :id")
     suspend fun delete(id: String)
 

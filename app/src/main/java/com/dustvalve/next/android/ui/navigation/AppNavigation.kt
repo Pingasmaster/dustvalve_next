@@ -142,9 +142,14 @@ fun AppNavigation(
                     )
 
                     is NavDestination.YouTubeHome -> YouTubeScreen(
-                        onPlaylistClick = { url, name ->
+                        onPlaylistClick = { url, name, coverUrl ->
                             navViewModel.navigateTo(
-                                NavDestination.CollectionDetail(url = url, sourceId = "youtube", name = name),
+                                NavDestination.CollectionDetail(
+                                    url = url,
+                                    sourceId = "youtube",
+                                    name = name,
+                                    coverUrl = coverUrl,
+                                ),
                             )
                         },
                         onArtistClick = { url, name, imageUrl ->
@@ -230,6 +235,7 @@ fun AppNavigation(
                             sourceId = destination.sourceId,
                             collectionUrl = destination.url,
                             collectionName = destination.name,
+                            collectionCoverHint = destination.coverUrl,
                             onBack = { navViewModel.navigateBack() },
                             viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
                         )

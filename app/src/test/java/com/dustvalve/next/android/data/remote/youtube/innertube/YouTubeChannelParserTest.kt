@@ -20,6 +20,9 @@ class YouTubeChannelParserTest {
         )
         assertThat(page.tracks).isNotEmpty()
         assertThat(page.channelName).isNotNull()
+        assertThat(page.avatarUrl).isNotNull()
+        assertThat(page.avatarUrl!!).contains("googleusercontent.com")
+        assertThat(page.avatarUrl!!).contains("=s0")
         with(page.tracks.first()) {
             assertThat(id).startsWith("yt_")
             assertThat(title).isNotEmpty()

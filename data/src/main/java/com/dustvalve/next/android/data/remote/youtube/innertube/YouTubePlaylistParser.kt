@@ -20,7 +20,7 @@ import javax.inject.Singleton
 @Singleton
 class YouTubePlaylistParser @Inject constructor() {
 
-    data class PlaylistPage(val tracks: List<Track>, val title: String?, val continuation: String?)
+    data class PlaylistPage(val tracks: List<Track>, val title: String?, val continuation: String?, val coverUrl: String? = null)
 
     /** Next-page cursor for a Mix (nullable fields mean "not available"). */
     data class MixContinuation(val lastVideoId: String, val playlistIndex: Int, val params: String?)
@@ -29,7 +29,8 @@ class YouTubePlaylistParser @Inject constructor() {
 
     fun parse(root: JsonElement, playlistId: String): PlaylistPage {
         val title = extractTitle(root)
-        val sectionContents = extractSectionList(root) ?: return PlaylistPage(emptyList(), title, null)
+        val coverUrl = extractCoverUrl(root)
+        val sectionContents = extractSectionList(root) ?: return PlaylistPage(emptyList(), title, null, coverUrl)
 
         val tracks = mutableListOf<Track>()
         var continuation: String? = null
@@ -52,7 +53,7 @@ class YouTubePlaylistParser @Inject constructor() {
                 }
             }
         }
-        return PlaylistPage(tracks, title, continuation)
+        return PlaylistPage(tracks, title, continuation, coverUrl)
     }
 
     /** Continuation page parser (no header, just more items). */
@@ -85,6 +86,39 @@ class YouTubePlaylistParser @Inject constructor() {
         return header.path("playlistHeaderRenderer")?.runsText("title")
             ?: header.path("pageHeaderRenderer")?.str("pageTitle")
             ?: header.path("musicDetailHeaderRenderer")?.runsText("title")
+    }
+
+    /**
+     * Playlist / album cover from the page header hero image, then microformat.
+     * Avoids the owner avatar stack (channel face, not playlist art).
+     */
+    private fun extractCoverUrl(root: JsonElement): String? {
+        val header = root.path("header")
+        val hero = header
+            ?.path("pageHeaderRenderer")
+            ?.path("content")
+            ?.path("pageHeaderViewModel")
+            ?.path("heroImage")
+            ?.path("contentPreviewImageViewModel")
+            ?.extractImageSources()
+        if (hero != null) return hero
+
+        // OLAK / album playlists (YTM) use playlistHeaderBanner.heroPlaylistThumbnailRenderer.
+        // Plain playlists may put thumbs directly under playlistHeaderBanner or .thumbnails.
+        val legacy = header
+            ?.path("playlistHeaderRenderer")
+            ?.path("playlistHeaderBanner")
+            ?.path("heroPlaylistThumbnailRenderer")
+            ?.extractThumbnail()
+            ?: header?.path("playlistHeaderRenderer")?.path("playlistHeaderBanner")?.extractThumbnail()
+            ?: header?.path("playlistHeaderRenderer")?.path("thumbnails")?.extractThumbnail()
+            ?: header?.path("musicDetailHeaderRenderer")?.path("thumbnail")?.extractThumbnail()
+        if (legacy != null) return legacy
+
+        return root.path("microformat")
+            ?.path("microformatDataRenderer")
+            ?.path("thumbnail")
+            ?.extractThumbnail()
     }
 
     private fun extractSectionList(root: JsonElement): List<JsonElement>? {

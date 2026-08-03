@@ -111,7 +111,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun YouTubeScreen(
-    onPlaylistClick: (url: String, name: String) -> Unit,
+    onPlaylistClick: (url: String, name: String, coverUrl: String?) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
     onOpenLink: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -201,9 +201,9 @@ fun YouTubeScreen(
         }
     }
 
-    val openPlaylistById: (String, String) -> Unit = { id, name ->
+    val openPlaylistById: (String, String, String?) -> Unit = { id, name, coverUrl ->
         val stripped = id.removePrefix("VL")
-        onPlaylistClick("https://www.youtube.com/playlist?list=$stripped", name)
+        onPlaylistClick("https://www.youtube.com/playlist?list=$stripped", name, coverUrl)
     }
 
     val inputField = @Composable {
@@ -321,7 +321,7 @@ fun YouTubeScreen(
                                 val playlistId = hero.playlistId
                                 when {
                                     videoId != null -> onPlayVideoId(videoId)
-                                    playlistId != null -> openPlaylistById(playlistId, hero.title)
+                                    playlistId != null -> openPlaylistById(playlistId, hero.title, hero.thumbnailUrl)
                                     else -> scope.launch { snackbarHostState.showSnackbar(failedLoadMsg) }
                                 }
                             },
@@ -335,7 +335,7 @@ fun YouTubeScreen(
                                     com.dustvalve.next.android.domain.model.TileKind.ALBUM,
                                     com.dustvalve.next.android.domain.model.TileKind.PLAYLIST,
                                     ->
-                                        openPlaylistById(tile.id, tile.title)
+                                        openPlaylistById(tile.id, tile.title, tile.thumbnailUrl)
                                 }
                             },
                             onOpenArtist = { artist ->
@@ -518,7 +518,7 @@ fun YouTubeScreen(
                                                         SearchResultType.YOUTUBE_ALBUM,
                                                         -> {
                                                             scope.launch { searchBarState.animateToCollapsed() }
-                                                            onPlaylistClick(result.url, result.name)
+                                                            onPlaylistClick(result.url, result.name, result.imageUrl)
                                                         }
 
                                                         SearchResultType.YOUTUBE_ARTIST -> {

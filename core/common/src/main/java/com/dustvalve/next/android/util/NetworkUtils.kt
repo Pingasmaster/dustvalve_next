@@ -45,9 +45,13 @@ object NetworkUtils {
 
     /**
      * Builds the art/image URL for a given Dustvalve art ID.
-     * Size `_0` is Bandcamp's full-original JPEG tier.
+     * Size `_0` is Bandcamp's full-original JPEG tier. Returns empty string
+     * for non-positive ids (unguarded `a0_0.jpg` is a persistent 404).
      */
-    fun buildArtUrl(artId: Long): String = "https://f4.bcbits.com/img/a${artId}_0.jpg"
+    fun buildArtUrl(artId: Long): String {
+        if (artId <= 0L) return ""
+        return "https://f4.bcbits.com/img/a${artId}_0.jpg"
+    }
 
     /**
      * Rewrites a Bandcamp CDN image URL to the full-original `_0` size.
