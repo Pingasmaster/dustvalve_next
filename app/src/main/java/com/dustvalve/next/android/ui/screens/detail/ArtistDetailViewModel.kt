@@ -18,6 +18,7 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -73,6 +74,7 @@ class ArtistDetailViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadController: DownloadController,
+    private val expandSourceTracks: ExpandSourceTracksUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArtistDetailUiState())
@@ -255,6 +257,19 @@ class ArtistDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Expand paginated artist tracks up to [ExpandSourceTracksUseCase.MAX_TRACKS]
+     * then play from [startIndex]. Bandcamp (album grid) callers should keep
+     * using the album list directly.
+     */
+    fun playExpanded(startIndex: Int, play: (List<Track>, Int) -> Unit) {
+        viewModelScope.launch {
+            val tracks = expandLoadedArtistTracks()
+            if (tracks.isEmpty()) return@launch
+            play(tracks, startIndex.coerceIn(0, tracks.lastIndex))
+        }
+    }
+
     fun downloadAll() {
         val state = _uiState.value
         if (state.isDownloading) return
@@ -271,8 +286,9 @@ class ArtistDetailViewModel @Inject constructor(
                         }
                     }
                 } else {
-                    for (track in state.tracks) {
-                        if (track.id !in state.downloadedTrackIds) {
+                    val tracks = expandLoadedArtistTracks()
+                    for (track in tracks) {
+                        if (track.id !in _uiState.value.downloadedTrackIds) {
                             downloadController.downloadTrackBlocking(track)
                         }
                     }
@@ -300,6 +316,39 @@ class ArtistDetailViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    private suspend fun expandLoadedArtistTracks(): List<Track> {
+        val state = _uiState.value
+        val source = sources[state.sourceId] ?: return state.tracks
+        if (SourceConcept.ARTIST_TRACKS !in source.capabilities) return state.tracks
+        if (state.tracks.isEmpty() && !state.hasMore) return emptyList()
+        _uiState.update { it.copy(isLoadingMore = true) }
+        return try {
+            val expanded = expandSourceTracks.expandArtistTracks(
+                source = source,
+                url = state.artistUrl,
+                seedTracks = state.tracks,
+                seedContinuation = nextPage,
+                seedHasMore = state.hasMore,
+            )
+            nextPage = null
+            if (expanded.isNotEmpty()) {
+                trackDao.insertAll(expanded.map { it.toEntity() })
+            }
+            _uiState.update {
+                it.copy(
+                    tracks = expanded,
+                    hasMore = false,
+                    isLoadingMore = false,
+                )
+            }
+            expanded
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            _uiState.update { it.copy(isLoadingMore = false) }
+            state.tracks
         }
     }
 

@@ -103,6 +103,10 @@ class SoundCloudMappersTest {
         )
         val url = SoundCloudMappers.pickBestTranscodingUrl(track)
         assertThat(url).endsWith("/progressive")
+        assertThat(SoundCloudMappers.pickBestTranscodingUrls(track)).containsExactly(
+            "https://api-v2.soundcloud.com/media/progressive",
+            "https://api-v2.soundcloud.com/media/hls",
+        ).inOrder()
     }
 
     @Test

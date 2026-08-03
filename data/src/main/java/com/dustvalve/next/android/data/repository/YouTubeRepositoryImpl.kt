@@ -84,6 +84,12 @@ class YouTubeRepositoryImpl @Inject constructor(
         // playlist-shaped URLs; they must be resolved to the album's real
         // audioPlaylistId (OLAK5uy_...) before the playlist browse.
         const val ALBUM_BROWSE_ID_PREFIX = "MPREb"
+
+        /** Match [ExpandSourceTracksUseCase.MAX_TRACKS] for play/download parity. */
+        const val MAX_PLAYLIST_TRACKS = 5_000
+
+        /** ~25 tracks/page -> well past the track cap; safety against tiny pages. */
+        const val MAX_PLAYLIST_PAGES = 200
     }
 
     /**
@@ -287,17 +293,20 @@ class YouTubeRepositoryImpl @Inject constructor(
         val response = client.browse("VL$playlistId")
         val first = playlistParser.parse(response, playlistId)
         val all = first.tracks.toMutableList()
-
         var cont = first.continuation
         var safety = 0
-        // Paginate through continuations until exhausted, capped at 20
-        // pages (~2k tracks) to avoid runaway loops on huge playlists.
-        while (cont != null && safety < 20) {
+
+        // Paginate through continuations until exhausted or we hit the
+        // shared expansion ceiling (same cap as play/download queue fill).
+        while (cont != null && all.size < MAX_PLAYLIST_TRACKS && safety < MAX_PLAYLIST_PAGES) {
             val contResp = client.browseContinuation(cont)
             val nextPage = playlistParser.parseContinuation(contResp, playlistId, all.size + 1)
             all += nextPage.tracks
             cont = nextPage.continuation
             safety += 1
+        }
+        if (all.size > MAX_PLAYLIST_TRACKS) {
+            all.subList(MAX_PLAYLIST_TRACKS, all.size).clear()
         }
         val title = first.title ?: ""
         val coverUrl = first.coverUrl

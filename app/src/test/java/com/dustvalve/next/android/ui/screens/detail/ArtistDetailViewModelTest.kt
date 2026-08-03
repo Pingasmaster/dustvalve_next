@@ -17,6 +17,7 @@ import com.dustvalve.next.android.domain.repository.MusicSource
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import com.google.common.truth.Truth.assertThat
@@ -203,6 +204,56 @@ class ArtistDetailViewModelTest {
         assertThat(state.hasMore).isFalse()
     }
 
+    @Test fun `playExpanded drains artist track pages before playing`() = runTest(dispatcher) {
+        val ytSource = sourceWith(
+            id = "youtube",
+            capabilities = setOf(SourceConcept.ARTIST, SourceConcept.ARTIST_TRACKS),
+        )
+        val url = "https://youtube.com/channel/UC1"
+        coEvery { ytSource.getArtist(url) } returns Artist(
+            id = url,
+            name = "Ch",
+            url = url,
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = emptyList(),
+        )
+        coEvery { ytSource.getArtistTracks(url, continuation = null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Ch",
+            owner = "Ch",
+            coverUrl = null,
+            tracks = listOf(track("yt_1"), track("yt_2")),
+            continuation = "T1",
+            hasMore = true,
+        )
+        coEvery { ytSource.getArtistTracks(url, continuation = "T1") } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Ch",
+            owner = "Ch",
+            coverUrl = null,
+            tracks = listOf(track("yt_3"), track("yt_4")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns ytSource
+        coEvery { favoriteDao.isFavorite(url) } returns false
+
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url)
+        advanceUntilIdle()
+
+        var played: List<Track>? = null
+        vm.playExpanded(0) { tracks, _ -> played = tracks }
+        advanceUntilIdle()
+
+        assertThat(played!!.map { it.id }).containsExactly("yt_1", "yt_2", "yt_3", "yt_4").inOrder()
+        assertThat(vm.uiState.value.hasMore).isFalse()
+    }
+
     @Test fun `failed load with a seeded hint surfaces the error and keeps retry working`() = runTest(dispatcher) {
         val ytSource = sourceWith(
             id = "youtube",
@@ -297,6 +348,7 @@ class ArtistDetailViewModelTest {
         downloadRepository = downloadRepository,
         downloadAlbumUseCase = downloadAlbumUseCase,
         downloadController = downloadController,
+        expandSourceTracks = ExpandSourceTracksUseCase(),
     )
 
     private fun sourceWith(id: String, capabilities: Set<SourceConcept>): MusicSource {

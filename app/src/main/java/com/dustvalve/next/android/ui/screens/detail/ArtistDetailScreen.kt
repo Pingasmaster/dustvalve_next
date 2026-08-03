@@ -252,13 +252,14 @@ fun ArtistDetailScreen(
                         state = state,
                         innerPadding = innerPadding,
                         onPlayAll = {
-                            if (state.tracks.isNotEmpty()) {
-                                playerViewModel.playAlbum(state.tracks, 0)
+                            viewModel.playExpanded(0) { tracks, index ->
+                                playerViewModel.playAlbum(tracks, index)
                             }
                         },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onDownload = {
                             val allDownloaded = state.tracks.isNotEmpty() &&
+                                !state.hasMore &&
                                 state.tracks.all { it.id in state.downloadedTrackIds }
                             if (allDownloaded) {
                                 showDeleteDialog = true
@@ -267,7 +268,11 @@ fun ArtistDetailScreen(
                             }
                         },
                         onLoadMore = viewModel::loadMore,
-                        onTrackClick = { idx -> playerViewModel.playAlbum(state.tracks, idx) },
+                        onTrackClick = { idx ->
+                            viewModel.playExpanded(idx) { tracks, index ->
+                                playerViewModel.playAlbum(tracks, index)
+                            }
+                        },
                         onAlbumClick = onAlbumClick,
                     )
                 } else {

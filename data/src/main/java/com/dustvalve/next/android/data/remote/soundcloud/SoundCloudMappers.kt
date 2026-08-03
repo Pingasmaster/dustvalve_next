@@ -249,9 +249,9 @@ object SoundCloudMappers {
         else -> emptyList()
     }
 
-    fun pickBestTranscodingUrl(trackElement: JsonElement): String? {
+    fun pickBestTranscodingUrls(trackElement: JsonElement): List<String> {
         val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
-            ?: return null
+            ?: return emptyList()
         data class Candidate(val url: String, val progressive: Boolean, val quality: Int)
 
         return transcodings.mapNotNull { t ->
@@ -274,9 +274,11 @@ object SoundCloudMappers {
                 compareByDescending<Candidate> { it.progressive }
                     .thenByDescending { it.quality },
             )
-            .firstOrNull()
-            ?.url
+            .map { it.url }
     }
+
+    /** Best single URL for callers that only need one candidate. */
+    fun pickBestTranscodingUrl(trackElement: JsonElement): String? = pickBestTranscodingUrls(trackElement).firstOrNull()
 
     private fun parseShelfItem(element: JsonElement): SoundCloudShelfItem? {
         val kindRaw = element.str("kind")?.lowercase() ?: return null

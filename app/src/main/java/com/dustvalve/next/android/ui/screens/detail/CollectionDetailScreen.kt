@@ -311,6 +311,7 @@ fun CollectionDetailScreen(
 
                         item(key = "actions") {
                             val allDownloaded = state.tracks.isNotEmpty() &&
+                                !state.hasMore &&
                                 state.tracks.all { it.id in state.downloadedTrackIds }
                             CollectionActionBar(
                                 isFavorite = state.isFavorite,
@@ -318,13 +319,13 @@ fun CollectionDetailScreen(
                                 allTracksDownloaded = allDownloaded,
                                 hasTracks = state.tracks.isNotEmpty(),
                                 onPlayAll = {
-                                    if (state.tracks.isNotEmpty()) {
-                                        playerViewModel.playAlbum(state.tracks, 0)
+                                    viewModel.playExpanded(0) { tracks, index ->
+                                        playerViewModel.playAlbum(tracks, index)
                                     }
                                 },
                                 onShuffle = {
-                                    if (state.tracks.isNotEmpty()) {
-                                        playerViewModel.playAlbum(state.tracks.shuffled(), 0)
+                                    viewModel.playExpandedShuffled { tracks, index ->
+                                        playerViewModel.playAlbum(tracks, index)
                                     }
                                 },
                                 onToggleFavorite = { viewModel.toggleFavorite() },
@@ -379,7 +380,11 @@ fun CollectionDetailScreen(
                                 ) {
                                     MusicRow(
                                         track = track,
-                                        onClick = { playerViewModel.playAlbum(state.tracks, index) },
+                                        onClick = {
+                                            viewModel.playExpanded(index) { tracks, start ->
+                                                playerViewModel.playAlbum(tracks, start)
+                                            }
+                                        },
                                         isPlaying = isCurrent && playerState.isPlaying,
                                         isCurrentTrack = isCurrent,
                                     )

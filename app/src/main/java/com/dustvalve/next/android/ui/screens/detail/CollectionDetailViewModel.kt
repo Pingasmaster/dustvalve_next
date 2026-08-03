@@ -17,6 +17,7 @@ import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -68,6 +69,7 @@ class CollectionDetailViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadController: DownloadController,
+    private val expandSourceTracks: ExpandSourceTracksUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CollectionDetailUiState())
@@ -189,12 +191,17 @@ class CollectionDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isImporting = true) }
         viewModelScope.launch {
             try {
+                val tracks = expandLoadedTracks()
+                if (tracks.isEmpty()) {
+                    _uiState.update { it.copy(isImporting = false) }
+                    return@launch
+                }
                 var playlistId: String? = null
                 database.withTransaction {
-                    trackDao.insertAll(state.tracks.map { it.toEntity() })
-                    val pl = playlistRepository.createPlaylist(state.name)
+                    trackDao.insertAll(tracks.map { it.toEntity() })
+                    val pl = playlistRepository.createPlaylist(_uiState.value.name)
                     playlistId = pl.id
-                    playlistRepository.addTracksToPlaylist(pl.id, state.tracks.map { it.id })
+                    playlistRepository.addTracksToPlaylist(pl.id, tracks.map { it.id })
                 }
                 _uiState.update {
                     it.copy(isImported = true, isImporting = false, importedPlaylistId = playlistId)
@@ -228,6 +235,7 @@ class CollectionDetailViewModel @Inject constructor(
                 } else {
                     val favType = when (state.sourceId) {
                         "youtube" -> "youtube_playlist"
+                        "soundcloud" -> "soundcloud_playlist"
                         else -> "collection"
                     }
                     favoriteDao.insert(FavoriteEntity(id = url, type = favType))
@@ -240,14 +248,40 @@ class CollectionDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Expand paginated collections up to [ExpandSourceTracksUseCase.MAX_TRACKS],
+     * then play starting at [startIndex] (clamped). Used for Play all / row tap
+     * so infinite feeds do not queue only the first scrolled page.
+     */
+    fun playExpanded(startIndex: Int, play: (List<Track>, Int) -> Unit) {
+        viewModelScope.launch {
+            val tracks = expandLoadedTracks()
+            if (tracks.isEmpty()) return@launch
+            val index = startIndex.coerceIn(0, tracks.lastIndex)
+            play(tracks, index)
+        }
+    }
+
+    /** Expand, then play a shuffled copy (still capped). */
+    fun playExpandedShuffled(play: (List<Track>, Int) -> Unit) {
+        viewModelScope.launch {
+            val tracks = expandLoadedTracks()
+            if (tracks.isEmpty()) return@launch
+            play(tracks.shuffled(), 0)
+        }
+    }
+
     fun downloadAll() {
-        val tracks = _uiState.value.tracks
-        if (tracks.isEmpty() || _uiState.value.isDownloading) return
-        val pending = tracks.filter { it.id !in _uiState.value.downloadedTrackIds }
-        if (pending.isEmpty()) return
+        if (_uiState.value.isDownloading) return
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             try {
+                val tracks = expandLoadedTracks()
+                val pending = tracks.filter { it.id !in _uiState.value.downloadedTrackIds }
+                if (pending.isEmpty()) {
+                    _uiState.update { it.copy(isDownloading = false) }
+                    return@launch
+                }
                 downloadController.downloadPlaylistBlocking(
                     label = _uiState.value.name.ifEmpty { "playlist" },
                     tracks = pending,
@@ -272,6 +306,41 @@ class CollectionDetailViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Drain remaining pages into [CollectionDetailUiState.tracks] (capped),
+     * keep UI in sync, and return the expanded list for play/download.
+     */
+    private suspend fun expandLoadedTracks(): List<Track> {
+        val state = _uiState.value
+        val source = sources[state.sourceId] ?: return state.tracks
+        if (state.tracks.isEmpty() && !state.hasMore) return emptyList()
+        _uiState.update { it.copy(isLoadingMore = true) }
+        return try {
+            val expanded = expandSourceTracks.expandCollection(
+                source = source,
+                url = state.collectionUrl,
+                seedTracks = state.tracks,
+                seedContinuation = paginationCursor,
+                seedHasMore = state.hasMore,
+            )
+            paginationCursor = null
+            _uiState.update {
+                it.copy(
+                    tracks = expanded,
+                    hasMore = false,
+                    isLoadingMore = false,
+                    coverUrl = it.coverUrl
+                        ?: expanded.firstOrNull()?.artUrl?.takeIf { art -> art.isNotBlank() },
+                )
+            }
+            expanded
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            _uiState.update { it.copy(isLoadingMore = false) }
+            state.tracks
         }
     }
 

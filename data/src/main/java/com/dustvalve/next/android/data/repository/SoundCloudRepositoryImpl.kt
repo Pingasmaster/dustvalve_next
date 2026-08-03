@@ -47,10 +47,18 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
         val numeric = numericIdFromTrackId(track.id)
             ?: throw IOException("Invalid SoundCloud track id: ${track.id}")
         val trackJson = api.track(numeric)
-        val streamUrl = SoundCloudMappers.pickBestTranscodingUrl(trackJson)
-            ?.let { url -> api.resolveStream(url, trackJson.str("track_authorization")).str("url") }
-            ?: throw IOException("No playable SoundCloud stream for ${track.id}")
-        return streamUrl
+        val auth = trackJson.str("track_authorization")
+        val candidates = SoundCloudMappers.pickBestTranscodingUrls(trackJson)
+        var lastError: IOException? = null
+        for (url in candidates) {
+            try {
+                val resolved = api.resolveStream(url, auth).str("url")
+                if (!resolved.isNullOrBlank()) return resolved
+            } catch (e: IOException) {
+                lastError = e
+            }
+        }
+        throw lastError ?: IOException("No playable SoundCloud stream for ${track.id}")
     }
 
     override suspend fun getArtist(url: String): Artist {
@@ -105,10 +113,10 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
     }
 
     private suspend fun hydratePlaylistTracks(playlist: JsonElement): List<Track> {
-        val stubs = SoundCloudMappers.playlistTrackStubs(playlist)
+        val stubs = SoundCloudMappers.playlistTrackStubs(playlist).take(MAX_PLAYLIST_TRACKS)
         if (stubs.isEmpty()) {
             val embedded = playlist.path("tracks") ?: return emptyList()
-            return SoundCloudMappers.parseTracksArray(embedded)
+            return SoundCloudMappers.parseTracksArray(embedded).take(MAX_PLAYLIST_TRACKS)
         }
         val byId = LinkedHashMap<String, Track>()
         for (chunk in stubs.chunked(TRACK_IDS_CHUNK)) {
@@ -135,5 +143,8 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
 
     private companion object {
         const val TRACK_IDS_CHUNK = 50
+
+        /** Match [ExpandSourceTracksUseCase.MAX_TRACKS] for queue/download parity. */
+        const val MAX_PLAYLIST_TRACKS = 5_000
     }
 }

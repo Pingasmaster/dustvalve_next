@@ -18,6 +18,7 @@ import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.repository.UnsupportedSourceOperation
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import com.google.common.truth.Truth.assertThat
@@ -230,6 +231,59 @@ class CollectionDetailViewModelTest {
         assertThat(vm.uiState.value.isFavorite).isFalse()
     }
 
+    @Test fun `playExpanded drains remaining pages before playing`() = runTest(dispatcher) {
+        val url = "https://youtube.com/playlist?list=MIX"
+        val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
+        coEvery { source.getCollection(url, null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Infinite Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("yt_1"), track("yt_2")),
+            continuation = "page2",
+            hasMore = true,
+        )
+        coEvery { source.getCollection(url, "page2") } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Infinite Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("yt_3"), track("yt_4"), track("yt_5")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns source
+        coEvery { favoriteDao.isFavorite(url) } returns false
+        coEvery { playlistDao.getPlaylistByName(any()) } returns null
+
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url, nameHint = "Infinite Mix")
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.tracks).hasSize(2)
+        assertThat(vm.uiState.value.hasMore).isTrue()
+
+        var played: List<Track>? = null
+        var start = -1
+        vm.playExpanded(1) { tracks, index ->
+            played = tracks
+            start = index
+        }
+        advanceUntilIdle()
+
+        assertThat(played!!.map { it.id }).containsExactly(
+            "yt_1",
+            "yt_2",
+            "yt_3",
+            "yt_4",
+            "yt_5",
+        ).inOrder()
+        assertThat(start).isEqualTo(1)
+        assertThat(vm.uiState.value.tracks).hasSize(5)
+        assertThat(vm.uiState.value.hasMore).isFalse()
+    }
+
     @Test fun `unfavoriting deletes only the playlist imported this session`() = runTest(dispatcher) {
         mockkStatic("androidx.room.RoomDatabaseKt")
         try {
@@ -288,6 +342,7 @@ class CollectionDetailViewModelTest {
         downloadRepository = downloadRepository,
         downloadAlbumUseCase = downloadAlbumUseCase,
         downloadController = downloadController,
+        expandSourceTracks = ExpandSourceTracksUseCase(),
     )
 
     private fun sourceWith(id: String, capabilities: Set<SourceConcept>): MusicSource {
