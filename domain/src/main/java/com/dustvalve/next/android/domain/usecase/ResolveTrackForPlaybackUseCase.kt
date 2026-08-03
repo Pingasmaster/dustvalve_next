@@ -4,6 +4,7 @@ import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import java.io.IOException
 import javax.inject.Inject
@@ -14,13 +15,14 @@ import kotlin.coroutines.cancellation.CancellationException
  * 1. Local tracks already carry a content:// URI - returned as-is
  * 2. Downloaded same-or-higher quality file wins over the remote stream
  * 3. YouTube resolves a live googlevideo URL (or null on failure)
- * 4. Otherwise the track's existing stream URL (Bandcamp mp3-128) is used
+ * 4. SoundCloud resolves a live stream URL (or null on failure)
+ * 5. Otherwise the track's existing stream URL (Bandcamp mp3-128) is used
  */
 data class PlaybackResolveResult(
     val track: Track,
     val playbackFormat: AudioFormat?,
     val sourcePath: String?,
-    /** YouTube resolution failed; surface a snackbar only when [reportFailure] was true. */
+    /** Remote resolution failed; surface a snackbar only when [reportFailure] was true. */
     val streamFailed: Boolean = false,
     /** A remote stream URL was freshly resolved; caller should stamp TTL. */
     val recordedRemoteResolution: Boolean = false,
@@ -29,6 +31,7 @@ data class PlaybackResolveResult(
 class ResolveTrackForPlaybackUseCase @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val youtubeRepository: YouTubeRepository,
+    private val soundCloudRepository: SoundCloudRepository,
 ) {
     suspend operator fun invoke(track: Track, reportFailure: Boolean = true): PlaybackResolveResult {
         if (track.isLocal) {
@@ -41,6 +44,10 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
 
         if (track.source == TrackSource.YOUTUBE) {
             return resolveYouTube(track, reportFailure)
+        }
+
+        if (track.source == TrackSource.SOUNDCLOUD) {
+            return resolveSoundCloud(track, reportFailure)
         }
 
         val downloadInfo = downloadRepository.getDownloadInfo(track.id)
@@ -57,6 +64,35 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
             playbackFormat = AudioFormat.MP3_128,
             sourcePath = null,
         )
+    }
+
+    private suspend fun resolveSoundCloud(track: Track, reportFailure: Boolean): PlaybackResolveResult {
+        val downloadInfo = downloadRepository.getDownloadInfo(track.id)
+        if (downloadInfo != null) {
+            return PlaybackResolveResult(
+                track = track.copy(streamUrl = downloadInfo.streamUri),
+                playbackFormat = downloadInfo.format,
+                sourcePath = downloadInfo.filePath,
+            )
+        }
+
+        return try {
+            val streamUrl = soundCloudRepository.getStreamUrl(track)
+            PlaybackResolveResult(
+                track = track.copy(streamUrl = streamUrl),
+                playbackFormat = null,
+                sourcePath = null,
+                recordedRemoteResolution = true,
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
+            streamFailed(track, reportFailure)
+        } catch (_: IllegalStateException) {
+            streamFailed(track, reportFailure)
+        } catch (_: IllegalArgumentException) {
+            streamFailed(track, reportFailure)
+        }
     }
 
     private suspend fun resolveYouTube(track: Track, reportFailure: Boolean): PlaybackResolveResult {
@@ -86,15 +122,15 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (_: IOException) {
-            youtubeStreamFailed(track, reportFailure)
+            streamFailed(track, reportFailure)
         } catch (_: IllegalStateException) {
-            youtubeStreamFailed(track, reportFailure)
+            streamFailed(track, reportFailure)
         } catch (_: IllegalArgumentException) {
-            youtubeStreamFailed(track, reportFailure)
+            streamFailed(track, reportFailure)
         }
     }
 
-    private fun youtubeStreamFailed(track: Track, reportFailure: Boolean) = PlaybackResolveResult(
+    private fun streamFailed(track: Track, reportFailure: Boolean) = PlaybackResolveResult(
         track = track.copy(streamUrl = null),
         playbackFormat = null,
         sourcePath = null,

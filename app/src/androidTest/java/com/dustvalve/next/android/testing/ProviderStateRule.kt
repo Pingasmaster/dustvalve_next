@@ -30,11 +30,13 @@ fun testSettings(): SettingsDataStore = SettingsDataStore(InstrumentationRegistr
 class ProviderStateRule(
     private val bandcamp: Boolean = false,
     private val youtube: Boolean = false,
+    private val soundcloud: Boolean = false,
 ) : ExternalResource() {
     override fun before() {
         runBlocking {
             testSettings().setBandcampEnabled(bandcamp)
             testSettings().setYoutubeEnabled(youtube)
+            testSettings().setSoundcloudEnabled(soundcloud)
         }
     }
 }

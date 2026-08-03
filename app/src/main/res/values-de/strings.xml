@@ -332,6 +332,16 @@
     <string name="youtube_tab_artists">Künstler</string>
     <string name="youtube_tab_playlists">Playlists</string>
     <string name="youtube_tab_tracks">Tracks</string>
+
+    <!-- SoundCloud screen -->
+    <string name="soundcloud_search_hint">SoundCloud durchsuchen</string>
+    <string name="soundcloud_home_trending">Trends</string>
+    <string name="soundcloud_home_discover">Entdecken</string>
+    <string name="soundcloud_home_genres">Genres</string>
+    <string name="soundcloud_home_empty">Noch nichts hier</string>
+    <string name="soundcloud_home_retry">Erneut versuchen</string>
+    <string name="soundcloud_error_load">SoundCloud konnte nicht geladen werden</string>
+
     <string name="ytm_section_trending">Gerade angesagt</string>
     <string name="ytm_section_discover">Entdecken: <xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
     <string name="ytm_section_recommended">Für dich empfohlen</string>

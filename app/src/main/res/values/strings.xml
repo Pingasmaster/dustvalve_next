@@ -123,6 +123,7 @@
     <string name="nav_label_local">Local</string>
     <string name="nav_label_bandcamp" translatable="false">Bandcamp</string>
     <string name="nav_label_youtube" translatable="false">YouTube</string>
+    <string name="nav_label_soundcloud" translatable="false">SoundCloud</string>
     <string name="nav_label_library">Library</string>
     <string name="nav_label_settings">Settings</string>
 
@@ -201,6 +202,7 @@
     <string name="settings_source_local">Local</string>
     <string name="settings_source_bandcamp" translatable="false">Bandcamp</string>
     <string name="settings_source_youtube" translatable="false">YouTube</string>
+    <string name="settings_source_soundcloud" translatable="false">SoundCloud</string>
     <string name="settings_use_individual_folders">Use individual folders</string>
     <string name="settings_use_individual_folders_desc">Pick specific folders instead of scanning all audio</string>
     <string name="settings_remove_downloads_title">Remove all downloads</string>
@@ -294,6 +296,7 @@
     <string name="settings_search_history_cleared">Erased all search history</string>
     <string name="settings_search_history_source_bandcamp" translatable="false">Bandcamp</string>
     <string name="settings_search_history_source_youtube" translatable="false">YouTube</string>
+    <string name="settings_search_history_source_soundcloud" translatable="false">SoundCloud</string>
     <string name="settings_search_history_source_local">Local</string>
     <string name="settings_version">Version</string>
     <string name="settings_license">Licensed under <xliff:g id="license">GPLv3</xliff:g></string>
@@ -376,6 +379,15 @@
     <string name="youtube_tab_artists">Artists</string>
     <string name="youtube_tab_playlists">Playlists</string>
     <string name="youtube_tab_tracks">Tracks</string>
+
+    <!-- SoundCloud screen -->
+    <string name="soundcloud_search_hint">Search SoundCloud</string>
+    <string name="soundcloud_home_trending">Trending</string>
+    <string name="soundcloud_home_discover">Discover</string>
+    <string name="soundcloud_home_genres">Genres</string>
+    <string name="soundcloud_home_empty">Nothing here yet</string>
+    <string name="soundcloud_home_retry">Retry</string>
+    <string name="soundcloud_error_load">Couldn’t load SoundCloud</string>
 
     <!-- YouTube discovery feed -->
     <string name="ytm_section_trending">Trending now</string>

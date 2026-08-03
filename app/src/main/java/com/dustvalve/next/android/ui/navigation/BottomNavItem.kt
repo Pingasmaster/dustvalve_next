@@ -8,6 +8,7 @@ enum class BottomNavItem(@param:StringRes val labelRes: Int, val destination: Na
     LOCAL(R.string.nav_label_local, NavDestination.LocalHome, MusicProvider.LOCAL),
     BANDCAMP(R.string.nav_label_bandcamp, NavDestination.BandcampHome, MusicProvider.BANDCAMP),
     YOUTUBE(R.string.nav_label_youtube, NavDestination.YouTubeHome, MusicProvider.YOUTUBE),
+    SOUNDCLOUD(R.string.nav_label_soundcloud, NavDestination.SoundCloudHome, MusicProvider.SOUNDCLOUD),
     LIBRARY(R.string.nav_label_library, NavDestination.Library),
     SETTINGS(R.string.nav_label_settings, NavDestination.Settings),
 }

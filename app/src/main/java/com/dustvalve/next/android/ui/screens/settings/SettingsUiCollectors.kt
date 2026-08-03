@@ -46,11 +46,13 @@ internal class SettingsUiCollectors(
         collect(settingsDataStore.localMusicUseMediaStore) { copy(localMusicUseMediaStore = it) }
         collect(settingsDataStore.bandcampEnabled) { copy(bandcampEnabled = it) }
         collect(settingsDataStore.youtubeEnabled) { copy(youtubeEnabled = it) }
+        collect(settingsDataStore.soundcloudEnabled) { copy(soundcloudEnabled = it) }
         collect(settingsDataStore.showInlineVolumeSlider) { copy(showInlineVolumeSlider = it) }
         collect(settingsDataStore.showVolumeButton) { copy(showVolumeButton = it) }
         collect(settingsDataStore.searchHistoryEnabled) { copy(searchHistoryEnabled = it) }
         collect(settingsDataStore.searchHistoryBandcamp) { copy(searchHistoryBandcamp = it) }
         collect(settingsDataStore.searchHistoryYoutube) { copy(searchHistoryYoutube = it) }
+        collect(settingsDataStore.searchHistorySoundcloud) { copy(searchHistorySoundcloud = it) }
         collect(settingsDataStore.searchHistoryLocal) { copy(searchHistoryLocal = it) }
         collect(settingsDataStore.youtubeDefaultSource) { copy(youtubeDefaultSource = it) }
         collect(settingsDataStore.autoUpdateCheckEnabled) { copy(autoUpdateCheckEnabled = it) }

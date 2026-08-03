@@ -59,6 +59,7 @@ internal sealed interface SettingsSourcesAction {
     data class SetKeepLocalFilters(val keep: Boolean) : SettingsSourcesAction
     data class SetBandcampEnabled(val enabled: Boolean) : SettingsSourcesAction
     data class SetYoutubeEnabled(val enabled: Boolean) : SettingsSourcesAction
+    data class SetSoundcloudEnabled(val enabled: Boolean) : SettingsSourcesAction
     data class SetYoutubeDefaultSource(val source: String) : SettingsSourcesAction
     data object ClearScanMessage : SettingsSourcesAction
 }
@@ -91,6 +92,9 @@ internal fun handleSettingsSourcesAction(viewModel: SettingsViewModel, action: S
 
         is SettingsSourcesAction.SetYoutubeEnabled ->
             viewModel.setYoutubeEnabled(action.enabled)
+
+        is SettingsSourcesAction.SetSoundcloudEnabled ->
+            viewModel.setSoundcloudEnabled(action.enabled)
 
         is SettingsSourcesAction.SetYoutubeDefaultSource ->
             viewModel.setYoutubeDefaultSource(action.source)
@@ -253,6 +257,17 @@ private fun SourcesCardContent(
                 onAction = onAction,
             )
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        SettingsToggleRow(
+            title = stringResource(R.string.settings_source_soundcloud),
+            icon = R.drawable.ic_graphic_eq,
+            checked = state.soundcloudEnabled,
+            onCheckedChange = {
+                onAction(SettingsSourcesAction.SetSoundcloudEnabled(it))
+            },
+        )
     }
 }
 

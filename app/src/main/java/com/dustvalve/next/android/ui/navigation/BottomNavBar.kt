@@ -73,6 +73,7 @@ private val BottomNavItem.selectedIcon: Int
         BottomNavItem.LOCAL -> R.drawable.ic_phone_android
         BottomNavItem.BANDCAMP -> R.drawable.ic_cloud
         BottomNavItem.YOUTUBE -> R.drawable.ic_play_circle
+        BottomNavItem.SOUNDCLOUD -> R.drawable.ic_graphic_eq
         BottomNavItem.LIBRARY -> R.drawable.ic_library_music
         BottomNavItem.SETTINGS -> R.drawable.ic_settings
     }
@@ -82,6 +83,7 @@ private val BottomNavItem.unselectedIcon: Int
         BottomNavItem.LOCAL -> R.drawable.ic_phone_android_outlined
         BottomNavItem.BANDCAMP -> R.drawable.ic_cloud_outlined
         BottomNavItem.YOUTUBE -> R.drawable.ic_play_circle_outlined
+        BottomNavItem.SOUNDCLOUD -> R.drawable.ic_graphic_eq_outlined
         BottomNavItem.LIBRARY -> R.drawable.ic_library_music_outlined
         BottomNavItem.SETTINGS -> R.drawable.ic_settings_outlined
     }

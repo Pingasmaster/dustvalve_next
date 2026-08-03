@@ -10,6 +10,7 @@ sealed interface NavDestination {
     data object LocalHome : NavDestination
     data object BandcampHome : NavDestination
     data object YouTubeHome : NavDestination
+    data object SoundCloudHome : NavDestination
     data object Library : NavDestination
     data object Settings : NavDestination
     data class AlbumDetail(val url: String) : NavDestination

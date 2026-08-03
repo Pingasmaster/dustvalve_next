@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.data.remote.BandcampDomainSniffer
 import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.ProviderStateUseCase
 import com.dustvalve.next.android.util.DeepLinkAction
@@ -36,6 +37,7 @@ data class PendingLink(val provider: MusicProvider, val type: LinkResourceType, 
 class NavigationViewModel @Inject constructor(
     private val providerStateUseCase: ProviderStateUseCase,
     private val youtubeRepository: YouTubeRepository,
+    private val soundCloudRepository: SoundCloudRepository,
     private val bandcampDomainSniffer: BandcampDomainSniffer,
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -66,6 +68,7 @@ class NavigationViewModel @Inject constructor(
             BottomNavItem.LOCAL to listOf(NavDestination.LocalHome),
             BottomNavItem.BANDCAMP to listOf(NavDestination.BandcampHome),
             BottomNavItem.YOUTUBE to listOf(NavDestination.YouTubeHome),
+            BottomNavItem.SOUNDCLOUD to listOf(NavDestination.SoundCloudHome),
             BottomNavItem.LIBRARY to listOf(NavDestination.Library),
             BottomNavItem.SETTINGS to listOf(NavDestination.Settings),
         ),
@@ -205,6 +208,18 @@ class NavigationViewModel @Inject constructor(
                     }
                 }
             }
+
+            is DeepLinkAction.PlaySoundCloudTrack -> {
+                navigateTo(NavDestination.SoundCloudHome)
+                viewModelScope.launch {
+                    try {
+                        val track = soundCloudRepository.getTrack(action.url)
+                        _deepLinkTrack.value = track
+                    } catch (e: Exception) {
+                        if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                    }
+                }
+            }
         }
     }
 
@@ -292,6 +307,7 @@ class NavigationViewModel @Inject constructor(
         is NavDestination.LocalHome -> BottomNavItem.LOCAL
         is NavDestination.BandcampHome -> BottomNavItem.BANDCAMP
         is NavDestination.YouTubeHome -> BottomNavItem.YOUTUBE
+        is NavDestination.SoundCloudHome -> BottomNavItem.SOUNDCLOUD
         is NavDestination.Library -> BottomNavItem.LIBRARY
         is NavDestination.Settings -> BottomNavItem.SETTINGS
         else -> null
@@ -372,6 +388,8 @@ class NavigationViewModel @Inject constructor(
 
             NavDestination.YouTubeHome -> "youtubeHome"
 
+            NavDestination.SoundCloudHome -> "soundcloudHome"
+
             NavDestination.Library -> "library"
 
             NavDestination.Settings -> "settings"
@@ -402,6 +420,8 @@ class NavigationViewModel @Inject constructor(
                 "bandcampHome" -> NavDestination.BandcampHome
 
                 "youtubeHome" -> NavDestination.YouTubeHome
+
+                "soundcloudHome" -> NavDestination.SoundCloudHome
 
                 "library" -> NavDestination.Library
 

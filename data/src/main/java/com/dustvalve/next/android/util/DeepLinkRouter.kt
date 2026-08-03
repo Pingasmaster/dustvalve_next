@@ -11,6 +11,9 @@ sealed interface DeepLinkAction {
 
     /** Fetch track info from YouTube and play it immediately. */
     data class PlayYouTubeVideo(val videoUrl: String) : DeepLinkAction
+
+    /** Fetch track info from SoundCloud and play it immediately. */
+    data class PlaySoundCloudTrack(val url: String) : DeepLinkAction
 }
 
 /** The kind of resource a compatible link points at - drives the inline chip label. */
@@ -36,6 +39,14 @@ object DeepLinkRouter {
     private val YOUTU_BE_HOSTS = setOf("youtu.be", "www.youtu.be")
     private val BANDCAMP_HOST_RE = Regex("""^(?:[\w-]+\.)?bandcamp\.com$""", RegexOption.IGNORE_CASE)
     private val GOOGLE_HOST_RE = Regex("""^(?:www\.)?google\.[a-z.]+$""")
+    private val SOUNDCLOUD_HOSTS = setOf(
+        "soundcloud.com",
+        "www.soundcloud.com",
+        "m.soundcloud.com",
+        "on.soundcloud.com",
+    )
+    private const val SOUNDCLOUD_SET_SEGMENTS = 3
+    private const val SOUNDCLOUD_TRACK_SEGMENTS = 2
 
     // Path-based video-id forms: /shorts/ID, /embed/ID, /live/ID, /v/ID, /e/ID, /watch/ID.
     private val PATH_VIDEO_RE = Regex("""^/(?:shorts|embed|live|v|e|watch)/($VID)""")
@@ -66,6 +77,8 @@ object DeepLinkRouter {
                 routeYouTube(uri, host)
 
             BANDCAMP_HOST_RE.matches(host) -> routeBandcamp(uri, host)
+
+            host in SOUNDCLOUD_HOSTS -> routeSoundCloud(uri, host)
 
             else -> null
         }
@@ -237,4 +250,72 @@ object DeepLinkRouter {
     }
 
     private fun navAlbum(url: String): DeepLinkAction = DeepLinkAction.Navigate(NavDestination.AlbumDetail(url))
+
+    // --- SoundCloud --------------------------------------------------------
+
+    private fun routeSoundCloud(uri: URI, host: String): DetectedLink? {
+        val path = uri.path?.trimEnd('/') ?: ""
+        val segments = path.split('/').filter { it.isNotEmpty() }
+        if (segments.isEmpty()) return null
+
+        // on.soundcloud.com short links: treat as track play when a single slug remains.
+        if (host == "on.soundcloud.com") {
+            val canonical = "https://soundcloud.com$path"
+            return DetectedLink(
+                MusicProvider.SOUNDCLOUD,
+                LinkResourceType.TRACK,
+                DeepLinkAction.PlaySoundCloudTrack(canonical),
+            )
+        }
+
+        val user = segments[0]
+        // Skip reserved top-level paths that are not user permalinks.
+        if (user in SOUNDCLOUD_RESERVED) return null
+
+        return when {
+            // /user/sets/playlist
+            segments.size >= SOUNDCLOUD_SET_SEGMENTS && segments[1] == "sets" -> {
+                val canonical = "https://soundcloud.com/$user/sets/${segments[2]}"
+                DetectedLink(
+                    MusicProvider.SOUNDCLOUD,
+                    LinkResourceType.PLAYLIST,
+                    DeepLinkAction.Navigate(
+                        NavDestination.CollectionDetail(
+                            url = canonical,
+                            sourceId = "soundcloud",
+                            name = "",
+                        ),
+                    ),
+                )
+            }
+
+            // /user/track
+            segments.size >= SOUNDCLOUD_TRACK_SEGMENTS -> {
+                val canonical = "https://soundcloud.com/$user/${segments[1]}"
+                DetectedLink(
+                    MusicProvider.SOUNDCLOUD,
+                    LinkResourceType.TRACK,
+                    DeepLinkAction.PlaySoundCloudTrack(canonical),
+                )
+            }
+
+            // /user profile
+            else -> {
+                val canonical = "https://soundcloud.com/$user"
+                DetectedLink(
+                    MusicProvider.SOUNDCLOUD,
+                    LinkResourceType.ARTIST,
+                    DeepLinkAction.Navigate(
+                        NavDestination.ArtistDetail(url = canonical, sourceId = "soundcloud"),
+                    ),
+                )
+            }
+        }
+    }
+
+    private val SOUNDCLOUD_RESERVED = setOf(
+        "discover", "stream", "library", "search", "upload", "pages", "you",
+        "settings", "messages", "notifications", "charts", "popular", "signin",
+        "login", "signup", "feed", "explore",
+    )
 }

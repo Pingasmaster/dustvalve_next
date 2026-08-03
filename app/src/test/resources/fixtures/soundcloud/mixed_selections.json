@@ -1,0 +1,46 @@
+{
+  "collection": [
+    {
+      "urn": "soundcloud:selections:trending-by-genre-playlists",
+      "title": "Trending by genre",
+      "items": {
+        "collection": [
+          {
+            "id": 9001,
+            "kind": "playlist",
+            "title": "Hip-Hop & Rap",
+            "set_type": "",
+            "permalink_url": "https://soundcloud.com/trending-music-us/sets/hip-hop-rap",
+            "artwork_url": "https://i1.sndcdn.com/artworks-hiphop-large.jpg",
+            "user": { "username": "Trending Music" }
+          },
+          {
+            "id": 9002,
+            "kind": "playlist",
+            "title": "Ambient Album",
+            "set_type": "album",
+            "permalink_url": "https://soundcloud.com/label/sets/ambient-album",
+            "artwork_url": "https://i1.sndcdn.com/artworks-ambient-large.jpg",
+            "user": { "username": "Label" }
+          },
+          {
+            "id": 9003,
+            "kind": "track",
+            "title": "Shelf Track",
+            "permalink_url": "https://soundcloud.com/user/shelf-track",
+            "artwork_url": "https://i1.sndcdn.com/artworks-shelf-large.jpg",
+            "user": { "username": "Shelf User" }
+          },
+          {
+            "id": 9004,
+            "kind": "user",
+            "username": "Rising Artist",
+            "full_name": "Rising Artist",
+            "permalink_url": "https://soundcloud.com/rising-artist",
+            "avatar_url": "https://i1.sndcdn.com/avatars-rising-large.jpg"
+          }
+        ]
+      }
+    }
+  ]
+}

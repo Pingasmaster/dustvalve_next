@@ -691,6 +691,8 @@ fun BandcampScreen(
 
                                                         SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
                                                         SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
+                                                        SearchResultType.SOUNDCLOUD_TRACK, SearchResultType.SOUNDCLOUD_ALBUM,
+                                                        SearchResultType.SOUNDCLOUD_ARTIST, SearchResultType.SOUNDCLOUD_PLAYLIST,
                                                         -> { /* not applicable */ }
                                                     }
                                                 },
@@ -927,6 +929,9 @@ private fun SearchResultItem(result: SearchResult) {
         SearchResultType.YOUTUBE_TRACK -> AppShapes.SearchResultTrack
         SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> AppShapes.SearchResultAlbum
         SearchResultType.YOUTUBE_ARTIST -> AppShapes.SearchResultArtist
+        SearchResultType.SOUNDCLOUD_TRACK -> AppShapes.SearchResultTrack
+        SearchResultType.SOUNDCLOUD_ALBUM, SearchResultType.SOUNDCLOUD_PLAYLIST -> AppShapes.SearchResultAlbum
+        SearchResultType.SOUNDCLOUD_ARTIST -> AppShapes.SearchResultArtist
     }
 
     val artistLabel = stringResource(R.string.bandcamp_type_artist)
@@ -964,6 +969,8 @@ private fun SearchResultItem(result: SearchResult) {
 
                     SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,
                     SearchResultType.YOUTUBE_ARTIST, SearchResultType.YOUTUBE_PLAYLIST,
+                    SearchResultType.SOUNDCLOUD_TRACK, SearchResultType.SOUNDCLOUD_ALBUM,
+                    SearchResultType.SOUNDCLOUD_ARTIST, SearchResultType.SOUNDCLOUD_PLAYLIST,
                     -> {
                         result.artist?.let { append(it) }
                     }
@@ -990,6 +997,9 @@ private fun SearchResultItem(result: SearchResult) {
                 SearchResultType.YOUTUBE_TRACK -> R.drawable.ic_music_note
                 SearchResultType.YOUTUBE_ALBUM, SearchResultType.YOUTUBE_PLAYLIST -> R.drawable.ic_album
                 SearchResultType.YOUTUBE_ARTIST -> R.drawable.ic_person
+                SearchResultType.SOUNDCLOUD_TRACK -> R.drawable.ic_music_note
+                SearchResultType.SOUNDCLOUD_ALBUM, SearchResultType.SOUNDCLOUD_PLAYLIST -> R.drawable.ic_album
+                SearchResultType.SOUNDCLOUD_ARTIST -> R.drawable.ic_person
             }
             if (result.imageUrl != null) {
                 AsyncImage(

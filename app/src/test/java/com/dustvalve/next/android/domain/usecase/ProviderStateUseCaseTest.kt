@@ -13,10 +13,15 @@ import org.junit.Test
 
 class ProviderStateUseCaseTest {
 
-    private fun useCase(bandcamp: Boolean, youtube: Boolean): Pair<ProviderStateUseCase, SettingsDataStore> {
+    private fun useCase(
+        bandcamp: Boolean,
+        youtube: Boolean,
+        soundcloud: Boolean = false,
+    ): Pair<ProviderStateUseCase, SettingsDataStore> {
         val store = mockk<SettingsDataStore>(relaxed = true)
         every { store.bandcampEnabled } returns flowOf(bandcamp)
         every { store.youtubeEnabled } returns flowOf(youtube)
+        every { store.soundcloudEnabled } returns flowOf(soundcloud)
         return ProviderStateUseCase(store) to store
     }
 
@@ -26,11 +31,12 @@ class ProviderStateUseCaseTest {
     }
 
     @Test fun `enabled providers are included`() = runTest {
-        val (uc, _) = useCase(bandcamp = true, youtube = true)
+        val (uc, _) = useCase(bandcamp = true, youtube = true, soundcloud = true)
         assertThat(uc.activeProviders.first()).containsExactly(
             MusicProvider.LOCAL,
             MusicProvider.BANDCAMP,
             MusicProvider.YOUTUBE,
+            MusicProvider.SOUNDCLOUD,
         )
     }
 
@@ -43,11 +49,13 @@ class ProviderStateUseCaseTest {
     }
 
     @Test fun `setEnabled routes to the matching setting`() = runTest {
-        val (uc, store) = useCase(bandcamp = true, youtube = true)
+        val (uc, store) = useCase(bandcamp = true, youtube = true, soundcloud = true)
         uc.setEnabled(MusicProvider.BANDCAMP, false)
         coVerify(exactly = 1) { store.setBandcampEnabled(false) }
         uc.setEnabled(MusicProvider.YOUTUBE, true)
         coVerify(exactly = 1) { store.setYoutubeEnabled(true) }
+        uc.setEnabled(MusicProvider.SOUNDCLOUD, true)
+        coVerify(exactly = 1) { store.setSoundcloudEnabled(true) }
     }
 
     @Test fun `setEnabled ignores LOCAL`() = runTest {
@@ -55,5 +63,6 @@ class ProviderStateUseCaseTest {
         uc.setEnabled(MusicProvider.LOCAL, false)
         coVerify(exactly = 0) { store.setBandcampEnabled(any()) }
         coVerify(exactly = 0) { store.setYoutubeEnabled(any()) }
+        coVerify(exactly = 0) { store.setSoundcloudEnabled(any()) }
     }
 }

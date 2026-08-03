@@ -5,6 +5,7 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
@@ -19,12 +20,14 @@ class ResolveTrackForPlaybackUseCaseTest {
 
     private lateinit var downloadRepository: DownloadRepository
     private lateinit var youtubeRepository: YouTubeRepository
+    private lateinit var soundCloudRepository: SoundCloudRepository
     private lateinit var useCase: ResolveTrackForPlaybackUseCase
 
     @Before fun setUp() {
         downloadRepository = mockk()
         youtubeRepository = mockk()
-        useCase = ResolveTrackForPlaybackUseCase(downloadRepository, youtubeRepository)
+        soundCloudRepository = mockk()
+        useCase = ResolveTrackForPlaybackUseCase(downloadRepository, youtubeRepository, soundCloudRepository)
     }
 
     @Test fun `local track is returned as-is with stream path`() = runTest {

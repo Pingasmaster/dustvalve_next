@@ -119,6 +119,18 @@
                 <data android:scheme="https" android:host="*.bandcamp.com" />
             </intent-filter>
 
+            <!-- SoundCloud deep links -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="soundcloud.com" />
+                <data android:host="www.soundcloud.com" />
+                <data android:host="m.soundcloud.com" />
+                <data android:host="on.soundcloud.com" />
+            </intent-filter>
+
             <!-- Share URLs from other apps -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

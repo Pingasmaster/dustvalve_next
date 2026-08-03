@@ -82,6 +82,17 @@ class ProviderScreensCrashRegressionTest {
     }
 
     @Test
+    fun soundcloudTab_opensWithoutCrash() {
+        runBlocking { settings().setSoundcloudEnabled(true) }
+        waitForText(string(R.string.nav_label_soundcloud))
+
+        composeRule.onNodeWithText(string(R.string.nav_label_soundcloud)).performClick()
+        composeRule.waitForIdle()
+
+        waitForText(string(R.string.soundcloud_home_genres))
+    }
+
+    @Test
     fun settingsTab_opensWithoutCrash() {
         waitForText(string(R.string.nav_label_settings))
         composeRule.onNodeWithText(string(R.string.nav_label_settings)).performClick()

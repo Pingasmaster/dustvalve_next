@@ -27,4 +27,5 @@ val MusicProvider.iconRes: Int
         MusicProvider.LOCAL -> R.drawable.ic_phone_android
         MusicProvider.BANDCAMP -> R.drawable.ic_cloud
         MusicProvider.YOUTUBE -> R.drawable.ic_play_circle
+        MusicProvider.SOUNDCLOUD -> R.drawable.ic_graphic_eq
     }

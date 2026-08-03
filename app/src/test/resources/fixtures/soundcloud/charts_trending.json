@@ -1,0 +1,68 @@
+{
+  "genre": "soundcloud:genres:all-music",
+  "kind": "trending",
+  "collection": [
+    {
+      "track": {
+        "id": 111,
+        "kind": "track",
+        "title": "Chart Track One",
+        "duration": 180000,
+        "full_duration": 180000,
+        "artwork_url": "https://i1.sndcdn.com/artworks-aaa-large.jpg",
+        "permalink_url": "https://soundcloud.com/artist-a/chart-track-one",
+        "genre": "Electronic",
+        "user": {
+          "id": 1,
+          "username": "Artist A",
+          "permalink_url": "https://soundcloud.com/artist-a",
+          "avatar_url": "https://i1.sndcdn.com/avatars-aaa-large.jpg"
+        },
+        "media": {
+          "transcodings": [
+            {
+              "url": "https://api-v2.soundcloud.com/media/soundcloud:tracks:111/abc/stream/progressive",
+              "preset": "mp3_1_0",
+              "duration": 180000,
+              "snipped": false,
+              "format": { "protocol": "progressive", "mime_type": "audio/mpeg" },
+              "quality": "sq"
+            },
+            {
+              "url": "https://api-v2.soundcloud.com/media/soundcloud:tracks:111/def/stream/hls",
+              "preset": "mp3_0_1",
+              "duration": 180000,
+              "snipped": false,
+              "format": { "protocol": "hls", "mime_type": "audio/mpeg" },
+              "quality": "sq"
+            },
+            {
+              "url": "https://api-v2.soundcloud.com/media/soundcloud:tracks:111/enc/stream/hls",
+              "preset": "aac_1_0",
+              "duration": 180000,
+              "snipped": false,
+              "format": { "protocol": "cbc-encrypted-hls", "mime_type": "audio/mp4" },
+              "quality": "sq"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "track": {
+        "id": 222,
+        "kind": "track",
+        "title": "Chart Track Two",
+        "duration": 95000,
+        "artwork_url": null,
+        "permalink_url": "https://soundcloud.com/artist-b/chart-track-two",
+        "user": {
+          "id": 2,
+          "username": "Artist B",
+          "permalink_url": "https://soundcloud.com/artist-b",
+          "avatar_url": "https://i1.sndcdn.com/avatars-bbb-large.jpg"
+        }
+      }
+    }
+  ]
+}

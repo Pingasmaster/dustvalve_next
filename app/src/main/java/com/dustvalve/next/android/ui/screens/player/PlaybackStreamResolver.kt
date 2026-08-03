@@ -4,6 +4,7 @@ import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
 import java.io.IOException
@@ -11,11 +12,12 @@ import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Remote-stream TTL tracking + forced Bandcamp/YouTube re-resolve.
+ * Remote-stream TTL tracking + forced Bandcamp/YouTube/SoundCloud re-resolve.
  * Keeps [PlayerViewModel] free of the expiry / auto-recovery bookkeeping.
  */
 class PlaybackStreamResolver @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
+    private val soundCloudRepository: SoundCloudRepository,
     private val dustvalveStreamResolver: DustvalveStreamResolver,
     private val downloadRepository: DownloadRepository,
     private val resolveTrackForPlayback: ResolveTrackForPlaybackUseCase,
@@ -48,6 +50,12 @@ class PlaybackStreamResolver @Inject constructor(
                 recordResolved(track.id)
                 track.copy(streamUrl = freshUrl)
             }
+        }
+
+        TrackSource.SOUNDCLOUD -> {
+            val freshUrl = soundCloudRepository.getStreamUrl(track)
+            recordResolved(track.id)
+            track.copy(streamUrl = freshUrl)
         }
 
         TrackSource.BANDCAMP -> reResolveBandcamp(track)

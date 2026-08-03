@@ -83,6 +83,32 @@ class DeepLinkRouterTest {
             .isEqualTo(LinkResourceType.TRACK)
     }
 
+    @Test fun `detect soundcloud track`() {
+        val d = DeepLinkRouter.detect("https://soundcloud.com/artist/cool-track")!!
+        assertThat(d.provider).isEqualTo(MusicProvider.SOUNDCLOUD)
+        assertThat(d.type).isEqualTo(LinkResourceType.TRACK)
+        assertThat((d.action as DeepLinkAction.PlaySoundCloudTrack).url)
+            .isEqualTo("https://soundcloud.com/artist/cool-track")
+    }
+
+    @Test fun `detect soundcloud playlist set`() {
+        val d = DeepLinkRouter.detect("https://soundcloud.com/artist/sets/my-playlist")!!
+        assertThat(d.provider).isEqualTo(MusicProvider.SOUNDCLOUD)
+        assertThat(d.type).isEqualTo(LinkResourceType.PLAYLIST)
+        val nav = (d.action as DeepLinkAction.Navigate).destination as NavDestination.CollectionDetail
+        assertThat(nav.url).isEqualTo("https://soundcloud.com/artist/sets/my-playlist")
+        assertThat(nav.sourceId).isEqualTo("soundcloud")
+    }
+
+    @Test fun `detect soundcloud user profile`() {
+        val d = DeepLinkRouter.detect("https://m.soundcloud.com/some-artist")!!
+        assertThat(d.provider).isEqualTo(MusicProvider.SOUNDCLOUD)
+        assertThat(d.type).isEqualTo(LinkResourceType.ARTIST)
+        val nav = (d.action as DeepLinkAction.Navigate).destination as NavDestination.ArtistDetail
+        assertThat(nav.url).isEqualTo("https://soundcloud.com/some-artist")
+        assertThat(nav.sourceId).isEqualTo("soundcloud")
+    }
+
     // --- normalization / unwrapping ----------------------------------------
 
     @Test fun `google url wrapper unwrapped`() {

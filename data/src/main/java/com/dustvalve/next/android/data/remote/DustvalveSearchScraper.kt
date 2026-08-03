@@ -71,6 +71,10 @@ class DustvalveSearchScraper @Inject constructor(
             SearchResultType.YOUTUBE_ALBUM,
             SearchResultType.YOUTUBE_ARTIST,
             SearchResultType.YOUTUBE_PLAYLIST,
+            SearchResultType.SOUNDCLOUD_TRACK,
+            SearchResultType.SOUNDCLOUD_ARTIST,
+            SearchResultType.SOUNDCLOUD_PLAYLIST,
+            SearchResultType.SOUNDCLOUD_ALBUM,
             -> return@withContext emptyList()
 
             null -> ""

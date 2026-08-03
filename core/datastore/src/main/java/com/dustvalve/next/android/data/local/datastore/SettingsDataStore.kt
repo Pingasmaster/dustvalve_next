@@ -61,12 +61,15 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         val LOCAL_MUSIC_USE_MEDIASTORE = booleanPreferencesKey("local_music_use_mediastore")
         val BANDCAMP_ENABLED = booleanPreferencesKey("bandcamp_enabled")
         val YOUTUBE_ENABLED = booleanPreferencesKey("youtube_enabled")
+        val SOUNDCLOUD_ENABLED = booleanPreferencesKey("soundcloud_enabled")
+        val SOUNDCLOUD_CLIENT_ID = stringPreferencesKey("soundcloud_client_id")
         val SHOW_INLINE_VOLUME_SLIDER = booleanPreferencesKey("show_inline_volume_slider")
         val SHOW_VOLUME_BUTTON = booleanPreferencesKey("show_volume_button")
         val LAST_YOUTUBE_VIDEO_ID = stringPreferencesKey("last_youtube_video_id")
         val SEARCH_HISTORY_ENABLED = booleanPreferencesKey("search_history_enabled")
         val SEARCH_HISTORY_BANDCAMP = booleanPreferencesKey("search_history_bandcamp")
         val SEARCH_HISTORY_YOUTUBE = booleanPreferencesKey("search_history_youtube")
+        val SEARCH_HISTORY_SOUNDCLOUD = booleanPreferencesKey("search_history_soundcloud")
         val SEARCH_HISTORY_LOCAL = booleanPreferencesKey("search_history_local")
         val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
         val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
@@ -434,6 +437,14 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         prefs[Keys.YOUTUBE_ENABLED] ?: false
     }
 
+    val soundcloudEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
+        prefs[Keys.SOUNDCLOUD_ENABLED] ?: false
+    }
+
+    val soundcloudClientId: Flow<String?> = guardedPreferences.map { prefs ->
+        prefs[Keys.SOUNDCLOUD_CLIENT_ID]
+    }
+
     val showInlineVolumeSlider: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SHOW_INLINE_VOLUME_SLIDER] ?: false
     }
@@ -455,6 +466,24 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     suspend fun setYoutubeEnabled(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.YOUTUBE_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSoundcloudEnabled(enabled: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SOUNDCLOUD_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSoundcloudClientId(clientId: String) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.SOUNDCLOUD_CLIENT_ID] = clientId
+        }
+    }
+
+    suspend fun clearSoundcloudClientId() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(Keys.SOUNDCLOUD_CLIENT_ID)
         }
     }
 
@@ -496,6 +525,10 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         prefs[Keys.SEARCH_HISTORY_YOUTUBE] ?: true
     }
 
+    val searchHistorySoundcloud: Flow<Boolean> = guardedPreferences.map { prefs ->
+        prefs[Keys.SEARCH_HISTORY_SOUNDCLOUD] ?: true
+    }
+
     val searchHistoryLocal: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.SEARCH_HISTORY_LOCAL] ?: true
     }
@@ -524,6 +557,10 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     suspend fun setSearchHistoryYoutube(enabled: Boolean) {
         context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_YOUTUBE] = enabled }
+    }
+
+    suspend fun setSearchHistorySoundcloud(enabled: Boolean) {
+        context.dataStore.edit { prefs -> prefs[Keys.SEARCH_HISTORY_SOUNDCLOUD] = enabled }
     }
 
     suspend fun setSearchHistoryLocal(enabled: Boolean) {

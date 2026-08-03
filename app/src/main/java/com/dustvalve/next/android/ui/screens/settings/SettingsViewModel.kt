@@ -56,11 +56,13 @@ data class SettingsUiState(
     val scanMessage: UiText? = null,
     val bandcampEnabled: Boolean = false,
     val youtubeEnabled: Boolean = false,
+    val soundcloudEnabled: Boolean = false,
     val showInlineVolumeSlider: Boolean = false,
     val showVolumeButton: Boolean = false,
     val searchHistoryEnabled: Boolean = true,
     val searchHistoryBandcamp: Boolean = true,
     val searchHistoryYoutube: Boolean = true,
+    val searchHistorySoundcloud: Boolean = true,
     val searchHistoryLocal: Boolean = true,
     val searchHistoryClearedMessage: UiText? = null,
     val albumCoverLongPressCarousel: Boolean = true,
@@ -411,6 +413,16 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setSoundcloudEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                settingsDataStore.setSoundcloudEnabled(enabled)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            }
+        }
+    }
+
     fun setShowInlineVolumeSlider(enabled: Boolean) {
         viewModelScope.launch {
             try {
@@ -447,6 +459,7 @@ class SettingsViewModel @Inject constructor(
                 when (source) {
                     "bandcamp" -> settingsDataStore.setSearchHistoryBandcamp(enabled)
                     "youtube" -> settingsDataStore.setSearchHistoryYoutube(enabled)
+                    "soundcloud" -> settingsDataStore.setSearchHistorySoundcloud(enabled)
                     "local" -> settingsDataStore.setSearchHistoryLocal(enabled)
                 }
             } catch (e: Exception) {
@@ -458,7 +471,7 @@ class SettingsViewModel @Inject constructor(
     fun clearAllSearchHistory() {
         viewModelScope.launch {
             try {
-                for (source in listOf("bandcamp", "youtube", "local")) {
+                for (source in listOf("bandcamp", "youtube", "soundcloud", "local")) {
                     recentSearchDao.clearAll(source)
                 }
                 _uiState.update {

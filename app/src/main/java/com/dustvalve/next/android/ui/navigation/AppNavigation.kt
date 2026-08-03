@@ -47,6 +47,7 @@ import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
 import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
 import com.dustvalve.next.android.ui.screens.settings.YouTubeMusicLoginScreen
+import com.dustvalve.next.android.ui.screens.soundcloud.SoundCloudScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
 import com.dustvalve.next.android.ui.util.iconRes
 import com.dustvalve.next.android.util.LinkResourceType
@@ -166,13 +167,38 @@ fun AppNavigation(
                         onExpandPlayer = { navViewModel.expandPlayer() },
                     )
 
+                    is NavDestination.SoundCloudHome -> SoundCloudScreen(
+                        onCollectionClick = { url, name, coverUrl ->
+                            navViewModel.navigateTo(
+                                NavDestination.CollectionDetail(
+                                    url = url,
+                                    sourceId = "soundcloud",
+                                    name = name,
+                                    coverUrl = coverUrl,
+                                ),
+                            )
+                        },
+                        onArtistClick = { url, name, imageUrl ->
+                            navViewModel.navigateTo(
+                                NavDestination.ArtistDetail(
+                                    url = url,
+                                    sourceId = "soundcloud",
+                                    name = name,
+                                    imageUrl = imageUrl,
+                                ),
+                            )
+                        },
+                        onOpenLink = { navViewModel.openLink(it) },
+                        onExpandPlayer = { navViewModel.expandPlayer() },
+                    )
+
                     is NavDestination.Library -> LibraryScreen(
                         onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                         onArtistClick = { url ->
-                            val sourceId = if (url.contains("youtube.com") || url.contains("youtu.be")) {
-                                "youtube"
-                            } else {
-                                "bandcamp"
+                            val sourceId = when {
+                                url.contains("soundcloud.com") -> "soundcloud"
+                                url.contains("youtube.com") || url.contains("youtu.be") -> "youtube"
+                                else -> "bandcamp"
                             }
                             navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
                         },
@@ -211,15 +237,15 @@ fun AppNavigation(
                             artistNameHint = destination.name,
                             artistImageHint = destination.imageUrl,
                             onAlbumClick = { url ->
-                                if (destination.sourceId == "youtube") {
-                                    navViewModel.navigateTo(
+                                when (destination.sourceId) {
+                                    "youtube", "soundcloud" -> navViewModel.navigateTo(
                                         NavDestination.CollectionDetail(
                                             url = url,
-                                            sourceId = "youtube",
+                                            sourceId = destination.sourceId,
                                         ),
                                     )
-                                } else {
-                                    navViewModel.navigateTo(NavDestination.AlbumDetail(url))
+
+                                    else -> navViewModel.navigateTo(NavDestination.AlbumDetail(url))
                                 }
                             },
                             onBack = { navViewModel.navigateBack() },

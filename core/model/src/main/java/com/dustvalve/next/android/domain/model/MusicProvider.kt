@@ -4,4 +4,5 @@ enum class MusicProvider(val key: String, val label: String, val alwaysEnabled: 
     LOCAL("local", "Local", alwaysEnabled = true),
     BANDCAMP("bandcamp", "Bandcamp"),
     YOUTUBE("youtube", "YouTube"),
+    SOUNDCLOUD("soundcloud", "SoundCloud"),
 }

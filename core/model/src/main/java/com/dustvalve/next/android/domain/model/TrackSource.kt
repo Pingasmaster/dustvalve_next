@@ -4,6 +4,7 @@ enum class TrackSource(val key: String) {
     LOCAL("local"),
     BANDCAMP("bandcamp"),
     YOUTUBE("youtube"),
+    SOUNDCLOUD("soundcloud"),
     ;
 
     companion object {

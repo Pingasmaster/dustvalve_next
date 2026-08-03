@@ -591,6 +591,13 @@ internal fun SettingsSearchSection(
                                 onCheckedChange = { onSetSearchHistorySource("youtube", it) },
                             )
                         }
+                        if (state.soundcloudEnabled) {
+                            SearchHistorySourceRow(
+                                labelRes = R.string.settings_search_history_source_soundcloud,
+                                checked = state.searchHistorySoundcloud,
+                                onCheckedChange = { onSetSearchHistorySource("soundcloud", it) },
+                            )
+                        }
                         if (state.localMusicEnabled) {
                             SearchHistorySourceRow(
                                 labelRes = R.string.settings_search_history_source_local,

@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import app.cash.turbine.test
 import com.dustvalve.next.android.data.remote.BandcampDomainSniffer
 import com.dustvalve.next.android.domain.model.MusicProvider
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.ProviderStateUseCase
 import com.google.common.truth.Truth.assertThat
@@ -29,6 +30,7 @@ class NavigationViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var providerState: ProviderStateUseCase
     private lateinit var ytRepo: YouTubeRepository
+    private lateinit var scRepo: SoundCloudRepository
     private lateinit var sniffer: BandcampDomainSniffer
 
     private fun viewModel(
@@ -36,13 +38,14 @@ class NavigationViewModelTest {
         savedStateHandle: SavedStateHandle = SavedStateHandle(),
     ): NavigationViewModel {
         every { providerState.activeProviders } returns flowOf(active)
-        return NavigationViewModel(providerState, ytRepo, sniffer, savedStateHandle)
+        return NavigationViewModel(providerState, ytRepo, scRepo, sniffer, savedStateHandle)
     }
 
     @Before fun setUp() {
         Dispatchers.setMain(testDispatcher)
         providerState = mockk(relaxed = true)
         ytRepo = mockk(relaxed = true)
+        scRepo = mockk(relaxed = true)
         sniffer = mockk(relaxed = true)
     }
 

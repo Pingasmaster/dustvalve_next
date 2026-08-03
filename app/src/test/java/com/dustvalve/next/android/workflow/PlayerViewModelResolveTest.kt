@@ -87,12 +87,15 @@ class PlayerViewModelResolveTest {
             .build()
         queueManager = QueueManager()
         playbackManager = PlaybackManager(player, queueManager, ApplicationProvider.getApplicationContext())
+        val soundCloudRepository = mockk<com.dustvalve.next.android.domain.repository.SoundCloudRepository>(relaxed = true)
         val resolveUseCase = com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase(
             downloadRepository,
             youtubeRepository,
+            soundCloudRepository,
         )
         val streamResolver = com.dustvalve.next.android.ui.screens.player.PlaybackStreamResolver(
             youtubeRepository,
+            soundCloudRepository,
             dustvalveStreamResolver,
             downloadRepository,
             resolveUseCase,

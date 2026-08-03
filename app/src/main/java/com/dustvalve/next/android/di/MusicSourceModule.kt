@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.di
 
 import com.dustvalve.next.android.data.repository.BandcampMusicSource
+import com.dustvalve.next.android.data.repository.SoundCloudMusicSource
 import com.dustvalve.next.android.data.repository.YouTubeMusicSource
 import com.dustvalve.next.android.data.repository.YouTubeSource
 import com.dustvalve.next.android.domain.repository.MusicSource
@@ -21,8 +22,9 @@ object MusicSourceModule {
         bandcamp: BandcampMusicSource,
         youtube: YouTubeSource,
         youtubeMusic: YouTubeMusicSource,
+        soundcloud: SoundCloudMusicSource,
     ): MusicSourceRegistry {
-        val byId = listOf(bandcamp, youtube, youtubeMusic).associateBy { it.id }
+        val byId = listOf(bandcamp, youtube, youtubeMusic, soundcloud).associateBy { it.id }
         return object : MusicSourceRegistry {
             override fun get(id: String): MusicSource? = byId[id]
         }
