@@ -146,7 +146,14 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        handleIncomingIntent(intent)
+        // Only on a genuinely fresh launch: on recreation (rotation, theme
+        // change) the OS redelivers the ORIGINAL VIEW/SEND intent, but the
+        // previous instance already consumed it - re-handling would renavigate
+        // and restart playback of the linked track. New links while alive
+        // arrive via onNewIntent.
+        if (savedInstanceState == null) {
+            handleIncomingIntent(intent)
+        }
         requestNotificationPermissionIfNeeded()
         triggerLocalMusicRescanIfNeeded()
         bootstrapDedicatedFolderIfNeeded()
@@ -245,6 +252,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun triggerLocalMusicRescanIfNeeded() {
+        // Once per process: a rotation must not re-walk MediaStore/SAF.
+        if (!localRescanTriggered.compareAndSet(false, true)) return
         lifecycleScope.launch(ioDispatcher) {
             try {
                 if (settingsDataStore.getLocalMusicEnabledSync() &&
@@ -262,10 +271,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun bootstrapDedicatedFolderIfNeeded() {
+        // Once per process: rehydrateAll() wipes and rewrites the whole Room
+        // library and restores DataStore from the folder snapshot. Re-running
+        // it on every Activity recreation (rotation, theme change) would show
+        // the boot screen again and could silently revert settings the async
+        // mirror had not flushed yet. Cold start still runs the full check.
+        if (dedicatedFolderBootDone.get()) {
+            _bootState.value = BootState.Ready
+            return
+        }
         lifecycleScope.launch(ioDispatcher) {
             try {
                 val enabled = settingsDataStore.getDedicatedFolderEnabledSync()
                 if (!enabled) {
+                    dedicatedFolderBootDone.set(true)
                     _bootState.value = BootState.Ready
                     return@launch
                 }
@@ -278,6 +297,7 @@ class MainActivity : ComponentActivity() {
                 // The hold lasts for the rehydrate's actual duration (slow
                 // SAF providers used to outrun the old fixed 5s window).
                 folderMirror.suppressed { folderRehydrator.rehydrateAll() }
+                dedicatedFolderBootDone.set(true)
                 _bootState.value = BootState.Ready
             } catch (_: Exception) {
                 _bootState.value = BootState.DedicatedFolderUnreachable
@@ -286,6 +306,10 @@ class MainActivity : ComponentActivity() {
     }
 
     fun clearDedicatedFolderError() {
+        // Reached only after the error screen resolved the folder state
+        // (re-pick + rehydrate, or feature turned off) - boot is done for
+        // this process.
+        dedicatedFolderBootDone.set(true)
         _bootState.value = BootState.Ready
     }
 
@@ -308,6 +332,17 @@ class MainActivity : ComponentActivity() {
         if (url != null) {
             _deepLinkUrl.value = url
         }
+    }
+
+    private companion object {
+        /**
+         * Process-wide guards so Activity recreation (rotation, theme change)
+         * never re-runs the expensive boot pipeline. A ViewModel would only
+         * survive configuration changes for one Activity; these flags also
+         * cover a finished Activity being relaunched in a warm process.
+         */
+        val localRescanTriggered = java.util.concurrent.atomic.AtomicBoolean(false)
+        val dedicatedFolderBootDone = java.util.concurrent.atomic.AtomicBoolean(false)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
