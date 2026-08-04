@@ -1,9 +1,13 @@
 package com.dustvalve.next.android.data.remote.soundcloud
 
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -20,6 +24,7 @@ import javax.inject.Singleton
 class SoundCloudClientIdProvider @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val settingsDataStore: SettingsDataStore,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     private val mutex = Mutex()
     private val memoryCache = AtomicReference<String?>(null)
@@ -42,7 +47,8 @@ class SoundCloudClientIdProvider @Inject constructor(
         settingsDataStore.clearSoundcloudClientId()
     }
 
-    private fun scrapeClientId(): String {
+    /** Blocking homepage + script scrapes run on [ioDispatcher]. */
+    private suspend fun scrapeClientId(): String = withContext(ioDispatcher) {
         val homepage = httpGet(HOMEPAGE_URL)
         val scriptUrls = SCRIPT_SRC_REGEX.findAll(homepage)
             .map { it.groupValues[1] }
@@ -50,7 +56,7 @@ class SoundCloudClientIdProvider @Inject constructor(
             .toList()
             .asReversed()
 
-        return scriptUrls.firstNotNullOfOrNull { src ->
+        scriptUrls.firstNotNullOfOrNull { src ->
             val body = try {
                 httpGet(src, rangeBytes = SCRIPT_RANGE_BYTES)
             } catch (_: IOException) {

@@ -1,7 +1,11 @@
 package com.dustvalve.next.android.data.remote.soundcloud
 
+import com.dustvalve.next.android.di.qualifiers.AppDispatchers
+import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -20,7 +24,11 @@ import javax.inject.Singleton
  * client_id and retries once with a freshly scraped value.
  */
 @Singleton
-class SoundCloudApi @Inject constructor(private val okHttpClient: OkHttpClient, private val clientIdProvider: SoundCloudClientIdProvider) {
+class SoundCloudApi @Inject constructor(
+    private val okHttpClient: OkHttpClient,
+    private val clientIdProvider: SoundCloudClientIdProvider,
+    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+) {
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -148,11 +156,9 @@ class SoundCloudApi @Inject constructor(private val okHttpClient: OkHttpClient, 
                     }
                 }
                 .build()
-            val response = execute(httpUrl)
-            val code = response.code
-            when (code) {
-                HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> {
-                    response.close()
+            val (code, body) = executeForBody(httpUrl)
+            when {
+                code == HTTP_UNAUTHORIZED || code == HTTP_FORBIDDEN -> {
                     if (attemptedRefresh) {
                         throw IOException("SoundCloud API $code after client_id refresh")
                     }
@@ -160,20 +166,19 @@ class SoundCloudApi @Inject constructor(private val okHttpClient: OkHttpClient, 
                     attemptedRefresh = true
                 }
 
-                in HTTP_OK_MIN..HTTP_OK_MAX -> {
-                    val body = response.use { it.body.string() }
-                    return json.parseToJsonElement(body)
-                }
+                body != null -> return json.parseToJsonElement(body)
 
-                else -> {
-                    response.close()
-                    throw IOException("SoundCloud API HTTP $code for $httpUrl")
-                }
+                else -> throw IOException("SoundCloud API HTTP $code for $httpUrl")
             }
         }
     }
 
-    private fun execute(url: HttpUrl): okhttp3.Response {
+    /**
+     * Runs the blocking OkHttp call and body read on [ioDispatcher] (callers
+     * sit on viewModelScope / the playback manager's Main.immediate scope).
+     * Returns the HTTP code plus the body for 2xx responses (null otherwise).
+     */
+    private suspend fun executeForBody(url: HttpUrl): Pair<Int, String?> = withContext(ioDispatcher) {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
@@ -182,10 +187,16 @@ class SoundCloudApi @Inject constructor(private val okHttpClient: OkHttpClient, 
             .header("Referer", "https://soundcloud.com/")
             .get()
             .build()
-        return okHttpClient.newCall(request).execute()
+        val response = okHttpClient.newCall(request).execute()
+        if (response.code in HTTP_OK_MIN..HTTP_OK_MAX) {
+            response.code to response.use { it.body.string() }
+        } else {
+            response.close()
+            response.code to null
+        }
     }
 
-    private fun rawGet(url: String): String {
+    private suspend fun rawGet(url: String): String = withContext(ioDispatcher) {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", USER_AGENT)
@@ -196,7 +207,7 @@ class SoundCloudApi @Inject constructor(private val okHttpClient: OkHttpClient, 
             if (!response.isSuccessful) {
                 throw IOException("HTTP ${response.code} fetching $url")
             }
-            return response.body.string()
+            response.body.string()
         }
     }
 
