@@ -25,6 +25,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
@@ -175,6 +177,10 @@ class PlaybackManager @Inject constructor(
             _playbackState.value = Player.STATE_IDLE
             _duration.value = 0L
             seekInProgress = false
+            // Snapshot the live position: with the demand-gated poll the flow
+            // can be stale (screen off), and stream-error auto-recovery reads
+            // it to resume where playback failed.
+            _currentPosition.value = player.currentPosition.coerceAtLeast(0L)
             stopPositionUpdates()
         }
 
@@ -186,10 +192,41 @@ class PlaybackManager @Inject constructor(
     init {
         player.addListener(playerListener)
         queueManager.onCurrentTrackRemoved = ::handleCurrentTrackRemoved
+        startPositionDemandGate()
+    }
+
+    /** True while at least one collector is subscribed to [currentPosition]. */
+    @Volatile
+    private var hasPositionSubscribers = false
+
+    /**
+     * Demand-gates the 5 Hz position poll. All UI collection is
+     * lifecycle-aware (WhileSubscribed), so during screen-off/background
+     * playback there are zero collectors - yet the poll used to keep waking
+     * the main thread 5x/second for the whole session, scheduling AP wakeups
+     * that defeat the future flavor's audio offload (DSP playing while the AP
+     * sleeps). Media3's notification/session position display computes
+     * position from speed + timestamp and does not need this poll.
+     */
+    private fun startPositionDemandGate() {
+        scope.launch {
+            _currentPosition.subscriptionCount
+                .map { it > 0 }
+                .distinctUntilChanged()
+                .collect { active ->
+                    hasPositionSubscribers = active
+                    if (active) {
+                        if (player.isPlaying) startPositionUpdates()
+                    } else {
+                        stopPositionUpdates()
+                    }
+                }
+        }
     }
 
     private fun startPositionUpdates() {
         stopPositionUpdates()
+        if (!hasPositionSubscribers) return
         positionUpdateJob = scope.launch {
             while (isActive) {
                 if (!seekInProgress) {
@@ -667,6 +704,9 @@ class PlaybackManager @Inject constructor(
         serviceStarted = false
         seekInProgress = false
         handlingPlaybackEnded.set(false)
+        // The old gate collector died with the cancelled scope; relaunch it on
+        // the fresh one (it immediately re-reads the current subscriber count).
+        startPositionDemandGate()
         player.addListener(playerListener)
         if (player.mediaItemCount > 0) {
             // Player still holds real state (e.g. service restart mid-session):

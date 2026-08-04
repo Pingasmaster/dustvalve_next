@@ -121,8 +121,9 @@ fun MiniPlayer(
         }
     }
 
-    val rawProgress = if (state.duration > 0L) {
-        (state.currentPosition.toFloat() / state.duration.toFloat()).coerceIn(0f, 1f)
+    val positionState by playerViewModel.positionState.collectAsStateWithLifecycle()
+    val rawProgress = if (positionState.durationMs > 0L) {
+        (positionState.positionMs.toFloat() / positionState.durationMs.toFloat()).coerceIn(0f, 1f)
     } else {
         0f
     }

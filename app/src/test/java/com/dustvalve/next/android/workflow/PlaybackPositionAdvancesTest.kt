@@ -12,6 +12,9 @@ import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.workflow.support.AudioFixture
 import com.dustvalve.next.android.workflow.support.FixtureTracks
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -71,9 +74,19 @@ class PlaybackPositionAdvancesTest {
         // playUntilPosition pauses on a 10ms render boundary just before the
         // target, so allow one boundary of slack.
         assertThat(player.currentPosition).isAtLeast(450L)
-        // Let the 200ms position poller propagate into the manager's flow.
-        shadowOf(android.os.Looper.getMainLooper()).idleFor(400L, TimeUnit.MILLISECONDS)
-        assertThat(manager.currentPosition.value).isGreaterThan(0L)
+        // The 200ms poller is demand-gated on currentPosition collectors
+        // (background playback must not wake the AP 5x/sec), so hold a
+        // subscription like the UI does, then let the poll propagate into
+        // the manager's flow.
+        val collectJob = CoroutineScope(Dispatchers.Main).launch {
+            manager.currentPosition.collect {}
+        }
+        try {
+            shadowOf(android.os.Looper.getMainLooper()).idleFor(400L, TimeUnit.MILLISECONDS)
+            assertThat(manager.currentPosition.value).isGreaterThan(0L)
+        } finally {
+            collectJob.cancel()
+        }
     }
 
     @Test

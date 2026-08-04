@@ -48,8 +48,6 @@ data class PlayerUiState(
     val queue: List<Track> = emptyList(),
     val currentQueueIndex: Int = -1,
     val isPlaying: Boolean = false,
-    val currentPosition: Long = 0L,
-    val duration: Long = 0L,
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
     val isMiniPlayerVisible: Boolean = false,
@@ -72,6 +70,9 @@ data class PlayerUiState(
     val activeAudioDevice: AudioDeviceInfo? = null,
     val albumCoverLongPressCarousel: Boolean = true,
 )
+
+/** 5 Hz position tick, split from [PlayerUiState]; see [PlayerViewModel.positionState]. */
+data class PlaybackPositionState(val positionMs: Long = 0L, val durationMs: Long = 0L)
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
@@ -164,9 +165,13 @@ class PlayerViewModel @Inject constructor(
         // or a TTL-stale stream URL. Deliberately NOT cleared in onCleared():
         // the singletons outlive this activity-scoped ViewModel, and skip from
         // the media notification must keep resolving while the UI is closed
-        // (the next MainActivity's ViewModel overwrites them).
-        playbackManager.streamIsStale = playbackStreamResolver::isResolutionStale
-        playbackManager.streamResolver = { track -> playbackStreamResolver.resolveOnDemand(track) }
+        // (the next MainActivity's ViewModel overwrites them). Capture the
+        // @Singleton resolver in a local so the installed lambda references
+        // ONLY the resolver - it must never retain this cleared ViewModel
+        // (audio callbacks, DAO refs) on the singleton manager.
+        val resolver = playbackStreamResolver
+        playbackManager.streamIsStale = resolver::isResolutionStale
+        playbackManager.streamResolver = { track -> resolver.resolveOnDemand(track) }
         audioManager.registerAudioDeviceCallback(audioDeviceCallback, Handler(Looper.getMainLooper()))
     }
 
@@ -421,19 +426,20 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    // The 5 Hz playback-position tick is deliberately NOT part of this state:
+    // every browse screen collects uiState, and folding the tick in used to
+    // recompose all of them (and their visible list rows) 5x/sec for the whole
+    // playback session. Position/duration live in [positionState], collected
+    // only by the seek bar / progress consumers.
     val uiState: StateFlow<PlayerUiState> = combine(
         queueManager.currentTrack,
         queueManager.queue,
         playbackManager.isPlaying,
-        playbackManager.currentPosition,
-        playbackManager.duration,
-    ) { currentTrack, queue, isPlaying, currentPosition, duration ->
+    ) { currentTrack, queue, isPlaying ->
         PlayerUiState(
             currentTrack = currentTrack,
             queue = queue,
             isPlaying = isPlaying,
-            currentPosition = currentPosition,
-            duration = duration,
             isMiniPlayerVisible = currentTrack != null,
         )
     }.combine(
@@ -494,6 +500,22 @@ class PlayerViewModel @Inject constructor(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = PlayerUiState(),
+    )
+
+    /**
+     * High-frequency (200 ms) playback position slice, kept out of [uiState]
+     * so only the seek bar and the mini-player progress indicator recompose
+     * on each tick.
+     */
+    val positionState: StateFlow<PlaybackPositionState> = combine(
+        playbackManager.currentPosition,
+        playbackManager.duration,
+    ) { position, duration ->
+        PlaybackPositionState(positionMs = position, durationMs = duration)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = PlaybackPositionState(),
     )
 
     fun setAudioOutputDevice(device: AudioDeviceInfo?) {

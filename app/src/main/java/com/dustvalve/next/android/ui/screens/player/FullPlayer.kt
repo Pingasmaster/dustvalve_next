@@ -158,6 +158,9 @@ fun FullPlayer(
     playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
+    // Position tick is a separate slice so browse screens (which only collect
+    // uiState) never see the 200 ms updates; the full player displays them.
+    val positionState by playerViewModel.positionState.collectAsStateWithLifecycle()
     val track = state.currentTrack
     val snackbarHostState = remember { SnackbarHostState() }
     val adaptive = LocalAdaptiveLayoutInfo.current
@@ -468,12 +471,11 @@ fun FullPlayer(
                     ) {
                         Spacer(modifier = Modifier.height(86.dp))
 
-                        // Album art with single-tap play/pause and double-tap heart
-                        val albumArtShape = if (heartProgress.value > 0f) {
-                            MorphShape(heartMorph, heartProgress.value)
-                        } else {
-                            MorphShape(heartMorph, 0f)
-                        }
+                        // Album art with single-tap play/pause and double-tap heart.
+                        // The morph progress is read inside the graphicsLayer block
+                        // below (layout phase), never in composition - the whole
+                        // in/hold/out heart animation runs without recomposing
+                        // this scope.
                         val artMax = adaptive.heroMaxSize
                         val artCapped = artMax != Dp.Unspecified
                         Row(
@@ -629,8 +631,11 @@ fun FullPlayer(
                                                 .zIndex(1f)
                                                 .graphicsLayer {
                                                     translationX = albumSwipeOffsetX.value
+                                                    // Deferred read of the heart morph progress:
+                                                    // animation frames re-run only this block.
+                                                    shape = MorphShape(heartMorph, heartProgress.value)
+                                                    clip = true
                                                 }
-                                                .clip(albumArtShape)
                                                 .pointerInput(Unit) {
                                                     detectHorizontalDragGestures(
                                                         onDragEnd = {
@@ -832,8 +837,8 @@ fun FullPlayer(
 
                         FullPlayerSeekBar(
                             trackId = track.id,
-                            currentPosition = state.currentPosition,
-                            duration = state.duration,
+                            currentPosition = positionState.positionMs,
+                            duration = positionState.durationMs,
                             isLoadingTrack = state.isLoadingTrack,
                             progressBarStyle = state.progressBarStyle,
                             progressBarSizeDp = state.progressBarSizeDp,
