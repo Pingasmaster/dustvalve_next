@@ -299,10 +299,27 @@ class FolderMirror @Inject constructor(
         val tmpName = "${DedicatedFolderPaths.FILE_METADATA_CACHE.removeSuffix(".json")}.tmp.json"
         cache.findFile(tmpName)?.delete()
         val tmp = cache.createFile(DedicatedFolderPaths.JSON_MIME, tmpName) ?: return
-        context.contentResolver.openOutputStream(tmp.uri, "wt")?.use {
+        val wrote = context.contentResolver.openOutputStream(tmp.uri, "wt")?.use {
             it.write(text.toByteArray(Charsets.UTF_8))
-        } ?: return
+        }
+        if (wrote == null) {
+            try {
+                tmp.delete()
+            } catch (_: Exception) {
+            }
+            return
+        }
         val renamed = try {
+            // Swap: drop the old target BEFORE renaming (same sequence as
+            // FolderIo.writeJsonBlocking). AOSP's FileSystemProvider routes
+            // renameDocument through buildUniqueFile, so renaming over an
+            // existing metadata.json "succeeds" as "metadata (1).json" -
+            // leaving the canonical file stale forever and leaking one
+            // numbered file per flush.
+            try {
+                cache.findFile(DedicatedFolderPaths.FILE_METADATA_CACHE)?.delete()
+            } catch (_: Exception) {
+            }
             tmp.renameTo(DedicatedFolderPaths.FILE_METADATA_CACHE)
         } catch (_: Exception) {
             false
