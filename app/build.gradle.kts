@@ -10,7 +10,6 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
     alias(libs.plugins.roborazzi)
 }
@@ -303,19 +302,6 @@ android {
         explainIssues = true
         showAll = true
         lintConfig = rootProject.file("config/lint/lint.xml")
-    }
-}
-
-ktlint {
-    version.set(libs.versions.ktlint.engine.get())
-    android.set(true)
-    ignoreFailures.set(false)
-    filter {
-        exclude { it.file.path.contains("/build/") }
-    }
-    reporters {
-        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.PLAIN)
-        reporter(org.jlleitschuh.gradle.ktlint.reporter.ReporterType.SARIF)
     }
 }
 

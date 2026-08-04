@@ -2,7 +2,7 @@
 agp = "9.4.0-alpha07"
 desugar-jdk-libs = "2.1.5"
 kotlin = "2.4.20-Beta2"
-ksp = "2.3.10"
+ksp = "2.3.11"
 hilt = "2.60.1"
 hilt-androidx = "1.4.0"
 
@@ -23,7 +23,7 @@ documentfile = "1.1.0"
 palette = "1.1.0-alpha01"
 
 okhttp = "5.4.0"
-jsoup = "1.22.2"
+jsoup = "1.23.1"
 coil = "3.5.0"
 material-kolor = "5.0.0"
 media3 = "1.11.0-rc01"
@@ -46,7 +46,10 @@ androidx-benchmark = "1.5.0-beta01"
 androidx-profileinstaller = "1.4.1"
 
 # Static analysis toolchain.
-ktlint-gradle = "14.2.0"
+# ktlint-engine pins the CLI run by the JDK 25 JavaExec tasks in the root
+# build.gradle.kts. ktlint-gradle was removed: its worker processes load
+# kotlin-compiler-embeddable into the JDK 25 daemon and emit JEP 498
+# sun.misc.Unsafe warnings.
 ktlint-engine = "1.8.0"
 detekt = "2.0.0-alpha.5"
 compose-rules = "0.6.3"
@@ -160,6 +163,9 @@ androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchm
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidx-profileinstaller" }
 
 # Static analysis libs
+# ktlint CLI, run by the root build.gradle.kts JavaExec tasks on JDK 25.
+ktlint-cli = { group = "com.pinterest.ktlint", name = "ktlint-cli", version.ref = "ktlint-engine" }
+
 detekt-compose = { module = "io.nlopez.compose.rules:detekt", version.ref = "compose-rules" }
 lint-slack-checks = { module = "com.slack.lint:slack-lint-checks", version.ref = "slack-lint-checks" }
 lint-slack-compose = { module = "com.slack.lint.compose:compose-lint-checks", version.ref = "slack-compose-lints" }
@@ -171,7 +177,6 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle" }
 detekt = { id = "dev.detekt", version.ref = "detekt" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
 dependency-analysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }

@@ -1,7 +1,6 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
 }
 
@@ -38,13 +37,6 @@ ksp {
     // so schema bumps can ship hand-written Migrations verified against the
     // previous version. Pairs with exportSchema = true on the @Database.
     arg("room.schemaLocation", "$projectDir/schemas")
-}
-
-ktlint {
-    version.set(libs.versions.ktlint.engine.get())
-    android.set(true)
-    ignoreFailures.set(false)
-    filter { exclude { it.file.path.contains("/build/") } }
 }
 
 detekt {

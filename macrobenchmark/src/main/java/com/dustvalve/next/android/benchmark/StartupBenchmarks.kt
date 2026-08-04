@@ -39,10 +39,9 @@ class StartupBenchmarks {
     fun coldNone() = benchmark(CompilationMode.None())
 
     @Test
-    fun coldBaselineProfile() =
-        benchmark(
-            CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Require),
-        )
+    fun coldBaselineProfile() = benchmark(
+        CompilationMode.Partial(baselineProfileMode = BaselineProfileMode.Require),
+    )
 
     private fun benchmark(compilationMode: CompilationMode) {
         rule.measureRepeated(

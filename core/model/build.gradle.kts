@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.ktlint)
     alias(libs.plugins.detekt)
 }
 
@@ -30,13 +29,6 @@ android {
             jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)
         }
     }
-}
-
-ktlint {
-    version.set(libs.versions.ktlint.engine.get())
-    android.set(true)
-    ignoreFailures.set(false)
-    filter { exclude { it.file.path.contains("/build/") } }
 }
 
 detekt {
