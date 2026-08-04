@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.transfer
 
 import android.content.Context
 import android.net.Uri
+import android.os.storage.StorageManager
 import androidx.core.net.toUri
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.DatabaseGateway
@@ -185,7 +186,7 @@ class PlaylistTransferRepository(
             // OOM the app nor fill the disk. Each violation throws so the
             // finally-block temp cleanup runs.
             val budget = ImportBudget(
-                maxSpillBytes = (context.cacheDir.usableSpace - SPILL_FREE_MARGIN_BYTES).coerceAtLeast(0L),
+                maxSpillBytes = (spillCeilingBytes() - SPILL_FREE_MARGIN_BYTES).coerceAtLeast(0L),
             )
             ZipInputStream(inp.buffered()).use { zip ->
                 var entry = zip.nextEntry
@@ -311,6 +312,21 @@ class PlaylistTransferRepository(
             out.write(buffer, 0, read)
         }
         return copied
+    }
+
+    /**
+     * Space available for spilling audio entries into the cache dir. Consults
+     * StorageManager.getAllocatableBytes alongside File.usableSpace (per lint's
+     * UsableSpace guidance) but takes the MINIMUM of the two: this budget is a
+     * hostile-archive bound, and we never call allocateBytes to actually clear
+     * other apps' caches, so the conservative measure is the honest one.
+     */
+    private fun spillCeilingBytes(): Long {
+        val usable = context.cacheDir.usableSpace
+        return runCatching {
+            val storageManager = context.getSystemService(StorageManager::class.java) ?: return usable
+            minOf(usable, storageManager.getAllocatableBytes(storageManager.getUuidForPath(context.cacheDir)))
+        }.getOrDefault(usable)
     }
 
     /** Mutable running totals for one import; see the caps in the companion. */

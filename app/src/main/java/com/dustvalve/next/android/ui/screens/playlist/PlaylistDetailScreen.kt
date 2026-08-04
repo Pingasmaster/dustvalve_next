@@ -75,6 +75,7 @@ import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.getPlaylistIconRes
+import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
@@ -492,7 +493,7 @@ private fun PlaylistHero(playlist: Playlist, heroUrl: String?, onDoubleTap: (() 
     // Clips only while the morph is animating (resting hero stays full-bleed);
     // progress is read in the layer block, so animation frames don't recompose
     // this scope.
-    val heartClipModifier = heartMorph.clipModifier()
+    val heartClipModifier = Modifier.heartMorphClip(heartMorph)
     val isSystem = playlist.isSystem
     val containerColor = when {
         isSystem -> MaterialTheme.colorScheme.primaryContainer

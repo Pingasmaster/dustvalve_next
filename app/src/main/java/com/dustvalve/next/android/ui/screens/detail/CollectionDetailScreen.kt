@@ -69,6 +69,7 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
+import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
@@ -263,7 +264,7 @@ fun CollectionDetailScreen(
                             // hero stays full-bleed); progress is read in the
                             // layer block, so animation frames don't recompose
                             // this scope.
-                            val heartClipModifier = heartMorph.clipModifier()
+                            val heartClipModifier = Modifier.heartMorphClip(heartMorph)
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

@@ -93,17 +93,8 @@ class HeartMorphState internal constructor(
      */
     val shape: Shape get() = MorphShape(morph, progressAnim.value)
 
-    /**
-     * Preferred over reading [progress]/[shape] in composition: the morph
-     * progress is read inside the graphicsLayer block (layout phase), so the
-     * whole in -> hold -> out animation runs without recomposing the caller's
-     * scope. Clips only while animating so the resting hero stays full-bleed.
-     */
-    fun clipModifier(): Modifier = Modifier.graphicsLayer {
-        val p = progressAnim.value
-        shape = MorphShape(morph, p)
-        clip = p > 0f
-    }
+    /** Clip shape at an explicit [progress]; used by [heartMorphClip]. */
+    internal fun shapeAt(progress: Float): Shape = MorphShape(morph, progress)
 
     /** Run the full in -> hold -> out sequence (same timings as FullPlayer). */
     suspend fun play() {
@@ -115,6 +106,19 @@ class HeartMorphState internal constructor(
     companion object {
         const val HOLD_MILLIS = 1000L
     }
+}
+
+/**
+ * Clip this node to [state]'s morph while it animates. Preferred over reading
+ * [HeartMorphState.progress]/[HeartMorphState.shape] in composition: the morph
+ * progress is read inside the graphicsLayer block (layout phase), so the whole
+ * in -> hold -> out animation runs without recomposing the caller's scope.
+ * Clips only while animating so the resting hero stays full-bleed.
+ */
+fun Modifier.heartMorphClip(state: HeartMorphState): Modifier = graphicsLayer {
+    val p = state.progress
+    shape = state.shapeAt(p)
+    clip = p > 0f
 }
 
 /** Remember a [HeartMorphState] wired to the M3 expressive motion scheme. */

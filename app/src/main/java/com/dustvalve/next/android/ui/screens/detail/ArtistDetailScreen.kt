@@ -85,6 +85,7 @@ import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.AlbumCard
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
+import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
@@ -572,7 +573,7 @@ private fun ArtistHero(imageUrl: String?, name: String, isFavorite: Boolean, onD
     // this scope.
     val artModifier = Modifier
         .fillMaxSize()
-        .then(heartMorph.clipModifier())
+        .heartMorphClip(heartMorph)
     val adaptive = LocalAdaptiveLayoutInfo.current
     Box(
         modifier = Modifier

@@ -79,6 +79,7 @@ import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
+import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
@@ -287,7 +288,7 @@ fun AlbumDetailScreen(
                                             // full-bleed); progress is read in the
                                             // layer block, so animation frames
                                             // don't recompose this scope.
-                                            .then(heartMorph.clipModifier())
+                                            .heartMorphClip(heartMorph)
                                             // Double-tap the cover to toggle the album
                                             // favorite (single tap stays a no-op, so
                                             // no added latency anywhere) - same heart
