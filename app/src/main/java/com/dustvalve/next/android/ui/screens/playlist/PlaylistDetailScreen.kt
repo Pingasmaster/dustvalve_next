@@ -489,13 +489,10 @@ private fun PlaylistHero(playlist: Playlist, heroUrl: String?, onDoubleTap: (() 
     } else {
         Modifier
     }
-    // Clip only while the morph is animating so the resting hero stays
-    // full-bleed.
-    val heartClipModifier = if (heartMorph.progress > 0f) {
-        Modifier.clip(heartMorph.shape)
-    } else {
-        Modifier
-    }
+    // Clips only while the morph is animating (resting hero stays full-bleed);
+    // progress is read in the layer block, so animation frames don't recompose
+    // this scope.
+    val heartClipModifier = heartMorph.clipModifier()
     val isSystem = playlist.isSystem
     val containerColor = when {
         isSystem -> MaterialTheme.colorScheme.primaryContainer

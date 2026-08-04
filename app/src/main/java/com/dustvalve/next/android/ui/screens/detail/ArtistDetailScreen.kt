@@ -67,7 +67,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
@@ -568,17 +567,12 @@ private fun ArtistHero(imageUrl: String?, name: String, isFavorite: Boolean, onD
     } else {
         Modifier
     }
-    // Clip only while the morph is animating so the resting hero stays
-    // full-bleed.
+    // Clips only while the morph is animating (resting hero stays full-bleed);
+    // progress is read in the layer block, so animation frames don't recompose
+    // this scope.
     val artModifier = Modifier
         .fillMaxSize()
-        .then(
-            if (heartMorph.progress > 0f) {
-                Modifier.clip(heartMorph.shape)
-            } else {
-                Modifier
-            },
-        )
+        .then(heartMorph.clipModifier())
     val adaptive = LocalAdaptiveLayoutInfo.current
     Box(
         modifier = Modifier

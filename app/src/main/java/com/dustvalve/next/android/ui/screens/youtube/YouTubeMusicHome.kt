@@ -163,7 +163,11 @@ private fun YtmFeed(
             item(key = "ytm_hero") {
                 YtmHero(
                     hero = hero,
-                    scrollOffset = heroScrollOffset,
+                    // Lambda, not a value: the offset changes every scroll
+                    // frame, and a plain Int parameter would recompose the
+                    // whole hero subtree per frame. The provider defers the
+                    // state read to the graphicsLayer block (layout phase).
+                    scrollOffsetProvider = { heroScrollOffset },
                     onPlay = onPlayHero,
                 )
             }
@@ -239,15 +243,18 @@ private fun YtmFeed(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun YtmHero(hero: HeroItem, scrollOffset: Int, onPlay: (HeroItem) -> Unit) {
+private fun YtmHero(hero: HeroItem, scrollOffsetProvider: () -> Int, onPlay: (HeroItem) -> Unit) {
     val surface = MaterialTheme.colorScheme.surface
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(10f / 11f)
             .graphicsLayer {
-                translationY = -scrollOffset * 0.5f
-                alpha = 1f - (scrollOffset / 1200f).coerceIn(0f, 0.6f)
+                // Deferred read: scrolling re-runs only this block, never the
+                // hero composition.
+                val offset = scrollOffsetProvider()
+                translationY = -offset * 0.5f
+                alpha = 1f - (offset / 1200f).coerceIn(0f, 0.6f)
             },
     ) {
         if (hero.thumbnailUrl != null) {
@@ -265,17 +272,18 @@ private fun YtmHero(hero: HeroItem, scrollOffset: Int, onPlay: (HeroItem) -> Uni
             )
         }
 
+        val scrim = remember(surface) {
+            Brush.verticalGradient(
+                0f to Color.Transparent,
+                0.45f to surface.copy(alpha = 0.15f),
+                0.8f to surface.copy(alpha = 0.85f),
+                1f to surface,
+            )
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.45f to surface.copy(alpha = 0.15f),
-                        0.8f to surface.copy(alpha = 0.85f),
-                        1f to surface,
-                    ),
-                ),
+                .background(scrim),
         )
 
         Column(

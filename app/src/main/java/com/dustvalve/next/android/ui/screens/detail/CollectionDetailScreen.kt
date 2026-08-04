@@ -53,7 +53,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -260,13 +259,11 @@ fun CollectionDetailScreen(
                             val heartMorph = rememberHeartMorphState()
                             val heartScope = rememberCoroutineScope()
                             val hapticFeedback = LocalHapticFeedback.current
-                            // Clip only while the morph is animating so the
-                            // resting hero stays full-bleed.
-                            val heartClipModifier = if (heartMorph.progress > 0f) {
-                                Modifier.clip(heartMorph.shape)
-                            } else {
-                                Modifier
-                            }
+                            // Clips only while the morph is animating (resting
+                            // hero stays full-bleed); progress is read in the
+                            // layer block, so animation frames don't recompose
+                            // this scope.
+                            val heartClipModifier = heartMorph.clipModifier()
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()

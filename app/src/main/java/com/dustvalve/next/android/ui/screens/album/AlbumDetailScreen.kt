@@ -58,7 +58,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -283,16 +282,12 @@ fun AlbumDetailScreen(
                                         contentDescription = album.title,
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            // Clip only while the heart morph is
-                                            // animating so the resting hero stays
-                                            // full-bleed.
-                                            .then(
-                                                if (heartMorph.progress > 0f) {
-                                                    Modifier.clip(heartMorph.shape)
-                                                } else {
-                                                    Modifier
-                                                },
-                                            )
+                                            // Clips only while the heart morph is
+                                            // animating (resting hero stays
+                                            // full-bleed); progress is read in the
+                                            // layer block, so animation frames
+                                            // don't recompose this scope.
+                                            .then(heartMorph.clipModifier())
                                             // Double-tap the cover to toggle the album
                                             // favorite (single tap stays a no-op, so
                                             // no added latency anywhere) - same heart

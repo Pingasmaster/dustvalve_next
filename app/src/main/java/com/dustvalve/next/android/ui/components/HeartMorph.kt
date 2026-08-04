@@ -9,10 +9,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.asComposePath
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.graphics.shapes.Morph
@@ -90,6 +92,18 @@ class HeartMorphState internal constructor(
      * frames from re-tessellating.
      */
     val shape: Shape get() = MorphShape(morph, progressAnim.value)
+
+    /**
+     * Preferred over reading [progress]/[shape] in composition: the morph
+     * progress is read inside the graphicsLayer block (layout phase), so the
+     * whole in -> hold -> out animation runs without recomposing the caller's
+     * scope. Clips only while animating so the resting hero stays full-bleed.
+     */
+    fun clipModifier(): Modifier = Modifier.graphicsLayer {
+        val p = progressAnim.value
+        shape = MorphShape(morph, p)
+        clip = p > 0f
+    }
 
     /** Run the full in -> hold -> out sequence (same timings as FullPlayer). */
     suspend fun play() {
