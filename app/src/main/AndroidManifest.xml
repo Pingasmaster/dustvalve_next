@@ -16,6 +16,22 @@
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!--
+        Package-visibility carve-out for the self-update flow: without this,
+        API 30+ hides the system package installer from
+        AppUpdateService.resolveSystemInstallerPackage()'s
+        queryIntentActivities() call, the pinning branch silently never runs,
+        and the handoff degrades to an unpinned implicit VIEW +
+        package-archive intent that any app registering the filter could
+        intercept.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+    </queries>
+
     <application
         android:name=".DustvalveNextApplication"
         android:allowBackup="true"
