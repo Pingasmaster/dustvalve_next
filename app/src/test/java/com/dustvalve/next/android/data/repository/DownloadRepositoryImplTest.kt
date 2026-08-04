@@ -354,4 +354,20 @@ class DownloadRepositoryImplTest {
 
         coVerify(exactly = 1) { mediaCacheClearer.clearAll() }
     }
+
+    // --- Orphan-file reconciliation source ------------------------------
+
+    @Test fun `getAllDownloadFilePaths returns raw paths including content uris and blanks`() = runBlocking {
+        coEvery { downloadDao.getAllSync() } returns listOf(
+            DownloadEntity(trackId = "t1", albumId = "a", filePath = "/data/files/t1.mp3", sizeBytes = 1L),
+            DownloadEntity(trackId = "t2", albumId = "a", filePath = "content://com.provider/doc/2", sizeBytes = 1L),
+            DownloadEntity(trackId = "t3", albumId = "a", filePath = "", sizeBytes = 1L),
+        )
+
+        // Raw and unfiltered by contract: DownloadController owns the
+        // isNotBlank + content:// filtering.
+        assertThat(repo.getAllDownloadFilePaths())
+            .containsExactly("/data/files/t1.mp3", "content://com.provider/doc/2", "")
+            .inOrder()
+    }
 }

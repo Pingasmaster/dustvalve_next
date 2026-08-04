@@ -39,4 +39,11 @@ interface DownloadRepository {
     suspend fun clearAll()
     fun getDownloadedTrackIds(): Flow<List<String>>
     fun getDownloadedAlbumIds(): Flow<List<String>>
+
+    /**
+     * Every recorded download file path, raw and unfiltered (blank rows and
+     * `content://` URIs included); callers own filtering and error handling
+     * (DownloadController's orphan-file reconciliation).
+     */
+    suspend fun getAllDownloadFilePaths(): List<String>
 }

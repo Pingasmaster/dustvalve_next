@@ -7,11 +7,14 @@ import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.getByAlbumIds
 import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
+import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.local.db.entity.PlaylistEntity
 import com.dustvalve.next.android.data.local.db.entity.PlaylistTrackEntity
 import com.dustvalve.next.android.data.mapper.toDomain
+import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
@@ -171,49 +174,25 @@ class PlaylistRepositoryImpl @Inject constructor(
             Playlist.ID_DOWNLOADS -> combine(
                 trackDao.getDownloaded(),
                 playlistDao.getTracksInPlaylist(playlistId),
-                trackFavoriteIds(),
+                favoriteDao.trackFavoriteIdsFlow(),
             ) { source, ordered, favoriteIds ->
                 mergeSystemPlaylist(source, ordered).map { it.toDomain(it.id in favoriteIds) }
             }
 
             Playlist.ID_RECENT -> combine(
                 trackDao.getRecent(),
-                trackFavoriteIds(),
+                favoriteDao.trackFavoriteIdsFlow(),
             ) { tracks, favoriteIds ->
                 tracks.map { it.toDomain(it.id in favoriteIds) }
             }
 
             else -> combine(
                 playlistDao.getTracksInPlaylist(playlistId),
-                trackFavoriteIds(),
+                favoriteDao.trackFavoriteIdsFlow(),
             ) { trackEntities, favoriteIds ->
                 trackEntities.map { it.toDomain(it.id in favoriteIds) }
             }
         }.flowOn(ioDispatcher)
-    }
-
-    private fun trackFavoriteIds(): Flow<Set<String>> = favoriteDao.getAllTrackFavoriteIdsFlow().map { it.toSet() }
-
-    /**
-     * Merges a source-table list (favorites / downloaded) with an optional
-     * manual-order override from `playlist_tracks`:
-     *
-     *  - Tracks present in both source AND override: take the override order.
-     *  - Tracks in source but not in override: append in their source order
-     *    (so newly-favorited tracks land at the end of the custom list).
-     *  - Tracks in override but not in source: drop (unfavorited / undownloaded).
-     *  - Override empty -> return source verbatim.
-     */
-    private fun mergeSystemPlaylist(
-        source: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>,
-        ordered: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>,
-    ): List<com.dustvalve.next.android.data.local.db.entity.TrackEntity> {
-        if (ordered.isEmpty()) return source
-        val sourceById = source.associateBy { it.id }
-        val byOrder = ordered.mapNotNull { sourceById[it.id] }
-        val orderedIds = byOrder.mapTo(HashSet()) { it.id }
-        val tail = source.filter { it.id !in orderedIds }
-        return byOrder + tail
     }
 
     override suspend fun getTracksInPlaylistSync(playlistId: String): List<Track> {
@@ -303,11 +282,6 @@ class PlaylistRepositoryImpl @Inject constructor(
         playlistDao.reorderTrack(playlistId, trackId, fromPosition, toPosition)
     }
 
-    private fun isSystemPlaylistId(playlistId: String): Boolean = when (playlistId) {
-        Playlist.ID_FAVORITES, Playlist.ID_DOWNLOADS, Playlist.ID_RECENT -> true
-        else -> false
-    }
-
     /**
      * Rewrites the playlist_tracks override for a system playlist so its
      * rows exactly match the merged view the UI is displaying right now
@@ -379,5 +353,33 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
             playlistDao.updateTrackCount(playlist.id, collectionTracks.size)
         }
+    }
+
+    override suspend fun importTracksAsPlaylist(
+        name: String,
+        tracks: List<Track>,
+        favoriteId: String?,
+        favoriteType: FavoriteType?,
+    ): Playlist = database.withTransaction {
+        // Room suspending transactions are reentrant, so the nested
+        // createPlaylist/addTracksToPlaylist withTransaction calls behave
+        // exactly like the historical VM-side nesting of this block.
+        trackDao.insertAll(tracks.map { it.toEntity() })
+        val playlist = createPlaylist(name)
+        addTracksToPlaylist(playlist.id, tracks.map { it.id })
+        if (favoriteId != null) {
+            // Same transaction as the import itself: cancellation between the
+            // import and the favorite used to leave an imported-but-unfavorited
+            // playlist (YouTube playlist import).
+            favoriteDao.insert(FavoriteEntity(id = favoriteId, type = requireNotNull(favoriteType).key))
+        }
+        playlist
+    }
+
+    // Boolean on purpose - see the interface KDoc (deletion-authorization safety).
+    override suspend fun playlistExistsByName(name: String): Boolean = playlistDao.getPlaylistByName(name) != null
+
+    override fun getPlaylistTrackMappings(): Flow<Map<String, Set<String>>> = playlistDao.getAllPlaylistTrackMappings().map { rows ->
+        rows.groupBy({ it.playlistId }, { it.trackId }).mapValues { (_, trackIds) -> trackIds.toSet() }
     }
 }

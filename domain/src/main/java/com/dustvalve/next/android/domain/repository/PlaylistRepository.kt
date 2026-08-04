@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.domain.repository
 
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import kotlinx.coroutines.flow.Flow
@@ -33,4 +34,32 @@ interface PlaylistRepository {
     // Auto-sync for system playlists
     suspend fun syncRecentPlaylist()
     suspend fun syncCollectionPlaylist(collectionAlbumIds: List<String>)
+
+    // Playlist import (YouTube playlist import / collection import)
+
+    /**
+     * Atomically (one database transaction): cache [tracks], create a playlist
+     * named [name], add the tracks to it, and - when [favoriteId] is given -
+     * insert a favorites row of [favoriteType] in the SAME transaction, so
+     * cancellation cannot leave an imported-but-unfavorited playlist.
+     * Callers that favorite OUTSIDE the import transaction (collection detail)
+     * simply omit the favorite parameters.
+     */
+    suspend fun importTracksAsPlaylist(
+        name: String,
+        tracks: List<Track>,
+        favoriteId: String? = null,
+        favoriteType: FavoriteType? = null,
+    ): Playlist
+
+    /**
+     * Display-only "already imported" probe. Deliberately a Boolean, never the
+     * playlist or its id: callers must not learn a playlist id from a name
+     * lookup (deletion-authorization safety - a name can collide with an
+     * unrelated user playlist, and deleting that would destroy user data).
+     */
+    suspend fun playlistExistsByName(name: String): Boolean
+
+    /** Reactive playlistId -> set of member trackIds for every playlist_tracks row. */
+    fun getPlaylistTrackMappings(): Flow<Map<String, Set<String>>>
 }

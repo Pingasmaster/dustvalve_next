@@ -8,13 +8,19 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
 import com.dustvalve.next.android.data.local.scanner.LocalMusicScanner
 import com.dustvalve.next.android.data.local.scanner.LocalMusicSyncWorker
 import com.dustvalve.next.android.data.local.scanner.MediaStoreScanner
 import com.dustvalve.next.android.data.local.scanner.ScanResult
+import com.dustvalve.next.android.data.mapper.toDomain
+import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import java.io.File
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -27,6 +33,7 @@ class LocalMusicRepositoryImpl @Inject constructor(
     private val mediaStoreScanner: MediaStoreScanner,
     private val settingsDataStore: SettingsDataStore,
     private val trackDao: TrackDao,
+    private val favoriteDao: FavoriteDao,
 ) : LocalMusicRepository {
 
     companion object {
@@ -139,5 +146,32 @@ class LocalMusicRepositoryImpl @Inject constructor(
 
     override suspend fun cancelSyncWork() {
         WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+    }
+
+    // The combine (rather than a one-shot favorite lookup inside map {}) is
+    // load-bearing: heart toggles must re-emit the local list. Relocated
+    // verbatim from LocalViewModel's allLocalTracks upstream.
+    override fun getLocalTracks(): Flow<List<Track>> = combine(
+        trackDao.getLocalTracks(),
+        favoriteDao.getAllByType("track"),
+    ) { entities, favorites ->
+        val favoriteIds = favorites.map { it.id }.toSet()
+        entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
+    }
+
+    override suspend fun getLocalTrack(trackId: String): Track? {
+        val entity = trackDao.getById(trackId) ?: return null
+        val isFavorite = favoriteDao.isFavorite(trackId)
+        return entity.toDomain(isFavorite)
+    }
+
+    override suspend fun searchLocalTracks(query: String): List<Track> {
+        val entities = trackDao.searchLocalTracks(query)
+        val favoriteIds = favoriteDao.getFavoriteIds(entities.map { it.id }).toSet()
+        return entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
+    }
+
+    override suspend fun deleteTrackRows(trackIds: List<String>) {
+        trackDao.deleteByIdsChunk(trackIds)
     }
 }

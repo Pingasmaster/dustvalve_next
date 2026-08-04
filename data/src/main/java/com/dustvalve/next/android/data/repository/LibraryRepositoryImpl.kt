@@ -8,8 +8,12 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.local.db.entity.RecentTrackEntity
 import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.domain.model.FavoriteAlbumItem
+import com.dustvalve.next.android.domain.model.FavoriteArtistItem
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LibraryRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -52,6 +56,35 @@ class LibraryRepositoryImpl @Inject constructor(
 
             // Clean up old entries (keepCount must be >= 1 to avoid deleting all)
             recentTrackDao.deleteOld(MAX_RECENT_TRACKS.coerceAtLeast(1))
+        }
+    }
+
+    override fun getFavoriteAlbums(): Flow<List<FavoriteAlbumItem>> = favoriteDao.getFavoritedAlbumsWithInfo().map { infos ->
+        infos.map { info ->
+            FavoriteAlbumItem(
+                id = info.id,
+                addedAt = info.addedAt,
+                isPinned = info.isPinned,
+                shapeKey = info.shapeKey,
+                albumTitle = info.albumTitle,
+                albumArtist = info.albumArtist,
+                albumArtUrl = info.albumArtUrl,
+                albumUrl = info.albumUrl,
+            )
+        }
+    }
+
+    override fun getFavoriteArtists(): Flow<List<FavoriteArtistItem>> = favoriteDao.getFavoritedArtistsWithInfo().map { infos ->
+        infos.map { info ->
+            FavoriteArtistItem(
+                id = info.id,
+                addedAt = info.addedAt,
+                isPinned = info.isPinned,
+                shapeKey = info.shapeKey,
+                artistName = info.artistName,
+                artistImageUrl = info.artistImageUrl,
+                artistUrl = info.artistUrl,
+            )
         }
     }
 }

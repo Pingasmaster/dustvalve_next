@@ -597,6 +597,11 @@ class DownloadRepositoryImpl @Inject constructor(
 
     override fun getDownloadedAlbumIds(): Flow<List<String>> = downloadDao.getDownloadedAlbumIds()
 
+    // Raw and unfiltered on purpose: DownloadController's orphan-file
+    // reconciliation owns the isNotBlank/content:// filtering and its own
+    // exception handling.
+    override suspend fun getAllDownloadFilePaths(): List<String> = downloadDao.getAllSync().map { it.filePath }
+
     override suspend fun deleteDownload(trackId: String) {
         val download = downloadDao.getByTrackId(trackId) ?: return
 

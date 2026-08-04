@@ -8,6 +8,7 @@ import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.getByAlbumIds
 import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
+import com.dustvalve.next.android.data.local.db.entity.ArtistEntity
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
@@ -16,6 +17,7 @@ import com.dustvalve.next.android.data.util.orOnRemoteFailure
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Artist
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
@@ -234,6 +236,32 @@ class ArtistRepositoryImpl @Inject constructor(
     }
 
     override suspend fun isFavorite(artistId: String): Boolean = favoriteDao.isFavorite(artistId)
+
+    override suspend fun favoriteRemoteArtist(artist: Artist, source: String) {
+        // Best-effort artist-row persist so library INNER JOINs on the artist
+        // id resolve; a failure must not block the favorite itself. Relocated
+        // verbatim from ArtistDetailViewModel.persistYouTubeArtist (incl. the
+        // catch(Throwable)). Deliberately NOT transactional - matches the
+        // historical two-step sequence exactly.
+        try {
+            artistDao.insert(
+                ArtistEntity(
+                    id = artist.url,
+                    name = artist.name,
+                    url = artist.url,
+                    imageUrl = artist.imageUrl,
+                    bio = artist.bio,
+                    location = artist.location,
+                    source = source,
+                ),
+            )
+        } catch (_: Throwable) { /* best-effort */ }
+        favoriteDao.insert(FavoriteEntity(id = artist.url, type = FavoriteType.ARTIST.key))
+    }
+
+    override suspend fun unfavoriteArtist(artistId: String) {
+        favoriteDao.delete(artistId)
+    }
 
     override suspend fun getArtistMixTracks(albumIds: List<String>): List<Track> {
         if (albumIds.isEmpty()) return emptyList()

@@ -11,4 +11,16 @@ interface ArtistRepository {
     suspend fun isFavorite(artistId: String): Boolean
     suspend fun getArtistMixTracks(albumIds: List<String>): List<Track>
     suspend fun setAutoDownload(artistId: String, autoDownload: Boolean)
+
+    /**
+     * Remote-source (non-Bandcamp) favorite path. Best-effort persist of the
+     * artist row (so library INNER JOINs on the artist id resolve) THEN the
+     * favorites insert of type ARTIST. Deliberately NOT transactional - a
+     * failed artist-row insert must still favorite, matching the historical
+     * two-step sequence. Bandcamp keeps using [toggleFavorite].
+     */
+    suspend fun favoriteRemoteArtist(artist: Artist, source: String)
+
+    /** Favorites-row delete only (the remote-source unfavorite path); the artist row stays cached. */
+    suspend fun unfavoriteArtist(artistId: String)
 }
