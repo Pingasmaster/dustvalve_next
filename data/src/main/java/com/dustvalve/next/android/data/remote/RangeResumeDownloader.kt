@@ -1,7 +1,10 @@
 package com.dustvalve.next.android.data.remote
 
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -91,30 +94,54 @@ object RangeResumeDownloader {
 
         while (true) {
             val call = client.newCall(rangeRequest(url, bytesWritten))
-            // Disposed after the attempt so handlers (and their captured calls)
-            // don't accumulate on the job across retries.
-            val cancelHook = coroutineContext[kotlinx.coroutines.Job]?.invokeOnCompletion { cause ->
-                if (cause != null) call.cancel()
-            }
             try {
-                call.execute().use { response ->
-                    val gotPartial = response.code == 206
-                    if (gotPartial) serverHonorsRange = true
-                    checkResponseStatus(response, trackId)
-                    checkResumeAlignment(response, bytesWritten, gotPartial, trackId)
-                    if (expectedTotal == null) {
-                        expectedTotal = resolveExpectedTotal(response, bytesWritten, expectedTotalBytes, trackId)
+                // A completion-time invokeOnCompletion cannot abort a stalled
+                // transfer: the handler only fires once the job reaches its
+                // final state, which can't happen while this thread is blocked
+                // inside execute()/read(). A watcher coroutine resumes on
+                // another dispatcher thread the moment the caller is cancelled
+                // (pause/cancel) and aborts the call immediately instead of
+                // waiting out the 90s read timeout. Cancelling a call that
+                // already completed or failed is a no-op, so the watcher's
+                // finally is safe on every exit path; scoping it per attempt
+                // keeps handlers from accumulating across retries.
+                coroutineScope {
+                    val canceller = launch {
+                        try {
+                            awaitCancellation()
+                        } finally {
+                            call.cancel()
+                        }
                     }
-                    // bytesWritten is updated per chunk (not just on return) so a
-                    // mid-stream failure resumes from the real offset on retry.
-                    copyResponseBody(response, sink, bytesWritten) { written ->
-                        bytesWritten = written
-                        onProgress?.invoke(written, expectedTotal)
+                    try {
+                        call.execute().use { response ->
+                            val gotPartial = response.code == 206
+                            if (gotPartial) serverHonorsRange = true
+                            checkResponseStatus(response, trackId)
+                            checkResumeAlignment(response, bytesWritten, gotPartial, trackId)
+                            if (expectedTotal == null) {
+                                expectedTotal = resolveExpectedTotal(response, bytesWritten, expectedTotalBytes, trackId)
+                            }
+                            // bytesWritten is updated per chunk (not just on return) so a
+                            // mid-stream failure resumes from the real offset on retry.
+                            copyResponseBody(response, sink, bytesWritten) { written ->
+                                bytesWritten = written
+                                onProgress?.invoke(written, expectedTotal)
+                            }
+                        }
+                    } finally {
+                        canceller.cancel()
                     }
                 }
                 requireStreamComplete(bytesWritten, expectedTotal, trackId)
                 break
             } catch (e: IOException) {
+                // A pause/cancel surfaces here as a plain IOException from the
+                // aborted socket. Rethrow the job's CancellationException (the
+                // PausedDownloadException carrier) instead of misclassifying
+                // the pause as a failed download - callers keep the partial on
+                // pause and only delete it on real failures.
+                coroutineContext.ensureActive()
                 // Non-retryable restart-from-zero signal: retrying would hit
                 // the same mismatched payload again. Propagate unwrapped so
                 // callers can discard the partial and start over.
@@ -130,8 +157,6 @@ object RangeResumeDownloader {
                     )
                 }
                 delay(backoffMillis(attempt))
-            } finally {
-                cancelHook?.dispose()
             }
         }
 
