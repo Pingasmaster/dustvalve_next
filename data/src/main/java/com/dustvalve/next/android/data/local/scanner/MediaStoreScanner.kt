@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.deleteByIds
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
@@ -19,11 +20,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MediaStoreScanner @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-    private val trackDao: TrackDao,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
-) {
+class MediaStoreScanner(private val context: Context, private val trackDao: TrackDao, private val ioDispatcher: CoroutineDispatcher) {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        gateway: DatabaseGateway,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(context, gateway.trackDao, ioDispatcher)
 
     companion object {
         private const val FOLDER_URI_SENTINEL = "mediastore"

@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.repository
 
 import androidx.room.withTransaction
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
@@ -30,15 +31,22 @@ import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
-class AlbumRepositoryImpl @Inject constructor(
+class AlbumRepositoryImpl(
     private val database: DustvalveNextDatabase,
     private val albumDao: AlbumDao,
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
     private val albumScraper: DustvalveAlbumScraper,
     private val downloadRepository: DownloadRepository,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : AlbumRepository {
+
+    @Inject constructor(
+        gateway: DatabaseGateway,
+        albumScraper: DustvalveAlbumScraper,
+        downloadRepository: DownloadRepository,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(gateway.database, gateway.albumDao, gateway.trackDao, gateway.favoriteDao, albumScraper, downloadRepository, ioDispatcher)
 
     companion object {
         // Albums are immutable once released - title, artist, tracks, art and

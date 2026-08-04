@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
@@ -9,7 +10,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class RecentSearchRepositoryImpl @Inject constructor(private val recentSearchDao: RecentSearchDao) : RecentSearchRepository {
+class RecentSearchRepositoryImpl(private val recentSearchDao: RecentSearchDao) : RecentSearchRepository {
+
+    @Inject constructor(gateway: DatabaseGateway) : this(gateway.recentSearchDao)
 
     companion object {
         /** Per-source history cap, relocated verbatim from the VMs' deleteOld(source, keepCount = 20) calls. */

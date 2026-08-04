@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.repository
 
 import androidx.room.withTransaction
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
@@ -30,14 +31,20 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PlaylistRepositoryImpl @Inject constructor(
+class PlaylistRepositoryImpl(
     private val database: DustvalveNextDatabase,
     private val playlistDao: PlaylistDao,
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
     private val downloadRepository: DownloadRepository,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : PlaylistRepository {
+
+    @Inject constructor(
+        gateway: DatabaseGateway,
+        downloadRepository: DownloadRepository,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(gateway.database, gateway.playlistDao, gateway.trackDao, gateway.favoriteDao, downloadRepository, ioDispatcher)
 
     override fun getAllPlaylists(): Flow<List<Playlist>> {
         // Combine playlist entities with live track counts from source tables

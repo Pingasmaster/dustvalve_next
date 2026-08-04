@@ -15,6 +15,11 @@ android {
     compileSdkMinor = 1
     defaultConfig { minSdk = 26 }
 
+    // DatabaseGateway gates Room's destructive-migration fallback on :data's
+    // own BuildConfig.DEBUG (library debug pairs with app debug; :app's
+    // flavors are on the api dimension and don't affect library matching).
+    buildFeatures { buildConfig = true }
+
     lint {
         // Off-by-default check; must be enabled here so :app (checkDependencies
         // = true) can enforce it at error severity across module boundaries.

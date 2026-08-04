@@ -325,10 +325,12 @@ roborazzi {
 dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
-    // Project modules
+    // Project modules. :core:database is deliberately absent: the Room
+    // database/DAOs are an implementation detail of :data (DatabaseGateway);
+    // production code in :app must not see them. Tests still construct real
+    // in-memory databases via testImplementation below.
     implementation(project(":core:common"))
     implementation(project(":core:model"))
-    implementation(project(":core:database"))
     implementation(project(":core:datastore"))
     implementation(project(":domain"))
     implementation(project(":data"))
@@ -369,11 +371,6 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.compiler)
-
-    // Room
-    implementation(libs.room.runtime)
-    implementation(libs.room.ktx)
-    ksp(libs.room.compiler)
 
     // OkHttp
     implementation(libs.okhttp)
@@ -431,6 +428,12 @@ dependencies {
     testImplementation(libs.androidx.test.espresso.core)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
+    // Unit tests build real in-memory Room databases (DbTestBase) and mock
+    // RoomDatabaseKt's withTransaction (room-ktx); production :app code has
+    // no Room/database access - it goes through :data's repositories.
+    testImplementation(project(":core:database"))
+    testImplementation(libs.room.runtime)
+    testImplementation(libs.room.ktx)
     testImplementation(libs.room.testing)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.okhttp.tls)

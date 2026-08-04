@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.dustvalve.next.android.data.asset.StoragePaths
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
@@ -38,14 +39,22 @@ import kotlin.coroutines.coroutineContext
  * subdir is deleted from the tree and the persistable permission is released.
  */
 @Singleton
-class StorageMigrator @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class StorageMigrator(
+    private val context: Context,
     private val settingsDataStore: SettingsDataStore,
     private val database: DustvalveNextDatabase,
     private val downloadDao: DownloadDao,
     private val mirror: FolderMirror,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher,
 ) {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        settingsDataStore: SettingsDataStore,
+        gateway: DatabaseGateway,
+        mirror: FolderMirror,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(context, settingsDataStore, gateway.database, gateway.downloadDao, mirror, ioDispatcher)
     data class Progress(val fraction: Float, val label: String)
 
     suspend fun migrateToFolder(treeUriStr: String, includeImages: Boolean, includeMetadata: Boolean, onProgress: (Progress) -> Unit) =

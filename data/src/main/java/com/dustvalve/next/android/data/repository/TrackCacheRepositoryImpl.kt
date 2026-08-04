@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.getByIds
@@ -12,8 +13,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class TrackCacheRepositoryImpl @Inject constructor(private val trackDao: TrackDao, private val favoriteDao: FavoriteDao) :
-    TrackCacheRepository {
+class TrackCacheRepositoryImpl(private val trackDao: TrackDao, private val favoriteDao: FavoriteDao) : TrackCacheRepository {
+
+    @Inject constructor(gateway: DatabaseGateway) : this(gateway.trackDao, gateway.favoriteDao)
 
     // TrackDao.insertAll is a true @Upsert (NOT REPLACE - REPLACE would
     // cascade-delete playlist_tracks memberships). No transaction: matches

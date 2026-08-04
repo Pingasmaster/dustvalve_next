@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Environment
 import android.os.StatFs
 import com.dustvalve.next.android.data.asset.StoragePaths
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
@@ -27,12 +28,19 @@ import javax.inject.Singleton
  * vs. downloads bucket; everything is one pool.
  */
 @Singleton
-class StorageTracker @Inject constructor(
+class StorageTracker(
     private val downloadDao: DownloadDao,
     private val settingsDataStore: SettingsDataStore,
-    @param:ApplicationContext private val context: Context,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher,
 ) {
+
+    @Inject constructor(
+        gateway: DatabaseGateway,
+        settingsDataStore: SettingsDataStore,
+        @ApplicationContext context: Context,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(gateway.downloadDao, settingsDataStore, context, ioDispatcher)
 
     private val _sizeUpdateTrigger = MutableStateFlow(0L)
 

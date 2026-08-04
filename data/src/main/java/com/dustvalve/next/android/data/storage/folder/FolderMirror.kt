@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.storage.folder
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
@@ -47,8 +48,8 @@ import kotlin.coroutines.cancellation.CancellationException
  */
 @OptIn(FlowPreview::class)
 @Singleton
-class FolderMirror @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class FolderMirror(
+    private val context: Context,
     private val settingsDataStore: SettingsDataStore,
     private val playlistDao: PlaylistDao,
     private val favoriteDao: FavoriteDao,
@@ -61,8 +62,30 @@ class FolderMirror @Inject constructor(
     private val ytVideoDao: YouTubeVideoCacheDao,
     private val ytPlaylistDao: YouTubePlaylistCacheDao,
     private val ytmHomeDao: YouTubeMusicHomeCacheDao,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher,
 ) {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        settingsDataStore: SettingsDataStore,
+        gateway: DatabaseGateway,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(
+        context,
+        settingsDataStore,
+        gateway.playlistDao,
+        gateway.favoriteDao,
+        gateway.trackDao,
+        gateway.albumDao,
+        gateway.artistDao,
+        gateway.downloadDao,
+        gateway.recentTrackDao,
+        gateway.recentSearchDao,
+        gateway.youtubeVideoCacheDao,
+        gateway.youtubePlaylistCacheDao,
+        gateway.youtubeMusicHomeCacheDao,
+        ioDispatcher,
+    )
     private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private var activeJobs: MutableList<Job> = mutableListOf()
 

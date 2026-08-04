@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubePlaylistCacheEntity
@@ -43,7 +44,7 @@ import javax.inject.Singleton
  * search VM, etc.) keep working unchanged.
  */
 @Singleton
-class YouTubeRepositoryImpl @Inject constructor(
+class YouTubeRepositoryImpl(
     private val client: YouTubeInnertubeClient,
     private val playerParser: YouTubePlayerParser,
     private val searchParser: YouTubeSearchParser,
@@ -56,8 +57,37 @@ class YouTubeRepositoryImpl @Inject constructor(
     private val albumResolver: YouTubeMusicAlbumResolver,
     private val ytmClient: YouTubeMusicInnertubeClient,
     private val ytmArtistParser: YouTubeMusicArtistParser,
-    @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ioDispatcher: CoroutineDispatcher,
 ) : YouTubeRepository {
+
+    @Inject constructor(
+        client: YouTubeInnertubeClient,
+        playerParser: YouTubePlayerParser,
+        searchParser: YouTubeSearchParser,
+        playlistParser: YouTubePlaylistParser,
+        channelParser: YouTubeChannelParser,
+        nextParser: YouTubeNextParser,
+        gateway: DatabaseGateway,
+        youTubeMusicRepository: com.dustvalve.next.android.domain.repository.YouTubeMusicRepository,
+        albumResolver: YouTubeMusicAlbumResolver,
+        ytmClient: YouTubeMusicInnertubeClient,
+        ytmArtistParser: YouTubeMusicArtistParser,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(
+        client,
+        playerParser,
+        searchParser,
+        playlistParser,
+        channelParser,
+        nextParser,
+        gateway.youtubeVideoCacheDao,
+        gateway.youtubePlaylistCacheDao,
+        youTubeMusicRepository,
+        albumResolver,
+        ytmClient,
+        ytmArtistParser,
+        ioDispatcher,
+    )
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val json = Json { ignoreUnknownKeys = true }

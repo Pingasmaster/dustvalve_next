@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.repository
 
 import androidx.room.withTransaction
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.ArtistDao
@@ -36,7 +37,7 @@ import kotlin.coroutines.cancellation.CancellationException
 private val orderJson = Json { ignoreUnknownKeys = true }
 
 @Singleton
-class ArtistRepositoryImpl @Inject constructor(
+class ArtistRepositoryImpl(
     private val database: DustvalveNextDatabase,
     private val artistDao: ArtistDao,
     private val albumDao: AlbumDao,
@@ -45,8 +46,26 @@ class ArtistRepositoryImpl @Inject constructor(
     private val artistScraper: DustvalveArtistScraper,
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : ArtistRepository {
+
+    @Inject constructor(
+        gateway: DatabaseGateway,
+        artistScraper: DustvalveArtistScraper,
+        downloadRepository: DownloadRepository,
+        albumRepository: AlbumRepository,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(
+        gateway.database,
+        gateway.artistDao,
+        gateway.albumDao,
+        gateway.favoriteDao,
+        gateway.trackDao,
+        artistScraper,
+        downloadRepository,
+        albumRepository,
+        ioDispatcher,
+    )
 
     companion object {
         // Artists may grow new albums over time, so unlike fully-immutable

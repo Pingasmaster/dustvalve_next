@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.repository
 
 import androidx.room.withTransaction
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.RecentTrackDao
@@ -18,12 +19,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class LibraryRepositoryImpl @Inject constructor(
+class LibraryRepositoryImpl(
     private val database: DustvalveNextDatabase,
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
     private val recentTrackDao: RecentTrackDao,
 ) : LibraryRepository {
+
+    @Inject constructor(gateway: DatabaseGateway) :
+        this(gateway.database, gateway.trackDao, gateway.favoriteDao, gateway.recentTrackDao)
 
     companion object {
         private const val MAX_RECENT_TRACKS = 100

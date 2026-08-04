@@ -45,7 +45,7 @@ import com.dustvalve.next.android.data.local.db.entity.YouTubeVideoCacheEntity
     // Schema JSON is exported to core/database/schemas/ (room.schemaLocation
     // KSP arg) and committed, so future version bumps can ship real
     // Migrations and be covered by MigrationTestHelper. Release builds have
-    // no destructive fallback - see DatabaseModule.
+    // no destructive fallback - see DatabaseGateway in :data.
     exportSchema = true,
 )
 abstract class DustvalveNextDatabase : RoomDatabase() {

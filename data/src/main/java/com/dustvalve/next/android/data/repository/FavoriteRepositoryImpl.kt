@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.domain.model.FavoriteType
@@ -10,7 +11,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class FavoriteRepositoryImpl @Inject constructor(private val favoriteDao: FavoriteDao) : FavoriteRepository {
+class FavoriteRepositoryImpl(private val favoriteDao: FavoriteDao) : FavoriteRepository {
+
+    @Inject constructor(gateway: DatabaseGateway) : this(gateway.favoriteDao)
 
     override suspend fun isFavorite(id: String): Boolean = favoriteDao.isFavorite(id)
 

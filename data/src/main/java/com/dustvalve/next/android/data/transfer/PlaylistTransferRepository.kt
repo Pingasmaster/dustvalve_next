@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
 import com.dustvalve.next.android.data.asset.StoragePaths
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
@@ -44,15 +45,24 @@ import kotlin.coroutines.coroutineContext
  * storage layout, and snapshot DTOs.
  */
 @Singleton
-class PlaylistTransferRepository @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class PlaylistTransferRepository(
+    private val context: Context,
     private val playlistRepository: PlaylistRepository,
     private val downloadRepository: DownloadRepository,
     private val trackDao: TrackDao,
     private val downloadDao: DownloadDao,
     private val client: OkHttpClient,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher,
 ) {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        playlistRepository: PlaylistRepository,
+        downloadRepository: DownloadRepository,
+        gateway: DatabaseGateway,
+        client: OkHttpClient,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(context, playlistRepository, downloadRepository, gateway.trackDao, gateway.downloadDao, client, ioDispatcher)
     private val json = FolderSnapshotSerializer.json
 
     /** Write [playlistId] to [out] as a `.dvplaylist` ZIP. [onProgress] reports (done, total). */

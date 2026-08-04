@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.data.repository
 
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubeMusicHomeCacheEntity
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
@@ -26,7 +27,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class YouTubeMusicRepositoryImpl @Inject constructor(
+class YouTubeMusicRepositoryImpl(
     private val client: YouTubeMusicInnertubeClient,
     private val parser: YouTubeMusicParser,
     private val searchParser: YouTubeMusicSearchParser,
@@ -34,8 +35,28 @@ class YouTubeMusicRepositoryImpl @Inject constructor(
     private val youtubePlayerParser: YouTubePlayerParser,
     private val albumResolver: YouTubeMusicAlbumResolver,
     private val homeCache: YouTubeMusicHomeCacheDao,
-    @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ioDispatcher: CoroutineDispatcher,
 ) : YouTubeMusicRepository {
+
+    @Inject constructor(
+        client: YouTubeMusicInnertubeClient,
+        parser: YouTubeMusicParser,
+        searchParser: YouTubeMusicSearchParser,
+        youtubeInnertubeClient: YouTubeInnertubeClient,
+        youtubePlayerParser: YouTubePlayerParser,
+        albumResolver: YouTubeMusicAlbumResolver,
+        gateway: DatabaseGateway,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(
+        client,
+        parser,
+        searchParser,
+        youtubeInnertubeClient,
+        youtubePlayerParser,
+        albumResolver,
+        gateway.youtubeMusicHomeCacheDao,
+        ioDispatcher,
+    )
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     private val json = Json { ignoreUnknownKeys = true }

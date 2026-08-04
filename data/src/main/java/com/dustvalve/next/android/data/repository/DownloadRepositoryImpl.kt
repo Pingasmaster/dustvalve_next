@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.net.toUri
 import androidx.room.withTransaction
 import com.dustvalve.next.android.cache.StorageTracker
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
@@ -52,23 +53,50 @@ import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
-class DownloadRepositoryImpl @Inject constructor(
+class DownloadRepositoryImpl(
     private val database: DustvalveNextDatabase,
     private val downloadDao: DownloadDao,
     private val trackDao: TrackDao,
     private val albumDao: AlbumDao,
     // MediaHttp: no callTimeout - a track download on a slow connection
     // legitimately outlives the base client's 30s whole-call cap.
-    @param:MediaHttp private val client: OkHttpClient,
+    private val client: OkHttpClient,
     private val storageTracker: StorageTracker,
     private val downloadScraper: DustvalveDownloadScraper,
     private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
     private val notificationCenter: DownloadProgressReporter,
     private val mediaCacheClearer: MediaCacheClearer,
-    @param:ApplicationContext private val context: Context,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val context: Context,
+    private val ioDispatcher: CoroutineDispatcher,
 ) : DownloadRepository {
+
+    @Inject constructor(
+        gateway: DatabaseGateway,
+        @MediaHttp client: OkHttpClient,
+        storageTracker: StorageTracker,
+        downloadScraper: DustvalveDownloadScraper,
+        settingsDataStore: SettingsDataStore,
+        youtubeRepository: YouTubeRepository,
+        notificationCenter: DownloadProgressReporter,
+        mediaCacheClearer: MediaCacheClearer,
+        @ApplicationContext context: Context,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(
+        gateway.database,
+        gateway.downloadDao,
+        gateway.trackDao,
+        gateway.albumDao,
+        client,
+        storageTracker,
+        downloadScraper,
+        settingsDataStore,
+        youtubeRepository,
+        notificationCenter,
+        mediaCacheClearer,
+        context,
+        ioDispatcher,
+    )
 
     /**
      * Sidecar persisted next to a partial `.tmp` file. On resume the recorded

@@ -5,6 +5,7 @@ import android.database.Cursor
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.DocumentsContract
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.deleteByIds
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
@@ -21,11 +22,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class LocalMusicScanner @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-    private val trackDao: TrackDao,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
-) {
+class LocalMusicScanner(private val context: Context, private val trackDao: TrackDao, private val ioDispatcher: CoroutineDispatcher) {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        gateway: DatabaseGateway,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(context, gateway.trackDao, ioDispatcher)
 
     companion object {
         private val AUDIO_EXTENSIONS = setOf(

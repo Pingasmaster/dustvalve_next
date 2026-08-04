@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.room.withTransaction
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
@@ -23,11 +24,16 @@ import javax.inject.Singleton
  * eviction; this policy only governs `downloads` table rows.
  */
 @Singleton
-class AssetEvictionPolicy @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class AssetEvictionPolicy(
+    private val context: Context,
     private val database: DustvalveNextDatabase,
     private val downloadDao: DownloadDao,
 ) {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        gateway: DatabaseGateway,
+    ) : this(context, gateway.database, gateway.downloadDao)
 
     /** Evicts unpinned entries oldest-first until at least [targetBytes] freed. */
     suspend fun evict(targetBytes: Long) {

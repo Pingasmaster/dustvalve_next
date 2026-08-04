@@ -7,6 +7,7 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
@@ -27,14 +28,22 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class LocalMusicRepositoryImpl @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class LocalMusicRepositoryImpl(
+    private val context: Context,
     private val scanner: LocalMusicScanner,
     private val mediaStoreScanner: MediaStoreScanner,
     private val settingsDataStore: SettingsDataStore,
     private val trackDao: TrackDao,
     private val favoriteDao: FavoriteDao,
 ) : LocalMusicRepository {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        scanner: LocalMusicScanner,
+        mediaStoreScanner: MediaStoreScanner,
+        settingsDataStore: SettingsDataStore,
+        gateway: DatabaseGateway,
+    ) : this(context, scanner, mediaStoreScanner, settingsDataStore, gateway.trackDao, gateway.favoriteDao)
 
     companion object {
         private const val WORK_NAME = "local_music_sync"

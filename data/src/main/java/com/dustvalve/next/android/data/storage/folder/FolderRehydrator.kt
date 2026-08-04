@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.storage.folder
 import android.content.Context
 import androidx.core.net.toUri
 import androidx.room.withTransaction
+import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.AlbumDao
@@ -42,8 +43,8 @@ private const val TAG = "FolderRehydrator"
  * locally.
  */
 @Singleton
-class FolderRehydrator @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class FolderRehydrator(
+    private val context: Context,
     private val settingsDataStore: SettingsDataStore,
     private val database: DustvalveNextDatabase,
     private val playlistDao: PlaylistDao,
@@ -57,8 +58,31 @@ class FolderRehydrator @Inject constructor(
     private val ytVideoDao: YouTubeVideoCacheDao,
     private val ytPlaylistDao: YouTubePlaylistCacheDao,
     private val ytmHomeDao: YouTubeMusicHomeCacheDao,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    private val ioDispatcher: CoroutineDispatcher,
 ) {
+
+    @Inject constructor(
+        @ApplicationContext context: Context,
+        settingsDataStore: SettingsDataStore,
+        gateway: DatabaseGateway,
+        @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+    ) : this(
+        context,
+        settingsDataStore,
+        gateway.database,
+        gateway.playlistDao,
+        gateway.favoriteDao,
+        gateway.trackDao,
+        gateway.albumDao,
+        gateway.artistDao,
+        gateway.downloadDao,
+        gateway.recentTrackDao,
+        gateway.recentSearchDao,
+        gateway.youtubeVideoCacheDao,
+        gateway.youtubePlaylistCacheDao,
+        gateway.youtubeMusicHomeCacheDao,
+        ioDispatcher,
+    )
     suspend fun rehydrateAll() = withContext(ioDispatcher) {
         val uriStr = settingsDataStore.getDedicatedFolderTreeUriSync() ?: return@withContext
         val uri = orOnStorageFailure<android.net.Uri?>(null) { uriStr.toUri() } ?: return@withContext
