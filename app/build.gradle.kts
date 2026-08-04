@@ -223,6 +223,10 @@ android {
         // (the featureFlags.add(StrongSkipping) form was deprecated in 2.3.21 and
         // removed in subsequent versions). Audit reports produced via
         // `-Pcompose.reports=true` to confirm.
+        if (project.hasProperty("compose.reports")) {
+            reportsDestination = layout.buildDirectory.dir("compose_reports")
+            metricsDestination = layout.buildDirectory.dir("compose_metrics")
+        }
     }
 
     testOptions {
