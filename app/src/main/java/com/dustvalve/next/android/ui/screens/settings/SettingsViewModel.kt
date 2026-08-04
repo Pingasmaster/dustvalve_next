@@ -7,7 +7,6 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
 import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.data.storage.folder.StorageMigrator
 import com.dustvalve.next.android.domain.model.AccountState
@@ -16,6 +15,7 @@ import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
+import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.update.AppUpdateController
 import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.util.UiText
@@ -92,7 +92,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val localMusicRepository: LocalMusicRepository,
     private val downloadRepository: DownloadRepository,
-    private val recentSearchDao: RecentSearchDao,
+    private val recentSearchRepository: RecentSearchRepository,
     private val appUpdateController: AppUpdateController,
     private val storageMigrator: StorageMigrator,
     private val folderMirror: FolderMirror,
@@ -471,9 +471,7 @@ class SettingsViewModel @Inject constructor(
     fun clearAllSearchHistory() {
         viewModelScope.launch {
             try {
-                for (source in listOf("bandcamp", "youtube", "soundcloud", "local")) {
-                    recentSearchDao.clearAll(source)
-                }
+                recentSearchRepository.clearAllSources()
                 _uiState.update {
                     it.copy(searchHistoryClearedMessage = UiText.StringResource(R.string.settings_search_history_cleared))
                 }

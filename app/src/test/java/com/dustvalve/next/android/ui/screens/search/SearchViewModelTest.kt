@@ -1,12 +1,12 @@
 package com.dustvalve.next.android.ui.screens.search
 
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.entity.TrackEntity
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.repository.LocalMusicRepository
+import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
 import com.dustvalve.next.android.util.UiText
@@ -36,24 +36,22 @@ class SearchViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var search: SearchDustvalveUseCase
     private lateinit var albumDetail: GetAlbumDetailUseCase
-    private lateinit var recentSearchDao: RecentSearchDao
-    private lateinit var trackDao: TrackDao
-    private lateinit var favoriteDao: FavoriteDao
+    private lateinit var recentSearchRepository: RecentSearchRepository
+    private lateinit var localMusicRepository: LocalMusicRepository
     private lateinit var settings: SettingsDataStore
 
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
         search = mockk()
         albumDetail = mockk()
-        recentSearchDao = mockk(relaxed = true)
-        trackDao = mockk(relaxed = true)
-        favoriteDao = mockk(relaxed = true)
+        recentSearchRepository = mockk(relaxed = true)
+        localMusicRepository = mockk(relaxed = true)
         settings = mockk(relaxed = true)
-        every { recentSearchDao.getRecent(any(), any()) } returns flowOf(emptyList())
+        every { recentSearchRepository.getRecent(any(), any()) } returns flowOf(emptyList())
         every { settings.searchHistoryEnabled } returns flowOf(true)
         every { settings.searchHistoryBandcamp } returns flowOf(true)
         every { settings.localMusicEnabled } returns flowOf(false)
-        coEvery { trackDao.searchLocalTracks(any()) } returns emptyList()
+        coEvery { localMusicRepository.searchLocalTracks(any()) } returns emptyList()
     }
 
     @After fun tearDown() = Dispatchers.resetMain()
@@ -61,9 +59,8 @@ class SearchViewModelTest {
     private fun vm() = SearchViewModel(
         search,
         albumDetail,
-        recentSearchDao,
-        trackDao,
-        favoriteDao,
+        recentSearchRepository,
+        localMusicRepository,
         settings,
         dispatcher,
     )
@@ -125,8 +122,7 @@ class SearchViewModelTest {
         vm.onQueryChange("  beatles ")
         vm.onSearch()
         advanceUntilIdle()
-        coVerify { recentSearchDao.insert(match { it.query == "beatles" && it.source == "bandcamp" }) }
-        coVerify { recentSearchDao.deleteOld(source = "bandcamp", keepCount = 20) }
+        coVerify { recentSearchRepository.add("beatles", "bandcamp", trim = true) }
         coVerify(exactly = 1) { search.invoke(any(), any(), any()) }
     }
 
@@ -141,7 +137,7 @@ class SearchViewModelTest {
         vm.onQueryChange("beatles")
         vm.onSearch()
         advanceUntilIdle()
-        coVerify(exactly = 0) { recentSearchDao.insert(any()) }
+        coVerify(exactly = 0) { recentSearchRepository.add(any(), any(), any()) }
         job.cancel()
     }
 
@@ -201,11 +197,11 @@ class SearchViewModelTest {
 
     @Test fun `local filter searches only the local db and disables paging`() = runTest(dispatcher) {
         every { settings.localMusicEnabled } returns flowOf(true)
-        coEvery { trackDao.searchLocalTracks("beat") } returns listOf(
-            TrackEntity(
+        coEvery { localMusicRepository.searchLocalTracks("beat") } returns listOf(
+            Track(
                 id = "l1", albumId = "al", title = "beat it", artist = "MJ",
                 trackNumber = 1, duration = 60f, streamUrl = null, artUrl = "",
-                albumTitle = "Thriller", source = "local",
+                albumTitle = "Thriller", source = TrackSource.LOCAL,
             ),
         )
         val vm = vm()
@@ -224,12 +220,12 @@ class SearchViewModelTest {
         job.cancel()
     }
 
-    @Test fun `recent search management delegates to the dao`() = runTest(dispatcher) {
+    @Test fun `recent search management delegates to the repository`() = runTest(dispatcher) {
         val vm = vm()
         vm.removeRecentSearch("beatles")
         vm.clearRecentSearches()
         advanceUntilIdle()
-        coVerify { recentSearchDao.delete("beatles", "bandcamp") }
-        coVerify { recentSearchDao.clearAll("bandcamp") }
+        coVerify { recentSearchRepository.remove("beatles", "bandcamp") }
+        coVerify { recentSearchRepository.clear("bandcamp") }
     }
 }

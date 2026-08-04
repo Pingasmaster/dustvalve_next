@@ -4,11 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SoundCloudHomeFeed
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,7 +17,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -55,15 +53,14 @@ val soundCloudGenreChips = listOf(
 @HiltViewModel
 class SoundCloudViewModel @Inject constructor(
     private val soundCloudRepository: SoundCloudRepository,
-    private val recentSearchDao: RecentSearchDao,
+    private val recentSearchRepository: RecentSearchRepository,
     private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SoundCloudUiState())
     val uiState: StateFlow<SoundCloudUiState> = _uiState.asStateFlow()
 
-    val recentSearches: StateFlow<List<String>> = recentSearchDao.getRecent("soundcloud", 8)
-        .map { entities -> entities.map { it.query } }
+    val recentSearches: StateFlow<List<String>> = recentSearchRepository.getRecent("soundcloud")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val searchHistoryEnabled: StateFlow<Boolean> = combine(
@@ -91,7 +88,9 @@ class SoundCloudViewModel @Inject constructor(
             _uiState.update { it.copy(isSearching = true, searchError = null, results = emptyList()) }
             try {
                 if (searchHistoryEnabled.value) {
-                    recentSearchDao.insert(RecentSearchEntity(query = query, source = "soundcloud"))
+                    // trim = false preserves this screen's historical uncapped
+                    // history: it never trimmed old entries (no deleteOld call).
+                    recentSearchRepository.add(query, "soundcloud", trim = false)
                 }
                 val results = soundCloudRepository.search(query)
                 _uiState.update { it.copy(results = results, isSearching = false) }
@@ -122,13 +121,13 @@ class SoundCloudViewModel @Inject constructor(
 
     fun removeRecentSearch(query: String) {
         viewModelScope.launch {
-            recentSearchDao.delete(query, "soundcloud")
+            recentSearchRepository.remove(query, "soundcloud")
         }
     }
 
     fun clearRecentSearches() {
         viewModelScope.launch {
-            recentSearchDao.clearAll("soundcloud")
+            recentSearchRepository.clear("soundcloud")
         }
     }
 

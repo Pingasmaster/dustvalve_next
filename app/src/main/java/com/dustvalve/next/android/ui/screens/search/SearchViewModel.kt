@@ -4,16 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
-import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.repository.LocalMusicRepository
+import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
 import com.dustvalve.next.android.util.UiText
@@ -26,7 +23,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,9 +45,8 @@ data class SearchUiState(
 class SearchViewModel @Inject constructor(
     private val searchDustvalveUseCase: SearchDustvalveUseCase,
     private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
-    private val recentSearchDao: RecentSearchDao,
-    private val trackDao: TrackDao,
-    private val favoriteDao: FavoriteDao,
+    private val recentSearchRepository: RecentSearchRepository,
+    private val localMusicRepository: LocalMusicRepository,
     private val settingsDataStore: SettingsDataStore,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
@@ -59,8 +54,7 @@ class SearchViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
-    val recentSearches: StateFlow<List<String>> = recentSearchDao.getRecent("bandcamp", 8)
-        .map { entities -> entities.map { it.query } }
+    val recentSearches: StateFlow<List<String>> = recentSearchRepository.getRecent("bandcamp")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchHistoryEnabled: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(
@@ -142,10 +136,8 @@ class SearchViewModel @Inject constructor(
     // No play*(other ViewModel) overloads here: a ViewModel must never take
     // another ViewModel as a parameter (see MainActivity's forwarding note).
     // The UI awaits resolve*() and hands the Track to PlayerViewModel itself.
-    suspend fun resolveLocalTrack(trackId: String): Track? {
-        val entity = withContext(ioDispatcher) { trackDao.getById(trackId) } ?: return null
-        val isFav = favoriteDao.isFavorite(trackId)
-        return entity.toDomain(isFav)
+    suspend fun resolveLocalTrack(trackId: String): Track? = withContext(ioDispatcher) {
+        localMusicRepository.getLocalTrack(trackId)
     }
 
     suspend fun resolveBandcampTrack(trackUrl: String, trackName: String): Track? {
@@ -161,18 +153,20 @@ class SearchViewModel @Inject constructor(
     }
 
     fun removeRecentSearch(query: String) {
-        viewModelScope.launch { recentSearchDao.delete(query, "bandcamp") }
+        viewModelScope.launch { recentSearchRepository.remove(query, "bandcamp") }
     }
 
     fun clearRecentSearches() {
-        viewModelScope.launch { recentSearchDao.clearAll("bandcamp") }
+        viewModelScope.launch { recentSearchRepository.clear("bandcamp") }
     }
 
     private fun saveRecentSearch(query: String) {
         if (!searchHistoryEnabled.value) return
         viewModelScope.launch {
-            recentSearchDao.insert(RecentSearchEntity(query = query.trim(), source = "bandcamp"))
-            recentSearchDao.deleteOld(source = "bandcamp", keepCount = 20)
+            // The repository stores the query verbatim, so keep trimming here
+            // (see RecentSearchRepository.add's kdoc); trim = true caps the
+            // bandcamp history at 20 entries, as before.
+            recentSearchRepository.add(query.trim(), "bandcamp")
         }
     }
 
@@ -241,14 +235,17 @@ class SearchViewModel @Inject constructor(
     }
 
     private suspend fun searchLocalTracks(query: String): List<SearchResult> = withContext(ioDispatcher) {
-        trackDao.searchLocalTracks(query).map { entity ->
+        // The repository decorates tracks with favorite flags; this mapping
+        // deliberately ignores the flag (SearchResult carries none), so the
+        // output is identical to the previous entity-based mapping.
+        localMusicRepository.searchLocalTracks(query).map { track ->
             SearchResult(
                 type = SearchResultType.LOCAL_TRACK,
-                name = entity.title,
-                url = "local://${entity.id}",
-                imageUrl = entity.artUrl.ifBlank { null },
-                artist = entity.artist,
-                album = entity.albumTitle,
+                name = track.title,
+                url = "local://${track.id}",
+                imageUrl = track.artUrl.ifBlank { null },
+                artist = track.artist,
+                album = track.albumTitle,
                 genre = null,
                 releaseDate = null,
             )
