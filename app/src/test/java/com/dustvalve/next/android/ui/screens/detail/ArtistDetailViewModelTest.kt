@@ -1,10 +1,6 @@
 package com.dustvalve.next.android.ui.screens.detail
 
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.ArtistDao
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.MusicCollection
@@ -13,9 +9,11 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.ArtistRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.MusicSource
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
+import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
 import com.dustvalve.next.android.download.DownloadController
@@ -51,13 +49,11 @@ class ArtistDetailViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val sources = mockk<MusicSourceRegistry>()
     private val artistRepository = mockk<ArtistRepository>(relaxed = true)
-    private val favoriteDao = mockk<FavoriteDao>(relaxed = true)
-    private val artistDao = mockk<ArtistDao>(relaxed = true)
-    private val trackDao = mockk<TrackDao>(relaxed = true)
+    private val favoriteRepository = mockk<FavoriteRepository>(relaxed = true)
+    private val trackCacheRepository = mockk<TrackCacheRepository>(relaxed = true)
     private val downloadRepository = mockk<DownloadRepository>()
     private val downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true)
     private val downloadController = mockk<DownloadController>(relaxed = true)
-    private val database = mockk<DustvalveNextDatabase>(relaxed = true)
 
     @Before fun setUp() {
         Dispatchers.setMain(dispatcher)
@@ -85,7 +81,7 @@ class ArtistDetailViewModelTest {
         )
         coEvery { bandcampSource.getArtist(artist.url) } returns artist
         every { sources["bandcamp"] } returns bandcampSource
-        coEvery { favoriteDao.isFavorite(artist.url) } returns false
+        coEvery { favoriteRepository.isFavorite(artist.url) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "bandcamp", url = artist.url)
@@ -133,7 +129,7 @@ class ArtistDetailViewModelTest {
         coEvery { ytSource.getArtist(url) } returns artist
         coEvery { ytSource.getArtistTracks(url, continuation = null) } returns firstPage
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteDao.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, name = "YT Channel", imageUrl = "hint.jpg")
@@ -189,7 +185,7 @@ class ArtistDetailViewModelTest {
         coEvery { ytSource.getArtistTracks(url, continuation = null) } returns page1
         coEvery { ytSource.getArtistTracks(url, continuation = "T1") } returns page2
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteDao.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url)
@@ -240,7 +236,7 @@ class ArtistDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteDao.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url)
@@ -276,7 +272,7 @@ class ArtistDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteDao.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, name = "Hint", imageUrl = "hint.jpg")
@@ -313,7 +309,7 @@ class ArtistDetailViewModelTest {
         assertThat(error.args).containsExactly("nope")
     }
 
-    @Test fun `bandcamp toggleFavorite delegates to ArtistRepository, YT hits FavoriteDao directly`() = runTest(dispatcher) {
+    @Test fun `bandcamp toggleFavorite delegates to ArtistRepository toggleFavorite`() = runTest(dispatcher) {
         val bc = sourceWith("bandcamp", setOf(SourceConcept.ARTIST, SourceConcept.ALBUM))
         val artist = Artist(
             id = "bc_id",
@@ -326,7 +322,7 @@ class ArtistDetailViewModelTest {
         )
         coEvery { bc.getArtist(artist.url) } returns artist
         every { sources["bandcamp"] } returns bc
-        coEvery { favoriteDao.isFavorite(artist.url) } returns false
+        coEvery { favoriteRepository.isFavorite(artist.url) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "bandcamp", url = artist.url)
@@ -335,6 +331,49 @@ class ArtistDetailViewModelTest {
         advanceUntilIdle()
 
         coVerify { artistRepository.toggleFavorite("bc_id") }
+        coVerify(exactly = 0) { artistRepository.favoriteRemoteArtist(any(), any()) }
+    }
+
+    @Test fun `youtube toggleFavorite uses favoriteRemoteArtist and unfavoriteArtist`() = runTest(dispatcher) {
+        val ytSource = sourceWith("youtube", setOf(SourceConcept.ARTIST, SourceConcept.ARTIST_TRACKS))
+        val url = "https://youtube.com/channel/UC1"
+        val artist = Artist(
+            id = url,
+            name = "Ch",
+            url = url,
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = emptyList(),
+        )
+        coEvery { ytSource.getArtist(url) } returns artist
+        coEvery { ytSource.getArtistTracks(url, continuation = null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Ch",
+            owner = "Ch",
+            coverUrl = null,
+            tracks = listOf(track("yt_1")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns ytSource
+        coEvery { favoriteRepository.isFavorite(url) } returns false
+
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url)
+        advanceUntilIdle()
+
+        vm.toggleFavorite()
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.isFavorite).isTrue()
+        coVerify(exactly = 1) { artistRepository.favoriteRemoteArtist(any(), source = "youtube") }
+
+        vm.toggleFavorite()
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.isFavorite).isFalse()
+        coVerify(exactly = 1) { artistRepository.unfavoriteArtist(url) }
+        coVerify(exactly = 0) { artistRepository.toggleFavorite(any()) }
     }
 
     // --- helpers ------------------------------------------------------------
@@ -342,9 +381,8 @@ class ArtistDetailViewModelTest {
     private fun newVm() = ArtistDetailViewModel(
         sources = sources,
         artistRepository = artistRepository,
-        favoriteDao = favoriteDao,
-        artistDao = artistDao,
-        trackDao = trackDao,
+        favoriteRepository = favoriteRepository,
+        trackCacheRepository = trackCacheRepository,
         downloadRepository = downloadRepository,
         downloadAlbumUseCase = downloadAlbumUseCase,
         downloadController = downloadController,

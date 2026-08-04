@@ -2,17 +2,12 @@ package com.dustvalve.next.android.ui.screens.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.withTransaction
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
-import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.SourceConcept
@@ -62,10 +57,7 @@ data class CollectionDetailUiState(
 class CollectionDetailViewModel @Inject constructor(
     private val sources: MusicSourceRegistry,
     private val playlistRepository: PlaylistRepository,
-    private val trackDao: TrackDao,
-    private val playlistDao: PlaylistDao,
-    private val favoriteDao: FavoriteDao,
-    private val database: DustvalveNextDatabase,
+    private val favoriteRepository: FavoriteRepository,
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadController: DownloadController,
@@ -123,13 +115,12 @@ class CollectionDetailViewModel @Inject constructor(
             try {
                 val collection: MusicCollection = source.getCollection(url)
                 paginationCursor = collection.continuation
-                val isFav = favoriteDao.isFavorite(url)
+                val isFav = favoriteRepository.isFavorite(url)
                 val displayName = collection.name.ifBlank { nameHint }
                 // Name matching is DISPLAY-ONLY (drives the "already imported"
-                // affordance). It must never populate importedPlaylistId: that id
-                // authorizes deletion in toggleFavorite, and a user's own playlist
-                // may share the collection's name.
-                val existing = playlistDao.getPlaylistByName(displayName)
+                // affordance) - the repository deliberately returns a Boolean,
+                // never a playlist id; see PlaylistRepository.playlistExistsByName.
+                val alreadyImported = playlistRepository.playlistExistsByName(displayName)
                 _uiState.update {
                     it.copy(
                         name = displayName,
@@ -140,7 +131,7 @@ class CollectionDetailViewModel @Inject constructor(
                         isLoading = false,
                         hasMore = collection.hasMore,
                         isFavorite = isFav,
-                        isImported = existing != null || it.importedPlaylistId != null,
+                        isImported = alreadyImported || it.importedPlaylistId != null,
                     )
                 }
             } catch (e: Exception) {
@@ -196,15 +187,12 @@ class CollectionDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isImporting = false) }
                     return@launch
                 }
-                var playlistId: String? = null
-                database.withTransaction {
-                    trackDao.insertAll(tracks.map { it.toEntity() })
-                    val pl = playlistRepository.createPlaylist(_uiState.value.name)
-                    playlistId = pl.id
-                    playlistRepository.addTracksToPlaylist(pl.id, tracks.map { it.id })
-                }
+                // No favorite parameters: this screen's favorite row is inserted
+                // separately (in toggleFavorite, BEFORE the import) - the
+                // historical outside-the-transaction ordering is preserved.
+                val playlist = playlistRepository.importTracksAsPlaylist(_uiState.value.name, tracks)
                 _uiState.update {
-                    it.copy(isImported = true, isImporting = false, importedPlaylistId = playlistId)
+                    it.copy(isImported = true, isImporting = false, importedPlaylistId = playlist.id)
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -221,7 +209,7 @@ class CollectionDetailViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 if (prev) {
-                    favoriteDao.delete(url)
+                    favoriteRepository.remove(url)
                     // Delete ONLY the playlist this session imported (id captured in
                     // importToLibrary). Never fall back to a name lookup: it could
                     // resolve to - and destroy - an unrelated user playlist that
@@ -234,11 +222,11 @@ class CollectionDetailViewModel @Inject constructor(
                     }
                 } else {
                     val favType = when (state.sourceId) {
-                        "youtube" -> "youtube_playlist"
-                        "soundcloud" -> "soundcloud_playlist"
-                        else -> "collection"
+                        "youtube" -> FavoriteType.YOUTUBE_PLAYLIST
+                        "soundcloud" -> FavoriteType.SOUNDCLOUD_PLAYLIST
+                        else -> FavoriteType.COLLECTION
                     }
-                    favoriteDao.insert(FavoriteEntity(id = url, type = favType))
+                    favoriteRepository.add(url, favType)
                     importToLibrary()
                 }
             } catch (e: Exception) {

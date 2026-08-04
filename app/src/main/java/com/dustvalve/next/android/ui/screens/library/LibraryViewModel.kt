@@ -6,8 +6,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
 import com.dustvalve.next.android.data.remote.DustvalveCollectionScraper
 import com.dustvalve.next.android.data.transfer.PlaylistTransferRepository
 import com.dustvalve.next.android.domain.model.Album
@@ -17,6 +15,8 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
+import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
@@ -63,8 +63,8 @@ class LibraryViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
-    private val playlistDao: PlaylistDao,
-    private val favoriteDao: FavoriteDao,
+    private val favoriteRepository: FavoriteRepository,
+    private val libraryRepository: LibraryRepository,
     private val playlistTransferRepository: PlaylistTransferRepository,
     @param:ApplicationContext private val context: Context,
 ) : ViewModel() {
@@ -240,7 +240,7 @@ class LibraryViewModel @Inject constructor(
     fun pinFavorite(favoriteId: String, isPinned: Boolean) {
         viewModelScope.launch {
             try {
-                favoriteDao.setPinned(favoriteId, isPinned)
+                favoriteRepository.setPinned(favoriteId, isPinned)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_pin)) }
@@ -251,7 +251,7 @@ class LibraryViewModel @Inject constructor(
     fun deleteFavorite(favoriteId: String) {
         viewModelScope.launch {
             try {
-                favoriteDao.delete(favoriteId)
+                favoriteRepository.remove(favoriteId)
                 _uiState.update { it.copy(deleteTarget = null) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -263,7 +263,7 @@ class LibraryViewModel @Inject constructor(
     fun updateFavoriteShape(favoriteId: String, shapeKey: String?) {
         viewModelScope.launch {
             try {
-                favoriteDao.setShapeKey(favoriteId, shapeKey)
+                favoriteRepository.setShapeKey(favoriteId, shapeKey)
                 _uiState.update { it.copy(shapeTarget = null) }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -275,13 +275,12 @@ class LibraryViewModel @Inject constructor(
     private fun collectFullyDownloadedPlaylists() {
         viewModelScope.launch {
             combine(
-                playlistDao.getAllPlaylistTrackMappings(),
+                playlistRepository.getPlaylistTrackMappings(),
                 downloadRepository.getDownloadedTrackIds(),
             ) { mappings, downloadedIds ->
                 val downloadedSet = downloadedIds.toSet()
-                val byPlaylist = mappings.groupBy { it.playlistId }
-                byPlaylist.filter { (_, tracks) ->
-                    tracks.isNotEmpty() && tracks.all { it.trackId in downloadedSet }
+                mappings.filter { (_, trackIds) ->
+                    trackIds.isNotEmpty() && trackIds.all { it in downloadedSet }
                 }.keys
             }
                 .catch { /* ignore */ }
@@ -297,8 +296,8 @@ class LibraryViewModel @Inject constructor(
 
             combine(
                 playlistRepository.getAllPlaylists(),
-                favoriteDao.getFavoritedAlbumsWithInfo(),
-                favoriteDao.getFavoritedArtistsWithInfo(),
+                libraryRepository.getFavoriteAlbums(),
+                libraryRepository.getFavoriteArtists(),
                 accountRepository.getAccountState(),
             ) { playlists, favAlbums, favArtists, accountState ->
                 val filteredPlaylists = playlists.filter { playlist ->

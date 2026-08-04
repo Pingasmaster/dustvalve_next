@@ -2,14 +2,17 @@ package com.dustvalve.next.android.ui.screens.youtube
 
 import app.cash.turbine.test
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.domain.model.FavoriteType
+import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.domain.repository.RecentSearchRepository
+import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
+import com.dustvalve.next.android.domain.repository.YouTubePlaylistResult
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
@@ -37,10 +40,8 @@ class YouTubeViewModelSearchDispatchTest {
     private lateinit var ytRepo: YouTubeRepository
     private lateinit var ytmRepo: YouTubeMusicRepository
     private lateinit var playlistRepo: PlaylistRepository
-    private lateinit var trackDao: TrackDao
-    private lateinit var database: DustvalveNextDatabase
-    private lateinit var recentSearchDao: RecentSearchDao
-    private lateinit var favoriteDao: FavoriteDao
+    private lateinit var recentSearchRepo: RecentSearchRepository
+    private lateinit var trackCacheRepo: TrackCacheRepository
 
     @Before fun setUp() {
         Dispatchers.setMain(testDispatcher)
@@ -53,12 +54,10 @@ class YouTubeViewModelSearchDispatchTest {
         ytRepo = mockk()
         ytmRepo = mockk()
         playlistRepo = mockk(relaxed = true)
-        trackDao = mockk(relaxed = true)
-        database = mockk(relaxed = true)
-        recentSearchDao = mockk(relaxed = true)
-        favoriteDao = mockk(relaxed = true)
+        recentSearchRepo = mockk(relaxed = true)
+        trackCacheRepo = mockk(relaxed = true)
 
-        every { recentSearchDao.getRecent(any(), any()) } returns flowOf(emptyList())
+        every { recentSearchRepo.getRecent(any(), any()) } returns flowOf(emptyList())
 
         // Discovery feed runs at init - stub it out to a quick empty success.
         coEvery { ytRepo.search(any(), any(), any()) } returns Pair(emptyList(), null)
@@ -187,15 +186,39 @@ class YouTubeViewModelSearchDispatchTest {
         assertThat(vm.uiState.value.error).isNotNull()
     }
 
+    @Test fun `importPlaylist imports via the repository with the favorite inside the transaction`() = runTest {
+        val playlistUrl = "https://www.youtube.com/playlist?list=X"
+        val tracks = listOf(importedTrack("yt_a"), importedTrack("yt_b"))
+        coEvery { ytRepo.getPlaylistTracks(playlistUrl) } returns
+            YouTubePlaylistResult(tracks = tracks, title = "Mix")
+        coEvery {
+            playlistRepo.importTracksAsPlaylist(any(), any(), any(), any())
+        } returns Playlist(id = "imported_1", name = "Mix")
+
+        val vm = newViewModel()
+        advanceUntilIdle()
+
+        val imported = vm.importPlaylist(playlistUrl, "Mix").await()
+
+        assertThat(imported).isTrue()
+        assertThat(vm.uiState.value.error).isNull()
+        coVerify(exactly = 1) {
+            playlistRepo.importTracksAsPlaylist(
+                name = "Mix",
+                tracks = tracks,
+                favoriteId = playlistUrl,
+                favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+            )
+        }
+    }
+
     private fun newViewModel(): YouTubeViewModel = YouTubeViewModel(
         settingsDataStore = settings,
         youtubeRepository = ytRepo,
         youtubeMusicRepository = ytmRepo,
         playlistRepository = playlistRepo,
-        trackDao = trackDao,
-        database = database,
-        recentSearchDao = recentSearchDao,
-        favoriteDao = favoriteDao,
+        recentSearchRepository = recentSearchRepo,
+        trackCacheRepository = trackCacheRepo,
     )
 
     private fun track(url: String) = SearchResult(
@@ -207,5 +230,11 @@ class YouTubeViewModelSearchDispatchTest {
         album = null,
         genre = null,
         releaseDate = null,
+    )
+
+    private fun importedTrack(id: String) = Track(
+        id = id, albumId = "", title = id, artist = "", trackNumber = 0,
+        duration = 0f, streamUrl = null, artUrl = "", albumTitle = "",
+        source = TrackSource.YOUTUBE,
     )
 }

@@ -237,12 +237,12 @@ class ArtistRepositoryImpl @Inject constructor(
 
     override suspend fun isFavorite(artistId: String): Boolean = favoriteDao.isFavorite(artistId)
 
-    override suspend fun favoriteRemoteArtist(artist: Artist, source: String) {
+    override suspend fun cacheRemoteArtist(artist: Artist, source: String) {
         // Best-effort artist-row persist so library INNER JOINs on the artist
-        // id resolve; a failure must not block the favorite itself. Relocated
-        // verbatim from ArtistDetailViewModel.persistYouTubeArtist (incl. the
-        // catch(Throwable)). Deliberately NOT transactional - matches the
-        // historical two-step sequence exactly.
+        // id resolve; failures are swallowed. Relocated verbatim from
+        // ArtistDetailViewModel.persistYouTubeArtist (incl. the
+        // catch(Throwable)). The insert is a REPLACE, so repeat calls refresh
+        // the cached metadata.
         try {
             artistDao.insert(
                 ArtistEntity(
@@ -256,6 +256,13 @@ class ArtistRepositoryImpl @Inject constructor(
                 ),
             )
         } catch (_: Throwable) { /* best-effort */ }
+    }
+
+    override suspend fun favoriteRemoteArtist(artist: Artist, source: String) {
+        // Best-effort persist THEN the favorite - a failed artist-row insert
+        // must not block the favorite itself. Deliberately NOT transactional,
+        // matching the historical two-step sequence exactly.
+        cacheRemoteArtist(artist, source)
         favoriteDao.insert(FavoriteEntity(id = artist.url, type = FavoriteType.ARTIST.key))
     }
 

@@ -3,20 +3,15 @@ package com.dustvalve.next.android.ui.screens.youtube
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.withTransaction
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
-import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
-import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.domain.repository.RecentSearchRepository
+import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.util.UiText
@@ -30,7 +25,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -161,17 +155,14 @@ class YouTubeViewModel @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
     private val youtubeMusicRepository: YouTubeMusicRepository,
     private val playlistRepository: PlaylistRepository,
-    private val trackDao: TrackDao,
-    private val database: DustvalveNextDatabase,
-    private val recentSearchDao: RecentSearchDao,
-    private val favoriteDao: FavoriteDao,
+    private val recentSearchRepository: RecentSearchRepository,
+    private val trackCacheRepository: TrackCacheRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(YouTubeUiState())
     val uiState: StateFlow<YouTubeUiState> = _uiState.asStateFlow()
 
-    val recentSearches: StateFlow<List<String>> = recentSearchDao.getRecent("youtube", 8)
-        .map { entities -> entities.map { it.query } }
+    val recentSearches: StateFlow<List<String>> = recentSearchRepository.getRecent("youtube")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchHistoryEnabled: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(
@@ -323,7 +314,7 @@ class YouTubeViewModel @Inject constructor(
                 return
             }
 
-            val trackTitle = trackDao.getById("yt_$videoId")?.title
+            val trackTitle = trackCacheRepository.getTrack("yt_$videoId")?.title
             _uiState.update {
                 it.copy(
                     lastPlayedTrackTitle = trackTitle,
@@ -533,18 +524,18 @@ class YouTubeViewModel @Inject constructor(
     }
 
     fun removeRecentSearch(query: String) {
-        viewModelScope.launch { recentSearchDao.delete(query, "youtube") }
+        viewModelScope.launch { recentSearchRepository.remove(query, "youtube") }
     }
 
     fun clearRecentSearches() {
-        viewModelScope.launch { recentSearchDao.clearAll("youtube") }
+        viewModelScope.launch { recentSearchRepository.clear("youtube") }
     }
 
     private fun saveRecentSearch(query: String) {
         if (!searchHistoryEnabled.value) return
         viewModelScope.launch {
-            recentSearchDao.insert(RecentSearchEntity(query = query.trim(), source = "youtube"))
-            recentSearchDao.deleteOld(source = "youtube", keepCount = 20)
+            // trim = true (default): insert + cap the history at 20 entries.
+            recentSearchRepository.add(query.trim(), "youtube")
         }
     }
 
@@ -643,14 +634,15 @@ class YouTubeViewModel @Inject constructor(
     fun importPlaylist(playlistUrl: String, name: String): Deferred<Boolean> = viewModelScope.async {
         try {
             val result = youtubeRepository.getPlaylistTracks(playlistUrl)
-            database.withTransaction {
-                trackDao.insertAll(result.tracks.map { it.toEntity() })
-                val playlist = playlistRepository.createPlaylist(name)
-                playlistRepository.addTracksToPlaylist(playlist.id, result.tracks.map { it.id })
-                // Same transaction as the import itself: cancellation between
-                // the two used to leave an imported-but-unfavorited playlist.
-                favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
-            }
+            // The favorite is created in the SAME transaction as the import
+            // itself: cancellation between the two used to leave an
+            // imported-but-unfavorited playlist.
+            playlistRepository.importTracksAsPlaylist(
+                name = name,
+                tracks = result.tracks,
+                favoriteId = playlistUrl,
+                favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+            )
             true
         } catch (e: Exception) {
             if (e is CancellationException) throw e

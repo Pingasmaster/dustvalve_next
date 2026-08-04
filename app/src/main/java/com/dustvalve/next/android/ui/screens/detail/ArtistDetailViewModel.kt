@@ -3,20 +3,15 @@ package com.dustvalve.next.android.ui.screens.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.data.local.db.dao.ArtistDao
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.dao.getFavoriteIds
-import com.dustvalve.next.android.data.local.db.entity.ArtistEntity
-import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
-import com.dustvalve.next.android.data.mapper.toDomain
-import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.domain.model.Artist
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.ArtistRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.SourceConcept
+import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
 import com.dustvalve.next.android.download.DownloadController
@@ -68,9 +63,8 @@ data class ArtistDetailUiState(
 class ArtistDetailViewModel @Inject constructor(
     private val sources: MusicSourceRegistry,
     private val artistRepository: ArtistRepository,
-    private val favoriteDao: FavoriteDao,
-    private val artistDao: ArtistDao,
-    private val trackDao: TrackDao,
+    private val favoriteRepository: FavoriteRepository,
+    private val trackCacheRepository: TrackCacheRepository,
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadController: DownloadController,
@@ -160,7 +154,7 @@ class ArtistDetailViewModel @Inject constructor(
 
             try {
                 val artist = source.getArtist(url)
-                val isFav = favoriteDao.isFavorite(url)
+                val isFav = favoriteRepository.isFavorite(url)
                 _uiState.update {
                     it.copy(
                         artist = artist.copy(
@@ -173,11 +167,14 @@ class ArtistDetailViewModel @Inject constructor(
 
                 // YouTube-style flat track feed.
                 if (SourceConcept.ARTIST_TRACKS in source.capabilities) {
-                    persistYouTubeArtist(artist.copy(imageUrl = artist.imageUrl ?: imageUrl))
+                    artistRepository.cacheRemoteArtist(
+                        artist.copy(imageUrl = artist.imageUrl ?: imageUrl),
+                        source = "youtube",
+                    )
                     val page = source.getArtistTracks(url, continuation = null)
                     nextPage = page.continuation
                     if (page.tracks.isNotEmpty()) {
-                        trackDao.insertAll(page.tracks.map { it.toEntity() })
+                        trackCacheRepository.cacheTracks(page.tracks)
                     }
                     _uiState.update {
                         it.copy(
@@ -211,7 +208,7 @@ class ArtistDetailViewModel @Inject constructor(
                 val page = source.getArtistTracks(state.artistUrl, continuation = nextPage)
                 nextPage = page.continuation
                 if (page.tracks.isNotEmpty()) {
-                    trackDao.insertAll(page.tracks.map { it.toEntity() })
+                    trackCacheRepository.cacheTracks(page.tracks)
                 }
                 _uiState.update {
                     val existing = it.tracks.mapTo(HashSet()) { t -> t.id }
@@ -240,14 +237,21 @@ class ArtistDetailViewModel @Inject constructor(
                     val artistId = state.artist?.id ?: return@launch
                     artistRepository.toggleFavorite(artistId)
                 } else {
-                    // YT path - the Artist id IS the URL; persist the entity
-                    // so library INNER JOINs on artist_id resolve.
+                    // YT path - the Artist id IS the URL; the repository
+                    // persists the entity so library INNER JOINs on artist_id
+                    // resolve.
                     if (prev) {
-                        favoriteDao.delete(url)
+                        artistRepository.unfavoriteArtist(url)
                     } else {
                         val art = state.artist
-                        if (art != null) persistYouTubeArtist(art)
-                        favoriteDao.insert(FavoriteEntity(id = url, type = "artist"))
+                        if (art != null) {
+                            artistRepository.favoriteRemoteArtist(art, source = "youtube")
+                        } else {
+                            // No loaded artist metadata: historically the
+                            // favorite row was still inserted (only the
+                            // artist-row persist was skipped).
+                            favoriteRepository.add(url, FavoriteType.ARTIST)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -335,7 +339,7 @@ class ArtistDetailViewModel @Inject constructor(
             )
             nextPage = null
             if (expanded.isNotEmpty()) {
-                trackDao.insertAll(expanded.map { it.toEntity() })
+                trackCacheRepository.cacheTracks(expanded)
             }
             _uiState.update {
                 it.copy(
@@ -401,21 +405,5 @@ class ArtistDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoadingMix = false) }
             }
         }
-    }
-
-    private suspend fun persistYouTubeArtist(artist: Artist) {
-        try {
-            artistDao.insert(
-                ArtistEntity(
-                    id = artist.url,
-                    name = artist.name,
-                    url = artist.url,
-                    imageUrl = artist.imageUrl,
-                    bio = artist.bio,
-                    location = artist.location,
-                    source = "youtube",
-                ),
-            )
-        } catch (_: Throwable) { /* best-effort */ }
     }
 }

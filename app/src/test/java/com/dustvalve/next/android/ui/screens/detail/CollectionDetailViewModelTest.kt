@@ -1,17 +1,14 @@
 package com.dustvalve.next.android.ui.screens.detail
 
-import androidx.room.withTransaction
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.PlaylistDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.MusicSource
 import com.dustvalve.next.android.domain.repository.MusicSourceRegistry
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
@@ -26,8 +23,6 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -50,10 +45,7 @@ class CollectionDetailViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val sources = mockk<MusicSourceRegistry>()
     private val playlistRepository = mockk<PlaylistRepository>(relaxed = true)
-    private val trackDao = mockk<TrackDao>(relaxed = true)
-    private val playlistDao = mockk<PlaylistDao>(relaxed = true)
-    private val favoriteDao = mockk<FavoriteDao>(relaxed = true)
-    private val database = mockk<DustvalveNextDatabase>(relaxed = true)
+    private val favoriteRepository = mockk<FavoriteRepository>(relaxed = true)
     private val downloadRepository = mockk<DownloadRepository>()
     private val downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true)
     private val downloadController = mockk<DownloadController>(relaxed = true)
@@ -81,8 +73,8 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteDao.isFavorite(url) } returns false
-        coEvery { playlistDao.getPlaylistByName("Chill Mix") } returns null
+        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { playlistRepository.playlistExistsByName("Chill Mix") } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "Chill Mix")
@@ -111,8 +103,8 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteDao.isFavorite(url) } returns false
-        coEvery { playlistDao.getPlaylistByName("Chill Mix") } returns null
+        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { playlistRepository.playlistExistsByName("Chill Mix") } returns false
 
         val vm = newVm()
         vm.load(
@@ -182,10 +174,9 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteDao.isFavorite(url) } returns true
-        val existing = mockk<com.dustvalve.next.android.data.local.db.entity.PlaylistEntity>()
-        every { existing.id } returns "local_playlist_42"
-        coEvery { playlistDao.getPlaylistByName("My Mix") } returns existing
+        coEvery { favoriteRepository.isFavorite(url) } returns true
+        // A same-named playlist exists; the probe is a Boolean by design.
+        coEvery { playlistRepository.playlistExistsByName("My Mix") } returns true
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
@@ -213,10 +204,10 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteDao.isFavorite(url) } returns true
-        val userPlaylist = mockk<com.dustvalve.next.android.data.local.db.entity.PlaylistEntity>()
-        every { userPlaylist.id } returns "users_own_playlist"
-        coEvery { playlistDao.getPlaylistByName("My Mix") } returns userPlaylist
+        coEvery { favoriteRepository.isFavorite(url) } returns true
+        // A user's own playlist shares the collection's name: the repository
+        // reports only that SOME playlist exists, never which one.
+        coEvery { playlistRepository.playlistExistsByName("My Mix") } returns true
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
@@ -255,8 +246,8 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteDao.isFavorite(url) } returns false
-        coEvery { playlistDao.getPlaylistByName(any()) } returns null
+        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { playlistRepository.playlistExistsByName(any()) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "Infinite Mix")
@@ -285,49 +276,45 @@ class CollectionDetailViewModelTest {
     }
 
     @Test fun `unfavoriting deletes only the playlist imported this session`() = runTest(dispatcher) {
-        mockkStatic("androidx.room.RoomDatabaseKt")
-        try {
-            // Extension function: arg 0 is the RoomDatabase receiver, arg 1 the block.
-            coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
-                secondArg<suspend () -> Any?>().invoke()
-            }
-            val url = "https://youtube.com/playlist?list=PL1"
-            val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
-            coEvery { source.getCollection(url, null) } returns MusicCollection(
-                id = url,
-                url = url,
-                name = "My Mix",
-                owner = "",
-                coverUrl = null,
-                tracks = listOf(track("a")),
-                continuation = null,
-                hasMore = false,
-            )
-            every { sources["youtube"] } returns source
-            coEvery { favoriteDao.isFavorite(url) } returns false
-            coEvery { playlistDao.getPlaylistByName("My Mix") } returns null
-            coEvery { playlistRepository.createPlaylist("My Mix") } returns Playlist(id = "imported_1", name = "My Mix")
+        val url = "https://youtube.com/playlist?list=PL1"
+        val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
+        coEvery { source.getCollection(url, null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "My Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("a")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns source
+        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { playlistRepository.playlistExistsByName("My Mix") } returns false
+        coEvery {
+            playlistRepository.importTracksAsPlaylist("My Mix", any())
+        } returns Playlist(id = "imported_1", name = "My Mix")
 
-            val vm = newVm()
-            vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
-            advanceUntilIdle()
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
+        advanceUntilIdle()
 
-            vm.importToLibrary()
-            advanceUntilIdle()
-            assertThat(vm.uiState.value.importedPlaylistId).isEqualTo("imported_1")
+        vm.importToLibrary()
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.importedPlaylistId).isEqualTo("imported_1")
 
-            // Favorite, then unfavorite: exactly the imported id is deleted.
-            vm.toggleFavorite()
-            advanceUntilIdle()
-            vm.toggleFavorite()
-            advanceUntilIdle()
+        // Favorite, then unfavorite: exactly the imported id is deleted.
+        vm.toggleFavorite()
+        advanceUntilIdle()
+        vm.toggleFavorite()
+        advanceUntilIdle()
 
-            coVerify(exactly = 1) { playlistRepository.deletePlaylist("imported_1") }
-            assertThat(vm.uiState.value.importedPlaylistId).isNull()
-            assertThat(vm.uiState.value.isImported).isFalse()
-        } finally {
-            unmockkStatic("androidx.room.RoomDatabaseKt")
-        }
+        // Favoriting a not-yet-imported collection inserts the favorite row
+        // OUTSIDE the import transaction, before the import runs.
+        coVerify(exactly = 1) { favoriteRepository.add(url, FavoriteType.YOUTUBE_PLAYLIST) }
+        coVerify(exactly = 1) { playlistRepository.deletePlaylist("imported_1") }
+        assertThat(vm.uiState.value.importedPlaylistId).isNull()
+        assertThat(vm.uiState.value.isImported).isFalse()
     }
 
     // --- helpers ------------------------------------------------------------
@@ -335,10 +322,7 @@ class CollectionDetailViewModelTest {
     private fun newVm() = CollectionDetailViewModel(
         sources = sources,
         playlistRepository = playlistRepository,
-        trackDao = trackDao,
-        playlistDao = playlistDao,
-        favoriteDao = favoriteDao,
-        database = database,
+        favoriteRepository = favoriteRepository,
         downloadRepository = downloadRepository,
         downloadAlbumUseCase = downloadAlbumUseCase,
         downloadController = downloadController,

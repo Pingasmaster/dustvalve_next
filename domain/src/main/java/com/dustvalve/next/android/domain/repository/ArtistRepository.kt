@@ -13,6 +13,15 @@ interface ArtistRepository {
     suspend fun setAutoDownload(artistId: String, autoDownload: Boolean)
 
     /**
+     * Best-effort cache of a remote-source artist row WITHOUT touching
+     * favorites (any failure is swallowed). The insert is a REPLACE, so the
+     * artist-detail load path calls this on every visit to refresh cached
+     * name/image/bio - library INNER JOINs on the artist id then resolve with
+     * fresh metadata.
+     */
+    suspend fun cacheRemoteArtist(artist: Artist, source: String)
+
+    /**
      * Remote-source (non-Bandcamp) favorite path. Best-effort persist of the
      * artist row (so library INNER JOINs on the artist id resolve) THEN the
      * favorites insert of type ARTIST. Deliberately NOT transactional - a

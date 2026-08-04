@@ -21,7 +21,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Covers the remote-source favorite path (favoriteRemoteArtist /
+ * Covers the remote-source paths (cacheRemoteArtist / favoriteRemoteArtist /
  * unfavoriteArtist) against real DAOs; scraper and cross-repo deps mocked.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -48,6 +48,32 @@ class ArtistRepositoryImplTest : DbTestBase() {
         location = null,
         albums = emptyList(),
     )
+
+    @Test fun `cacheRemoteArtist refreshes the artist row without touching favorites`() = runTest {
+        val url = "https://www.youtube.com/channel/UC0"
+        db.artistDao().insert(
+            ArtistEntity(id = url, name = "Old Name", url = url, imageUrl = null, bio = null, location = null, source = "youtube"),
+        )
+
+        repo().cacheRemoteArtist(remoteArtist(url), source = "youtube")
+
+        // The insert is a REPLACE: repeat visits refresh cached metadata.
+        val row = db.artistDao().getByUrl(url)
+        assertThat(row?.name).isEqualTo("Channel")
+        assertThat(row?.imageUrl).isEqualTo("https://yt.example/img.jpg")
+        // No favorites side effect - this is the load-path cache, not a favorite.
+        assertThat(db.favoriteDao().getAllSync()).isEmpty()
+    }
+
+    @Test fun `cacheRemoteArtist swallows artist-row insert failures - best-effort contract`() = runTest {
+        val failingArtistDao = mockk<ArtistDao>()
+        coEvery { failingArtistDao.insert(any()) } throws IllegalStateException("row insert broke")
+
+        repo(artistDao = failingArtistDao)
+            .cacheRemoteArtist(remoteArtist("https://www.youtube.com/channel/UC0"), source = "youtube")
+
+        assertThat(db.favoriteDao().getAllSync()).isEmpty()
+    }
 
     @Test fun `favoriteRemoteArtist persists the artist row with its source and an artist favorite`() = runTest {
         val url = "https://www.youtube.com/channel/UC1"
