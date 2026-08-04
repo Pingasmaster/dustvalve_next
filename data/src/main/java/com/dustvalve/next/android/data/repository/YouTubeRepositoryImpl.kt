@@ -424,9 +424,7 @@ class YouTubeRepositoryImpl @Inject constructor(
             )
         }
 
-        val ytmPage = runCatching {
-            ytmArtistParser.parse(ytmClient.browse(channelId), channelId)
-        }.getOrNull()
+        val ytmPage = ytmArtistPageOrNull(channelId)
 
         if (ytmPage != null && (ytmPage.songs.isNotEmpty() || ytmPage.albums.isNotEmpty())) {
             return YouTubeChannelResult(
@@ -469,6 +467,21 @@ class YouTubeRepositoryImpl @Inject constructor(
             avatarUrl = videos.avatarUrl ?: ytmPage?.avatarUrl,
             albums = emptyList(),
         )
+    }
+
+    /**
+     * Best-effort YTM artist browse. NOT runCatching: it would swallow the
+     * CancellationException from a cancelled browse, and with no later
+     * suspension point in [resolveChannelFirstPage] the empty fallback result
+     * would be built and cached in lastChannelPage - permanently showing an
+     * empty artist page for that channel.
+     */
+    private suspend fun ytmArtistPageOrNull(channelId: String): YouTubeMusicArtistParser.ArtistPage? = try {
+        ytmArtistParser.parse(ytmClient.browse(channelId), channelId)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
     }
 
     /** Opaque page token for getChannelVideos pagination. */
