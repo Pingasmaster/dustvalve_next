@@ -4,8 +4,6 @@ package com.dustvalve.next.android.download
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.dustvalve.next.android.data.local.db.dao.DownloadDao
-import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
@@ -33,20 +31,17 @@ class DownloadControllerTest {
 
     private lateinit var context: Context
     private lateinit var downloadRepository: DownloadRepository
-    private lateinit var downloadDao: DownloadDao
     private lateinit var controller: DownloadController
 
     @Before fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         downloadRepository = mockk(relaxed = true)
-        downloadDao = mockk()
-        coEvery { downloadDao.getAllSync() } returns emptyList()
+        coEvery { downloadRepository.getAllDownloadFilePaths() } returns emptyList()
         controller = DownloadController(
             context = context,
             downloadRepository = downloadRepository,
             downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true),
             notificationCenter = mockk<DownloadNotificationCenter>(relaxed = true),
-            downloadDao = downloadDao,
             ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
@@ -123,9 +118,11 @@ class DownloadControllerTest {
             it.setLastModified(oldMtime)
         }
 
-        coEvery { downloadDao.getAllSync() } returns listOf(
-            DownloadEntity(trackId = "t1", albumId = "al1", filePath = kept.absolutePath, sizeBytes = 4L),
-            DownloadEntity(trackId = "t2", albumId = "al2", filePath = "content://saf/doc/42", sizeBytes = 4L),
+        // Raw, unfiltered paths (the repository contract): the controller owns
+        // the blank/content:// filtering.
+        coEvery { downloadRepository.getAllDownloadFilePaths() } returns listOf(
+            kept.absolutePath,
+            "content://saf/doc/42",
         )
 
         controller.awaitColdStartPurge()
@@ -147,7 +144,7 @@ class DownloadControllerTest {
             it.setLastModified(oldMtime)
         }
         val partial = File(albumDir, "part.mp3.tmp").also { it.writeBytes(ByteArray(4)) }
-        coEvery { downloadDao.getAllSync() } throws IllegalStateException("db not ready")
+        coEvery { downloadRepository.getAllDownloadFilePaths() } throws IllegalStateException("db not ready")
 
         controller.awaitColdStartPurge()
 

@@ -8,11 +8,12 @@ import androidx.media3.test.utils.robolectric.RobolectricUtil
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
 import androidx.test.core.app.ApplicationProvider
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.domain.model.AudioFormat
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
@@ -62,8 +63,8 @@ class PlayerViewModelResolveTest {
         every { getAllPlaylists() } returns flowOf(emptyList())
         every { getTrackIdsInUserPlaylists() } returns flowOf(emptySet())
     }
-    private val favoriteDao = mockk<FavoriteDao> {
-        every { getAllByType(any()) } returns flowOf(emptyList())
+    private val favoriteRepository = mockk<FavoriteRepository> {
+        every { favoriteIds(FavoriteType.TRACK) } returns flowOf(emptySet())
     }
     private val libraryRepository = mockk<LibraryRepository>(relaxed = true)
     private val youtubeRepository = mockk<YouTubeRepository>()
@@ -108,7 +109,7 @@ class PlayerViewModelResolveTest {
             mockk<DownloadController>(relaxed = true),
             downloadRepository,
             playlistRepository,
-            favoriteDao,
+            favoriteRepository,
             settingsDataStore,
             resolveUseCase,
             streamResolver,

@@ -13,11 +13,13 @@ import androidx.media3.common.Player
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AudioFormat
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
@@ -83,7 +85,7 @@ class PlayerViewModel @Inject constructor(
     private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val playlistRepository: PlaylistRepository,
-    private val favoriteDao: com.dustvalve.next.android.data.local.db.dao.FavoriteDao,
+    private val favoriteRepository: FavoriteRepository,
     private val settingsDataStore: SettingsDataStore,
     private val resolveTrackForPlaybackUseCase: ResolveTrackForPlaybackUseCase,
     private val playbackStreamResolver: PlaybackStreamResolver,
@@ -168,7 +170,7 @@ class PlayerViewModel @Inject constructor(
         // (the next MainActivity's ViewModel overwrites them). Capture the
         // @Singleton resolver in a local so the installed lambda references
         // ONLY the resolver - it must never retain this cleared ViewModel
-        // (audio callbacks, DAO refs) on the singleton manager.
+        // (audio callbacks, repository refs) on the singleton manager.
         val resolver = playbackStreamResolver
         playbackManager.streamIsStale = resolver::isResolutionStale
         playbackManager.streamResolver = { track -> resolver.resolveOnDemand(track) }
@@ -261,10 +263,10 @@ class PlayerViewModel @Inject constructor(
     // toggles done from album view / favorites tab show up on the player.
     private fun collectFavoriteTrackIds() {
         viewModelScope.launch {
-            favoriteDao.getAllByType("track")
+            favoriteRepository.favoriteIds(FavoriteType.TRACK)
                 .catch { /* ignore */ }
-                .collect { entities ->
-                    queueManager.applyFavoriteIds(entities.map { it.id }.toSet())
+                .collect { ids ->
+                    queueManager.applyFavoriteIds(ids)
                 }
         }
     }

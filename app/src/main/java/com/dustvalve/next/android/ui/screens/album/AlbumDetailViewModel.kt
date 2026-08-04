@@ -4,12 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.ToggleFavoriteUseCase
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -57,7 +57,7 @@ class AlbumDetailViewModel @Inject constructor(
     private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
-    private val favoriteDao: FavoriteDao,
+    private val favoriteRepository: FavoriteRepository,
     private val settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
 
@@ -92,8 +92,8 @@ class AlbumDetailViewModel @Inject constructor(
     private fun collectFavoriteIds() {
         viewModelScope.launch {
             combine(
-                favoriteDao.getAllByType("track").map { list -> list.map { it.id }.toSet() },
-                favoriteDao.getAllByType("album").map { list -> list.map { it.id }.toSet() },
+                favoriteRepository.favoriteIds(FavoriteType.TRACK),
+                favoriteRepository.favoriteIds(FavoriteType.ALBUM),
             ) { trackFavs, albumFavs -> trackFavs to albumFavs }
                 .catch { /* ignore */ }
                 .collect { (trackFavs, albumFavs) ->

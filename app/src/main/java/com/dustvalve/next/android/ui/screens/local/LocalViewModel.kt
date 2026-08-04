@@ -11,15 +11,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.RecentSearchDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.entity.RecentSearchEntity
-import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
+import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.util.LocaleCollation
 import com.dustvalve.next.android.util.isAtLeastR
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -96,9 +92,7 @@ data class LocalFilterState(
 
 @HiltViewModel
 class LocalViewModel @Inject constructor(
-    private val trackDao: TrackDao,
-    private val favoriteDao: FavoriteDao,
-    private val recentSearchDao: RecentSearchDao,
+    private val recentSearchRepository: RecentSearchRepository,
     private val settingsDataStore: SettingsDataStore,
     private val localMusicRepository: LocalMusicRepository,
     @param:ApplicationContext private val appContext: Context,
@@ -108,8 +102,7 @@ class LocalViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LocalUiState())
     val uiState: StateFlow<LocalUiState> = _uiState.asStateFlow()
 
-    val recentSearches: StateFlow<List<String>> = recentSearchDao.getRecent("local", 8)
-        .map { entities -> entities.map { it.query } }
+    val recentSearches: StateFlow<List<String>> = recentSearchRepository.getRecent("local")
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchHistoryEnabled: StateFlow<Boolean> = kotlinx.coroutines.flow.combine(
@@ -124,13 +117,8 @@ class LocalViewModel @Inject constructor(
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
 
-    val allLocalTracks: StateFlow<List<Track>> = combine(
-        trackDao.getLocalTracks(),
-        favoriteDao.getAllByType("track"),
-    ) { entities, favorites ->
-        val favoriteIds = favorites.map { it.id }.toSet()
-        entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val allLocalTracks: StateFlow<List<Track>> = localMusicRepository.getLocalTracks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Filter state
 
@@ -444,18 +432,20 @@ class LocalViewModel @Inject constructor(
     }
 
     fun removeRecentSearch(query: String) {
-        viewModelScope.launch { recentSearchDao.delete(query, "local") }
+        viewModelScope.launch { recentSearchRepository.remove(query, "local") }
     }
 
     fun clearRecentSearches() {
-        viewModelScope.launch { recentSearchDao.clearAll("local") }
+        viewModelScope.launch { recentSearchRepository.clear("local") }
     }
 
     private fun saveRecentSearch(query: String) {
         if (!searchHistoryEnabled.value) return
         viewModelScope.launch {
-            recentSearchDao.insert(RecentSearchEntity(query = query.trim(), source = "local"))
-            recentSearchDao.deleteOld(source = "local", keepCount = 20)
+            // The repository stores the query verbatim, so keep trimming here
+            // (see RecentSearchRepository.add's kdoc); trim = true caps the
+            // local history at 20 entries, as before.
+            recentSearchRepository.add(query.trim(), "local")
         }
     }
 
@@ -464,10 +454,9 @@ class LocalViewModel @Inject constructor(
         try {
             val filter = _uiState.value.searchFilter
             val results = withContext(ioDispatcher) {
-                val entities = trackDao.searchLocalTracks(query)
-                val ids = entities.map { it.id }
-                val favoriteIds = if (ids.isNotEmpty()) favoriteDao.getFavoriteIdsChunk(ids).toSet() else emptySet()
-                val all = entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
+                // The IO wrap stays here (not in the repository) so the
+                // in-memory locale-aware filtering below keeps running on IO.
+                val all = localMusicRepository.searchLocalTracks(query)
                 // Locale-aware case folding (e.g. Turkish dotted/dotless i)
                 val locale = Locale.getDefault()
                 val lowerQuery = query.lowercase(locale)
@@ -598,8 +587,10 @@ class LocalViewModel @Inject constructor(
 
     private suspend fun deleteDbRow(trackId: String) {
         try {
-            trackDao.deleteByIdsChunk(listOf(trackId))
+            localMusicRepository.deleteTrackRows(listOf(trackId))
             // SAF-mode covers live at local_art/<trackId>.jpg; drop the orphan.
+            // The cover file deletion deliberately stays in the ViewModel: the
+            // repository deletes DB rows only.
             File(appContext.filesDir, "local_art/$trackId.jpg").delete()
         } catch (e: Exception) {
             if (e is CancellationException) throw e

@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
-import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
@@ -62,7 +61,6 @@ class DownloadController @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val notificationCenter: DownloadNotificationCenter,
-    private val downloadDao: DownloadDao,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) {
     sealed interface DownloadWork {
@@ -198,9 +196,8 @@ class DownloadController @Inject constructor(
      */
     private suspend fun reconcileOrphanFiles(downloads: File) {
         val known = try {
-            downloadDao.getAllSync()
+            downloadRepository.getAllDownloadFilePaths()
                 .asSequence()
-                .map { it.filePath }
                 .filter { it.isNotBlank() && !it.startsWith("content://") }
                 .map { File(it).absolutePath }
                 .toHashSet()

@@ -1,13 +1,12 @@
 package com.dustvalve.next.android.download
 
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.local.db.dao.FavoriteDao
-import com.dustvalve.next.android.data.local.db.dao.TrackDao
-import com.dustvalve.next.android.data.local.db.dao.getByIds
-import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.domain.repository.FavoriteRepository
+import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -35,8 +34,8 @@ import javax.inject.Singleton
  *   downloaded gets enqueued via [DownloadRepository.downloadTrack].
  *
  * Initial scope: tracks-only. Album/artist favorites can be expanded later
- * by also observing `getAllByType("album")` / `getAllByType("artist")` and
- * driving `downloadAlbum` / per-album scrape + downloadAlbum respectively
+ * by also observing `favoriteIds(FavoriteType.ALBUM)` / `favoriteIds(FavoriteType.ARTIST)`
+ * and driving `downloadAlbum` / per-album scrape + downloadAlbum respectively
  * (TODO once the UI surfaces a download-progress sink for those flows).
  *
  * Errors are swallowed by design - auto-download must never crash the app
@@ -46,8 +45,8 @@ import javax.inject.Singleton
 @Singleton
 class AutoDownloadFavoritesCoordinator @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
-    private val favoriteDao: FavoriteDao,
-    private val trackDao: TrackDao,
+    private val favoriteRepository: FavoriteRepository,
+    private val trackCacheRepository: TrackCacheRepository,
     private val downloadRepository: DownloadRepository,
     private val downloadController: DownloadController,
     @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
@@ -71,15 +70,18 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
             downloadController.awaitColdStartPurge()
             combine(
                 settingsDataStore.autoDownloadFavorites.distinctUntilChanged(),
-                favoriteDao.getAllByType("track"),
+                favoriteRepository.favoriteIds(FavoriteType.TRACK),
                 downloadRepository.getDownloadedTrackIds().distinctUntilChanged(),
             ) { enabled, favorites, downloaded -> Triple(enabled, favorites, downloaded) }
                 .collectLatest { (enabled, favorites, downloaded) ->
                     if (!enabled) return@collectLatest
-                    val missing = favorites.map { it.id }.filter { it !in downloaded }
+                    val missing = favorites.filter { it !in downloaded }
                     if (missing.isEmpty()) return@collectLatest
-                    // We're iterating favorites, so isFavorite = true.
-                    val tracks = trackDao.getByIds(missing).map { it.toDomain(isFavorite = true) }
+                    // We're iterating favorites, so force isFavorite = true via
+                    // an explicit copy - this preserves the historical hardcoded
+                    // true even in the unfavorite race window, where the
+                    // repository's live decoration could already say false.
+                    val tracks = trackCacheRepository.getTracks(missing).map { it.copy(isFavorite = true) }
                     // Hand off to the controller (foreground service + serial
                     // queue, de-duped by track id). Fire-and-forget - failures
                     // just leave the track non-downloaded and a later emission
