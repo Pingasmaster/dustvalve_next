@@ -9,12 +9,20 @@ import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
 import java.io.IOException
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Remote-stream TTL tracking + forced Bandcamp/YouTube/SoundCloud re-resolve.
  * Keeps [PlayerViewModel] free of the expiry / auto-recovery bookkeeping.
+ *
+ * @Singleton so the TTL map survives Activity recreation: the @Singleton
+ * PlaybackManager keeps whatever hook instance was installed last, and an
+ * unscoped resolver used to mean a fresh (empty) TTL map per recreated
+ * PlayerViewModel while the manager still consulted the previous instance -
+ * two disagreeing sources of truth for stream freshness.
  */
+@Singleton
 class PlaybackStreamResolver @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
     private val soundCloudRepository: SoundCloudRepository,

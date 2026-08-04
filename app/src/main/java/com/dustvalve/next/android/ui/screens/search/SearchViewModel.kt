@@ -16,7 +16,6 @@ import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
-import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
@@ -140,34 +139,13 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun playLocalTrack(trackId: String, playerViewModel: PlayerViewModel) {
-        viewModelScope.launch {
-            try {
-                val entity = withContext(ioDispatcher) { trackDao.getById(trackId) } ?: return@launch
-                val isFav = favoriteDao.isFavorite(trackId)
-                val track = entity.toDomain(isFav)
-                playerViewModel.playTrack(track)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
-    fun playBandcampTrack(trackUrl: String, trackName: String, playerViewModel: PlayerViewModel) {
-        viewModelScope.launch {
-            try {
-                val album = getAlbumDetailUseCase(trackUrl)
-                val track = album.tracks.find { it.title.equals(trackName, ignoreCase = true) }
-                    ?: album.tracks.firstOrNull()
-                if (track != null) {
-                    playerViewModel.playTrack(track)
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                // Best-effort - silent fail for track play
-            }
-        }
+    // No play*(other ViewModel) overloads here: a ViewModel must never take
+    // another ViewModel as a parameter (see MainActivity's forwarding note).
+    // The UI awaits resolve*() and hands the Track to PlayerViewModel itself.
+    suspend fun resolveLocalTrack(trackId: String): Track? {
+        val entity = withContext(ioDispatcher) { trackDao.getById(trackId) } ?: return null
+        val isFav = favoriteDao.isFavorite(trackId)
+        return entity.toDomain(isFav)
     }
 
     suspend fun resolveBandcampTrack(trackUrl: String, trackName: String): Track? {

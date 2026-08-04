@@ -679,13 +679,30 @@ fun BandcampScreen(
                                                         SearchResultType.ARTIST -> onArtistClick(result.url)
 
                                                         SearchResultType.TRACK -> {
-                                                            searchViewModel.playBandcampTrack(result.url, result.name, playerViewModel)
+                                                            scope.launch {
+                                                                try {
+                                                                    val track = searchViewModel.resolveBandcampTrack(
+                                                                        result.url,
+                                                                        result.name,
+                                                                    )
+                                                                    if (track != null) playerViewModel.playTrack(track)
+                                                                } catch (_: Exception) {
+                                                                    // Best-effort - silent fail for track play
+                                                                }
+                                                            }
                                                             onExpandPlayer()
                                                         }
 
                                                         SearchResultType.LOCAL_TRACK -> {
                                                             val trackId = result.url.removePrefix("local://")
-                                                            searchViewModel.playLocalTrack(trackId, playerViewModel)
+                                                            scope.launch {
+                                                                try {
+                                                                    val track = searchViewModel.resolveLocalTrack(trackId)
+                                                                    if (track != null) playerViewModel.playTrack(track)
+                                                                } catch (_: Exception) {
+                                                                    // Best-effort - silent fail for track play
+                                                                }
+                                                            }
                                                             onExpandPlayer()
                                                         }
 

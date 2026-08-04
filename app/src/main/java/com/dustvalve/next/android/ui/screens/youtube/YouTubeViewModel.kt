@@ -647,8 +647,10 @@ class YouTubeViewModel @Inject constructor(
                 trackDao.insertAll(result.tracks.map { it.toEntity() })
                 val playlist = playlistRepository.createPlaylist(name)
                 playlistRepository.addTracksToPlaylist(playlist.id, result.tracks.map { it.id })
+                // Same transaction as the import itself: cancellation between
+                // the two used to leave an imported-but-unfavorited playlist.
+                favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
             }
-            favoriteDao.insert(FavoriteEntity(id = playlistUrl, type = "youtube_playlist"))
             true
         } catch (e: Exception) {
             if (e is CancellationException) throw e
