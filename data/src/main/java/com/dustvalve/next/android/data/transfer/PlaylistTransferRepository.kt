@@ -169,11 +169,23 @@ class PlaylistTransferRepository @Inject constructor(
             val smallFiles = HashMap<String, ByteArray>() // covers + misc small metadata
             val audioFiles = HashMap<String, File>() // zip entry name -> spilled temp file
             var manifestJson: String? = null
+            // .dvplaylist is a share-with-strangers format: bound the total
+            // entry count, the aggregate in-memory metadata bytes, and the
+            // audio bytes spilled to cache so a hostile archive can neither
+            // OOM the app nor fill the disk. Each violation throws so the
+            // finally-block temp cleanup runs.
+            val budget = ImportBudget(
+                maxSpillBytes = (context.cacheDir.usableSpace - SPILL_FREE_MARGIN_BYTES).coerceAtLeast(0L),
+            )
             ZipInputStream(inp.buffered()).use { zip ->
                 var entry = zip.nextEntry
                 while (entry != null) {
                     coroutineContext.ensureActive()
-                    readBundleEntry(zip, entry, smallFiles, audioFiles, ::tempDirOrCreate) { manifestJson = it }
+                    budget.entries++
+                    if (budget.entries > MAX_BUNDLE_ENTRIES) {
+                        throw IllegalStateException("Bundle has more than $MAX_BUNDLE_ENTRIES entries; refusing to import")
+                    }
+                    readBundleEntry(zip, entry, smallFiles, audioFiles, ::tempDirOrCreate, budget) { manifestJson = it }
                     zip.closeEntry()
                     entry = zip.nextEntry
                 }
@@ -226,6 +238,7 @@ class PlaylistTransferRepository @Inject constructor(
         smallFiles: MutableMap<String, ByteArray>,
         audioFiles: MutableMap<String, File>,
         tempDirOrCreate: () -> File,
+        budget: ImportBudget,
         onManifest: (String) -> Unit,
     ) {
         val name = entry.name
@@ -241,19 +254,60 @@ class PlaylistTransferRepository @Inject constructor(
                 // Temp names are index-based - zip entry names are used only as
                 // map keys, never as filesystem paths.
                 val spilled = File(tempDirOrCreate(), "audio_${audioFiles.size}")
-                spilled.outputStream().use { out -> zip.copyTo(out) }
+                spilled.outputStream().use { out ->
+                    budget.spilledBytes += copyCounted(zip, out, budget.maxSpillBytes - budget.spilledBytes)
+                }
                 audioFiles[name] = spilled
             }
 
             else -> {
                 val bytes = readEntryCapped(zip)
                 if (bytes != null) {
+                    // The per-entry cap alone would let thousands of
+                    // highly-compressible 8 MB entries inflate to multi-GB of
+                    // retained ByteArrays; bound the aggregate too.
+                    budget.metadataBytes += bytes.size
+                    if (budget.metadataBytes > MAX_METADATA_TOTAL_BYTES) {
+                        throw IllegalStateException(
+                            "Bundle metadata exceeds $MAX_METADATA_TOTAL_BYTES bytes total; refusing to import",
+                        )
+                    }
                     smallFiles[name] = bytes
                 } else {
                     android.util.Log.w("PlaylistTransfer", "Skipping oversized metadata entry: $name")
                 }
             }
         }
+    }
+
+    /**
+     * Copies [input] to [out], throwing once more than [remaining] bytes have
+     * been written - the uncompressed size is attacker-controlled, so the disk
+     * budget must be enforced on actual bytes, never on ZipEntry.size.
+     */
+    private fun copyCounted(input: InputStream, out: OutputStream, remaining: Long): Long {
+        if (remaining <= 0L) {
+            throw IllegalStateException("Bundle audio exceeds the available cache space; refusing to import")
+        }
+        val buffer = ByteArray(DEFAULT_COPY_BUFFER_BYTES)
+        var copied = 0L
+        while (true) {
+            val read = input.read(buffer)
+            if (read == -1) break
+            copied += read
+            if (copied > remaining) {
+                throw IllegalStateException("Bundle audio exceeds the available cache space; refusing to import")
+            }
+            out.write(buffer, 0, read)
+        }
+        return copied
+    }
+
+    /** Mutable running totals for one import; see the caps in the companion. */
+    private class ImportBudget(val maxSpillBytes: Long) {
+        var entries = 0
+        var metadataBytes = 0L
+        var spilledBytes = 0L
     }
 
     /**
@@ -268,7 +322,14 @@ class PlaylistTransferRepository @Inject constructor(
         audioFiles: Map<String, File>,
         smallFiles: Map<String, ByteArray>,
     ): TrackSnapshot {
-        var snap = bundleEntry.track
+        // Never persist a local-scheme artUrl from a foreign bundle: a hostile
+        // file:// value would later be dereferenced by export's fetchBytes()
+        // and embed an app-private file into a shared archive. Local-scheme
+        // values from the exporting device are dangling here anyway; offline
+        // bundles get artUrl repointed at the locally-written cover below.
+        var snap = bundleEntry.track.let {
+            if (isRemoteOrBlankUrl(it.artUrl)) it else it.copy(artUrl = "")
+        }
         if (!offline) return snap
 
         val audioTemp = bundleEntry.audioFile?.let { audioFiles[it] }
@@ -347,12 +408,23 @@ class PlaylistTransferRepository @Inject constructor(
     private fun readLocalBytes(url: String): ByteArray {
         val uri = url.toUri()
         val stream = if (url.startsWith("file://")) {
-            File(requireNotNull(uri.path) { "Bad file URI: $url" }).inputStream()
+            // Defense in depth against a poisoned DB row: only files the app
+            // itself wrote (downloads tree, which contains imagesDir) may be
+            // embedded into an exported bundle.
+            val file = File(requireNotNull(uri.path) { "Bad file URI: $url" }).canonicalFile
+            val downloadsRoot = StoragePaths.downloadsDir(context).canonicalFile
+            require(file.path.startsWith(downloadsRoot.path + File.separator)) {
+                "Refusing to embed $url: outside the app's downloads tree"
+            }
+            file.inputStream()
         } else {
             requireNotNull(context.contentResolver.openInputStream(uri)) { "Cannot open $url" }
         }
         return stream.use { it.readBytes() }
     }
+
+    /** True for http(s) or blank artUrl values; local schemes are rejected on import. */
+    private fun isRemoteOrBlankUrl(url: String): Boolean = url.isBlank() || url.startsWith("http://") || url.startsWith("https://")
 
     private companion object {
         /**
@@ -361,6 +433,15 @@ class PlaylistTransferRepository @Inject constructor(
          * fits any real manifest or cover while bounding a hostile bundle.
          */
         const val MAX_METADATA_ENTRY_BYTES = 8 * 1024 * 1024
+
+        /** Aggregate cap for all in-memory metadata entries of one bundle. */
+        const val MAX_METADATA_TOTAL_BYTES = 64L * 1024 * 1024
+
+        /** Total zip entries a bundle may contain (tracks + covers + manifest). */
+        const val MAX_BUNDLE_ENTRIES = 10_000
+
+        /** Cache headroom that spilled audio must leave untouched. */
+        const val SPILL_FREE_MARGIN_BYTES = 200L * 1024 * 1024
 
         const val DEFAULT_COPY_BUFFER_BYTES = 8192
     }
