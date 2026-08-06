@@ -227,24 +227,6 @@
     <string name="youtube_tab_source_yt" translatable="false">YouTube</string>
     <string name="youtube_tab_source_ytm" translatable="false">YouTube Music</string>
     <string name="settings_remove_all_downloads">Remove all downloads</string>
-    <string name="settings_dedicated_folder_title">Store everything in a dedicated folder</string>
-    <string name="settings_dedicated_folder_desc">Playlists, favorites, downloads, history, and settings are stored in a folder of your choice. Required on every app launch.</string>
-    <string name="settings_dedicated_folder_change">Change folder</string>
-    <string name="settings_dedicated_folder_image_cache">Also store image cache in folder</string>
-    <string name="settings_dedicated_folder_image_cache_desc">Album artwork mirrored to the folder; survives reinstalls.</string>
-    <string name="settings_dedicated_folder_metadata_cache">Also store metadata cache in folder</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc"><xliff:g id="brand">YouTube</xliff:g> and <xliff:g id="brand_2">Bandcamp</xliff:g> lookup caches mirrored to the folder.</string>
-    <string name="settings_dedicated_folder_disable_title">Move data back to app storage?</string>
-    <string name="settings_dedicated_folder_disable_text">Everything currently in the dedicated folder will be copied back into the app. The folder contents are removed afterwards.</string>
-    <string name="settings_dedicated_folder_disable_confirm">Move back</string>
-    <string name="settings_dedicated_folder_migrating">Moving your data…</string>
-    <string name="settings_dedicated_folder_migration_success">Dedicated folder ready</string>
-    <string name="settings_dedicated_folder_migration_reverted">Data back in app storage</string>
-    <string name="settings_dedicated_folder_migration_failed">Migration failed: <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">Dedicated folder unavailable</string>
-    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g> can’t reach the folder where your data lives. Locate it again, or turn the feature off to fall back to app storage.</string>
-    <string name="settings_dedicated_folder_locate">Locate folder</string>
-    <string name="settings_dedicated_folder_turn_off">Turn off and use app storage</string>
     <string name="settings_auto_download_purchases">Auto-download purchases</string>
     <string name="settings_auto_download_purchases_desc">Automatically download your <xliff:g id="brand">Dustvalve</xliff:g> purchases</string>
     <string name="settings_auto_download_future">Auto-download future content</string>

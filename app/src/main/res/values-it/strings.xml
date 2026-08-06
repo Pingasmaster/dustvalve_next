@@ -191,24 +191,6 @@
     <string name="common_play">Riproduci</string>
     <string name="ytm_artist_spotlight">Artista in evidenza</string>
     <string name="settings_remove_all_downloads">Rimuovi tutti i download</string>
-    <string name="settings_dedicated_folder_title">Salva tutto in una cartella dedicata</string>
-    <string name="settings_dedicated_folder_desc">Playlist, preferiti, download, cronologia e impostazioni vengono salvati in una cartella a tua scelta. Richiesta a ogni avvio dell’app.</string>
-    <string name="settings_dedicated_folder_change">Cambia cartella</string>
-    <string name="settings_dedicated_folder_image_cache">Salva nella cartella anche la cache immagini</string>
-    <string name="settings_dedicated_folder_image_cache_desc">Copertine degli album replicate nella cartella; sopravvivono alle reinstallazioni.</string>
-    <string name="settings_dedicated_folder_metadata_cache">Salva nella cartella anche la cache metadati</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc">Cache delle ricerche di <xliff:g id="brand">YouTube</xliff:g> e <xliff:g id="brand_2">Bandcamp</xliff:g> replicate nella cartella.</string>
-    <string name="settings_dedicated_folder_disable_title">Riportare i dati nell’archivio dell’app?</string>
-    <string name="settings_dedicated_folder_disable_text">Tutto ciò che si trova nella cartella dedicata verrà ricopiato nell’app. Il contenuto della cartella verrà poi rimosso.</string>
-    <string name="settings_dedicated_folder_disable_confirm">Riporta indietro</string>
-    <string name="settings_dedicated_folder_migrating">Spostamento dei dati…</string>
-    <string name="settings_dedicated_folder_migration_success">Cartella dedicata pronta</string>
-    <string name="settings_dedicated_folder_migration_reverted">Dati di nuovo nell’archivio dell’app</string>
-    <string name="settings_dedicated_folder_migration_failed">Migrazione non riuscita: <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">Cartella dedicata non disponibile</string>
-    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g> non riesce a raggiungere la cartella con i tuoi dati. Individuala di nuovo, oppure disattiva la funzione per tornare all’archivio dell’app.</string>
-    <string name="settings_dedicated_folder_locate">Individua cartella</string>
-    <string name="settings_dedicated_folder_turn_off">Disattiva e usa l’archivio dell’app</string>
     <string name="settings_auto_download_purchases">Scarica automaticamente gli acquisti</string>
     <string name="settings_auto_download_purchases_desc">Scarica automaticamente i tuoi acquisti <xliff:g id="brand">Dustvalve</xliff:g></string>
     <string name="settings_auto_download_future">Scarica automaticamente i contenuti futuri</string>

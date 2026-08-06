@@ -191,24 +191,6 @@
     <string name="common_play">Reproducir</string>
     <string name="ytm_artist_spotlight">Artista destacado</string>
     <string name="settings_remove_all_downloads">Eliminar todas las descargas</string>
-    <string name="settings_dedicated_folder_title">Guardar todo en una carpeta dedicada</string>
-    <string name="settings_dedicated_folder_desc">Las playlists, favoritos, descargas, historial y ajustes se guardan en una carpeta de tu elección. Se necesita en cada inicio de la app.</string>
-    <string name="settings_dedicated_folder_change">Cambiar carpeta</string>
-    <string name="settings_dedicated_folder_image_cache">Guardar también la caché de imágenes en la carpeta</string>
-    <string name="settings_dedicated_folder_image_cache_desc">Las portadas de álbumes se copian a la carpeta; sobreviven a las reinstalaciones.</string>
-    <string name="settings_dedicated_folder_metadata_cache">Guardar también la caché de metadatos en la carpeta</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc">Las cachés de consultas de <xliff:g id="brand">YouTube</xliff:g> y <xliff:g id="brand_2">Bandcamp</xliff:g> se copian a la carpeta.</string>
-    <string name="settings_dedicated_folder_disable_title">¿Mover los datos de vuelta al almacenamiento de la app?</string>
-    <string name="settings_dedicated_folder_disable_text">Todo lo que está en la carpeta dedicada se copiará de vuelta a la app. Después se elimina el contenido de la carpeta.</string>
-    <string name="settings_dedicated_folder_disable_confirm">Mover de vuelta</string>
-    <string name="settings_dedicated_folder_migrating">Moviendo tus datos…</string>
-    <string name="settings_dedicated_folder_migration_success">Carpeta dedicada lista</string>
-    <string name="settings_dedicated_folder_migration_reverted">Datos de vuelta en el almacenamiento de la app</string>
-    <string name="settings_dedicated_folder_migration_failed">Error en la migración: <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">Carpeta dedicada no disponible</string>
-    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g> no puede acceder a la carpeta donde están tus datos. Vuelve a ubicarla o desactiva la función para volver al almacenamiento de la app.</string>
-    <string name="settings_dedicated_folder_locate">Ubicar carpeta</string>
-    <string name="settings_dedicated_folder_turn_off">Desactivar y usar el almacenamiento de la app</string>
     <string name="settings_auto_download_purchases">Descargar compras automáticamente</string>
     <string name="settings_auto_download_purchases_desc">Descarga automáticamente tus compras de <xliff:g id="brand">Dustvalve</xliff:g></string>
     <string name="settings_auto_download_future">Descargar contenido futuro automáticamente</string>

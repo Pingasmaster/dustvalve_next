@@ -1,7 +1,5 @@
 package com.dustvalve.next.android.data.transfer
 
-import com.dustvalve.next.android.data.storage.folder.PlaylistSnapshot
-import com.dustvalve.next.android.data.storage.folder.TrackSnapshot
 import kotlinx.serialization.Serializable
 
 /**

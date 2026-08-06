@@ -191,24 +191,6 @@
     <string name="common_play">播放</string>
     <string name="ytm_artist_spotlight">艺人聚焦</string>
     <string name="settings_remove_all_downloads">删除所有下载</string>
-    <string name="settings_dedicated_folder_title">将所有内容存储在专用文件夹中</string>
-    <string name="settings_dedicated_folder_desc">播放列表、收藏、下载、历史记录和设置都存储在你选择的文件夹中。每次启动应用时都需要该文件夹。</string>
-    <string name="settings_dedicated_folder_change">更换文件夹</string>
-    <string name="settings_dedicated_folder_image_cache">同时将图片缓存存储到文件夹</string>
-    <string name="settings_dedicated_folder_image_cache_desc">专辑封面会镜像到该文件夹，重装应用后依然保留。</string>
-    <string name="settings_dedicated_folder_metadata_cache">同时将元数据缓存存储到文件夹</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc"><xliff:g id="brand">YouTube</xliff:g>和<xliff:g id="brand_2">Bandcamp</xliff:g>的查询缓存会镜像到该文件夹。</string>
-    <string name="settings_dedicated_folder_disable_title">要将数据移回应用存储吗？</string>
-    <string name="settings_dedicated_folder_disable_text">当前专用文件夹中的所有内容将被复制回应用内，之后文件夹中的内容会被移除。</string>
-    <string name="settings_dedicated_folder_disable_confirm">移回</string>
-    <string name="settings_dedicated_folder_migrating">正在移动你的数据…</string>
-    <string name="settings_dedicated_folder_migration_success">专用文件夹已就绪</string>
-    <string name="settings_dedicated_folder_migration_reverted">数据已移回应用存储</string>
-    <string name="settings_dedicated_folder_migration_failed">迁移失败：<xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">专用文件夹不可用</string>
-    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g>无法访问存放你数据的文件夹。请重新定位该文件夹，或关闭此功能以回退到应用存储。</string>
-    <string name="settings_dedicated_folder_locate">定位文件夹</string>
-    <string name="settings_dedicated_folder_turn_off">关闭并使用应用存储</string>
     <string name="settings_auto_download_purchases">自动下载已购内容</string>
     <string name="settings_auto_download_purchases_desc">自动下载你在<xliff:g id="brand">Dustvalve</xliff:g>购买的内容</string>
     <string name="settings_auto_download_future">自动下载新内容</string>

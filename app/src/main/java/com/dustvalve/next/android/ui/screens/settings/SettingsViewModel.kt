@@ -7,8 +7,6 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.storage.folder.FolderMirror
-import com.dustvalve.next.android.data.storage.folder.StorageMigrator
 import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
@@ -71,14 +69,6 @@ data class SettingsUiState(
     val keepScreenOnWhilePlaying: Boolean = false,
     val keepLocalSort: Boolean = false,
     val keepLocalFilters: Boolean = false,
-    val dedicatedFolderEnabled: Boolean = false,
-    val dedicatedFolderTreeUri: String? = null,
-    val dedicatedFolderIncludeImageCache: Boolean = false,
-    val dedicatedFolderIncludeMetadataCache: Boolean = false,
-    val folderMigrationInProgress: Boolean = false,
-    val folderMigrationProgress: Float = 0f,
-    val folderMigrationMessage: UiText? = null,
-    val folderMigrationError: UiText? = null,
     val updateState: UpdateUiState = UpdateUiState.Idle,
     val updateMessage: UiText? = null,
     val autoUpdateCheckEnabled: Boolean = true,
@@ -94,19 +84,10 @@ class SettingsViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val recentSearchRepository: RecentSearchRepository,
     private val appUpdateController: AppUpdateController,
-    private val storageMigrator: StorageMigrator,
-    private val folderMirror: FolderMirror,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
-
-    private val dedicatedFolder = DedicatedFolderSettingsCoordinator(
-        scope = viewModelScope,
-        uiState = _uiState,
-        storageMigrator = storageMigrator,
-        folderMirror = folderMirror,
-    )
 
     private val localMusic = LocalMusicSettingsCoordinator(
         scope = viewModelScope,
@@ -136,22 +117,6 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update { it.copy(updateMessage = m) }
             }
         }
-    }
-
-    fun enableDedicatedFolder(treeUri: String) = dedicatedFolder.enable(treeUri)
-
-    fun disableDedicatedFolder() = dedicatedFolder.disable()
-
-    fun setDedicatedFolderIncludeImageCache(enabled: Boolean) = dedicatedFolder.setIncludeImageCache(enabled)
-
-    fun setDedicatedFolderIncludeMetadataCache(enabled: Boolean) = dedicatedFolder.setIncludeMetadataCache(enabled)
-
-    fun clearFolderMigrationMessage() {
-        _uiState.update { it.copy(folderMigrationMessage = null) }
-    }
-
-    fun clearFolderMigrationError() {
-        _uiState.update { it.copy(folderMigrationError = null) }
     }
 
     fun setThemeMode(mode: String) {

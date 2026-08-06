@@ -191,24 +191,6 @@
     <string name="common_play">Tocar</string>
     <string name="ytm_artist_spotlight">Artista em destaque</string>
     <string name="settings_remove_all_downloads">Remover todos os downloads</string>
-    <string name="settings_dedicated_folder_title">Guardar tudo em uma pasta dedicada</string>
-    <string name="settings_dedicated_folder_desc">Playlists, favoritos, downloads, histórico e configurações ficam em uma pasta escolhida por você. Necessária em toda abertura do app.</string>
-    <string name="settings_dedicated_folder_change">Mudar pasta</string>
-    <string name="settings_dedicated_folder_image_cache">Também guardar o cache de imagens na pasta</string>
-    <string name="settings_dedicated_folder_image_cache_desc">Capas de álbum espelhadas na pasta; sobrevivem a reinstalações.</string>
-    <string name="settings_dedicated_folder_metadata_cache">Também guardar o cache de metadados na pasta</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc">Caches de consulta do <xliff:g id="brand">YouTube</xliff:g> e do <xliff:g id="brand_2">Bandcamp</xliff:g> espelhados na pasta.</string>
-    <string name="settings_dedicated_folder_disable_title">Mover os dados de volta para o armazenamento do app?</string>
-    <string name="settings_dedicated_folder_disable_text">Tudo o que está na pasta dedicada será copiado de volta para o app. Depois disso, o conteúdo da pasta é removido.</string>
-    <string name="settings_dedicated_folder_disable_confirm">Mover de volta</string>
-    <string name="settings_dedicated_folder_migrating">Movendo seus dados…</string>
-    <string name="settings_dedicated_folder_migration_success">Pasta dedicada pronta</string>
-    <string name="settings_dedicated_folder_migration_reverted">Dados de volta no armazenamento do app</string>
-    <string name="settings_dedicated_folder_migration_failed">Falha na migração: <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">Pasta dedicada indisponível</string>
-    <string name="settings_dedicated_folder_unreachable_text">O <xliff:g id="app_name">Dustvalve</xliff:g> não consegue acessar a pasta onde seus dados estão. Localize a pasta de novo ou desative o recurso para voltar ao armazenamento do app.</string>
-    <string name="settings_dedicated_folder_locate">Localizar pasta</string>
-    <string name="settings_dedicated_folder_turn_off">Desativar e usar o armazenamento do app</string>
     <string name="settings_auto_download_purchases">Baixar compras automaticamente</string>
     <string name="settings_auto_download_purchases_desc">Baixe automaticamente suas compras do <xliff:g id="brand">Dustvalve</xliff:g></string>
     <string name="settings_auto_download_future">Baixar conteúdo futuro automaticamente</string>

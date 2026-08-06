@@ -1,15 +1,10 @@
 package com.dustvalve.next.android.data.asset
 
-import android.content.Context
-import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import androidx.room.withTransaction
 import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
-import com.dustvalve.next.android.data.util.ignoringStorageFailures
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,16 +19,9 @@ import javax.inject.Singleton
  * eviction; this policy only governs `downloads` table rows.
  */
 @Singleton
-class AssetEvictionPolicy(
-    private val context: Context,
-    private val database: DustvalveNextDatabase,
-    private val downloadDao: DownloadDao,
-) {
+class AssetEvictionPolicy(private val database: DustvalveNextDatabase, private val downloadDao: DownloadDao) {
 
-    @Inject constructor(
-        @ApplicationContext context: Context,
-        gateway: DatabaseGateway,
-    ) : this(context, gateway.database, gateway.downloadDao)
+    @Inject constructor(gateway: DatabaseGateway) : this(gateway.database, gateway.downloadDao)
 
     /** Evicts unpinned entries oldest-first until at least [targetBytes] freed. */
     suspend fun evict(targetBytes: Long) {
@@ -62,17 +50,13 @@ class AssetEvictionPolicy(
         }
     }
 
-    /**
-     * Delete helper that handles both local file paths and the content://
-     * URIs used in dedicated-folder mode, where File(path).delete() is a
-     * silent no-op. Mirrors DownloadRepositoryImpl.deleteByPath.
-     */
+    /** Downloads live in app-private storage; a blank path has no file to unlink. */
     private fun deleteByPath(path: String) {
         if (path.isBlank()) return
-        if (path.startsWith("content://")) {
-            ignoringStorageFailures { DocumentFile.fromSingleUri(context, path.toUri())?.delete() }
-        } else {
-            ignoringStorageFailures { File(path).delete() }
+        try {
+            File(path).delete()
+        } catch (_: SecurityException) {
+            // An orphan we cannot unlink is wasted disk, not a failed eviction.
         }
     }
 }

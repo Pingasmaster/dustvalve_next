@@ -1,6 +1,5 @@
 package com.dustvalve.next.android.data.asset
 
-import androidx.test.core.app.ApplicationProvider
 import com.dustvalve.next.android.data.local.db.DbTestBase
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.google.common.truth.Truth.assertThat
@@ -17,11 +16,7 @@ class AssetEvictionPolicyTest : DbTestBase() {
 
     @get:Rule val tmp = TemporaryFolder()
 
-    private fun policy() = AssetEvictionPolicy(
-        ApplicationProvider.getApplicationContext(),
-        db,
-        db.downloadDao(),
-    )
+    private fun policy() = AssetEvictionPolicy(db, db.downloadDao())
 
     private suspend fun insert(
         trackId: String,
@@ -82,15 +77,14 @@ class AssetEvictionPolicyTest : DbTestBase() {
         assertThat(db.downloadDao().getAllSync()).isEmpty()
     }
 
-    @Test fun `content uri file path is handled without aborting eviction`() = runTest {
-        // Dedicated-folder mode stores content:// URIs in filePath;
-        // File(path).delete() is a silent no-op for those, and the
-        // DocumentFile path must not crash even when the provider is gone.
+    @Test fun `blank file path is handled without aborting eviction`() = runTest {
+        // A row whose file never landed still has to be evictable: the delete
+        // is skipped but the row must go so it stops inflating reported size.
         db.downloadDao().insert(
             DownloadEntity(
-                trackId = "saf",
+                trackId = "pathless",
                 albumId = "al",
-                filePath = "content://com.example.provider/tree/root/document/root%2Fsaf.mp3",
+                filePath = "",
                 sizeBytes = 100,
                 downloadedAt = 1,
                 pinned = false,

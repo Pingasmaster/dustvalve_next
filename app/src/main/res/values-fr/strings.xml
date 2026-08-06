@@ -191,24 +191,6 @@
     <string name="common_play">Lecture</string>
     <string name="ytm_artist_spotlight">Artiste à la une</string>
     <string name="settings_remove_all_downloads">Supprimer tous les téléchargements</string>
-    <string name="settings_dedicated_folder_title">Tout stocker dans un dossier dédié</string>
-    <string name="settings_dedicated_folder_desc">Playlists, favoris, téléchargements, historique et réglages sont stockés dans un dossier de ton choix. Requis à chaque lancement de l’appli.</string>
-    <string name="settings_dedicated_folder_change">Changer de dossier</string>
-    <string name="settings_dedicated_folder_image_cache">Stocker aussi le cache d’images dans le dossier</string>
-    <string name="settings_dedicated_folder_image_cache_desc">Pochettes d’albums copiées dans le dossier ; elles survivent aux réinstallations.</string>
-    <string name="settings_dedicated_folder_metadata_cache">Stocker aussi le cache de métadonnées dans le dossier</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc">Caches de recherche <xliff:g id="brand">YouTube</xliff:g> et <xliff:g id="brand_2">Bandcamp</xliff:g> copiés dans le dossier.</string>
-    <string name="settings_dedicated_folder_disable_title">Redéplacer les données vers le stockage de l’appli ?</string>
-    <string name="settings_dedicated_folder_disable_text">Tout le contenu actuel du dossier dédié sera recopié dans l’appli. Le contenu du dossier est ensuite supprimé.</string>
-    <string name="settings_dedicated_folder_disable_confirm">Redéplacer</string>
-    <string name="settings_dedicated_folder_migrating">Déplacement de tes données…</string>
-    <string name="settings_dedicated_folder_migration_success">Dossier dédié prêt</string>
-    <string name="settings_dedicated_folder_migration_reverted">Données de retour dans le stockage de l’appli</string>
-    <string name="settings_dedicated_folder_migration_failed">Échec de la migration : <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">Dossier dédié indisponible</string>
-    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g> n’arrive pas à accéder au dossier où se trouvent tes données. Localise-le à nouveau, ou désactive la fonction pour revenir au stockage de l’appli.</string>
-    <string name="settings_dedicated_folder_locate">Localiser le dossier</string>
-    <string name="settings_dedicated_folder_turn_off">Désactiver et utiliser le stockage de l’appli</string>
     <string name="settings_auto_download_purchases">Téléchargement auto des achats</string>
     <string name="settings_auto_download_purchases_desc">Télécharge automatiquement tes achats <xliff:g id="brand">Dustvalve</xliff:g></string>
     <string name="settings_auto_download_future">Téléchargement auto des nouveautés</string>

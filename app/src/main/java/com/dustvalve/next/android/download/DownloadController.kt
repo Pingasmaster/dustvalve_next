@@ -192,13 +192,12 @@ class DownloadController @Inject constructor(
      * are managed by Coil, not Room), files touched within the last
      * [ORPHAN_GRACE_MS] are skipped (a rename racing its DB insert right now
      * must not be swept), and any DB failure skips the pass entirely.
-     * `content://` rows (SAF mode) point outside this tree and are ignored.
      */
     private suspend fun reconcileOrphanFiles(downloads: File) {
         val known = try {
             downloadRepository.getAllDownloadFilePaths()
                 .asSequence()
-                .filter { it.isNotBlank() && !it.startsWith("content://") }
+                .filter { it.isNotBlank() }
                 .map { File(it).absolutePath }
                 .toHashSet()
         } catch (e: CancellationException) {

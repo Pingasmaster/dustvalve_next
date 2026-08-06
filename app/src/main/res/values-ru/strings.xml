@@ -199,24 +199,6 @@
     <string name="common_play">Играть</string>
     <string name="ytm_artist_spotlight">В центре внимания</string>
     <string name="settings_remove_all_downloads">Удалить все загрузки</string>
-    <string name="settings_dedicated_folder_title">Хранить все в отдельной папке</string>
-    <string name="settings_dedicated_folder_desc">Плейлисты, избранное, загрузки, история и настройки хранятся в выбранной тобой папке. Нужна при каждом запуске приложения.</string>
-    <string name="settings_dedicated_folder_change">Сменить папку</string>
-    <string name="settings_dedicated_folder_image_cache">Также хранить кеш изображений в папке</string>
-    <string name="settings_dedicated_folder_image_cache_desc">Обложки альбомов зеркалируются в папку и переживают переустановку.</string>
-    <string name="settings_dedicated_folder_metadata_cache">Также хранить кеш метаданных в папке</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc">Кеши запросов <xliff:g id="brand">YouTube</xliff:g> и <xliff:g id="brand_2">Bandcamp</xliff:g> зеркалируются в папку.</string>
-    <string name="settings_dedicated_folder_disable_title">Вернуть данные в хранилище приложения?</string>
-    <string name="settings_dedicated_folder_disable_text">Все содержимое отдельной папки будет скопировано обратно в приложение. После этого содержимое папки удаляется.</string>
-    <string name="settings_dedicated_folder_disable_confirm">Вернуть</string>
-    <string name="settings_dedicated_folder_migrating">Переносим твои данные…</string>
-    <string name="settings_dedicated_folder_migration_success">Отдельная папка готова</string>
-    <string name="settings_dedicated_folder_migration_reverted">Данные снова в хранилище приложения</string>
-    <string name="settings_dedicated_folder_migration_failed">Перенос не удался: <xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">Отдельная папка недоступна</string>
-    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g> не может открыть папку с твоими данными. Укажи ее заново или отключи функцию, чтобы вернуться к хранилищу приложения.</string>
-    <string name="settings_dedicated_folder_locate">Найти папку</string>
-    <string name="settings_dedicated_folder_turn_off">Отключить и использовать хранилище приложения</string>
     <string name="settings_auto_download_purchases">Автозагрузка покупок</string>
     <string name="settings_auto_download_purchases_desc">Автоматически скачивать твои покупки <xliff:g id="brand">Dustvalve</xliff:g></string>
     <string name="settings_auto_download_future">Автозагрузка новинок</string>

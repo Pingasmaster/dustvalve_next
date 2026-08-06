@@ -106,8 +106,6 @@ fun SettingsScreen(
         snackbarHostState = snackbarHostState,
         onClearSignOutSuccess = viewModel::clearSignOutSuccess,
         onClearYtmSignOutSuccess = viewModel::clearYtmSignOutSuccess,
-        onClearFolderMigrationMessage = viewModel::clearFolderMigrationMessage,
-        onClearFolderMigrationError = viewModel::clearFolderMigrationError,
         onClearSearchHistoryClearedMessage = viewModel::clearSearchHistoryClearedMessage,
         onClearUpdateMessage = viewModel::clearUpdateMessage,
     )
@@ -178,14 +176,6 @@ fun SettingsScreen(
             onConfirmDownload = viewModel::confirmAppUpdate,
             onDismiss = viewModel::dismissAppUpdate,
         )
-
-        if (state.folderMigrationInProgress) {
-            com.dustvalve.next.android.ui.components.LoadingOverlay(
-                title = stringResource(R.string.settings_dedicated_folder_migrating),
-                progress = state.folderMigrationProgress,
-                message = state.folderMigrationMessage?.asString(),
-            )
-        }
     }
 }
 
@@ -195,15 +185,11 @@ private fun SettingsScreenSnackbars(
     snackbarHostState: SnackbarHostState,
     onClearSignOutSuccess: () -> Unit,
     onClearYtmSignOutSuccess: () -> Unit,
-    onClearFolderMigrationMessage: () -> Unit,
-    onClearFolderMigrationError: () -> Unit,
     onClearSearchHistoryClearedMessage: () -> Unit,
     onClearUpdateMessage: () -> Unit,
 ) {
     val clearSignOutSuccess by rememberUpdatedState(onClearSignOutSuccess)
     val clearYtmSignOutSuccess by rememberUpdatedState(onClearYtmSignOutSuccess)
-    val clearFolderMigrationMessage by rememberUpdatedState(onClearFolderMigrationMessage)
-    val clearFolderMigrationError by rememberUpdatedState(onClearFolderMigrationError)
     val clearSearchHistoryClearedMessage by rememberUpdatedState(onClearSearchHistoryClearedMessage)
     val clearUpdateMessage by rememberUpdatedState(onClearUpdateMessage)
 
@@ -225,28 +211,6 @@ private fun SettingsScreenSnackbars(
                 snackbarHostState.showSnackbar(ytmDisconnectedMsg)
             } finally {
                 clearYtmSignOutSuccess()
-            }
-        }
-    }
-
-    val folderMigrationText = state.folderMigrationMessage?.asString()
-    LaunchedEffect(folderMigrationText) {
-        folderMigrationText?.let { message ->
-            try {
-                snackbarHostState.showSnackbar(message)
-            } finally {
-                clearFolderMigrationMessage()
-            }
-        }
-    }
-
-    val folderMigrationErrorText = state.folderMigrationError?.asString()
-    LaunchedEffect(folderMigrationErrorText) {
-        folderMigrationErrorText?.let { message ->
-            try {
-                snackbarHostState.showSnackbar(message)
-            } finally {
-                clearFolderMigrationError()
             }
         }
     }

@@ -71,7 +71,7 @@ private fun LocaleShowcase() {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         // Long body copy: expansion / wrapping
-        Text(stringResource(R.string.settings_dedicated_folder_desc), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.settings_auto_update_desc), style = MaterialTheme.typography.bodyMedium)
         // Two-arg pattern with a brand name and an inserted noun
         Text(stringResource(R.string.provider_enable_text, "Bandcamp", stringResource(R.string.link_kind_album)))
         // Plurals across quantity classes (ru: one/few/many)

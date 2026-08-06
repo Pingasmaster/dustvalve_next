@@ -217,8 +217,6 @@ Group 6: Downloads (11)
   short-circuits (qualityRank + file exists).
 - [ ] yt-download-https-enforced [JVM, hermetic]: http:// stream -> IOException
   "Download URL must use HTTPS".
-- [ ] yt-download-saf-folder-mode [E2E, live]: SAF tree write via DocumentFile;
-  playback resolves SAF URI.
 - [ ] yt-download-failure-cleanup [smoke + JVM, hermetic]: mid-download network
   kill -> no final file, failure notification, no DB row, retry works.
 - [ ] yt-download-resolution-failure [JVM, hermetic]: age-restricted download ->

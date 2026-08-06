@@ -16,7 +16,6 @@ import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.crash.CrashReportManager
 import com.dustvalve.next.android.data.asset.StoragePaths
-import com.dustvalve.next.android.data.storage.folder.FolderMirror
 import com.dustvalve.next.android.download.AutoDownloadFavoritesCoordinator
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.DownloadNotificationCenter
@@ -41,9 +40,6 @@ class DustvalveNextApplication :
 
     @Inject
     lateinit var autoDownloadFavoritesCoordinator: AutoDownloadFavoritesCoordinator
-
-    @Inject
-    lateinit var folderMirror: FolderMirror
 
     @Inject
     lateinit var appUpdateController: AppUpdateController
@@ -85,9 +81,6 @@ class DustvalveNextApplication :
         // enqueues downloads for any favorited tracks not already on disk.
         // Internally waits for the cold-start sweep above to finish first.
         autoDownloadFavoritesCoordinator.start()
-        // Observes the dedicated-folder toggle; when on, mirrors every user-
-        // data table + DataStore to the folder. Cancels cleanly when off.
-        folderMirror.start()
         // Fire-and-forget pre-alpha update check. One-shot per process; the
         // controller swallows errors + mutates shared state that
         // MainActivity's dialog host observes. See AppUpdateController.

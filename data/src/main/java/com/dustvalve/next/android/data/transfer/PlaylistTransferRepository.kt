@@ -9,10 +9,6 @@ import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
-import com.dustvalve.next.android.data.storage.folder.FolderSnapshotSerializer
-import com.dustvalve.next.android.data.storage.folder.PlaylistSnapshot
-import com.dustvalve.next.android.data.storage.folder.TrackSnapshot
-import com.dustvalve.next.android.data.storage.folder.toEntity
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.AudioFormat
@@ -64,7 +60,7 @@ class PlaylistTransferRepository(
         client: OkHttpClient,
         @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
     ) : this(context, playlistRepository, downloadRepository, gateway.trackDao, gateway.downloadDao, client, ioDispatcher)
-    private val json = FolderSnapshotSerializer.json
+    private val json = PlaylistBundleSerializer.json
 
     /** Write [playlistId] to [out] as a `.dvplaylist` ZIP. [onProgress] reports (done, total). */
     suspend fun export(
@@ -413,12 +409,8 @@ class PlaylistTransferRepository(
         }
     }
 
-    private fun openDownload(filePath: String): InputStream = if (filePath.startsWith("content://")) {
-        context.contentResolver.openInputStream(filePath.toUri())
-            ?: throw IllegalStateException("Cannot open $filePath")
-    } else {
-        File(filePath).inputStream()
-    }
+    /** Downloads always live in app-private storage, so the path is a plain file. */
+    private fun openDownload(filePath: String): InputStream = File(filePath).inputStream()
 
     private fun fetchBytes(url: String): ByteArray {
         if (url.startsWith("content://") || url.startsWith("file://")) {

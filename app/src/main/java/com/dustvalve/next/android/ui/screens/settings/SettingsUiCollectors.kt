@@ -61,14 +61,6 @@ internal class SettingsUiCollectors(
         collect(settingsDataStore.keepScreenOnWhilePlaying) { copy(keepScreenOnWhilePlaying = it) }
         collect(settingsDataStore.keepLocalSort) { copy(keepLocalSort = it) }
         collect(settingsDataStore.keepLocalFilters) { copy(keepLocalFilters = it) }
-        collect(settingsDataStore.dedicatedFolderEnabled) { copy(dedicatedFolderEnabled = it) }
-        collect(settingsDataStore.dedicatedFolderTreeUri) { copy(dedicatedFolderTreeUri = it) }
-        collect(settingsDataStore.dedicatedFolderIncludeImageCache) {
-            copy(dedicatedFolderIncludeImageCache = it)
-        }
-        collect(settingsDataStore.dedicatedFolderIncludeMetadataCache) {
-            copy(dedicatedFolderIncludeMetadataCache = it)
-        }
         collect(settingsDataStore.storageLimit) { bytes ->
             copy(storageLimitIndex = bytesToSliderIndex(bytes))
         }

@@ -12,11 +12,9 @@
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@Composable private fun SearchResultItem</ID>
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>CyclomaticComplexMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
-    <ID>CyclomaticComplexMethod:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToFolder: Pair&lt;String, Long&gt;</ID>
     <ID>CyclomaticComplexMethod:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$suspend fun scrapeAlbum: Album</ID>
     <ID>CyclomaticComplexMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
     <ID>CyclomaticComplexMethod:DustvalveSearchScraper.kt:DustvalveSearchScraper$suspend fun search: List&lt;SearchResult&gt;</ID>
-    <ID>CyclomaticComplexMethod:FolderRehydrator.kt:FolderRehydrator$suspend fun rehydrateAll</ID>
     <ID>CyclomaticComplexMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
     <ID>CyclomaticComplexMethod:HtmlUtils.kt:HtmlUtils$fun extractJsonFromScript: String?</ID>
     <ID>CyclomaticComplexMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
@@ -42,7 +40,6 @@
     <ID>LongMethod:YouTubeScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun YouTubeScreen</ID>
     <ID>LoopWithTooManyJumpStatements:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$for</ID>
     <ID>LoopWithTooManyJumpStatements:HtmlUtils.kt:HtmlUtils$while</ID>
-    <ID>LoopWithTooManyJumpStatements:StorageMigrator.kt:StorageMigrator$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubeInnertubeClient.kt:YouTubeInnertubeClient$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubePlaylistParser.kt:YouTubePlaylistParser$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubeSearchParser.kt:YouTubeSearchParser$for</ID>
@@ -62,7 +59,6 @@
     <ID>MagicNumber:DustvalveNextApplication.kt:DustvalveNextApplication$0.25</ID>
     <ID>MagicNumber:DustvalveNextApplication.kt:DustvalveNextApplication$1024</ID>
     <ID>MagicNumber:DustvalveNextApplication.kt:DustvalveNextApplication$256L</ID>
-    <ID>MagicNumber:FolderMirror.kt:FolderMirror$500</ID>
     <ID>MagicNumber:LocalMusicScanner.kt:LocalMusicScanner$500</ID>
     <ID>MagicNumber:LocalViewModel.kt:LocalViewModel$300L</ID>
     <ID>MagicNumber:MediaStoreScanner.kt:MediaStoreScanner$500</ID>
@@ -76,14 +72,6 @@
     <ID>MagicNumber:RangeResumeDownloader.kt:RangeResumeDownloader$4</ID>
     <ID>MagicNumber:RangeResumeDownloader.kt:RangeResumeDownloader$500L</ID>
     <ID>MagicNumber:SearchViewModel.kt:SearchViewModel$400L</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$0.05f</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$0.1f</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$0.2f</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$0.7f</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$0.85f</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$0.92f</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$0.97f</ID>
-    <ID>MagicNumber:StorageMigrator.kt:StorageMigrator$8192</ID>
     <ID>MagicNumber:TimeUtils.kt:TimeUtils$60</ID>
     <ID>MagicNumber:YouTubeChannelParser.kt:YouTubeChannelParser$60</ID>
     <ID>MagicNumber:YouTubeMusicVisitorDataFetcher.kt:YouTubeMusicVisitorDataFetcher$120</ID>
@@ -132,7 +120,6 @@
     <ID>SwallowedException:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$e: IOException</ID>
     <ID>SwallowedException:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$e: IOException</ID>
     <ID>ThrowsCount:DownloadAlbumUseCase.kt:DownloadAlbumUseCase$suspend fun downloadArtist</ID>
-    <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToFolder: Pair&lt;String, Long&gt;</ID>
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToInternal: Pair&lt;String, Long&gt;</ID>
     <ID>ThrowsCount:YouTubeMusicParser.kt:YouTubeMusicParser$fun parseHome: YouTubeMusicHomeFeed</ID>
     <ID>ThrowsCount:YouTubePlayerParser.kt:YouTubePlayerParser$fun parsePlayerStreamInfo: PlayerStreamInfo</ID>
@@ -141,7 +128,6 @@
     <ID>TooGenericExceptionCaught:ArtistDetailViewModel.kt:ArtistDetailViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:BandcampViewModel.kt:BandcampViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:CollectionDetailViewModel.kt:CollectionDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:FolderMirror.kt:FolderMirror$t: Throwable</ID>
     <ID>TooGenericExceptionCaught:LibraryViewModel.kt:LibraryViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:LocalViewModel.kt:LocalViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NavigationViewModel.kt:NavigationViewModel$e: Exception</ID>

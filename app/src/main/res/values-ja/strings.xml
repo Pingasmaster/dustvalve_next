@@ -191,24 +191,6 @@
     <string name="common_play">再生</string>
     <string name="ytm_artist_spotlight">アーティストスポットライト</string>
     <string name="settings_remove_all_downloads">すべてのダウンロードを削除</string>
-    <string name="settings_dedicated_folder_title">すべてを専用フォルダに保存</string>
-    <string name="settings_dedicated_folder_desc">プレイリスト、お気に入り、ダウンロード、履歴、設定を選択したフォルダに保存します。アプリの起動ごとに必要です。</string>
-    <string name="settings_dedicated_folder_change">フォルダを変更</string>
-    <string name="settings_dedicated_folder_image_cache">画像キャッシュもフォルダに保存</string>
-    <string name="settings_dedicated_folder_image_cache_desc">アルバムアートワークをフォルダにミラーリングし、再インストール後も保持されます。</string>
-    <string name="settings_dedicated_folder_metadata_cache">メタデータキャッシュもフォルダに保存</string>
-    <string name="settings_dedicated_folder_metadata_cache_desc"><xliff:g id="brand">YouTube</xliff:g>と<xliff:g id="brand_2">Bandcamp</xliff:g>のルックアップキャッシュをフォルダにミラーリングします。</string>
-    <string name="settings_dedicated_folder_disable_title">データをアプリのストレージに戻しますか？</string>
-    <string name="settings_dedicated_folder_disable_text">現在専用フォルダにあるすべてのデータがアプリ内にコピーされます。その後、フォルダの内容は削除されます。</string>
-    <string name="settings_dedicated_folder_disable_confirm">戻す</string>
-    <string name="settings_dedicated_folder_migrating">データを移動中…</string>
-    <string name="settings_dedicated_folder_migration_success">専用フォルダの準備ができました</string>
-    <string name="settings_dedicated_folder_migration_reverted">データをアプリのストレージに戻しました</string>
-    <string name="settings_dedicated_folder_migration_failed">移行に失敗しました：<xliff:g id="reason" example="disk full">%1$s</xliff:g></string>
-    <string name="settings_dedicated_folder_unreachable_title">専用フォルダにアクセスできません</string>
-    <string name="settings_dedicated_folder_unreachable_text"><xliff:g id="app_name">Dustvalve</xliff:g>はデータのあるフォルダにアクセスできません。フォルダをもう一度指定するか、この機能をオフにしてアプリのストレージに戻してください。</string>
-    <string name="settings_dedicated_folder_locate">フォルダを指定</string>
-    <string name="settings_dedicated_folder_turn_off">オフにしてアプリのストレージを使用</string>
     <string name="settings_auto_download_purchases">購入品を自動ダウンロード</string>
     <string name="settings_auto_download_purchases_desc"><xliff:g id="brand">Dustvalve</xliff:g>の購入品を自動的にダウンロード</string>
     <string name="settings_auto_download_future">今後のコンテンツを自動ダウンロード</string>

@@ -8,9 +8,6 @@ import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.local.db.entity.TrackEntity
-import com.dustvalve.next.android.data.storage.folder.FolderSnapshotSerializer
-import com.dustvalve.next.android.data.storage.folder.PlaylistSnapshot
-import com.dustvalve.next.android.data.storage.folder.TrackSnapshot
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
@@ -132,7 +129,7 @@ class PlaylistTransferRepositoryTest {
                 zip.write(coverBytes)
                 zip.closeEntry()
                 zip.putNextEntry(ZipEntry("manifest.json"))
-                zip.write(FolderSnapshotSerializer.json.encodeToString(manifest).toByteArray())
+                zip.write(PlaylistBundleSerializer.json.encodeToString(manifest).toByteArray())
                 zip.closeEntry()
             }
         }.toByteArray()
@@ -166,7 +163,7 @@ class PlaylistTransferRepositoryTest {
         val zipBytes = ByteArrayOutputStream().also { baos ->
             ZipOutputStream(baos).use { zip ->
                 zip.putNextEntry(ZipEntry("manifest.json"))
-                zip.write(FolderSnapshotSerializer.json.encodeToString(manifest).toByteArray())
+                zip.write(PlaylistBundleSerializer.json.encodeToString(manifest).toByteArray())
                 zip.closeEntry()
             }
         }.toByteArray()

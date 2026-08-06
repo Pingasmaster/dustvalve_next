@@ -1,7 +1,6 @@
 package com.dustvalve.next.android.data.repository
 
 import android.content.Context
-import androidx.core.net.toUri
 import androidx.room.withTransaction
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.local.DatabaseGateway
@@ -15,7 +14,6 @@ import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
 import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
-import com.dustvalve.next.android.data.storage.folder.DedicatedFolderPaths
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
@@ -260,14 +258,9 @@ class DownloadRepositoryImpl(
             throw IOException("Download URL must use HTTPS: ${downloadUrl.take(50)}")
         }
 
-        // Branch: SAF folder mode vs. app-internal mode. Internal writes go
-        // via a temp sibling and atomic rename; SAF deletes any pre-existing
-        // target and writes directly to the DocumentFile.
-        val (finalPath, fileSize) = if (settingsDataStore.getDedicatedFolderEnabledSync()) {
-            writeDownloadToFolder(safeAlbumId, fileName, format, downloadUrl, track.id)
-        } else {
-            writeDownloadToInternal(safeAlbumId, fileName, downloadUrl, track.id)
-        }
+        // Downloads always land in app-private storage: the write goes via a
+        // temp sibling and an atomic rename.
+        val (finalPath, fileSize) = writeDownloadToInternal(safeAlbumId, fileName, downloadUrl, track.id)
 
         // Atomically insert the track row + the unified-pool download record.
         database.withTransaction {
@@ -397,106 +390,13 @@ class DownloadRepositoryImpl(
         return targetFile.absolutePath to targetFile.length()
     }
 
-    private suspend fun writeDownloadToFolder(
-        safeAlbumId: String,
-        fileName: String,
-        format: AudioFormat,
-        downloadUrl: String,
-        trackId: String,
-    ): Pair<String, Long> {
-        val treeUriStr = settingsDataStore.getDedicatedFolderTreeUriSync()
-            ?: throw IOException("Dedicated folder URI missing")
-        val treeUri = treeUriStr.toUri()
-        val downloadsRoot = DedicatedFolderPaths.downloadsDir(context, treeUri)
-            ?: throw IOException("Dedicated folder not accessible")
-        val albumDir = downloadsRoot.findFile(safeAlbumId)
-            ?: downloadsRoot.createDirectory(safeAlbumId)
-            ?: throw IOException("Failed to create album dir in folder: $safeAlbumId")
+    private fun downloadPathExists(path: String): Boolean = path.isNotBlank() && File(path).exists()
 
-        albumDir.findFile(fileName)?.delete()
-        val mime = when (format.extension) {
-            "flac" -> "audio/flac"
-            "mp3" -> "audio/mpeg"
-            "m4a" -> "audio/mp4"
-            "ogg" -> "audio/ogg"
-            "opus" -> "audio/opus"
-            "webm" -> "audio/webm"
-            "wav" -> "audio/wav"
-            else -> "application/octet-stream"
-        }
-        val newFile = albumDir.createFile(mime, fileName)
-            ?: throw IOException("Failed to create audio file in folder: $fileName")
-
-        val size: Long
-        try {
-            size = context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { out ->
-                streamWithResume(
-                    url = downloadUrl,
-                    trackId = trackId,
-                    sink = out,
-                )
-            } ?: throw IOException("Failed to open output stream for $fileName")
-        } catch (e: CancellationException) {
-            try {
-                newFile.delete()
-            } catch (_: SecurityException) {
-            } catch (_: IllegalStateException) {
-            }
-            throw e
-        } catch (e: IOException) {
-            try {
-                newFile.delete()
-            } catch (_: SecurityException) {
-            } catch (_: IllegalStateException) {
-            }
-            throw e
-        } catch (e: SecurityException) {
-            try {
-                newFile.delete()
-            } catch (_: SecurityException) {
-            } catch (_: IllegalStateException) {
-            }
-            throw e
-        }
-        return newFile.uri.toString() to size
-    }
-
-    /** Path-existence check that handles both local file paths and content:// URIs. */
-    private fun downloadPathExists(path: String): Boolean {
-        if (path.isBlank()) return false
-        return if (path.startsWith("content://")) {
-            try {
-                val uri = path.toUri()
-                val doc = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)
-                doc?.exists() == true
-            } catch (_: SecurityException) {
-                false
-            } catch (_: IllegalArgumentException) {
-                false
-            } catch (_: IllegalStateException) {
-                false
-            }
-        } else {
-            File(path).exists()
-        }
-    }
-
-    /** Delete helper that handles both local file paths and content:// URIs. */
     private fun deleteByPath(path: String) {
         if (path.isBlank()) return
-        if (path.startsWith("content://")) {
-            try {
-                val uri = path.toUri()
-                androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)?.delete()
-            } catch (_: SecurityException) {
-            } catch (_: IllegalArgumentException) {
-            } catch (_: IllegalStateException) {
-            }
-        } else {
-            try {
-                File(path).delete()
-            } catch (_: SecurityException) {
-            }
+        try {
+            File(path).delete()
+        } catch (_: SecurityException) {
         }
     }
 
@@ -624,18 +524,17 @@ class DownloadRepositoryImpl(
     override fun getDownloadedAlbumIds(): Flow<List<String>> = downloadDao.getDownloadedAlbumIds()
 
     // Raw and unfiltered on purpose: DownloadController's orphan-file
-    // reconciliation owns the isNotBlank/content:// filtering and its own
-    // exception handling.
+    // reconciliation owns the isNotBlank filtering and its own exception
+    // handling.
     override suspend fun getAllDownloadFilePaths(): List<String> = downloadDao.getAllSync().map { it.filePath }
 
     override suspend fun deleteDownload(trackId: String) {
         val download = downloadDao.getByTrackId(trackId) ?: return
 
-        // Delete the file, handling both local paths and SAF content URIs.
         deleteByPath(download.filePath)
         // Drop any paused partial + resume sidecar for the same target so a
         // later re-download starts clean.
-        if (!download.filePath.startsWith("content://") && download.filePath.isNotBlank()) {
+        if (download.filePath.isNotBlank()) {
             deleteByPath(download.filePath + ".tmp")
             deleteByPath(download.filePath + ".tmp.meta")
         }

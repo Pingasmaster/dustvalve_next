@@ -72,29 +72,13 @@ Group 4: Connections (6)
 - [ ] set-conn-ytm-login [E2E, live]: ytm_connected=true, "Connected" shown.
 - [ ] set-conn-ytm-signout [JVM]: keys cleared, cookies expired, snackbar.
 
-Group 5: Storage / dedicated folder (17) [JVM unless noted]
+Group 5: Storage (5) [JVM unless noted]
 - set-storage-limit-each-step: 7 steps 100MB..Unlimited (Long.MAX_VALUE).
 - set-storage-limit-eviction: lowering evicts auto-cache overage; pinned
   user downloads never evicted.
 - set-storage-limit-restore-index: arbitrary bytes snap to closest step.
 - set-storage-remove-all-downloads: confirm dialog -> clearAll; cancel
   intact.
-- [ ] set-storage-dedicated-enable [E2E]: SAF tree, folderMirror.suspendFor +
-  migrateToFolder with progress overlay, keys + snackbar.
-- set-storage-dedicated-enable-failure: error snackbar, toggle stays off.
-- set-storage-dedicated-disable: confirm -> migrateFromFolder + reverted
-  snackbar; cancel keeps on.
-- [ ] set-storage-dedicated-change-folder [E2E]: re-pick + migrate + label
-  updates.
-- set-storage-dedicated-image-cache / -metadata-cache: sub-toggles move
-  caches in/out of tree.
-- set-storage-dedicated-controls-disabled-during-migration: all 4 controls
-  dimmed (alpha 0.38).
-- [ ] set-storage-dedicated-boot-unreachable [E2E]: revoked tree -> BootState.
-  DedicatedFolderUnreachable -> error screen; Locate re-picks; Turn off
-  clears 4 keys, boots Ready.
-- set-storage-dedicated-mirror-excludes-own-keys: settings.json mirror
-  excludes the 4 dedicated_folder_* keys both directions.
 - set-storage-auto-download-purchases-visibility (login-gated) /
   -purchases (default on) / -future (reveals favorites sub-toggle) /
   -favorites (queues download on favorite; hides manual button).
@@ -176,7 +160,7 @@ Group 11: Debug (1)
 - [ ] set-debug-show-info [JVM]: album_cover_long_press_carousel repurposed key;
   debug overlay replaces cover carousel.
 
-Group 12: Navigation / app chrome (20) [JVM unless noted]
+Group 12: Navigation / app chrome (19) [JVM unless noted]
 - set-nav-default-tabs: fresh install -> Local, Library, Settings only.
 - set-nav-all-tabs: +Bandcamp +YouTube in BottomNavItem enum order.
 - set-nav-visit-each-destination: AnimatedContent swaps 5 screens, per-tab
@@ -206,16 +190,13 @@ Group 12: Navigation / app chrome (20) [JVM unless noted]
   line) / -open-repository (github URL) / -report-issue (/issues).
 - [ ] set-chrome-theme-no-flash [smoke]: nothing rendered until ThemeConfig
   emits (no light->dark flash).
-- set-chrome-boot-loading: DedicatedFolderBootLoading until rehydrateAll.
 
-Group 13: Persistence across restart (5) [all JVM]
+Group 13: Persistence across restart (4) [all JVM]
 - set-persist-all-toggles-survive-restart: set every non-default value, kill
   + relaunch, every flow re-emits (golden screenshot or per-key asserts).
 - set-persist-defaults-fresh-install: full default matrix (see
   SettingsDataStore.kt / SettingsDataStoreTest.kt).
 - set-persist-account-survives: login state restored (decrypted cookies).
-- set-persist-folder-mirror-roundtrip: wipe data keeping tree, re-enable ->
-  restorePreferences repopulates all types, dedicated keys excluded.
 - set-persist-viewmodel-vs-store-divergence: SettingsUiState defaults
   seamlessQualityUpgrade=true and albumCoverLongPressCarousel=true while
   DataStore defaults are false - assert UI never renders pre-collection

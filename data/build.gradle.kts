@@ -61,7 +61,6 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     implementation(libs.work.runtime.ktx)
-    implementation(libs.documentfile)
     implementation(libs.core.ktx)
 
     implementation(libs.hilt.android)

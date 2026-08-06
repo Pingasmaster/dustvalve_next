@@ -85,7 +85,6 @@ class DownloadRepositoryImplTest {
         coEvery { albumDao.getById(any()) } returns null
         settingsDataStore = mockk()
         coEvery { settingsDataStore.getDownloadFormatSync() } returns "mp3-128"
-        coEvery { settingsDataStore.getDedicatedFolderEnabledSync() } returns false
         youtubeRepository = mockk()
         mediaCacheClearer = mockk()
 
@@ -357,17 +356,17 @@ class DownloadRepositoryImplTest {
 
     // --- Orphan-file reconciliation source ------------------------------
 
-    @Test fun `getAllDownloadFilePaths returns raw paths including content uris and blanks`() = runBlocking {
+    @Test fun `getAllDownloadFilePaths returns raw paths including blanks`() = runBlocking {
         coEvery { downloadDao.getAllSync() } returns listOf(
             DownloadEntity(trackId = "t1", albumId = "a", filePath = "/data/files/t1.mp3", sizeBytes = 1L),
-            DownloadEntity(trackId = "t2", albumId = "a", filePath = "content://com.provider/doc/2", sizeBytes = 1L),
+            DownloadEntity(trackId = "t2", albumId = "a", filePath = "/data/files/t2.mp3", sizeBytes = 1L),
             DownloadEntity(trackId = "t3", albumId = "a", filePath = "", sizeBytes = 1L),
         )
 
         // Raw and unfiltered by contract: DownloadController owns the
-        // isNotBlank + content:// filtering.
+        // isNotBlank filtering.
         assertThat(repo.getAllDownloadFilePaths())
-            .containsExactly("/data/files/t1.mp3", "content://com.provider/doc/2", "")
+            .containsExactly("/data/files/t1.mp3", "/data/files/t2.mp3", "")
             .inOrder()
     }
 }

@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.IOException
@@ -85,10 +84,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         val LOCAL_SELECTED_DURATIONS = stringSetPreferencesKey("local_selected_durations")
         val LOCAL_FAVORITES_ONLY = booleanPreferencesKey("local_favorites_only")
         val LOCAL_SELECTED_FOLDERS = stringSetPreferencesKey("local_selected_folders")
-        val DEDICATED_FOLDER_ENABLED = booleanPreferencesKey("dedicated_folder_enabled")
-        val DEDICATED_FOLDER_TREE_URI = stringPreferencesKey("dedicated_folder_tree_uri")
-        val DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE = booleanPreferencesKey("dedicated_folder_include_image_cache")
-        val DEDICATED_FOLDER_INCLUDE_METADATA_CACHE = booleanPreferencesKey("dedicated_folder_include_metadata_cache")
         val BANDCAMP_CUSTOM_GENRES = stringPreferencesKey("bandcamp_custom_genres")
         val AUTO_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_update_check_enabled")
     }
@@ -349,28 +344,12 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    /**
-     * Decodes a JSON-encoded string list stored in a preference, treating a
-     * malformed value as empty instead of throwing SerializationException on
-     * every read forever. The next successful set() overwrites the bad value.
-     */
-    private fun decodeStringList(json: String?): List<String> {
-        if (json == null) return emptyList()
-        return try {
-            Json.decodeFromString<List<String>>(json)
-        } catch (_: SerializationException) {
-            emptyList()
-        } catch (_: IllegalArgumentException) {
-            emptyList()
-        }
-    }
-
     val localMusicEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.LOCAL_MUSIC_ENABLED] ?: false
     }
 
     val localMusicFolderUris: Flow<List<String>> = guardedPreferences.map { prefs ->
-        decodeStringList(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
+        StringListPreference.decode(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
     }
 
     val localMusicUseMediaStore: Flow<Boolean> = guardedPreferences.map { prefs ->
@@ -397,7 +376,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         context.dataStore.edit { prefs ->
             // decodeStringList treats a malformed stored value as empty, so
             // this write also repairs the key.
-            val current = decodeStringList(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
+            val current = StringListPreference.decode(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
             if (uri !in current) {
                 prefs[Keys.LOCAL_MUSIC_FOLDER_URIS] = Json.encodeToString(current + uri)
             }
@@ -406,7 +385,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     suspend fun removeLocalMusicFolderUri(uri: String) {
         context.dataStore.edit { prefs ->
-            val current = decodeStringList(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
+            val current = StringListPreference.decode(prefs[Keys.LOCAL_MUSIC_FOLDER_URIS])
             val updated = current - uri
             if (updated.isNotEmpty()) {
                 prefs[Keys.LOCAL_MUSIC_FOLDER_URIS] = Json.encodeToString(updated)
@@ -425,7 +404,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     suspend fun getLocalMusicEnabledSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_ENABLED) ?: false
 
     suspend fun getLocalMusicFolderUrisSync(): List<String> =
-        decodeStringList(guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS))
+        StringListPreference.decode(guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_FOLDER_URIS))
 
     suspend fun getLocalMusicUseMediaStoreSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true
 
@@ -674,52 +653,9 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    // Dedicated-folder toggle: when on, user data (playlists, favorites,
-    // downloads, history, settings) is mirrored to a user-picked SAF tree.
-    // The two include-cache keys are sub-toggles, ignored when the main
-    // toggle is off.
-    val dedicatedFolderEnabled: Flow<Boolean> = guardedPreferences.map {
-        it[Keys.DEDICATED_FOLDER_ENABLED] ?: false
-    }
-    val dedicatedFolderTreeUri: Flow<String?> = guardedPreferences.map {
-        it[Keys.DEDICATED_FOLDER_TREE_URI]
-    }
-    val dedicatedFolderIncludeImageCache: Flow<Boolean> = guardedPreferences.map {
-        it[Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE] ?: false
-    }
-    val dedicatedFolderIncludeMetadataCache: Flow<Boolean> = guardedPreferences.map {
-        it[Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE] ?: false
-    }
-
-    suspend fun getDedicatedFolderEnabledSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.DEDICATED_FOLDER_ENABLED) ?: false
-
-    suspend fun getDedicatedFolderTreeUriSync(): String? = guardedPreferences.firstOrNull()?.get(Keys.DEDICATED_FOLDER_TREE_URI)
-
-    suspend fun getDedicatedFolderIncludeMetadataCacheSync(): Boolean =
-        guardedPreferences.firstOrNull()?.get(Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE) ?: false
-
-    suspend fun setDedicatedFolder(enabled: Boolean, treeUri: String?) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.DEDICATED_FOLDER_ENABLED] = enabled
-            if (treeUri != null) {
-                prefs[Keys.DEDICATED_FOLDER_TREE_URI] = treeUri
-            } else {
-                prefs.remove(Keys.DEDICATED_FOLDER_TREE_URI)
-            }
-        }
-    }
-
-    suspend fun setDedicatedFolderIncludeImageCache(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE] = enabled }
-    }
-
-    suspend fun setDedicatedFolderIncludeMetadataCache(enabled: Boolean) {
-        context.dataStore.edit { it[Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE] = enabled }
-    }
-
     /** Custom Bandcamp genres added by the user, stored as JSON. */
     val bandcampCustomGenres: Flow<List<String>> = guardedPreferences.map { prefs ->
-        decodeStringList(prefs[Keys.BANDCAMP_CUSTOM_GENRES])
+        StringListPreference.decode(prefs[Keys.BANDCAMP_CUSTOM_GENRES])
     }
 
     suspend fun setBandcampCustomGenres(genres: List<String>) {
@@ -728,71 +664,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
                 prefs[Keys.BANDCAMP_CUSTOM_GENRES] = Json.encodeToString(genres)
             } else {
                 prefs.remove(Keys.BANDCAMP_CUSTOM_GENRES)
-            }
-        }
-    }
-
-    /**
-     * Raw preferences Flow used by [FolderMirror] to mirror every edit.
-     * Deliberately NOT routed through [guardedPreferences]: recovering to
-     * emptyPreferences() here would mirror an empty settings map over a good
-     * backup. Failing the collector is the safe direction for a mirror.
-     */
-    val rawPreferencesFlow: Flow<Preferences> = context.dataStore.data
-
-    /**
-     * Captures the entire current preferences map as a typed snapshot for
-     * mirroring to a settings.json file. We skip the dedicated-folder keys
-     * themselves; they are device-local and must not round-trip through the
-     * folder (that would make turning the toggle off impossible once on).
-     */
-    suspend fun captureAllPreferences(): Map<String, Any> {
-        val prefs = guardedPreferences.firstOrNull() ?: return emptyMap()
-        val skip = setOf(
-            Keys.DEDICATED_FOLDER_ENABLED.name,
-            Keys.DEDICATED_FOLDER_TREE_URI.name,
-            Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE.name,
-            Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE.name,
-        )
-        val out = mutableMapOf<String, Any>()
-        for ((key, value) in prefs.asMap()) {
-            if (key.name in skip) continue
-            out[key.name] = value
-        }
-        return out
-    }
-
-    /**
-     * Overwrites the DataStore with [entries]. Keys present in DataStore but
-     * absent from [entries] are preserved (device-local toggles, etc.), while
-     * any dedicated-folder keys in [entries] are discarded.
-     */
-    suspend fun restorePreferences(entries: Map<String, Any>) {
-        val skip = setOf(
-            Keys.DEDICATED_FOLDER_ENABLED.name,
-            Keys.DEDICATED_FOLDER_TREE_URI.name,
-            Keys.DEDICATED_FOLDER_INCLUDE_IMAGE_CACHE.name,
-            Keys.DEDICATED_FOLDER_INCLUDE_METADATA_CACHE.name,
-        )
-        context.dataStore.edit { prefs ->
-            for ((name, value) in entries) {
-                if (name in skip) continue
-                when (value) {
-                    is Boolean -> prefs[booleanPreferencesKey(name)] = value
-
-                    is Int -> prefs[androidx.datastore.preferences.core.intPreferencesKey(name)] = value
-
-                    is Long -> prefs[longPreferencesKey(name)] = value
-
-                    is Float -> prefs[androidx.datastore.preferences.core.floatPreferencesKey(name)] = value
-
-                    is String -> prefs[stringPreferencesKey(name)] = value
-
-                    is Set<*> -> {
-                        @Suppress("UNCHECKED_CAST")
-                        prefs[stringSetPreferencesKey(name)] = (value as Set<String>)
-                    }
-                }
             }
         }
     }
