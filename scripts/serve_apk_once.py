@@ -9,6 +9,7 @@ or on SIGTERM/SIGINT (next build.sh invocation).
 from __future__ import annotations
 
 import argparse
+import errno
 import os
 import signal
 import sys
@@ -17,6 +18,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 CONTENT_TYPE = "application/vnd.android.package-archive"
+# How many ports to try after --port when the preferred one is already taken
+# (e.g. another build / llama-server / leftover listener on that host).
+_PORT_FALLBACK_TRIES = 32
 
 
 class _ApkServer(HTTPServer):
@@ -128,8 +132,9 @@ def main() -> int:
             return 1
         apk_by_path[url_path] = apk_path.read_bytes()
 
+    # Pidfile is written only after a successful bind so callers do not treat a
+    # failed start (port in use, etc.) as success.
     pid_path = args.pidfile.resolve()
-    _write_pid(pid_path)
 
     def _cleanup(*_args) -> None:
         try:
@@ -148,15 +153,42 @@ def main() -> int:
     signal.signal(signal.SIGTERM, _on_signal)
     signal.signal(signal.SIGINT, _on_signal)
 
-    try:
-        server = _ApkServer((args.host, args.port), apk_by_path)
-    except OSError as exc:
-        print("ERROR: could not bind %s:%s: %s" % (args.host, args.port, exc), file=sys.stderr)
-        _cleanup()
+    server: _ApkServer | None = None
+    bound_port = args.port
+    last_exc: OSError | None = None
+    for port in range(args.port, args.port + _PORT_FALLBACK_TRIES):
+        try:
+            server = _ApkServer((args.host, port), apk_by_path)
+            bound_port = port
+            break
+        except OSError as exc:
+            last_exc = exc
+            in_use = getattr(exc, "errno", None) in (errno.EADDRINUSE, getattr(errno, "WSAEADDRINUSE", -1))
+            if not in_use:
+                print(
+                    "ERROR: could not bind %s:%s: %s" % (args.host, port, exc),
+                    file=sys.stderr,
+                )
+                return 1
+            continue
+    if server is None:
+        print(
+            "ERROR: could not bind %s:%s (+%d fallbacks): %s"
+            % (args.host, args.port, _PORT_FALLBACK_TRIES - 1, last_exc),
+            file=sys.stderr,
+        )
         return 1
+    if bound_port != args.port:
+        print(
+            "APK HTTP serve: port %s in use on %s, using %s instead."
+            % (args.port, args.host, bound_port),
+            file=sys.stderr,
+        )
+
+    _write_pid(pid_path)
 
     for url_path, data in apk_by_path.items():
-        url = "http://%s:%s%s" % (url_host, args.port, url_path)
+        url = "http://%s:%s%s" % (url_host, bound_port, url_path)
         print("APK HTTP serve: %s (%d bytes)" % (url, len(data)))
     print(
         "APK HTTP serve: stops after all APKs downloaded once, %ds timeout, or next build.sh."
