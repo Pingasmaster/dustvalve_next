@@ -36,4 +36,10 @@
         <item quantity="many">В очередь добавлено %1$d треков</item>
         <item quantity="other">В очередь добавлено %1$d трека</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="one">Скачано %1$d из %2$d, %3$d трек недоступен</item>
+        <item quantity="few">Скачано %1$d из %2$d, %3$d трека недоступны</item>
+        <item quantity="many">Скачано %1$d из %2$d, %3$d треков недоступны</item>
+        <item quantity="other">Скачано %1$d из %2$d, %3$d трека недоступны</item>
+    </plurals>
 </resources>

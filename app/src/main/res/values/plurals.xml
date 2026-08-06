@@ -24,4 +24,8 @@
         <item quantity="one">Added %1$d track to queue</item>
         <item quantity="other">Added %1$d tracks to queue</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="one">Downloaded %1$d of %2$d, %3$d track unavailable</item>
+        <item quantity="other">Downloaded %1$d of %2$d, %3$d tracks unavailable</item>
+    </plurals>
 </resources>

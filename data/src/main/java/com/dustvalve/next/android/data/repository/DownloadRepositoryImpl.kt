@@ -29,6 +29,7 @@ import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.MediaCacheClearer
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
+import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import com.dustvalve.next.android.download.isPauseCancellation
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -151,33 +152,30 @@ class DownloadRepositoryImpl(
         }
     }
 
-    @Suppress("ThrowsCount")
     private suspend fun downloadAlbumInner(album: Album) {
-        val errors = mutableListOf<Exception>()
-        var skipped = 0
-        for (track in album.tracks) {
-            try {
-                if (track.streamUrl == null) {
-                    skipped++
-                    continue
-                }
-                downloadTrack(track)
-            } catch (e: CancellationException) {
-                if (errors.isNotEmpty()) {
-                    android.util.Log.w("DownloadRepo", "${errors.size} track(s) failed before cancellation: ${errors.first().message}")
-                }
-                throw e // Respect structured concurrency
-            } catch (e: IOException) {
-                errors.add(e)
-            }
-        }
-        if (skipped == album.tracks.size) {
+        val downloadable = album.tracks.filter { it.streamUrl != null }
+        val skipped = album.tracks.size - downloadable.size
+        if (downloadable.isEmpty()) {
             throw IOException("No tracks available for download - all ${album.tracks.size} tracks lack stream URLs")
         }
-        if (errors.isNotEmpty()) {
+
+        // A track that cannot be fetched (age-restricted YouTube video, dead
+        // stream URL) is skipped on the spot and retried once after the rest
+        // of the album; only a second failure gives up on it. Each attempt is
+        // logged as it fails, so a cancellation part-way through still leaves
+        // the diagnostics behind. CancellationException is never absorbed by
+        // the runner, so structured concurrency is respected.
+        val result = downloadEachDeferringFailures(
+            items = downloadable,
+            onAttemptFailed = { track, e ->
+                android.util.Log.w("DownloadRepo", "Download attempt failed for track ${track.id}: ${e.message}")
+            },
+        ) { track -> downloadTrack(track) }
+
+        if (result.hasUnavailable) {
             val skippedMsg = if (skipped > 0) " ($skipped tracks unavailable for streaming)" else ""
             throw IOException(
-                "Failed to download ${errors.size} of ${album.tracks.size} tracks$skippedMsg: ${errors.first().message}",
+                "Failed to download ${result.unavailable.size} of ${album.tracks.size} tracks$skippedMsg: ${result.error?.message}",
             )
         }
         if (skipped > 0) {

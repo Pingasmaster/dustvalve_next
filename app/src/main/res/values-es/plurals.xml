@@ -30,4 +30,9 @@
         <item quantity="many">Se agregaron %1$d de pistas a la cola</item>
         <item quantity="other">Se agregaron %1$d pistas a la cola</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="one">Se descargaron %1$d de %2$d, %3$d pista no disponible</item>
+        <item quantity="many">Se descargaron %1$d de %2$d, %3$d de pistas no disponibles</item>
+        <item quantity="other">Se descargaron %1$d de %2$d, %3$d pistas no disponibles</item>
+    </plurals>
 </resources>

@@ -376,7 +376,101 @@ class ArtistDetailViewModelTest {
         coVerify(exactly = 0) { artistRepository.toggleFavorite(any()) }
     }
 
+    @Test fun `downloadAll skips an undownloadable track, retries it last, and reports it unavailable`() = runTest(dispatcher) {
+        val vm = loadedYoutubeArtist(listOf("t1", "bad", "t3"))
+        val attempts = mutableListOf<String>()
+        coEvery { downloadController.downloadTrackBlocking(any(), any()) } answers {
+            val t = firstArg<Track>()
+            attempts += t.id
+            if (t.id == "bad") throw IllegalStateException("no audio adaptiveFormats (playabilityStatus=\"LOGIN_REQUIRED\")")
+        }
+
+        vm.downloadAll()
+        advanceUntilIdle()
+
+        // "t3" runs BEFORE "bad" is retried: the bad track no longer ends the
+        // artist download where it stands.
+        assertThat(attempts).containsExactly("t1", "bad", "t3", "bad").inOrder()
+
+        val state = vm.uiState.value
+        assertThat(state.isDownloading).isFalse()
+        val message = state.snackbarMessage as UiText.PluralsResource
+        assertThat(message.resId).isEqualTo(R.plurals.snackbar_downloaded_partial)
+        assertThat(message.count).isEqualTo(1)
+        assertThat(message.args).containsExactly(2, 3, 1).inOrder()
+        // Partial success is not an error banner, but Retry is still offered.
+        assertThat(state.isSnackbarError).isFalse()
+        assertThat(vm.retryAction).isNotNull()
+    }
+
+    @Test fun `downloadAll reports plain success when the deferred retry lands`() = runTest(dispatcher) {
+        val vm = loadedYoutubeArtist(listOf("t1", "flaky", "t3"))
+        var flakyAttempts = 0
+        coEvery { downloadController.downloadTrackBlocking(any(), any()) } answers {
+            val t = firstArg<Track>()
+            if (t.id == "flaky" && ++flakyAttempts == 1) throw java.io.IOException("connection reset")
+        }
+
+        vm.downloadAll()
+        advanceUntilIdle()
+
+        assertThat(flakyAttempts).isEqualTo(2)
+        val state = vm.uiState.value
+        val message = state.snackbarMessage as UiText.StringResource
+        assertThat(message.resId).isEqualTo(R.string.snackbar_downloaded)
+        assertThat(message.args).containsExactly("YT Channel")
+        assertThat(state.isSnackbarError).isFalse()
+        assertThat(vm.retryAction).isNull()
+    }
+
+    @Test fun `downloadAll surfaces the failure when every track is unavailable`() = runTest(dispatcher) {
+        val vm = loadedYoutubeArtist(listOf("t1", "t2"))
+        coEvery { downloadController.downloadTrackBlocking(any(), any()) } throws java.io.IOException("offline")
+
+        vm.downloadAll()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertThat(state.isDownloading).isFalse()
+        assertThat(state.isSnackbarError).isTrue()
+        assertThat((state.snackbarMessage as UiText.DynamicString).value).isEqualTo("offline")
+        assertThat(vm.retryAction).isNotNull()
+    }
+
     // --- helpers ------------------------------------------------------------
+
+    /** A VM sitting on a fully loaded, single-page YouTube artist. */
+    private fun TestScope.loadedYoutubeArtist(trackIds: List<String>): ArtistDetailViewModel {
+        val ytSource = sourceWith("youtube", setOf(SourceConcept.ARTIST, SourceConcept.ARTIST_TRACKS))
+        val url = "https://youtube.com/channel/UC1"
+        val artist = Artist(
+            id = url,
+            name = "YT Channel",
+            url = url,
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = emptyList(),
+        )
+        coEvery { ytSource.getArtist(url) } returns artist
+        coEvery { ytSource.getArtistTracks(url, continuation = null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "YT Channel",
+            owner = "YT Channel",
+            coverUrl = null,
+            tracks = trackIds.map { track(it) },
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns ytSource
+        coEvery { favoriteRepository.isFavorite(url) } returns false
+
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url)
+        advanceUntilIdle()
+        return vm
+    }
 
     private fun newVm() = ArtistDetailViewModel(
         sources = sources,

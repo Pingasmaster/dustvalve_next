@@ -31,4 +31,9 @@
         <item quantity="many">%1$d de faixas adicionadas à fila</item>
         <item quantity="other">%1$d faixas adicionadas à fila</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="one">%1$d de %2$d baixadas, %3$d faixa indisponível</item>
+        <item quantity="many">%1$d de %2$d baixadas, %3$d de faixas indisponíveis</item>
+        <item quantity="other">%1$d de %2$d baixadas, %3$d faixas indisponíveis</item>
+    </plurals>
 </resources>

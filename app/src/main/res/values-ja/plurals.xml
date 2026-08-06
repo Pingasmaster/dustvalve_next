@@ -19,4 +19,7 @@
     <plurals name="snackbar_added_n_to_queue">
         <item quantity="other">%1$d曲をキューに追加しました</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="other">%2$d曲中%1$d曲をダウンロードしました（%3$d曲は利用できません）</item>
+    </plurals>
 </resources>

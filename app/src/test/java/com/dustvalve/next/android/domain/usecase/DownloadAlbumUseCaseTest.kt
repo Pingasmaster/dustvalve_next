@@ -105,6 +105,51 @@ class DownloadAlbumUseCaseTest {
         assertThat(ex.message).contains("2 of 2")
     }
 
+    @Test fun `downloadPlaylist retries a failed track once, at the very end`() {
+        val tracks = listOf(track("t1"), track("t2"), track("t3"))
+        val attempts = mutableListOf<String>()
+        coEvery { downloadRepo.downloadTrack(any()) } answers {
+            val t = firstArg<Track>()
+            attempts += t.id
+            if (t.id == "t2") throw IOException("boom")
+        }
+
+        assertThrows(IOException::class.java) {
+            runTest { useCase.downloadPlaylist("Mix", tracks) }
+        }
+
+        // t3 runs before t2 comes back around, and t2 gets exactly one retry.
+        assertThat(attempts).containsExactly("t1", "t2", "t3", "t2").inOrder()
+    }
+
+    @Test fun `downloadPlaylist succeeds when the deferred retry lands`() = runTest {
+        val tracks = listOf(track("t1"), track("t2"))
+        var t2Attempts = 0
+        coEvery { downloadRepo.downloadTrack(any()) } answers {
+            if (firstArg<Track>().id == "t2" && ++t2Attempts == 1) throw IOException("transient")
+        }
+
+        useCase.downloadPlaylist("Mix", tracks) // must not throw
+
+        assertThat(t2Attempts).isEqualTo(2)
+    }
+
+    @Test fun `downloadPlaylist keeps going when a track throws IllegalStateException`() {
+        // The age-restricted YouTube case: the parser's IllegalStateException
+        // used to escape the loop's IOException catch and abort the playlist.
+        val tracks = listOf(track("t1"), track("t2"), track("t3"))
+        coEvery { downloadRepo.downloadTrack(tracks[1]) } throws
+            IllegalStateException("no audio adaptiveFormats (playabilityStatus=\"LOGIN_REQUIRED\")")
+
+        val ex = assertThrows(IOException::class.java) {
+            runTest { useCase.downloadPlaylist("Mix", tracks) }
+        }
+
+        assertThat(ex.message).contains("1 of 3")
+        coVerify(exactly = 1) { downloadRepo.downloadTrack(tracks[0]) }
+        coVerify(exactly = 1) { downloadRepo.downloadTrack(tracks[2]) }
+    }
+
     @Test fun `downloadArtist with no albums throws`() {
         assertThrows(IOException::class.java) {
             runTest { useCase.downloadArtist(artist(emptyList())) }
@@ -154,6 +199,40 @@ class DownloadAlbumUseCaseTest {
             runTest { useCase.downloadArtist(artist(listOf(stub1, stub2))) }
         }
         coVerify(exactly = 0) { downloadRepo.downloadAlbum(any()) }
+    }
+
+    @Test fun `downloadArtist retries a failed album once, at the very end`() = runTest {
+        val stub1 = album("a1")
+        val stub2 = album("a2")
+        coEvery { albumRepo.getAlbumDetail(stub1.url) } returns stub1
+        coEvery { albumRepo.getAlbumDetail(stub2.url) } returns stub2
+        val attempts = mutableListOf<String>()
+        coEvery { downloadRepo.downloadAlbum(any()) } answers {
+            val a = firstArg<Album>()
+            attempts += a.id
+            if (a.id == "a1") throw IOException("boom")
+        }
+
+        // a2 survived, so the artist as a whole is not a failure.
+        useCase.downloadArtist(artist(listOf(stub1, stub2)))
+
+        assertThat(attempts).containsExactly("a1", "a2", "a1").inOrder()
+    }
+
+    @Test fun `downloadArtist retries a failed album detail fetch once, at the very end`() = runTest {
+        val stub1 = album("a1")
+        val stub2 = album("a2")
+        val fetches = mutableListOf<String>()
+        coEvery { albumRepo.getAlbumDetail(any()) } answers {
+            val url = firstArg<String>()
+            fetches += url
+            if (url == stub1.url) throw IOException("detail fail") else stub2
+        }
+
+        useCase.downloadArtist(artist(listOf(stub1, stub2)))
+
+        assertThat(fetches).containsExactly(stub1.url, stub2.url, stub1.url).inOrder()
+        coVerify(exactly = 1) { downloadRepo.downloadAlbum(stub2) }
     }
 
     @Test fun `deleteArtistDownloads deletes every album`() = runTest {

@@ -31,4 +31,9 @@
         <item quantity="many">%1$d di tracce aggiunte alla coda</item>
         <item quantity="other">%1$d tracce aggiunte alla coda</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="one">%1$d di %2$d scaricate, %3$d traccia non disponibile</item>
+        <item quantity="many">%1$d di %2$d scaricate, %3$d di tracce non disponibili</item>
+        <item quantity="other">%1$d di %2$d scaricate, %3$d tracce non disponibili</item>
+    </plurals>
 </resources>

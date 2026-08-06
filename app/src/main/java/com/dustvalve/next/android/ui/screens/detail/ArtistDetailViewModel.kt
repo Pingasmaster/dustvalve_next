@@ -14,7 +14,9 @@ import com.dustvalve.next.android.domain.repository.SourceConcept
 import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
+import com.dustvalve.next.android.download.BatchDownloadResult
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -280,31 +282,36 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             try {
-                if (state.sourceId == "bandcamp") {
-                    val albums = state.artist?.albums ?: emptyList()
-                    for (album in albums) {
-                        for (track in album.tracks) {
-                            if (track.id !in state.downloadedTrackIds) {
-                                downloadController.downloadTrackBlocking(track)
-                            }
-                        }
-                    }
+                val pending = if (state.sourceId == "bandcamp") {
+                    state.artist?.albums.orEmpty().flatMap { it.tracks }
                 } else {
-                    val tracks = expandLoadedArtistTracks()
-                    for (track in tracks) {
-                        if (track.id !in _uiState.value.downloadedTrackIds) {
-                            downloadController.downloadTrackBlocking(track)
-                        }
+                    expandLoadedArtistTracks()
+                }.filter { it.id !in state.downloadedTrackIds }
+
+                // One undownloadable track (typically an age-restricted
+                // YouTube video) used to end the whole artist download where
+                // it stood. Skip it, come back to it once at the very end,
+                // and report what was lost instead of stopping.
+                val result = downloadEachDeferringFailures(pending) { track ->
+                    // Re-check per track: the auto-download coordinator or
+                    // another screen may have landed it while we were working.
+                    if (track.id !in _uiState.value.downloadedTrackIds) {
+                        downloadController.downloadTrackBlocking(track)
                     }
+                }
+
+                // Cleared on a clean run so a Retry left over from an earlier
+                // failure can't ride along with a success snackbar.
+                retryAction = if (result.hasUnavailable) {
+                    { downloadAll() }
+                } else {
+                    null
                 }
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
-                        snackbarMessage = UiText.StringResource(
-                            R.string.snackbar_downloaded,
-                            listOf(state.artist?.name.orEmpty()),
-                        ),
-                        isSnackbarError = false,
+                        snackbarMessage = downloadSummary(result, state.artist?.name.orEmpty()),
+                        isSnackbarError = result.allFailed,
                     )
                 }
             } catch (e: Exception) {
@@ -321,6 +328,23 @@ class ArtistDetailViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Success line for a finished batch: the plain "Downloaded <artist>" when
+     * everything landed, the underlying error when nothing did, and a count of
+     * what was given up on in between.
+     */
+    private fun downloadSummary(result: BatchDownloadResult<Track>, artistName: String): UiText = when {
+        !result.hasUnavailable -> UiText.StringResource(R.string.snackbar_downloaded, listOf(artistName))
+
+        result.allFailed -> UiText.orResource(result.error?.message, R.string.snackbar_download_failed)
+
+        else -> UiText.PluralsResource(
+            R.plurals.snackbar_downloaded_partial,
+            result.unavailable.size,
+            listOf(result.downloaded, result.attempted, result.unavailable.size),
+        )
     }
 
     private suspend fun expandLoadedArtistTracks(): List<Track> {

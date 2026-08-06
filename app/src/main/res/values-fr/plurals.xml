@@ -31,4 +31,9 @@
         <item quantity="many">%1$d de titres ajoutés à la file d’attente</item>
         <item quantity="other">%1$d titres ajoutés à la file d’attente</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="one">%1$d sur %2$d téléchargés, %3$d titre indisponible</item>
+        <item quantity="many">%1$d sur %2$d téléchargés, %3$d de titres indisponibles</item>
+        <item quantity="other">%1$d sur %2$d téléchargés, %3$d titres indisponibles</item>
+    </plurals>
 </resources>

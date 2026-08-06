@@ -23,6 +23,7 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -208,19 +209,19 @@ class ArtistRepositoryImpl(
         // Auto-download new albums if auto-download is enabled
         if (previousAutoDownload) {
             val newAlbums = artist.albums.filter { it.url !in previousAlbumUrls }
-            for (albumStub in newAlbums) {
-                try {
-                    val fullAlbum = albumRepository.getAlbumDetail(albumStub.url)
-                    downloadRepository.downloadAlbum(fullAlbum)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: IOException) {
-                    // Best-effort auto-download
-                } catch (_: SerializationException) {
-                    // Best-effort auto-download (scrape/parse failed)
-                } catch (_: IllegalArgumentException) {
-                    // Best-effort auto-download (bad URL/args)
+            // Best-effort auto-download: an album that fails is skipped at
+            // once and retried after the others, and whatever still fails is
+            // left for the next refresh to pick up.
+            downloadEachDeferringFailures(newAlbums) { albumStub ->
+                val fullAlbum = try {
+                    albumRepository.getAlbumDetail(albumStub.url)
+                } catch (e: SerializationException) {
+                    // Not one of the types the runner absorbs; re-wrap so a
+                    // scrape/parse failure is deferred-and-retried like any
+                    // other rather than escaping into the caching path.
+                    throw IOException("Album detail parse failed for ${albumStub.url}", e)
                 }
+                downloadRepository.downloadAlbum(fullAlbum)
             }
         }
 

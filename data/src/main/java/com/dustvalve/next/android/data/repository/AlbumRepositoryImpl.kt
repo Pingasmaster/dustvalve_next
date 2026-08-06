@@ -20,6 +20,7 @@ import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
+import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -199,14 +200,11 @@ class AlbumRepositoryImpl(
         // Auto-download new tracks if auto-download is enabled
         if (previousAutoDownload && cachedTrackIds.isNotEmpty()) {
             val newTracks = result.tracks.filter { it.id !in cachedTrackIds }
-            for (track in newTracks) {
-                try {
-                    downloadRepository.downloadTrack(track)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: IOException) {
-                    // Best-effort auto-download
-                }
+            // Best-effort auto-download: a track that fails is skipped at once
+            // and retried after the others, and whatever still fails is left
+            // for the next refresh to pick up.
+            downloadEachDeferringFailures(newTracks) { track ->
+                downloadRepository.downloadTrack(track)
             }
         }
 

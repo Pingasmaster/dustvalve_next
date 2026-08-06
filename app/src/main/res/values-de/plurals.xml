@@ -24,4 +24,8 @@
         <item quantity="one">%1$d Track zur Warteschlange hinzugefügt</item>
         <item quantity="other">%1$d Tracks zur Warteschlange hinzugefügt</item>
     </plurals>
+    <plurals name="snackbar_downloaded_partial">
+        <item quantity="one">%1$d von %2$d heruntergeladen, %3$d Track nicht verfügbar</item>
+        <item quantity="other">%1$d von %2$d heruntergeladen, %3$d Tracks nicht verfügbar</item>
+    </plurals>
 </resources>

@@ -20,6 +20,7 @@ import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -251,15 +252,11 @@ class PlaylistRepositoryImpl(
                 }
             }
         }
-        // Auto-download outside the transaction to avoid holding the DB lock
-        tracksToDownload.forEach { track ->
-            try {
-                downloadRepository.downloadTrack(track)
-            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
-                throw e
-            } catch (_: java.io.IOException) {
-                // Best-effort auto-download, ignore failures
-            }
+        // Auto-download outside the transaction to avoid holding the DB lock.
+        // Best-effort: a failing track is skipped at once and retried after
+        // the others instead of stopping the tracks queued behind it.
+        downloadEachDeferringFailures(tracksToDownload) { track ->
+            downloadRepository.downloadTrack(track)
         }
     }
 
