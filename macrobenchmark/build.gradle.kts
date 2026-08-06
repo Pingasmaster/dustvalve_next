@@ -70,6 +70,17 @@ android {
             testedAbi = "arm64-v8a"
         }
     }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_26
+        targetCompatibility = JavaVersion.VERSION_26
+    }
+
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_26)
+        }
+    }
 }
 
 dependencies {

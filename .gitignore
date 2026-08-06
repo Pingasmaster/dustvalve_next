@@ -54,6 +54,6 @@ log*.txt
 log*.md
 ideas
 .worktrees/
-.jdk25-home/
+.jdk*-home/
 app-release-future-mapping.txt
 app-release-mapping.txt

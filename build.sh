@@ -19,8 +19,8 @@
 #   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
 #   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks
-#   ./build.sh --publish          # serve existing root APKs over NetBird HTTP + exit
-#   ./build.sh --publish-debug    # serve the last built debug APKs over NetBird HTTP + exit
+#   ./build.sh --publish          # serve existing root release APKs over NetBird HTTP + exit
+#   ./build.sh --publish-debug    # serve existing root debug APKs over NetBird HTTP + exit
 #   ./build.sh --block-on-outdated
 #                                 # refuse to build when any catalog pin is behind
 #                                 # (default is to auto-bump pins, then continue)
@@ -36,6 +36,8 @@
 # http://<netbird-fqdn>:8765/app-release.apk (compat, Android 8+) and
 # http://<netbird-fqdn>:8765/app-release-future.apk (future, Android 17) until
 # both are downloaded once, 10 minutes, or the next ./build.sh invocation.
+# A --debug build (and --publish-debug) serve the same way under
+# app-debug.apk / app-debug-future.apk so the URLs stay stable.
 #
 # User-facing speed: default builds ALWAYS regenerate baseline-prof.txt +
 # startup-prof.txt (needs KVM) so release APKs ship fresh AOT hints. R8
@@ -53,27 +55,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
-
-./scripts/apk_http_serve.sh stop || true
-
-if [[ -z "${JAVA_HOME:-}" || "${JAVA_HOME}" == "${SCRIPT_DIR}/.jdk25-home" ]]; then
-    unset JAVA_HOME
-    for candidate in \
-        "${HOME}/.jdks/jdk-25" \
-        /usr/lib/jvm/java-25-openjdk-amd64 \
-        /usr/lib/jvm/java-25-openjdk \
-        /usr/lib/jvm/temurin-25-jdk-amd64 \
-        /usr/lib/jvm/jdk-25; do
-        if [[ -x "${candidate}/bin/java" ]]; then
-            export JAVA_HOME="$candidate"
-            break
-        fi
-    done
-fi
-# shellcheck source=scripts/ensure-jdk25-home.sh
-source "$SCRIPT_DIR/scripts/ensure-jdk25-home.sh"
-
-export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"
 
 DO_CLEAN_ONLY=0
 DO_FORMAT=0
@@ -96,15 +77,14 @@ ROOT_MAPPING_COMPAT="app-release-mapping.txt"
 ROOT_APK_FUTURE="app-release-future.apk"
 ROOT_MAPPING_FUTURE="app-release-future-mapping.txt"
 
-# --publish-debug serves these straight out of the Gradle output tree, so it
-# hands out whatever the last assembleCompatDebug / assembleFutureDebug
-# produced - including one built by Android Studio rather than by this script.
+# Gradle debug outputs; --debug copies them to the root names below.
 DEBUG_APK_COMPAT="app/build/outputs/apk/compat/debug/app-compat-debug.apk"
 DEBUG_APK_FUTURE="app/build/outputs/apk/future/debug/app-future-debug.apk"
 
-# A --debug run copies its APKs to the repo root under their own names, the way
-# a release run does. They are deliberately NOT the release names: a dev build
-# must never clobber the artifacts a release build published there.
+# Root debug APKs (same role as ROOT_APK_* for release). --debug copies here;
+# --publish-debug serves these so the NetBird URLs stay app-debug.apk /
+# app-debug-future.apk. Deliberately NOT the release names: a dev build must
+# never clobber the artifacts a release build published there.
 ROOT_APK_DEBUG_COMPAT="app-debug.apk"
 ROOT_APK_DEBUG_FUTURE="app-debug-future.apk"
 
@@ -135,6 +115,44 @@ for arg in "$@"; do
     esac
 done
 
+# Serve-only modes: no JDK, no catalog rewrite. Fail hard if APKs or NetBird
+# are missing (apk_http_serve.sh used to soft-skip with exit 0, which made
+# --publish-debug look like a successful no-op right after reboot).
+./scripts/apk_http_serve.sh stop || true
+if [[ "$DO_PUBLISH" -eq 1 ]]; then
+    ./scripts/apk_http_serve.sh start "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"
+    exit 0
+fi
+if [[ "$DO_PUBLISH_DEBUG" -eq 1 ]]; then
+    ./scripts/apk_http_serve.sh start "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
+    exit 0
+fi
+
+# Prefer a real JDK 26, then wrap it so Gradle Worker Daemons (ktlint) also
+# get the JEP 498 / JEP 472 opt-in flags. Arch ships JDK 26 as
+# extra/jdk-openjdk -> /usr/lib/jvm/java-26-openjdk (also via default).
+if [[ -z "${JAVA_HOME:-}" || "${JAVA_HOME}" == "${SCRIPT_DIR}/.jdk26-home" ]]; then
+    unset JAVA_HOME
+    for candidate in \
+        /usr/lib/jvm/java-26-openjdk \
+        /usr/lib/jvm/default \
+        /usr/lib/jvm/java-26-openjdk-amd64 \
+        /usr/lib/jvm/temurin-26-jdk-amd64 \
+        "${HOME}/.jdks/jdk-26"; do
+        if [[ -x "${candidate}/bin/java" ]]; then
+            ver="$("${candidate}/bin/java" -version 2>&1 | head -1 || true)"
+            if [[ "$ver" == *'"26'* || "$ver" == *' 26.'* ]]; then
+                export JAVA_HOME="$candidate"
+                break
+            fi
+        fi
+    done
+fi
+# shellcheck source=scripts/ensure-jdk26-home.sh
+source "$SCRIPT_DIR/scripts/ensure-jdk26-home.sh"
+
+export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }--sun-misc-unsafe-memory-access=allow --enable-native-access=ALL-UNNAMED"
+
 # Keep dependencies on the newest published release. Default: auto-bump every
 # referenced key in gradle/libs.versions.toml (Google Maven / Maven Central /
 # Gradle Plugin Portal; alphas/betas/RCs count), print what changed, continue.
@@ -155,11 +173,7 @@ check_dependency_freshness() {
     fi
 }
 
-# Mandatory on every mode except --publish / --publish-debug (serve-only; must
-# not rewrite the catalog while handing out already-built APKs).
-if [[ "$DO_PUBLISH" -eq 0 && "$DO_PUBLISH_DEBUG" -eq 0 ]]; then
-    check_dependency_freshness
-fi
+check_dependency_freshness
 
 acquire_lock() {
     local lock_dir="${XDG_CACHE_HOME:-$HOME/.cache}/android-apps"
@@ -188,30 +202,6 @@ regenerate_baseline_profiles() {
     chmod +x ./scripts/install_baseline_profiles.sh
     ./scripts/install_baseline_profiles.sh
 }
-
-if [[ "$DO_PUBLISH" -eq 1 ]]; then
-    ./scripts/apk_http_serve.sh start "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"
-    exit 0
-fi
-
-# Serve the last debug build. Skips a flavor whose APK is absent instead of
-# serving nothing: apk_http_serve.sh bails on the whole set if any listed file
-# is missing, and a debug build of only one flavor is a normal state.
-if [[ "$DO_PUBLISH_DEBUG" -eq 1 ]]; then
-    DEBUG_APKS=()
-    for debug_apk in "$DEBUG_APK_COMPAT" "$DEBUG_APK_FUTURE"; do
-        if [[ -f "$debug_apk" ]]; then
-            DEBUG_APKS+=("$debug_apk")
-        fi
-    done
-    if [[ "${#DEBUG_APKS[@]}" -eq 0 ]]; then
-        echo "ERROR: no debug APK to publish. Run ./build.sh --debug first." >&2
-        echo "Looked for $DEBUG_APK_COMPAT and $DEBUG_APK_FUTURE." >&2
-        exit 1
-    fi
-    ./scripts/apk_http_serve.sh start "${DEBUG_APKS[@]}"
-    exit 0
-fi
 
 if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     acquire_lock
@@ -369,6 +359,8 @@ GRADLE_TASKS=(
     detekt
     lintCompatRelease
     lintFutureRelease
+    # Libraries have no api flavors - their unit tests stay testDebugUnitTest.
+    testDebugUnitTest
     testCompatDebugUnitTest
     testFutureDebugUnitTest
     :macrobenchmark:assembleFutureRelease
@@ -400,7 +392,7 @@ if [[ "$DO_DEBUG" -eq 1 ]]; then
     echo "Copied compat debug APK to $ROOT_APK_DEBUG_COMPAT"
     cp "$DEBUG_APK_FUTURE" "$ROOT_APK_DEBUG_FUTURE"
     echo "Copied future debug APK to $ROOT_APK_DEBUG_FUTURE"
-    ./scripts/apk_http_serve.sh start "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
+    ./scripts/apk_http_serve.sh start --optional "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
     exit 0
 fi
 
@@ -418,5 +410,5 @@ if [[ -f "$GRADLE_MAPPING_FUTURE" ]]; then
     echo "Copied future release mapping to $ROOT_MAPPING_FUTURE"
 fi
 
-# Serve both flavor APKs (compat + future).
-./scripts/apk_http_serve.sh start "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"
+# Serve both flavor APKs (compat + future). Soft-skip if NetBird is down.
+./scripts/apk_http_serve.sh start --optional "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"

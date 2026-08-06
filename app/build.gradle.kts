@@ -172,8 +172,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_25
-        targetCompatibility = JavaVersion.VERSION_25
+        sourceCompatibility = JavaVersion.VERSION_26
+        targetCompatibility = JavaVersion.VERSION_26
         // Required for compat (minSdk 26 + JVM 25). Harmless no-op on future
         // for APIs already present on Android 17; R8 strips unused bits.
         isCoreLibraryDesugaringEnabled = true
@@ -181,7 +181,7 @@ android {
 
     kotlin {
         compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25)
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_26)
         }
     }
 
@@ -266,9 +266,12 @@ android {
                 // SDK-37 ApplicationSharedMemory shadow reaches SharedSecrets.
                 "--add-opens=java.base/jdk.internal.access=ALL-UNNAMED",
                 "--add-exports=java.base/jdk.internal.access=ALL-UNNAMED",
-                // Robolectric loads its native runtime via System::load; JDK 25
+                // Robolectric loads its native runtime via System::load; JDK 26
                 // warns (and will later block) restricted methods without this.
                 "--enable-native-access=ALL-UNNAMED",
+                // MockK mutates final Kotlin properties via Unsafe reflection;
+                // JDK 26 warns (and will later block) without this opt-in.
+                "--enable-final-field-mutation=ALL-UNNAMED",
                 // datastore's bundled protobuf still calls sun.misc.Unsafe
                 // memory accessors (JEP 498 deprecation warning otherwise).
                 "--sun-misc-unsafe-memory-access=allow",

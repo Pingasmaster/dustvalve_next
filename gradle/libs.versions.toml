@@ -45,9 +45,9 @@ androidx-benchmark = "1.5.0-beta01"
 androidx-profileinstaller = "1.4.1"
 
 # Static analysis toolchain.
-# ktlint-engine pins the CLI run by the JDK 25 JavaExec tasks in the root
+# ktlint-engine pins the CLI run by the JDK 26 JavaExec tasks in the root
 # build.gradle.kts. ktlint-gradle was removed: its worker processes load
-# kotlin-compiler-embeddable into the JDK 25 daemon and emit JEP 498
+# kotlin-compiler-embeddable into the JDK 26 daemon and emit JEP 498
 # sun.misc.Unsafe warnings.
 ktlint-engine = "1.8.0"
 detekt = "2.0.0-alpha.6"
@@ -161,7 +161,7 @@ androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchm
 androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "androidx-profileinstaller" }
 
 # Static analysis libs
-# ktlint CLI, run by the root build.gradle.kts JavaExec tasks on JDK 25.
+# ktlint CLI, run by the root build.gradle.kts JavaExec tasks on JDK 26.
 ktlint-cli = { group = "com.pinterest.ktlint", name = "ktlint-cli", version.ref = "ktlint-engine" }
 
 detekt-compose = { module = "io.nlopez.compose.rules:detekt", version.ref = "compose-rules" }
