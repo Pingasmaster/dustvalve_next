@@ -65,8 +65,8 @@ class DustvalveNextApplication :
         // transmitted unless they explicitly share it (see CrashReportManager).
         crashReportManager.install()
         // StrictMode is debug-only: surfaces disk I/O on Main, leaked SQLite
-        // cursors, and unclosed Closeables via logcat + a small ANR dialog
-        // for severe ThreadPolicy violations. Suppressed in release via the
+        // cursors, and unclosed Closeables via logcat, and kills the process
+        // on main-thread NETWORK. Suppressed in release via the
         // BuildConfig.DEBUG gate - release APKs must not stall on a stray
         // `runOnUiThread { db.query() }`.
         if (BuildConfig.DEBUG) installStrictMode()
@@ -130,9 +130,24 @@ class DustvalveNextApplication :
 
     /**
      * Debug-only policy: log every Main-thread disk read/write, network call,
-     * and SQLite leak. `penaltyLog` keeps the app running so the dev can
-     * see the stack trace without losing UI state; `penaltyDeathOnNetwork`
-     * on ThreadPolicy would crash the app and is intentionally NOT set.
+     * and SQLite leak. `penaltyLog` keeps the app running for disk and
+     * slow-call violations, so the dev sees the stack trace without losing UI
+     * state.
+     *
+     * Network is the exception - it is fatal here, matching release. Release
+     * APKs inherit the OS-default death-on-network policy, so a blocking HTTP
+     * call that reaches Main crashes the user's app while a `penaltyLog`-only
+     * debug build merely logs a line nobody reads. That asymmetry is exactly
+     * how 0.5.20 shipped a NetworkOnMainThreadException on the SoundCloud tab
+     * (fixed in a206868): the provider clients ran OkHttp inside suspend
+     * functions with no `withContext`, and `viewModelScope`'s
+     * Dispatchers.Main.immediate runs a `launch` body inline when it is
+     * already on Main. Dying here makes debug builds fail the same way the
+     * shipped APK would, on the first tap rather than in a user's crash log.
+     *
+     * Disk stays non-fatal: Room, DataStore, and SharedPreferences all do
+     * legitimate first-touch reads that would otherwise make the app
+     * unstartable in debug.
      */
     private fun installStrictMode() {
         StrictMode.setThreadPolicy(
@@ -142,6 +157,7 @@ class DustvalveNextApplication :
                 .detectNetwork()
                 .detectCustomSlowCalls()
                 .penaltyLog()
+                .penaltyDeathOnNetwork()
                 .build(),
         )
         StrictMode.setVmPolicy(
