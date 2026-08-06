@@ -6,7 +6,8 @@
 #                                 # + tests + assemble harnesses + assemble APKs,
 #                                 # then one-shot NetBird APK HTTP serve for both
 #   ./build.sh --debug            # DEV path: same gates/assemble, but skip release-only
-#                                 # steps (baseline regen + version bump)
+#                                 # steps (baseline regen + version bump), then copy the
+#                                 # debug APKs to the repo root and serve those
 #   ./build.sh --clean            # gradle clean + remove APKs + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
@@ -95,11 +96,17 @@ ROOT_MAPPING_COMPAT="app-release-mapping.txt"
 ROOT_APK_FUTURE="app-release-future.apk"
 ROOT_MAPPING_FUTURE="app-release-future-mapping.txt"
 
-# Debug APKs are never copied to the repo root; --publish-debug serves them
-# straight out of the Gradle output tree, so it hands out whatever the last
-# assembleCompatDebug / assembleFutureDebug produced.
+# --publish-debug serves these straight out of the Gradle output tree, so it
+# hands out whatever the last assembleCompatDebug / assembleFutureDebug
+# produced - including one built by Android Studio rather than by this script.
 DEBUG_APK_COMPAT="app/build/outputs/apk/compat/debug/app-compat-debug.apk"
 DEBUG_APK_FUTURE="app/build/outputs/apk/future/debug/app-future-debug.apk"
+
+# A --debug run copies its APKs to the repo root under their own names, the way
+# a release run does. They are deliberately NOT the release names: a dev build
+# must never clobber the artifacts a release build published there.
+ROOT_APK_DEBUG_COMPAT="app-debug.apk"
+ROOT_APK_DEBUG_FUTURE="app-debug-future.apk"
 
 for arg in "$@"; do
     case "$arg" in
@@ -210,6 +217,7 @@ if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     acquire_lock
     ./gradlew clean
     rm -f "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT" "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE"
+    rm -f "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
     echo "Clean complete."
     exit 0
 fi
@@ -346,8 +354,17 @@ else
     echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"
 fi
 
+# `clean` runs as its own invocation. Inside one task graph Gradle is free to
+# run it in parallel with ktlintCheck, and it does: ktlint's source walk then
+# trips over app/build/ intermediates that :app:clean is deleting underneath it
+# and fails with NoSuchFileException. Nothing declares an ordering between the
+# two, so the only reliable fix is to finish the delete first.
+if ! ./gradlew clean; then
+    revert_version_bump
+    exit 1
+fi
+
 GRADLE_TASKS=(
-    clean
     ktlintCheck
     detekt
     lintCompatRelease
@@ -372,6 +389,19 @@ if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
     ./gradlew buildHealth || true
     REPORT="build/reports/dependency-analysis/build-health-report.txt"
     [[ -f "$REPORT" ]] && echo "Dependency-analysis report: $REPORT"
+fi
+
+# A dev build exposes its own APKs and stops here: the release artifacts at the
+# root belong to the last release build, and its version bump, so overwriting
+# them with an unbumped dev build is how you end up serving the wrong APK.
+if [[ "$DO_DEBUG" -eq 1 ]]; then
+    rm -f "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
+    cp "$DEBUG_APK_COMPAT" "$ROOT_APK_DEBUG_COMPAT"
+    echo "Copied compat debug APK to $ROOT_APK_DEBUG_COMPAT"
+    cp "$DEBUG_APK_FUTURE" "$ROOT_APK_DEBUG_FUTURE"
+    echo "Copied future debug APK to $ROOT_APK_DEBUG_FUTURE"
+    ./scripts/apk_http_serve.sh start "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
+    exit 0
 fi
 
 rm -f "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT" "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE"
