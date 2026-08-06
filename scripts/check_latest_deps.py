@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail the build when gradle/libs.versions.toml is not on the newest release.
+"""Keep gradle/libs.versions.toml on the newest published release.
 
 Every version key in [versions] that is referenced by a [libraries] or
 [plugins] entry is resolved to its Maven coordinates, and the newest version
@@ -10,8 +10,12 @@ bleeding edge.
 
 Usage:
     scripts/check_latest_deps.py            # exit 1 if anything is stale
+    scripts/check_latest_deps.py --apply    # rewrite stale pins, then exit 0
     scripts/check_latest_deps.py --json     # machine-readable report
     scripts/check_latest_deps.py --quiet    # only print problems
+
+./build.sh defaults to --apply (auto-bump, then continue). Pass
+--block-on-outdated to ./build.sh to keep the old refuse-to-build behavior.
 
 Holding a version back:
     Add a trailing "# hold: <reason>" comment on the [versions] line. The key
@@ -72,6 +76,9 @@ HOLD_RE = re.compile(
 )
 COORD_RE = re.compile(
     r"""^\s*(?P<key>[A-Za-z0-9_.-]+)\s*=\s*['"][^'"]*['"]\s*#\s*coord:\s*(?P<coord>[\w.-]+:[\w.-]+)\s*$"""
+)
+VERSION_LINE_RE = re.compile(
+    r"""^(?P<prefix>\s*(?P<key>[A-Za-z0-9_.-]+)\s*=\s*['"])(?P<value>[^'"]+)(?P<suffix>['"].*)$"""
 )
 
 
@@ -217,9 +224,51 @@ def newest_for_group(coordinates):
     return max(common, key=compare_key)
 
 
+def apply_bumps(catalog_path, stale):
+    """Rewrite stale version pins in the [versions] section. Preserve comments."""
+    bumps = {item["key"]: item["latest"] for item in stale}
+    lines = catalog_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    out = []
+    in_versions = False
+    applied = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("["):
+            in_versions = stripped == "[versions]"
+            out.append(line)
+            continue
+        if in_versions:
+            match = VERSION_LINE_RE.match(line.rstrip("\r\n"))
+            if match and match.group("key") in bumps:
+                key = match.group("key")
+                latest = bumps[key]
+                newline = "\n" if line.endswith("\n") else ""
+                if line.endswith("\r\n"):
+                    newline = "\r\n"
+                out.append(
+                    "%s%s%s%s"
+                    % (match.group("prefix"), latest, match.group("suffix"), newline)
+                )
+                applied.append(key)
+                continue
+        out.append(line)
+    missing = sorted(set(bumps) - set(applied))
+    if missing:
+        raise RuntimeError(
+            "could not rewrite version pin(s) in %s: %s"
+            % (catalog_path, ", ".join(missing))
+        )
+    catalog_path.write_text("".join(out), encoding="utf-8")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--catalog", default="gradle/libs.versions.toml")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="rewrite stale pins in the catalog to the newest published release",
+    )
     parser.add_argument("--json", action="store_true", help="emit a JSON report")
     parser.add_argument("--quiet", action="store_true", help="only print problems")
     args = parser.parse_args()
@@ -279,12 +328,23 @@ def main():
                     "unresolved": unresolved,
                     "holds": holds,
                     "unreferenced": skipped,
+                    "applied": bool(args.apply and stale and not unresolved),
                 },
                 indent=2,
                 sort_keys=True,
             )
         )
-        return 1 if (stale or unresolved) else 0
+        if unresolved:
+            return 1
+        if stale and not args.apply:
+            return 1
+        if stale and args.apply:
+            try:
+                apply_bumps(catalog_path, stale)
+            except RuntimeError as exc:
+                print("ERROR: %s" % exc, file=sys.stderr)
+                return 1
+        return 0
 
     for key, reason in sorted(holds.items()):
         print("HOLD  %-28s %-18s %s" % (key, versions.get(key, "?"), reason))
@@ -296,25 +356,51 @@ def main():
 
     if stale:
         print()
-        print("Out-of-date dependencies in %s:" % args.catalog)
         width = max(len(item["key"]) for item in stale)
-        for item in stale:
+        if args.apply and not unresolved:
+            print("Updating out-of-date dependencies in %s:" % args.catalog)
+            for item in stale:
+                print(
+                    "  %-*s %s -> %s"
+                    % (width, item["key"], item["current"], item["latest"])
+                )
+                for coordinate in item["coordinates"]:
+                    print("      %s" % coordinate)
+            try:
+                apply_bumps(catalog_path, stale)
+            except RuntimeError as exc:
+                print("ERROR: %s" % exc, file=sys.stderr)
+                return 1
+            print()
             print(
-                "  %-*s %s -> %s" % (width, item["key"], item["current"], item["latest"])
+                "Updated %d version pin(s) in %s."
+                % (len(stale), args.catalog)
             )
-            for coordinate in item["coordinates"]:
-                print("      %s" % coordinate)
-        print()
-        print(
-            "Bump the versions above (or add a '# hold: <reason>' comment), "
-            "then re-run."
-        )
-        print("To build anyway, pass --continue-without-updates to ./build.sh.")
+        else:
+            print("Out-of-date dependencies in %s:" % args.catalog)
+            for item in stale:
+                print(
+                    "  %-*s %s -> %s"
+                    % (width, item["key"], item["current"], item["latest"])
+                )
+                for coordinate in item["coordinates"]:
+                    print("      %s" % coordinate)
+            print()
+            print(
+                "Bump the versions above (or add a '# hold: <reason>' comment), "
+                "then re-run."
+            )
+            print(
+                "Default ./build.sh auto-updates; pass --block-on-outdated to "
+                "keep this refuse-to-build behavior."
+            )
 
-    if stale or unresolved:
+    if unresolved:
+        return 1
+    if stale and not args.apply:
         return 1
 
-    if not args.quiet:
+    if not args.quiet and not stale:
         print(
             "Dependency freshness: %d version keys are on the newest published "
             "release (pre-releases included)." % len(checkable)

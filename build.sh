@@ -19,13 +19,17 @@
 #   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
 #   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks
 #   ./build.sh --publish          # serve existing root APKs over NetBird HTTP + exit
-#   ./build.sh --continue-without-updates
-#                                 # skip the pre-build dependency freshness gate
+#   ./build.sh --publish-debug    # serve the last built debug APKs over NetBird HTTP + exit
+#   ./build.sh --block-on-outdated
+#                                 # refuse to build when any catalog pin is behind
+#                                 # (default is to auto-bump pins, then continue)
 #
-# Every build mode first runs scripts/check_latest_deps.py, which aborts the
-# build when any version in gradle/libs.versions.toml is behind the newest
-# release published to Google Maven / Maven Central / the Gradle Plugin Portal.
-# Pre-releases count: alphas, betas and RCs are all valid "latest" targets.
+# Every build mode first runs scripts/check_latest_deps.py --apply, which bumps
+# any version in gradle/libs.versions.toml that is behind the newest release
+# published to Google Maven / Maven Central / the Gradle Plugin Portal, prints
+# what changed, then continues. Pre-releases count: alphas, betas and RCs are
+# all valid "latest" targets. Pass --block-on-outdated to keep the old
+# refuse-to-build behavior instead of rewriting the catalog.
 #
 # After a successful full build, scripts/apk_http_serve.sh publishes both
 # http://<netbird-fqdn>:8765/app-release.apk (compat, Android 8+) and
@@ -82,13 +86,21 @@ DO_E2E_LIVE=0
 DO_LIVE_NET=0
 DO_MACROBENCHMARK=0
 DO_PUBLISH=0
+DO_PUBLISH_DEBUG=0
 DO_DEBUG=0
-SKIP_DEP_CHECK=0
+BLOCK_ON_OUTDATED=0
 
 ROOT_APK_COMPAT="app-release.apk"
 ROOT_MAPPING_COMPAT="app-release-mapping.txt"
 ROOT_APK_FUTURE="app-release-future.apk"
 ROOT_MAPPING_FUTURE="app-release-future-mapping.txt"
+
+# Debug APKs are never copied to the repo root; --publish-debug serves them
+# straight out of the Gradle output tree, so it hands out whatever the last
+# assembleCompatDebug / assembleFutureDebug produced.
+DEBUG_APK_COMPAT="app/build/outputs/apk/compat/debug/app-compat-debug.apk"
+DEBUG_APK_FUTURE="app/build/outputs/apk/future/debug/app-future-debug.apk"
+
 for arg in "$@"; do
     case "$arg" in
         --clean)             DO_CLEAN_ONLY=1 ;;
@@ -103,35 +115,42 @@ for arg in "$@"; do
         --live-net)          DO_LIVE_NET=1 ;;
         --macrobenchmark)    DO_MACROBENCHMARK=1 ;;
         --publish)           DO_PUBLISH=1 ;;
+        --publish-debug)     DO_PUBLISH_DEBUG=1 ;;
         --debug)             DO_DEBUG=1 ;;
-        --continue-without-updates) SKIP_DEP_CHECK=1 ;;
+        --block-on-outdated) BLOCK_ON_OUTDATED=1 ;;
         *)
             echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
                 "--workflow-tests, --smoke, --smoke-release, --smoke-shipped," \
                 "--e2e, --e2e-live, --live-net, --macrobenchmark," \
-                "--publish, --debug, --continue-without-updates)" >&2
+                "--publish, --publish-debug, --debug, --block-on-outdated)" >&2
             exit 2
             ;;
     esac
 done
 
-# Refuse to build on stale dependencies. scripts/check_latest_deps.py resolves
-# every referenced key in gradle/libs.versions.toml against Google Maven,
-# Maven Central and the Gradle Plugin Portal, counting alphas/betas/RCs, and
-# exits non-zero naming anything that is behind. Escape hatches: a
-# "# hold: <reason>" comment on the catalog line, or --continue-without-updates.
+# Keep dependencies on the newest published release. Default: auto-bump every
+# referenced key in gradle/libs.versions.toml (Google Maven / Maven Central /
+# Gradle Plugin Portal; alphas/betas/RCs count), print what changed, continue.
+# --block-on-outdated restores the old refuse-to-build gate. Held pins still
+# use a "# hold: <reason>" comment on the catalog line.
 check_dependency_freshness() {
-    if [[ "$SKIP_DEP_CHECK" -eq 1 ]]; then
-        echo "Dependency freshness check skipped (--continue-without-updates)."
+    if [[ "$BLOCK_ON_OUTDATED" -eq 1 ]]; then
+        if ! python3 ./scripts/check_latest_deps.py; then
+            echo "ERROR: dependencies are not on their latest versions (see above)." >&2
+            echo "Re-run without --block-on-outdated to auto-update, or add a '# hold:'." >&2
+            exit 1
+        fi
         return 0
     fi
-    if ! python3 ./scripts/check_latest_deps.py; then
-        echo "ERROR: dependencies are not on their latest versions (see above)." >&2
+    if ! python3 ./scripts/check_latest_deps.py --apply; then
+        echo "ERROR: dependency freshness check failed (see above)." >&2
         exit 1
     fi
 }
 
-if [[ "$DO_PUBLISH" -eq 0 && "$DO_CLEAN_ONLY" -eq 0 && "$DO_FORMAT" -eq 0 ]]; then
+# Mandatory on every mode except --publish / --publish-debug (serve-only; must
+# not rewrite the catalog while handing out already-built APKs).
+if [[ "$DO_PUBLISH" -eq 0 && "$DO_PUBLISH_DEBUG" -eq 0 ]]; then
     check_dependency_freshness
 fi
 
@@ -165,6 +184,25 @@ regenerate_baseline_profiles() {
 
 if [[ "$DO_PUBLISH" -eq 1 ]]; then
     ./scripts/apk_http_serve.sh start "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE"
+    exit 0
+fi
+
+# Serve the last debug build. Skips a flavor whose APK is absent instead of
+# serving nothing: apk_http_serve.sh bails on the whole set if any listed file
+# is missing, and a debug build of only one flavor is a normal state.
+if [[ "$DO_PUBLISH_DEBUG" -eq 1 ]]; then
+    DEBUG_APKS=()
+    for debug_apk in "$DEBUG_APK_COMPAT" "$DEBUG_APK_FUTURE"; do
+        if [[ -f "$debug_apk" ]]; then
+            DEBUG_APKS+=("$debug_apk")
+        fi
+    done
+    if [[ "${#DEBUG_APKS[@]}" -eq 0 ]]; then
+        echo "ERROR: no debug APK to publish. Run ./build.sh --debug first." >&2
+        echo "Looked for $DEBUG_APK_COMPAT and $DEBUG_APK_FUTURE." >&2
+        exit 1
+    fi
+    ./scripts/apk_http_serve.sh start "${DEBUG_APKS[@]}"
     exit 0
 fi
 
