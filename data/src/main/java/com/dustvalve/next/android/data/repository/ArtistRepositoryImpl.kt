@@ -296,6 +296,16 @@ class ArtistRepositoryImpl(
         if (trackEntities.isEmpty()) return emptyList()
         val allTrackIds = trackEntities.map { it.id }
         val favoriteIds = favoriteDao.getFavoriteIds(allTrackIds).toSet()
-        return trackEntities.map { it.toDomain(it.id in favoriteIds) }
+        // Shuffled HERE rather than at the call site, because being a mix is
+        // the entire point of this query. It used to return the DAO's
+        // trackNumber order and the caller started at index 0, so every tap on
+        // "Play mix" replayed the same first track of the same first album.
+        return trackEntities.map { it.toDomain(it.id in favoriteIds) }.shuffled()
+    }
+
+    override suspend fun albumIdsMissingTracks(albumIds: List<String>): List<String> {
+        if (albumIds.isEmpty()) return emptyList()
+        val stocked = trackDao.getByAlbumIds(albumIds).mapTo(HashSet()) { it.albumId }
+        return albumIds.filterNot { it in stocked }
     }
 }

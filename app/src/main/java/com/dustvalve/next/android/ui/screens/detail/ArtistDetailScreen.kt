@@ -256,6 +256,11 @@ fun ArtistDetailScreen(
                                 playerViewModel.playAlbum(tracks, index)
                             }
                         },
+                        onShuffle = {
+                            viewModel.playMixShuffled { tracks, index ->
+                                playerViewModel.playAlbum(tracks, index)
+                            }
+                        },
                         onToggleFavorite = viewModel::toggleFavorite,
                         onDownload = {
                             val allDownloaded = state.tracks.isNotEmpty() &&
@@ -398,6 +403,7 @@ private fun FlatTracksLayout(
     state: ArtistDetailUiState,
     innerPadding: PaddingValues,
     onPlayAll: () -> Unit,
+    onShuffle: () -> Unit,
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
     onLoadMore: () -> Unit,
@@ -449,6 +455,8 @@ private fun FlatTracksLayout(
                 onPlayPrimary = onPlayAll,
                 onToggleFavorite = onToggleFavorite,
                 onDownload = onDownload,
+                onShuffle = onShuffle,
+                shuffleEnabled = !state.isLoadingMix && state.tracks.isNotEmpty(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -629,6 +637,12 @@ private fun ActionBar(
     onToggleFavorite: () -> Unit,
     onDownload: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Null on the album-grid layout, whose primary button IS the mix. The flat
+     * track feed plays in order, so it needs its own shuffle.
+     */
+    onShuffle: (() -> Unit)? = null,
+    shuffleEnabled: Boolean = false,
 ) {
     Row(
         modifier = modifier.heightIn(min = 56.dp),
@@ -654,6 +668,21 @@ private fun ActionBar(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(playPrimaryLabel)
+            }
+        }
+
+        if (onShuffle != null) {
+            FilledTonalButton(
+                onClick = onShuffle,
+                enabled = shuffleEnabled,
+                shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                modifier = Modifier.heightIn(min = 56.dp),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_shuffle),
+                    contentDescription = stringResource(R.string.common_cd_shuffle_play),
+                )
             }
         }
 

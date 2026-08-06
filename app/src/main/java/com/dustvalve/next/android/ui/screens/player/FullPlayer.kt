@@ -495,15 +495,35 @@ fun FullPlayer(
                             Box(
                                 modifier = Modifier
                                     .then(
-                                        if (artCapped) {
-                                            Modifier
-                                                .widthIn(max = artMax)
-                                                .fillMaxWidth()
-                                                .aspectRatio(1f)
-                                        } else {
-                                            Modifier
-                                                .weight(1f)
-                                                .aspectRatio(1f)
+                                        when {
+                                            // The carousel is a multi-item strip, so the
+                                            // square cap that suits a single cover starves
+                                            // it: at heroMaxSize (420/480dp) against a
+                                            // ~240-280dp preferred item width, a tablet
+                                            // shows barely two items however wide it is.
+                                            // Take the full row and keep the cap as the
+                                            // HEIGHT, so covers stay their usual size and
+                                            // only the strip gets longer.
+                                            isCarouselMode && artCapped ->
+                                                Modifier
+                                                    .fillMaxWidth()
+                                                    .height(artMax)
+
+                                            isCarouselMode ->
+                                                Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
+
+                                            artCapped ->
+                                                Modifier
+                                                    .widthIn(max = artMax)
+                                                    .fillMaxWidth()
+                                                    .aspectRatio(1f)
+
+                                            else ->
+                                                Modifier
+                                                    .weight(1f)
+                                                    .aspectRatio(1f)
                                         },
                                     ),
                                 contentAlignment = Alignment.Center,
@@ -699,7 +719,7 @@ fun FullPlayer(
                                                             // Settings -> Debug -> "Show debug info":
                                                             //   ON  -> long-press shows the debug sheet
                                                             //   OFF -> long-press opens the cover carousel (default)
-                                                            if (state.albumCoverLongPressCarousel) {
+                                                            if (state.playerDebugOverlay) {
                                                                 showDebugSheet = true
                                                             } else {
                                                                 isCarouselMode = true

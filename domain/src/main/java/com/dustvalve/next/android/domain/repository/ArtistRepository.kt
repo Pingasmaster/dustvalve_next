@@ -9,7 +9,21 @@ interface ArtistRepository {
     fun getArtistDetailFlow(url: String): Flow<Artist>
     suspend fun toggleFavorite(artistId: String)
     suspend fun isFavorite(artistId: String): Boolean
+
+    /**
+     * The artist's cached tracks across [albumIds], in random order. Shuffled
+     * by the implementation because a mix that returns a stable order is just
+     * "play the first album".
+     */
     suspend fun getArtistMixTracks(albumIds: List<String>): List<Track>
+
+    /**
+     * Of [albumIds], those with no cached tracks yet. Drives the mix preload:
+     * an artist's albums are listed without their track lists, so the mix pool
+     * only covers albums that happen to have been opened or downloaded until
+     * the missing ones are fetched.
+     */
+    suspend fun albumIdsMissingTracks(albumIds: List<String>): List<String>
     suspend fun setAutoDownload(artistId: String, autoDownload: Boolean)
 
     /**

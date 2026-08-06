@@ -189,6 +189,9 @@ class ArtistDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
                 }
                 loadedKey = key
+                // The artist is on screen; start stocking the mix pool now so a
+                // later tap plays instantly and covers the whole catalogue.
+                preloadMixPool()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
@@ -412,7 +415,14 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(snackbarMessage = null, isSnackbarError = false) }
     }
 
-    /** Bandcamp-only: load the artist mix (one track per album, interleaved). */
+    /**
+     * Album-grid sources (Bandcamp): play every cached track of every album, in
+     * random order.
+     *
+     * The pool is whatever [preloadMixPool] has stocked, so it spans the full
+     * discography rather than only the albums that happen to be downloaded.
+     * Falls back to stocking on demand when the preload has not finished.
+     */
     fun loadMixTracks(onLoaded: (List<Track>) -> Unit) {
         val state = _uiState.value
         if (state.isLoadingMix) return
@@ -421,12 +431,83 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isLoadingMix = true) }
         viewModelScope.launch {
             try {
-                val tracks = artistRepository.getArtistMixTracks(albums.map { it.id })
-                onLoaded(tracks)
+                val albumIds = albums.map { it.id }
+                if (artistRepository.albumIdsMissingTracks(albumIds).isNotEmpty()) {
+                    // Preload still running (or it failed): stock what is left
+                    // before playing, so the first tap is never a thin mix.
+                    stockMixPool()
+                }
+                val tracks = artistRepository.getArtistMixTracks(albumIds)
+                if (tracks.isNotEmpty()) onLoaded(tracks)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             } finally {
                 _uiState.update { it.copy(isLoadingMix = false) }
+            }
+        }
+    }
+
+    /**
+     * Flat-feed sources (YouTube, SoundCloud): drain the paginated artist feed,
+     * then play it shuffled.
+     *
+     * [expandLoadedArtistTracks] writes the drained list back into state and
+     * into the track cache, so the network cost is paid once and every later
+     * shuffle is a re-sort of what is already held.
+     */
+    fun playMixShuffled(play: (List<Track>, Int) -> Unit) {
+        if (_uiState.value.isLoadingMix) return
+        _uiState.update { it.copy(isLoadingMix = true) }
+        viewModelScope.launch {
+            try {
+                val tracks = expandLoadedArtistTracks()
+                if (tracks.isNotEmpty()) play(tracks.shuffled(), 0)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+            } finally {
+                _uiState.update { it.copy(isLoadingMix = false) }
+            }
+        }
+    }
+
+    /**
+     * Fetch, in the background, the track lists the mix needs.
+     *
+     * An artist's albums arrive without their tracks (the cached path builds
+     * them with an empty list), so nothing but previously-opened albums is in
+     * the pool. Fetching each album's detail persists its tracks, and the
+     * database is the indefinite store - this cost is paid once per album.
+     */
+    private fun preloadMixPool() {
+        val state = _uiState.value
+        if (state.artist?.albums.isNullOrEmpty()) return
+        viewModelScope.launch {
+            try {
+                stockMixPool()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // Best effort: a failed preload only means the mix falls back
+                // to stocking on demand.
+            }
+        }
+    }
+
+    private suspend fun stockMixPool() {
+        val state = _uiState.value
+        val albums = state.artist?.albums.orEmpty()
+        if (albums.isEmpty()) return
+        val source = sources[state.sourceId] ?: return
+        if (SourceConcept.ALBUM !in source.capabilities) return
+        val missing = artistRepository.albumIdsMissingTracks(albums.map { it.id }).toSet()
+        if (missing.isEmpty()) return
+        for (album in albums.filter { it.id in missing }) {
+            try {
+                // Persists the album with its tracks; the mix reads them back
+                // out of the database on the next getArtistMixTracks call.
+                source.getAlbum(album.url)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // One unreachable album must not strand the rest of the mix.
             }
         }
     }

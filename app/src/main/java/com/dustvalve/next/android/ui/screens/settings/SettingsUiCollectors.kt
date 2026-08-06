@@ -56,7 +56,7 @@ internal class SettingsUiCollectors(
         collect(settingsDataStore.searchHistoryLocal) { copy(searchHistoryLocal = it) }
         collect(settingsDataStore.youtubeDefaultSource) { copy(youtubeDefaultSource = it) }
         collect(settingsDataStore.autoUpdateCheckEnabled) { copy(autoUpdateCheckEnabled = it) }
-        collect(settingsDataStore.albumCoverLongPressCarousel) { copy(albumCoverLongPressCarousel = it) }
+        collect(settingsDataStore.playerDebugOverlay) { copy(playerDebugOverlay = it) }
         collect(settingsDataStore.keepScreenOnInApp) { copy(keepScreenOnInApp = it) }
         collect(settingsDataStore.keepScreenOnWhilePlaying) { copy(keepScreenOnWhilePlaying = it) }
         collect(settingsDataStore.keepLocalSort) { copy(keepLocalSort = it) }

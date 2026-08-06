@@ -77,7 +77,7 @@ class PlayerViewModelResolveTest {
         every { progressBarSizeDp } returns flowOf(24)
         every { showInlineVolumeSlider } returns flowOf(false)
         every { showVolumeButton } returns flowOf(false)
-        every { albumCoverLongPressCarousel } returns flowOf(false)
+        every { playerDebugOverlay } returns flowOf(false)
     }
 
     private lateinit var viewModel: PlayerViewModel

@@ -550,12 +550,18 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
      * Repurposed from "long-press cover for carousel": when on, the player
      * shows a debug overlay instead of the cover carousel. Off by default.
      * Surfaced as the "Show debug info" toggle in Settings -> Debug.
+     *
+     * The persisted key is still `album_cover_long_press_carousel`, which now
+     * reads as the opposite of what the flag means. That mismatch is
+     * deliberate: renaming the key would silently reset the toggle for every
+     * existing install, and the Kotlin name is the one people read. Rename the
+     * key only alongside a migration that carries the old value across.
      */
-    val albumCoverLongPressCarousel: Flow<Boolean> = guardedPreferences.map { prefs ->
+    val playerDebugOverlay: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] ?: false
     }
 
-    suspend fun setAlbumCoverLongPressCarousel(enabled: Boolean) {
+    suspend fun setPlayerDebugOverlay(enabled: Boolean) {
         context.dataStore.edit { prefs ->
             prefs[Keys.ALBUM_COVER_LONG_PRESS_CAROUSEL] = enabled
         }

@@ -166,7 +166,7 @@ fun SettingsScreen(
                 onClearAllSearchHistory = viewModel::clearAllSearchHistory,
                 onCheckForAppUpdate = viewModel::checkForAppUpdate,
                 onSetAutoUpdateCheckEnabled = viewModel::setAutoUpdateCheckEnabled,
-                onSetAlbumCoverLongPressCarousel = viewModel::setAlbumCoverLongPressCarousel,
+                onSetPlayerDebugOverlay = viewModel::setPlayerDebugOverlay,
             )
         }
 
@@ -327,7 +327,7 @@ private fun SettingsScreenList(
     onClearAllSearchHistory: () -> Unit,
     onCheckForAppUpdate: () -> Unit,
     onSetAutoUpdateCheckEnabled: (Boolean) -> Unit,
-    onSetAlbumCoverLongPressCarousel: (Boolean) -> Unit,
+    onSetPlayerDebugOverlay: (Boolean) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier
@@ -410,8 +410,8 @@ private fun SettingsScreenList(
         }
         item {
             SettingsDebugSection(
-                albumCoverLongPressCarousel = state.albumCoverLongPressCarousel,
-                onSetAlbumCoverLongPressCarousel = onSetAlbumCoverLongPressCarousel,
+                playerDebugOverlay = state.playerDebugOverlay,
+                onSetPlayerDebugOverlay = onSetPlayerDebugOverlay,
             )
         }
     }

@@ -63,7 +63,7 @@ data class SettingsUiState(
     val searchHistorySoundcloud: Boolean = true,
     val searchHistoryLocal: Boolean = true,
     val searchHistoryClearedMessage: UiText? = null,
-    val albumCoverLongPressCarousel: Boolean = true,
+    val playerDebugOverlay: Boolean = false,
     val youtubeDefaultSource: String = "youtube",
     val keepScreenOnInApp: Boolean = false,
     val keepScreenOnWhilePlaying: Boolean = false,
@@ -484,10 +484,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAlbumCoverLongPressCarousel(enabled: Boolean) {
+    fun setPlayerDebugOverlay(enabled: Boolean) {
         viewModelScope.launch {
             try {
-                settingsDataStore.setAlbumCoverLongPressCarousel(enabled)
+                settingsDataStore.setPlayerDebugOverlay(enabled)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
             }

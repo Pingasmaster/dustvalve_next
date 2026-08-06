@@ -732,7 +732,7 @@ internal fun SettingsAboutSection(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun SettingsDebugSection(albumCoverLongPressCarousel: Boolean, onSetAlbumCoverLongPressCarousel: (Boolean) -> Unit) {
+internal fun SettingsDebugSection(playerDebugOverlay: Boolean, onSetPlayerDebugOverlay: (Boolean) -> Unit) {
     SettingsSection(
         title = stringResource(R.string.settings_section_debug),
         icon = R.drawable.ic_bug_report,
@@ -747,8 +747,8 @@ internal fun SettingsDebugSection(albumCoverLongPressCarousel: Boolean, onSetAlb
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_show_debug_info),
                     description = stringResource(R.string.settings_show_debug_info_desc),
-                    checked = albumCoverLongPressCarousel,
-                    onCheckedChange = onSetAlbumCoverLongPressCarousel,
+                    checked = playerDebugOverlay,
+                    onCheckedChange = onSetPlayerDebugOverlay,
                 )
             }
         }

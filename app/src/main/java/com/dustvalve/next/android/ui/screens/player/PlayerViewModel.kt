@@ -70,7 +70,7 @@ data class PlayerUiState(
     val showVolumeButton: Boolean = false,
     val audioOutputDevices: List<AudioDeviceInfo> = emptyList(),
     val activeAudioDevice: AudioDeviceInfo? = null,
-    val albumCoverLongPressCarousel: Boolean = true,
+    val playerDebugOverlay: Boolean = false,
 )
 
 /** 5 Hz position tick, split from [PlayerUiState]; see [PlayerViewModel.positionState]. */
@@ -496,8 +496,8 @@ class PlayerViewModel @Inject constructor(
             audioOutputDevices = devices,
             activeAudioDevice = active,
         )
-    }.combine(settingsDataStore.albumCoverLongPressCarousel) { state, carousel ->
-        state.copy(albumCoverLongPressCarousel = carousel)
+    }.combine(settingsDataStore.playerDebugOverlay) { state, carousel ->
+        state.copy(playerDebugOverlay = carousel)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
