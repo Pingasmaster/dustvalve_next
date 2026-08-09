@@ -21,7 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -42,7 +42,7 @@ fun RemoteResultActionSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+        sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
     ) {
         Text(
             text = result.name,

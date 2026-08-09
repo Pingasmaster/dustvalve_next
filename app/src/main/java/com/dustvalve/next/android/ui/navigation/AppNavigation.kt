@@ -34,7 +34,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.TestTags
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
 import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
@@ -55,6 +55,7 @@ import com.dustvalve.next.android.util.LinkResourceType
 // destination), so they are suppressed rather than split into artificial helpers.
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 fun AppNavigation(
+    adaptiveInfo: AdaptiveLayoutInfo,
     modifier: Modifier = Modifier,
     // Activity-scoped: hiltViewModel() resolves to MainActivity's
     // ViewModelStoreOwner, so this is the same instance MainContent owns.
@@ -71,7 +72,7 @@ fun AppNavigation(
     val linkSnackbarHostState = remember { SnackbarHostState() }
     val unsupportedMsg = stringResource(R.string.snackbar_unsupported_source)
     val useLibraryDualPane =
-        LocalAdaptiveLayoutInfo.current.useDualPane && currentTab == BottomNavItem.LIBRARY
+        adaptiveInfo.useDualPane && currentTab == BottomNavItem.LIBRARY
 
     // Surface "this link isn't from a supported source" regardless of which tab triggered it.
     androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -104,6 +105,7 @@ fun AppNavigation(
     Box(modifier = modifier.fillMaxSize()) {
         if (useLibraryDualPane) {
             LibraryListDetailHost(
+                adaptiveInfo = adaptiveInfo,
                 backStack = backStack,
                 detailVmStores = detailVmStores,
                 modifier = Modifier.fillMaxSize(),
@@ -129,6 +131,7 @@ fun AppNavigation(
                     )
 
                     is NavDestination.BandcampHome -> BandcampScreen(
+                        adaptiveInfo = adaptiveInfo,
                         onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                         onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                         onOpenLink = { navViewModel.openLink(it) },
@@ -136,6 +139,7 @@ fun AppNavigation(
                     )
 
                     is NavDestination.YouTubeHome -> YouTubeScreen(
+                        adaptiveInfo = adaptiveInfo,
                         onPlaylistClick = { url, name, coverUrl ->
                             navViewModel.navigateTo(
                                 NavDestination.CollectionDetail(
@@ -161,6 +165,7 @@ fun AppNavigation(
                     )
 
                     is NavDestination.SoundCloudHome -> SoundCloudScreen(
+                        adaptiveInfo = adaptiveInfo,
                         onCollectionClick = { url, name, coverUrl ->
                             navViewModel.navigateTo(
                                 NavDestination.CollectionDetail(
@@ -186,6 +191,7 @@ fun AppNavigation(
                     )
 
                     is NavDestination.Library -> LibraryScreen(
+                        adaptiveInfo = adaptiveInfo,
                         onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                         onArtistClick = { url ->
                             val sourceId = when {
@@ -198,7 +204,7 @@ fun AppNavigation(
                         onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
                     )
 
-                    is NavDestination.Settings -> SettingsScreen()
+                    is NavDestination.Settings -> SettingsScreen(adaptiveInfo = adaptiveInfo)
 
                     // Detail destinations: the detail ViewModel is resolved against a
                     // per-destination store owner (cleared once the destination leaves
@@ -210,6 +216,7 @@ fun AppNavigation(
                             "detailStoreKey must be non-null for detail destination $destination"
                         }
                         AlbumDetailScreen(
+                            adaptiveInfo = adaptiveInfo,
                             albumUrl = destination.url,
                             onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                             onBack = { navViewModel.navigateBack() },
@@ -222,6 +229,7 @@ fun AppNavigation(
                             "detailStoreKey must be non-null for detail destination $destination"
                         }
                         ArtistDetailScreen(
+                            adaptiveInfo = adaptiveInfo,
                             sourceId = destination.sourceId,
                             artistUrl = destination.url,
                             artistNameHint = destination.name,
@@ -248,6 +256,7 @@ fun AppNavigation(
                             "detailStoreKey must be non-null for detail destination $destination"
                         }
                         PlaylistDetailScreen(
+                            adaptiveInfo = adaptiveInfo,
                             playlistId = destination.playlistId,
                             onBack = { navViewModel.navigateBack() },
                             viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
@@ -259,6 +268,7 @@ fun AppNavigation(
                             "detailStoreKey must be non-null for detail destination $destination"
                         }
                         CollectionDetailScreen(
+                            adaptiveInfo = adaptiveInfo,
                             sourceId = destination.sourceId,
                             collectionUrl = destination.url,
                             collectionName = destination.name,

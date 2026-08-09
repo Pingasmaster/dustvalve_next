@@ -85,6 +85,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,7 +94,8 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
@@ -153,6 +155,7 @@ private val discoverCategories = listOf(
 )
 @Composable
 fun BandcampScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     onAlbumClick: (String) -> Unit,
     onArtistClick: (String) -> Unit,
     onOpenLink: (String) -> Unit,
@@ -235,7 +238,7 @@ fun BandcampScreen(
             onDismissRequest = { viewModel.dismissCategory() },
             containerColor = selectedCategoryColor,
             contentColor = Color.White,
-            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+            sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
         ) {
             Text(
                 text = state.selectedGenreName,
@@ -306,6 +309,7 @@ fun BandcampScreen(
                 }
             } else {
                 CategorySheetContent(
+                    carouselItemWidth = adaptiveInfo.carouselItemWidth,
                     albums = state.categoryAlbums,
                     onAlbumClick = { url ->
                         viewModel.dismissCategory()
@@ -1048,7 +1052,11 @@ private fun SearchResultItem(result: SearchResult) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> Unit) {
+private fun CategorySheetContent(
+    carouselItemWidth: Dp,
+    albums: List<Album>,
+    onAlbumClick: (String) -> Unit,
+) {
     val carouselAlbums = albums.take(10)
     val listAlbums = albums.drop(10)
 
@@ -1060,10 +1068,9 @@ private fun CategorySheetContent(albums: List<Album>, onAlbumClick: (String) -> 
         if (carouselAlbums.isNotEmpty()) {
             item(key = "carousel") {
                 val carouselState = rememberCarouselState { carouselAlbums.size }
-                val preferredItemWidth = LocalAdaptiveLayoutInfo.current.carouselItemWidth
                 HorizontalMultiBrowseCarousel(
                     state = carouselState,
-                    preferredItemWidth = preferredItemWidth,
+                    preferredItemWidth = carouselItemWidth,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 12.dp)

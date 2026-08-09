@@ -73,6 +73,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.getPlaylistIconRes
 import com.dustvalve.next.android.ui.components.heartMorphClip
@@ -90,6 +91,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun PlaylistDetailScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     playlistId: String,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -264,7 +266,7 @@ fun PlaylistDetailScreen(
                         listState = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .adaptiveContentWidth(),
+                            .adaptiveContentWidth(adaptiveInfo.contentMaxWidth),
                     )
                 }
             }

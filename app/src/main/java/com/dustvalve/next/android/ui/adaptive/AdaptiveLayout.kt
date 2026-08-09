@@ -6,11 +6,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -31,7 +28,8 @@ enum class WidthSizeClass {
 
 /**
  * Shared adaptive metrics for chrome, content width, grids, and panes.
- * Provided once near the activity root so screens do not re-derive breakpoints.
+ * Computed once near the activity root and threaded as an explicit parameter
+ * so screens do not re-derive breakpoints.
  */
 @Immutable
 data class AdaptiveLayoutInfo(val widthSizeClass: WidthSizeClass, val windowWidthDp: Dp) {
@@ -90,13 +88,6 @@ object AdaptiveTokens {
     val PrimaryActionMaxWidth = 480.dp
 }
 
-val LocalAdaptiveLayoutInfo = staticCompositionLocalOf {
-    AdaptiveLayoutInfo(
-        widthSizeClass = WidthSizeClass.Compact,
-        windowWidthDp = 411.dp,
-    )
-}
-
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
 @Composable
 fun rememberAdaptiveLayoutInfo(): AdaptiveLayoutInfo {
@@ -120,11 +111,6 @@ fun rememberAdaptiveLayoutInfo(): AdaptiveLayoutInfo {
     }
 }
 
-@Composable
-fun ProvideAdaptiveLayout(info: AdaptiveLayoutInfo = rememberAdaptiveLayoutInfo(), content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalAdaptiveLayoutInfo provides info, content = content)
-}
-
 /**
  * Centers content and caps its width on Medium/Expanded windows.
  * On Compact this is a no-op (full available width).
@@ -134,14 +120,6 @@ fun Modifier.adaptiveContentWidth(maxWidth: Dp = Dp.Unspecified): Modifier {
     return this
         .fillMaxWidth()
         .widthIn(max = maxWidth)
-}
-
-/** Reads [LocalAdaptiveLayoutInfo] and applies [adaptiveContentWidth]. */
-@Composable
-@ReadOnlyComposable
-fun Modifier.adaptiveContentWidth(): Modifier {
-    val maxWidth = LocalAdaptiveLayoutInfo.current.contentMaxWidth
-    return adaptiveContentWidth(maxWidth)
 }
 
 /**
@@ -158,14 +136,18 @@ fun Modifier.adaptiveHeroSize(maxSize: Dp): Modifier {
 }
 
 /**
- * Convenience wrapper that reads [LocalAdaptiveLayoutInfo] and centers capped content.
+ * Convenience wrapper that centers content capped by [contentMaxWidth].
  */
 @Composable
-fun AdaptiveContentColumn(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun AdaptiveContentColumn(
+    contentMaxWidth: Dp,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .adaptiveContentWidth(),
+            .adaptiveContentWidth(contentMaxWidth),
         contentAlignment = Alignment.TopCenter,
     ) {
         content()

@@ -58,15 +58,6 @@
     <issue id="UnrememberedMutableState"      severity="error" />
     <issue id="ModifierParameter"             severity="error" />
     <!--
-        Adaptive width metrics are provided once at the activity root and read
-        by many screens (content max-width, hero caps, dual-pane, sheets).
-        Threading AdaptiveLayoutInfo through every call site would dwarf the
-        CompositionLocal cost; allow this one intentional local.
-    -->
-    <issue id="ComposeCompositionLocalUsage">
-        <option name="allowed-composition-locals" value="LocalAdaptiveLayoutInfo" />
-    </issue>
-    <!--
         slack-compose-lints' ComposeUnstableCollections flags every composable
         parameter typed as List<T>/Set<T>/Map<T>. The runtime concern (Compose
         treats kotlin.collections.* as unstable so composables can't skip on

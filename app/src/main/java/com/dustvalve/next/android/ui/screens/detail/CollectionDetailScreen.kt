@@ -66,7 +66,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.heartMorphClip
@@ -91,6 +91,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CollectionDetailScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     sourceId: String,
     collectionUrl: String,
     collectionName: String,
@@ -250,13 +251,12 @@ fun CollectionDetailScreen(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .adaptiveContentWidth(),
+                            .adaptiveContentWidth(adaptiveInfo.contentMaxWidth),
                         contentPadding = PaddingValues(bottom = 10.dp),
                     ) {
                         // Hero cover. Name + track count live in the top-bar, so
                         // the hero is the bare artwork - matches AlbumDetailScreen.
                         item(key = "hero") {
-                            val adaptive = LocalAdaptiveLayoutInfo.current
                             val heartMorph = rememberHeartMorphState()
                             val heartScope = rememberCoroutineScope()
                             val hapticFeedback = LocalHapticFeedback.current
@@ -285,7 +285,7 @@ fun CollectionDetailScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .adaptiveHeroSize(adaptive.heroMaxSize)
+                                        .adaptiveHeroSize(adaptiveInfo.heroMaxSize)
                                         .aspectRatio(1f),
                                 ) {
                                     if (!heroUrl.isNullOrBlank()) {

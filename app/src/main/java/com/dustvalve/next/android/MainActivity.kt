@@ -59,8 +59,8 @@ import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
-import com.dustvalve.next.android.ui.adaptive.ProvideAdaptiveLayout
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.rememberAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.navigation.AppNavigation
 import com.dustvalve.next.android.ui.navigation.BottomNavBar
 import com.dustvalve.next.android.ui.navigation.BottomNavItem
@@ -280,20 +280,21 @@ private val MINI_BAR_HEIGHT = 66.dp
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun MainContent(activity: MainActivity) {
-    ProvideAdaptiveLayout {
-        MainContentBody(
-            activity = activity,
-        )
-    }
+    val adaptiveInfo = rememberAdaptiveLayoutInfo()
+    MainContentBody(
+        activity = activity,
+        adaptiveInfo = adaptiveInfo,
+    )
 }
 
-// Body is separated only so ProvideAdaptiveLayout can establish LocalAdaptiveLayoutInfo
-// before chrome reads it. ViewModels are obtained here via hiltViewModel() (same
-// activity-scoped instances) rather than forwarded from MainContent.
+// ViewModels are obtained here via hiltViewModel() (same activity-scoped
+// instances) rather than forwarded from MainContent. Adaptive metrics are
+// computed once above and threaded as an explicit parameter.
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun MainContentBody(
     activity: MainActivity,
+    adaptiveInfo: AdaptiveLayoutInfo,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     navViewModel: NavigationViewModel = hiltViewModel(),
 ) {
@@ -301,7 +302,6 @@ private fun MainContentBody(
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
-    val adaptiveInfo = LocalAdaptiveLayoutInfo.current
     val useNavRail = adaptiveInfo.useNavRail
 
     // Screen wake lock
@@ -354,7 +354,7 @@ private fun MainContentBody(
     }
 
     // Adaptive chrome: NavigationRail on Medium+ (WindowSizeClass), bottom bar on Compact
-    // (metrics come from ProvideAdaptiveLayout / rememberAdaptiveLayoutInfo above).
+    // (metrics come from rememberAdaptiveLayoutInfo above).
 
     val miniVisible by remember {
         playerViewModel.uiState.map { it.isMiniPlayerVisible }.distinctUntilChanged()
@@ -496,6 +496,7 @@ private fun MainContentBody(
                         },
                     ) { innerPadding ->
                         AppNavigation(
+                            adaptiveInfo = adaptiveInfo,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(innerPadding),
@@ -519,6 +520,7 @@ private fun MainContentBody(
                     },
                 ) { innerPadding ->
                     AppNavigation(
+                        adaptiveInfo = adaptiveInfo,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
@@ -540,6 +542,7 @@ private fun MainContentBody(
                     val avScope = this
                     if (isFull) {
                         FullPlayer(
+                            adaptiveInfo = adaptiveInfo,
                             sharedScope = sts,
                             visScope = avScope,
                             expandDistancePx = expandDistancePx,
