@@ -55,19 +55,30 @@ interface PlaylistRepository {
      * cancellation cannot leave an imported-but-unfavorited playlist.
      * Collection detail favoriting uses this with a real source URL as
      * [favoriteId]; the standalone import button omits the favorite parameters.
+     *
+     * When [sourceUrl] is set it is persisted on the playlist row so later
+     * sessions can resolve the import by URL (not by name).
      */
     suspend fun importTracksAsPlaylist(
         name: String,
         tracks: List<Track>,
         favoriteId: String? = null,
         favoriteType: FavoriteType? = null,
+        sourceUrl: String? = null,
     ): Playlist
+
+    /**
+     * Returns the playlist id previously imported from [sourceUrl], or null.
+     * Durable counterpart to session-only importedPlaylistId.
+     */
+    suspend fun getPlaylistIdForSourceUrl(sourceUrl: String): String?
 
     /**
      * Display-only "already imported" probe. Deliberately a Boolean, never the
      * playlist or its id: callers must not learn a playlist id from a name
      * lookup (deletion-authorization safety - a name can collide with an
      * unrelated user playlist, and deleting that would destroy user data).
+     * Prefer [getPlaylistIdForSourceUrl] for import/unfavorite decisions.
      */
     suspend fun playlistExistsByName(name: String): Boolean
 

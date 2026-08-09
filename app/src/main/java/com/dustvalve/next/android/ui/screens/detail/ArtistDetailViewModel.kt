@@ -178,7 +178,7 @@ class ArtistDetailViewModel @Inject constructor(
 
             runCatchingUi(R.string.detail_error_load_artist) {
                 val artist = source.getArtist(url)
-                val isFav = favoriteRepository.isFavorite(url)
+                val isFav = favoriteRepository.isFavorite(url, FavoriteType.ARTIST)
                 _uiState.update {
                     it.copy(
                         artist = artist.copy(

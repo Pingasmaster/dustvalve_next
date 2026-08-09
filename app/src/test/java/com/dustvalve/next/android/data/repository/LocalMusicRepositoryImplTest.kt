@@ -48,7 +48,7 @@ class LocalMusicRepositoryImplTest : DbTestBase() {
             db.favoriteDao().insert(FavoriteEntity(id = "t1", type = "track"))
             assertThat(awaitItem().single().isFavorite).isTrue()
 
-            db.favoriteDao().delete("t1")
+            db.favoriteDao().delete("t1", "track")
             assertThat(awaitItem().single().isFavorite).isFalse()
 
             cancelAndIgnoreRemainingEvents()

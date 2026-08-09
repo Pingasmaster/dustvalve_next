@@ -15,14 +15,14 @@ interface FavoriteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(favorite: FavoriteEntity)
 
-    @Query("DELETE FROM favorites WHERE id = :id")
-    suspend fun delete(id: String)
+    @Query("DELETE FROM favorites WHERE id = :id AND type = :type")
+    suspend fun delete(id: String, type: String)
 
-    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE id = :id)")
-    suspend fun isFavorite(id: String): Boolean
+    @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE id = :id AND type = :type)")
+    suspend fun isFavorite(id: String, type: String): Boolean
 
-    @Query("SELECT id FROM favorites WHERE id IN (:ids)")
-    suspend fun getFavoriteIdsChunk(ids: List<String>): List<String>
+    @Query("SELECT id FROM favorites WHERE type = :type AND id IN (:ids)")
+    suspend fun getFavoriteIdsChunk(type: String, ids: List<String>): List<String>
 
     // Reactive id set of favorited tracks. Combine this into any Flow that
     // decorates tracks with isFavorite so heart toggles re-emit; a one-shot
@@ -33,11 +33,11 @@ interface FavoriteDao {
     @Query("SELECT * FROM favorites WHERE type = :type ORDER BY addedAt DESC")
     fun getAllByType(type: String): Flow<List<FavoriteEntity>>
 
-    @Query("UPDATE favorites SET isPinned = :isPinned WHERE id = :id")
-    suspend fun setPinned(id: String, isPinned: Boolean)
+    @Query("UPDATE favorites SET isPinned = :isPinned WHERE id = :id AND type = :type")
+    suspend fun setPinned(id: String, type: String, isPinned: Boolean)
 
-    @Query("UPDATE favorites SET shapeKey = :shapeKey WHERE id = :id")
-    suspend fun setShapeKey(id: String, shapeKey: String?)
+    @Query("UPDATE favorites SET shapeKey = :shapeKey WHERE id = :id AND type = :type")
+    suspend fun setShapeKey(id: String, type: String, shapeKey: String?)
 
     @Query(
         """
@@ -71,7 +71,10 @@ interface FavoriteDao {
     suspend fun deleteAll()
 }
 
-suspend fun FavoriteDao.getFavoriteIds(ids: List<String>): List<String> {
+suspend fun FavoriteDao.getFavoriteIds(type: String, ids: List<String>): List<String> {
     if (ids.isEmpty()) return emptyList()
-    return ids.chunked(SQLITE_MAX_BIND_PARAMS).flatMap { chunk -> getFavoriteIdsChunk(chunk) }
+    // type is one bind param; leave headroom under SQLITE_MAX_BIND_PARAMS.
+    return ids.chunked(SQLITE_MAX_BIND_PARAMS - 1).flatMap { chunk ->
+        getFavoriteIdsChunk(type, chunk)
+    }
 }

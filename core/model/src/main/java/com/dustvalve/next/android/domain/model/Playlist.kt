@@ -16,6 +16,8 @@ data class Playlist(
     val autoDownload: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    /** Remote collection URL when this playlist was imported from a source. */
+    val sourceUrl: String? = null,
 ) {
     enum class SystemPlaylistType(val defaultName: String, val iconRes: String? = null) {
         DOWNLOADS("Downloads"),

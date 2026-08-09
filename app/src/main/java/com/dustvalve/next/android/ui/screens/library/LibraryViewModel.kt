@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.transfer.PlaylistTransferRepository
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
@@ -216,39 +217,39 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun pinFavorite(favoriteId: String, isPinned: Boolean) {
+    fun pinFavorite(favoriteId: String, type: FavoriteType, isPinned: Boolean) {
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { _ ->
                     _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_pin)) }
                 },
             ) {
-                favoriteRepository.setPinned(favoriteId, isPinned)
+                favoriteRepository.setPinned(favoriteId, type, isPinned)
             }
         }
     }
 
-    fun deleteFavorite(favoriteId: String) {
+    fun deleteFavorite(favoriteId: String, type: FavoriteType) {
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { _ ->
                     _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_remove)) }
                 },
             ) {
-                favoriteRepository.remove(favoriteId)
+                favoriteRepository.remove(favoriteId, type)
                 _uiState.update { it.copy(deleteTarget = null) }
             }
         }
     }
 
-    fun updateFavoriteShape(favoriteId: String, shapeKey: String?) {
+    fun updateFavoriteShape(favoriteId: String, type: FavoriteType, shapeKey: String?) {
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { _ ->
                     _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_shape)) }
                 },
             ) {
-                favoriteRepository.setShapeKey(favoriteId, shapeKey)
+                favoriteRepository.setShapeKey(favoriteId, type, shapeKey)
                 _uiState.update { it.copy(shapeTarget = null) }
             }
         }

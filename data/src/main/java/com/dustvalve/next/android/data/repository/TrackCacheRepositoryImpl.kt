@@ -27,14 +27,14 @@ class TrackCacheRepositoryImpl(private val trackDao: TrackDao, private val favor
 
     override suspend fun getTrack(trackId: String): Track? {
         val entity = trackDao.getById(trackId) ?: return null
-        val isFavorite = favoriteDao.isFavorite(trackId)
+        val isFavorite = favoriteDao.isFavorite(trackId, "track")
         return entity.toDomain(isFavorite)
     }
 
     override suspend fun getTracks(trackIds: List<String>): List<Track> {
         val entities = trackDao.getByIds(trackIds)
         if (entities.isEmpty()) return emptyList()
-        val favoriteIds = favoriteDao.getFavoriteIds(entities.map { it.id }).toSet()
+        val favoriteIds = favoriteDao.getFavoriteIds("track", entities.map { it.id }).toSet()
         return entities.map { it.toDomain(it.id in favoriteIds) }
     }
 }

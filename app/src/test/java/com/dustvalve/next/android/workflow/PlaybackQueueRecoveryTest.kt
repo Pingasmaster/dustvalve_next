@@ -204,4 +204,18 @@ class PlaybackQueueRecoveryTest {
         assertThat(player.mediaItemCount).isEqualTo(0)
         assertThat(manager.isPlaying.value).isFalse()
     }
+
+    @Test
+    fun hotSwapSource_patchesQueueStreamUrl() {
+        val t1 = FixtureTracks.localTrack(id = "t1")
+        manager.playQueue(listOf(t1), 0)
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+
+        val localPath = "/data/data/com.dustvalve.next/files/t1.mp3"
+        manager.hotSwapSource(localPath, "t1")
+        idle()
+
+        assertThat(queueManager.currentTrack.value?.streamUrl)
+            .isEqualTo("file://$localPath")
+    }
 }

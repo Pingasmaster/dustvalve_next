@@ -73,7 +73,15 @@ class PlaylistRepositoryImpl(
 
     override suspend fun getPlaylistByIdSync(playlistId: String): Playlist? = playlistDao.getPlaylistById(playlistId)?.toDomain()
 
-    override suspend fun createPlaylist(name: String, shapeKey: String?, iconUrl: String?): Playlist {
+    override suspend fun createPlaylist(name: String, shapeKey: String?, iconUrl: String?): Playlist =
+        insertUserPlaylist(name = name, shapeKey = shapeKey, iconUrl = iconUrl, sourceUrl = null)
+
+    private suspend fun insertUserPlaylist(
+        name: String,
+        shapeKey: String? = null,
+        iconUrl: String? = null,
+        sourceUrl: String? = null,
+    ): Playlist {
         val playlist = PlaylistEntity(
             id = UUID.randomUUID().toString(),
             name = name,
@@ -83,6 +91,7 @@ class PlaylistRepositoryImpl(
             isPinned = false,
             sortOrder = 0,
             trackCount = 0,
+            sourceUrl = sourceUrl,
         )
         playlistDao.insertPlaylist(playlist)
         return playlist.toDomain()
@@ -223,7 +232,7 @@ class PlaylistRepositoryImpl(
         }
         val trackIds = tracks.map { it.id }
         val favoriteIds = if (trackIds.isNotEmpty()) {
-            favoriteDao.getFavoriteIds(trackIds).toSet()
+            favoriteDao.getFavoriteIds("track", trackIds).toSet()
         } else {
             emptySet()
         }
@@ -358,12 +367,13 @@ class PlaylistRepositoryImpl(
         tracks: List<Track>,
         favoriteId: String?,
         favoriteType: FavoriteType?,
+        sourceUrl: String?,
     ): Playlist = database.withTransaction {
         // Room suspending transactions are reentrant, so the nested
         // createPlaylist/addTracksToPlaylist withTransaction calls behave
         // exactly like the historical VM-side nesting of this block.
         trackDao.insertAll(tracks.map { it.toEntity() })
-        val playlist = createPlaylist(name)
+        val playlist = insertUserPlaylist(name = name, sourceUrl = sourceUrl)
         addTracksToPlaylist(playlist.id, tracks.map { it.id })
         if (favoriteId != null) {
             // Same transaction as the import itself: cancellation between the
@@ -373,6 +383,9 @@ class PlaylistRepositoryImpl(
         }
         playlist
     }
+
+    override suspend fun getPlaylistIdForSourceUrl(sourceUrl: String): String? =
+        playlistDao.getPlaylistBySourceUrl(sourceUrl)?.id
 
     // Boolean on purpose - see the interface KDoc (deletion-authorization safety).
     override suspend fun playlistExistsByName(name: String): Boolean = playlistDao.getPlaylistByName(name) != null

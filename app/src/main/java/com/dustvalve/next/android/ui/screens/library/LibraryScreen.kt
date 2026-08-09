@@ -67,6 +67,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
@@ -214,12 +215,12 @@ fun LibraryScreen(
                             viewModel.pinPlaylist(playlist.id, !playlist.isPinned)
                         },
                         onPinFavorite = pinFavorite@{ item ->
-                            val favoriteId = when (item) {
-                                is LibraryItem.AlbumItem -> item.favoriteId
-                                is LibraryItem.ArtistItem -> item.favoriteId
+                            val (favoriteId, type) = when (item) {
+                                is LibraryItem.AlbumItem -> item.favoriteId to FavoriteType.ALBUM
+                                is LibraryItem.ArtistItem -> item.favoriteId to FavoriteType.ARTIST
                                 else -> return@pinFavorite
                             }
-                            viewModel.pinFavorite(favoriteId, !item.isPinned)
+                            viewModel.pinFavorite(favoriteId, type, !item.isPinned)
                         },
                         onRenameClick = { playlist -> viewModel.showRenameDialog(playlist) },
                         onDeleteClick = { item -> viewModel.showDeleteDialog(item) },
@@ -281,7 +282,7 @@ fun LibraryScreen(
                     message = stringResource(R.string.library_remove_text, item.name),
                     confirmText = stringResource(R.string.common_action_remove),
                     onDismiss = { viewModel.dismissDeleteDialog() },
-                    onConfirm = { viewModel.deleteFavorite(item.favoriteId) },
+                    onConfirm = { viewModel.deleteFavorite(item.favoriteId, FavoriteType.ALBUM) },
                 )
             }
 
@@ -291,7 +292,7 @@ fun LibraryScreen(
                     message = stringResource(R.string.library_remove_text, item.name),
                     confirmText = stringResource(R.string.common_action_remove),
                     onDismiss = { viewModel.dismissDeleteDialog() },
-                    onConfirm = { viewModel.deleteFavorite(item.favoriteId) },
+                    onConfirm = { viewModel.deleteFavorite(item.favoriteId, FavoriteType.ARTIST) },
                 )
             }
         }
@@ -304,13 +305,18 @@ fun LibraryScreen(
             is LibraryItem.ArtistItem -> item.favoriteId
             else -> return@let
         }
+        val favoriteType = when (item) {
+            is LibraryItem.AlbumItem -> FavoriteType.ALBUM
+            is LibraryItem.ArtistItem -> FavoriteType.ARTIST
+            is LibraryItem.PlaylistItem -> return@let
+        }
         val defaultShapeKey = when (item) {
             is LibraryItem.AlbumItem -> "sunny"
             is LibraryItem.ArtistItem -> "arch"
         }
         ShapePickerSheet(
             onDismiss = { viewModel.dismissShapeDialog() },
-            onConfirm = { shapeKey -> viewModel.updateFavoriteShape(favoriteId, shapeKey) },
+            onConfirm = { shapeKey -> viewModel.updateFavoriteShape(favoriteId, favoriteType, shapeKey) },
             initialShapeKey = item.shapeKey ?: defaultShapeKey,
         )
     }

@@ -122,7 +122,7 @@ class ArtistRepositoryImpl(
         cleanUrl: String,
         originalUrl: String,
     ): Artist {
-        val isFavorite = favoriteDao.isFavorite(cachedArtist.id)
+        val isFavorite = favoriteDao.isFavorite(cachedArtist.id, "artist")
         val albumEntities = albumDao.getByArtistUrl(cleanUrl) +
             (if (cleanUrl != originalUrl) albumDao.getByArtistUrl(originalUrl) else emptyList())
         val albumMap = albumEntities.distinctBy { it.id }.associateBy { it.id }
@@ -191,7 +191,7 @@ class ArtistRepositoryImpl(
             if (!contentChanged) {
                 artistDao.updateCachedAt(artist.id)
             }
-            favoriteDao.isFavorite(artist.id)
+            favoriteDao.isFavorite(artist.id, "artist")
         }
 
         // Auto-download new albums if auto-download is enabled
@@ -234,16 +234,16 @@ class ArtistRepositoryImpl(
 
     override suspend fun toggleFavorite(artistId: String) {
         database.withTransaction {
-            val isFavorite = favoriteDao.isFavorite(artistId)
+            val isFavorite = favoriteDao.isFavorite(artistId, "artist")
             if (isFavorite) {
-                favoriteDao.delete(artistId)
+                favoriteDao.delete(artistId, "artist")
             } else {
                 favoriteDao.insert(FavoriteEntity(id = artistId, type = "artist"))
             }
         }
     }
 
-    override suspend fun isFavorite(artistId: String): Boolean = favoriteDao.isFavorite(artistId)
+    override suspend fun isFavorite(artistId: String): Boolean = favoriteDao.isFavorite(artistId, "artist")
 
     override suspend fun cacheRemoteArtist(artist: Artist, source: String) {
         // Best-effort artist-row persist so library INNER JOINs on the artist
@@ -275,7 +275,7 @@ class ArtistRepositoryImpl(
     }
 
     override suspend fun unfavoriteArtist(artistId: String) {
-        favoriteDao.delete(artistId)
+        favoriteDao.delete(artistId, "artist")
     }
 
     override suspend fun getArtistMixTracks(albumIds: List<String>): List<Track> {
@@ -283,7 +283,7 @@ class ArtistRepositoryImpl(
         val trackEntities = trackDao.getByAlbumIds(albumIds)
         if (trackEntities.isEmpty()) return emptyList()
         val allTrackIds = trackEntities.map { it.id }
-        val favoriteIds = favoriteDao.getFavoriteIds(allTrackIds).toSet()
+        val favoriteIds = favoriteDao.getFavoriteIds("track", allTrackIds).toSet()
         // Shuffled HERE rather than at the call site, because being a mix is
         // the entire point of this query. It used to return the DAO's
         // trackNumber order and the caller started at index 0, so every tap on

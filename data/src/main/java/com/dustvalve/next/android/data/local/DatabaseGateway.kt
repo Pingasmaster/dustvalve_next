@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
+import com.dustvalve.next.android.data.local.db.MIGRATION_1_2
 import com.dustvalve.next.data.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -54,6 +55,7 @@ class DatabaseGateway(internal val database: DustvalveNextDatabase) {
             // writing those migrations lives in core/database/schemas/.
             // (:data's library debug build type pairs with app debug, so
             // BuildConfig.DEBUG here matches the old :app check.)
+            .addMigrations(MIGRATION_1_2)
             .apply { if (BuildConfig.DEBUG) fallbackToDestructiveMigration(dropAllTables = true) }
             // Write-Ahead Logging: readers and writers don't block each other,
             // which matters because DownloadService / DownloadController mutate

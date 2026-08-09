@@ -118,12 +118,13 @@ class CollectionDetailViewModel @Inject constructor(
             runCatchingUi(R.string.detail_error_load_collection) {
                 val collection: MusicCollection = source.getCollection(url)
                 paginationCursor = collection.continuation
-                val isFav = favoriteRepository.isFavorite(url)
+                val favType = favoriteTypeFor(sourceId)
+                val isFav = favoriteRepository.isFavorite(url, favType)
                 val displayName = collection.name.ifBlank { nameHint }
-                // Name matching is DISPLAY-ONLY (drives the "already imported"
-                // affordance) - the repository deliberately returns a Boolean,
-                // never a playlist id; see PlaylistRepository.playlistExistsByName.
-                val alreadyImported = playlistRepository.playlistExistsByName(displayName)
+                // Durable URL -> playlist id mapping (survives process death).
+                // Never use playlistExistsByName for deletion authorization or
+                // import skip: name collisions with unrelated user playlists.
+                val mappedPlaylistId = playlistRepository.getPlaylistIdForSourceUrl(url)
                 _uiState.update {
                     it.copy(
                         name = displayName,
@@ -134,7 +135,8 @@ class CollectionDetailViewModel @Inject constructor(
                         isLoading = false,
                         hasMore = collection.hasMore,
                         isFavorite = isFav,
-                        isImported = alreadyImported || it.importedPlaylistId != null,
+                        isImported = mappedPlaylistId != null,
+                        importedPlaylistId = mappedPlaylistId,
                     )
                 }
             }.onFailure { error, cause ->
@@ -197,7 +199,11 @@ class CollectionDetailViewModel @Inject constructor(
                 // Standalone import button: no favorite parameters. Favoriting
                 // uses importTracksAsPlaylist(..., favoriteId, favoriteType)
                 // in one transaction via toggleFavorite.
-                val playlist = playlistRepository.importTracksAsPlaylist(_uiState.value.name, tracks)
+                val playlist = playlistRepository.importTracksAsPlaylist(
+                    name = _uiState.value.name,
+                    tracks = tracks,
+                    sourceUrl = state.collectionUrl,
+                )
                 _uiState.update {
                     it.copy(isImported = true, isImporting = false, importedPlaylistId = playlist.id)
                 }
@@ -209,6 +215,7 @@ class CollectionDetailViewModel @Inject constructor(
         val state = _uiState.value
         val url = state.collectionUrl.ifBlank { return }
         val prev = state.isFavorite
+        val favType = favoriteTypeFor(state.sourceId)
         _uiState.update { it.copy(isFavorite = !prev) }
         viewModelScope.launch {
             runCatchingUiIgnore(
@@ -217,22 +224,17 @@ class CollectionDetailViewModel @Inject constructor(
                 },
             ) {
                 if (prev) {
-                    favoriteRepository.remove(url)
-                    // Delete ONLY the playlist this session imported (id captured in
-                    // importToLibrary / favorited import). Never fall back to a name
-                    // lookup: it could resolve to - and destroy - an unrelated user
-                    // playlist that happens to share the collection's name.
+                    favoriteRepository.remove(url, favType)
+                    // Delete the playlist linked by durable sourceUrl mapping
+                    // (or the id captured this session). Never fall back to a
+                    // name lookup: it could resolve to an unrelated user playlist.
                     val playlistId = state.importedPlaylistId
+                        ?: playlistRepository.getPlaylistIdForSourceUrl(url)
                     if (playlistId != null) {
                         playlistRepository.deletePlaylist(playlistId)
                         _uiState.update { it.copy(isImported = false, importedPlaylistId = null) }
                     }
                 } else {
-                    val favType = when (state.sourceId) {
-                        "youtube" -> FavoriteType.YOUTUBE_PLAYLIST
-                        "soundcloud" -> FavoriteType.SOUNDCLOUD_PLAYLIST
-                        else -> FavoriteType.COLLECTION
-                    }
                     if (state.isImported || state.importedPlaylistId != null) {
                         // Playlist already in library - just add the favorite row.
                         favoriteRepository.add(url, favType)
@@ -249,6 +251,7 @@ class CollectionDetailViewModel @Inject constructor(
                                 tracks = tracks,
                                 favoriteId = url,
                                 favoriteType = favType,
+                                sourceUrl = url,
                             )
                             _uiState.update {
                                 it.copy(isImported = true, importedPlaylistId = playlist.id)
@@ -372,6 +375,12 @@ class CollectionDetailViewModel @Inject constructor(
     fun clearSnackbar() {
         retryAction = null
         _uiState.update { it.copy(snackbarMessage = null, isSnackbarError = false) }
+    }
+
+    private fun favoriteTypeFor(sourceId: String): FavoriteType = when (sourceId) {
+        "youtube" -> FavoriteType.YOUTUBE_PLAYLIST
+        "soundcloud" -> FavoriteType.SOUNDCLOUD_PLAYLIST
+        else -> FavoriteType.COLLECTION
     }
 
     private fun failedImport(e: Throwable): UiText = UiText.StringResource(

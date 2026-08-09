@@ -414,6 +414,15 @@ class PlaybackManager @Inject constructor(
 
         val resolvedUri = if (filePath.startsWith("/")) File(filePath).toUri().toString() else filePath
 
+        // Keep queue streamUrl in sync so error recovery / re-resolve stays on
+        // the local file instead of bouncing back to the remote URL.
+        val queued = queueManager.currentTrack.value
+        if (queued != null && queued.id == trackId) {
+            queueManager.applyResolvedTracks(
+                mapOf(trackId to queued.copy(streamUrl = resolvedUri)),
+            )
+        }
+
         val mediaItem = MediaItem.Builder()
             .setUri(resolvedUri)
             .setMediaId(trackId)
