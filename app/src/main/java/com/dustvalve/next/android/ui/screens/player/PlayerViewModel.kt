@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.screens.player
 import android.media.AudioDeviceInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
@@ -161,8 +162,9 @@ class PlayerViewModel @Inject constructor(core: PlayerCoreDeps, libraryDeps: Pla
             audioOutputDevices = devices,
             activeAudioDevice = active,
         )
-    }.combine(settingsDataStore.playerDebugOverlay) { state, carousel ->
-        state.copy(playerDebugOverlay = carousel)
+    }.combine(settingsDataStore.playerDebugOverlay) { state, overlayEnabled ->
+        // Preference may linger from a prior debug install; never honor it in release.
+        state.copy(playerDebugOverlay = overlayEnabled && BuildConfig.DEBUG)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),

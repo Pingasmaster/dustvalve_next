@@ -59,6 +59,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
@@ -299,11 +300,14 @@ private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActi
                 onSetAutoUpdateCheckEnabled = onSetAutoUpdateCheckEnabled,
             )
         }
-        item {
-            SettingsDebugSection(
-                playerDebugOverlay = state.playerDebugOverlay,
-                onSetPlayerDebugOverlay = onSetPlayerDebugOverlay,
-            )
+        // Debug overlay toggle is a developer aid; keep it out of release APKs.
+        if (BuildConfig.DEBUG) {
+            item {
+                SettingsDebugSection(
+                    playerDebugOverlay = state.playerDebugOverlay,
+                    onSetPlayerDebugOverlay = onSetPlayerDebugOverlay,
+                )
+            }
         }
     }
 }
