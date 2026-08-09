@@ -28,8 +28,6 @@ internal class PlayerStateCollectors(
     private val favoriteRepository: FavoriteRepository,
     private val playbackStreamResolver: PlaybackStreamResolver,
 ) {
-    private val autoRetriedTrackIds = mutableSetOf<String>()
-
     fun start() {
         collectDownloadedTrackIds()
         collectPlaylists()
@@ -59,7 +57,7 @@ internal class PlayerStateCollectors(
         scope.launch {
             playbackManager.playbackState.collect { state ->
                 if (state == Player.STATE_READY) {
-                    queueManager.currentTrack.value?.id?.let { autoRetriedTrackIds.remove(it) }
+                    queueManager.currentTrack.value?.id?.let { playbackStreamResolver.clearAutoRetry(it) }
                 }
             }
         }
@@ -69,6 +67,9 @@ internal class PlayerStateCollectors(
         PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
         PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
         PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+        PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+        PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
         -> true
 
         else -> false
@@ -78,7 +79,7 @@ internal class PlayerStateCollectors(
         val track = queueManager.currentTrack.value ?: return false
         if (track.isLocal ||
             !isRecoverableStreamError(error) ||
-            !autoRetriedTrackIds.add(track.id)
+            !playbackStreamResolver.tryClaimAutoRetry(track.id)
         ) {
             return false
         }

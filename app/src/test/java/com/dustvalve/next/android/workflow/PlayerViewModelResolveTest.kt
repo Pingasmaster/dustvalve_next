@@ -8,19 +8,22 @@ import androidx.media3.test.utils.robolectric.RobolectricUtil
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
 import androidx.test.core.app.ApplicationProvider
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.FavoriteType
+import com.dustvalve.next.android.domain.repository.BandcampStreamUrlResolver
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
+import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
+import com.dustvalve.next.android.ui.screens.player.PlaybackStreamResolver
 import com.dustvalve.next.android.ui.screens.player.PlayerCoreDeps
 import com.dustvalve.next.android.ui.screens.player.PlayerLibraryDeps
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -74,7 +77,9 @@ class PlayerViewModelResolveTest {
     }
     private val libraryRepository = mockk<LibraryRepository>(relaxed = true)
     private val youtubeRepository = mockk<YouTubeRepository>()
-    private val dustvalveStreamResolver = mockk<DustvalveStreamResolver>()
+    private val bandcampStreamUrlResolver = mockk<BandcampStreamUrlResolver> {
+        coEvery { resolveStreamUrl(any()) } returns null
+    }
     private val settingsDataStore = mockk<SettingsDataStore>(relaxed = true) {
         coEvery { getProgressiveDownloadSync() } returns false
         // uiState combines these flows; they must emit or uiState stays at
@@ -94,16 +99,17 @@ class PlayerViewModelResolveTest {
             .build()
         queueManager = QueueManager()
         playbackManager = PlaybackManager(player, queueManager, ApplicationProvider.getApplicationContext())
-        val soundCloudRepository = mockk<com.dustvalve.next.android.domain.repository.SoundCloudRepository>(relaxed = true)
-        val resolveUseCase = com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase(
+        val soundCloudRepository = mockk<SoundCloudRepository>(relaxed = true)
+        val resolveUseCase = ResolveTrackForPlaybackUseCase(
             downloadRepository,
             youtubeRepository,
             soundCloudRepository,
+            bandcampStreamUrlResolver,
         )
-        val streamResolver = com.dustvalve.next.android.ui.screens.player.PlaybackStreamResolver(
+        val streamResolver = PlaybackStreamResolver(
             youtubeRepository,
             soundCloudRepository,
-            dustvalveStreamResolver,
+            bandcampStreamUrlResolver,
             downloadRepository,
             resolveUseCase,
         )
@@ -292,7 +298,25 @@ class PlayerViewModelResolveTest {
         job.cancel()
     }
 
-    // --- H5: a failed direct tap must not destroy the previous queue ---
+    // --- C1: failed YouTube tap must not pause current playback ---
+
+    @Test
+    fun playTrack_youtubeFails_doesNotPausePreviousPlayback() {
+        viewModel.playTrackInList(listOf(FixtureTracks.localTrack()), 0)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+        assertThat(player.playWhenReady).isTrue()
+
+        coEvery { youtubeRepository.getStreamUrl(any()) } throws IllegalStateException("HTTP 403")
+        viewModel.playTrack(FixtureTracks.youtubeTrack())
+        idle()
+
+        assertThat(player.playWhenReady).isTrue()
+        assertThat(queueManager.currentTrack.value?.id).isEqualTo("local_ms_1")
+        assertThat(playbackManager.isPlaying.value).isTrue()
+    }
+
+    // --- H1/H5: a failed direct tap must not destroy the previous queue ---
 
     @Test
     fun playTrack_resolutionFails_leavesPreviousQueueAndPlayerIntact() {
@@ -309,6 +333,39 @@ class PlayerViewModelResolveTest {
         assertThat(queueManager.queue.value.map { it.id }).containsExactly("local_ms_1")
         assertThat(queueManager.currentTrack.value?.id).isEqualTo("local_ms_1")
         assertThat(player.currentMediaItem?.localConfiguration?.uri.toString()).isEqualTo(playingBefore)
+    }
+
+    @Test
+    fun playTrackInList_youtubeFails_leavesPreviousQueueIntact() {
+        viewModel.playTrackInList(listOf(FixtureTracks.localTrack()), 0)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+        assertThat(player.playWhenReady).isTrue()
+
+        coEvery { youtubeRepository.getStreamUrl(any()) } throws IllegalStateException("HTTP 403")
+        viewModel.playTrackInList(
+            listOf(FixtureTracks.youtubeTrack(), FixtureTracks.localTrack(id = "local_other")),
+            0,
+        )
+        idle()
+
+        assertThat(queueManager.queue.value.map { it.id }).containsExactly("local_ms_1")
+        assertThat(queueManager.currentTrack.value?.id).isEqualTo("local_ms_1")
+        assertThat(player.playWhenReady).isTrue()
+    }
+
+    @Test
+    fun playAlbum_youtubeFails_leavesPreviousQueueIntact() {
+        viewModel.playTrackInList(listOf(FixtureTracks.localTrack()), 0)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+
+        coEvery { youtubeRepository.getStreamUrl(any()) } throws IllegalStateException("HTTP 403")
+        viewModel.playAlbum(listOf(FixtureTracks.youtubeTrack()), 0)
+        idle()
+
+        assertThat(queueManager.queue.value.map { it.id }).containsExactly("local_ms_1")
+        assertThat(player.playWhenReady).isTrue()
     }
 
     // --- H4: queue edits made during background resolution survive ---

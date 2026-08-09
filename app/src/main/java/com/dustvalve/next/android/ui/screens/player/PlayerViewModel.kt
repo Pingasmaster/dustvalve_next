@@ -87,6 +87,10 @@ class PlayerViewModel @Inject constructor(core: PlayerCoreDeps, libraryDeps: Pla
         val resolver = core.playbackStreamResolver
         playbackManager.streamIsStale = resolver::isResolutionStale
         playbackManager.streamResolver = { track -> resolver.resolveOnDemand(track) }
+        playbackManager.onPlayAfterError = { track ->
+            resolver.clearAutoRetry(track.id)
+            resolver.invalidateResolution(track.id)
+        }
         audio.register()
     }
 

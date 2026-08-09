@@ -88,6 +88,13 @@ class PlaybackManager @Inject constructor(
      */
     var streamIsStale: ((Track) -> Boolean)? = null
 
+    /**
+     * Optional hook run immediately before [playTrack] when the user presses
+     * play while ExoPlayer is IDLE with a loaded (typically failed) MediaItem.
+     * Clears the one-shot auto-retry guard and forces stream re-resolution.
+     */
+    var onPlayAfterError: ((Track) -> Unit)? = null
+
     fun clearPlaybackError() {
         _playbackError.value = null
     }
@@ -264,7 +271,16 @@ class PlaybackManager @Inject constructor(
             resumeAfterRelease()
             return
         }
+        // H2: after a stream failure ExoPlayer sits IDLE with the dead MediaItem.
+        // prepare()+play() would retry the same URL and the one-shot auto-retry
+        // is already spent - force re-resolve via playTrack instead.
         if (player.playbackState == Player.STATE_IDLE && player.mediaItemCount > 0) {
+            val track = queueManager.currentTrack.value
+            if (track != null && !track.isLocal) {
+                onPlayAfterError?.invoke(track)
+                playTrack(track)
+                return
+            }
             player.prepare()
         }
         if (player.playbackState == Player.STATE_ENDED) {

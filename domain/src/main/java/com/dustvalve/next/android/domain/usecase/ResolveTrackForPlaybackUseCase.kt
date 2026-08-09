@@ -3,6 +3,7 @@ package com.dustvalve.next.android.domain.usecase
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.repository.BandcampStreamUrlResolver
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
@@ -16,7 +17,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * 2. Downloaded same-or-higher quality file wins over the remote stream
  * 3. YouTube resolves a live googlevideo URL (or null on failure)
  * 4. SoundCloud resolves a live stream URL (or null on failure)
- * 5. Otherwise the track's existing stream URL (Bandcamp mp3-128) is used
+ * 5. Bandcamp re-resolves when streamUrl is blank; otherwise uses the scrape URL
+ * 6. Otherwise the track's existing stream URL is used
  */
 data class PlaybackResolveResult(
     val track: Track,
@@ -32,6 +34,7 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val youtubeRepository: YouTubeRepository,
     private val soundCloudRepository: SoundCloudRepository,
+    private val bandcampStreamUrlResolver: BandcampStreamUrlResolver,
 ) {
     suspend operator fun invoke(track: Track, reportFailure: Boolean = true): PlaybackResolveResult {
         if (track.isLocal) {
@@ -50,6 +53,10 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
             return resolveSoundCloud(track, reportFailure)
         }
 
+        if (track.source == TrackSource.BANDCAMP) {
+            return resolveBandcamp(track, reportFailure)
+        }
+
         val downloadInfo = downloadRepository.getDownloadInfo(track.id)
         if (downloadInfo != null && downloadInfo.format.qualityRank >= AudioFormat.MP3_128.qualityRank) {
             return PlaybackResolveResult(
@@ -64,6 +71,47 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
             playbackFormat = AudioFormat.MP3_128,
             sourcePath = null,
         )
+    }
+
+    private suspend fun resolveBandcamp(track: Track, reportFailure: Boolean): PlaybackResolveResult {
+        val downloadInfo = downloadRepository.getDownloadInfo(track.id)
+        if (downloadInfo != null && downloadInfo.format.qualityRank >= AudioFormat.MP3_128.qualityRank) {
+            return PlaybackResolveResult(
+                track = track.copy(streamUrl = downloadInfo.streamUri),
+                playbackFormat = downloadInfo.format,
+                sourcePath = downloadInfo.filePath,
+            )
+        }
+
+        if (!track.streamUrl.isNullOrBlank()) {
+            return PlaybackResolveResult(
+                track = track,
+                playbackFormat = AudioFormat.MP3_128,
+                sourcePath = null,
+            )
+        }
+
+        return try {
+            val streamUrl = bandcampStreamUrlResolver.resolveStreamUrl(track)
+            if (streamUrl.isNullOrBlank()) {
+                streamFailed(track, reportFailure)
+            } else {
+                PlaybackResolveResult(
+                    track = track.copy(streamUrl = streamUrl),
+                    playbackFormat = AudioFormat.MP3_128,
+                    sourcePath = null,
+                    recordedRemoteResolution = true,
+                )
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
+            streamFailed(track, reportFailure)
+        } catch (_: IllegalStateException) {
+            streamFailed(track, reportFailure)
+        } catch (_: IllegalArgumentException) {
+            streamFailed(track, reportFailure)
+        }
     }
 
     private suspend fun resolveSoundCloud(track: Track, reportFailure: Boolean): PlaybackResolveResult {
