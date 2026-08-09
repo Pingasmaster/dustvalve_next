@@ -139,4 +139,14 @@ class BandcampDomainSnifferTest {
         assertThat(d.provider).isEqualTo(MusicProvider.BANDCAMP)
         assertThat(d.type).isEqualTo(LinkResourceType.ALBUM)
     }
+
+    @Test fun `sniff refuses private and link-local hosts without connecting`() = runTest {
+        assertThat(sniffer.sniff("https://127.0.0.1/album/x")).isNull()
+        assertThat(sniffer.sniff("https://10.0.0.1/album/x")).isNull()
+        assertThat(sniffer.sniff("https://192.168.1.1/album/x")).isNull()
+        assertThat(sniffer.sniff("https://169.254.1.1/album/x")).isNull()
+        assertThat(sniffer.sniff("https://100.64.0.1/album/x")).isNull()
+        assertThat(sniffer.sniff("http://localhost/album/x")).isNull()
+        assertThat(setup.server.requestCount).isEqualTo(0)
+    }
 }

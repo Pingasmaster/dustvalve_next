@@ -1,5 +1,9 @@
 package com.dustvalve.next.android.ui.screens.settings
 
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,11 +26,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.components.StorageIndicator
+import com.dustvalve.next.android.util.isAtLeastTiramisu
 import kotlin.math.roundToInt
 
 /** Actions emitted by [SettingsStorageSection]. */
@@ -176,6 +183,48 @@ private fun StorageAutoDownloadControls(state: SettingsUiState, onAction: (Setti
             extras = SettingsToggleExtras(
                 description = stringResource(R.string.settings_download_notifications_desc),
             ),
+        )
+
+        // Permanent POST_NOTIFICATIONS denial: the in-app toggle cannot post
+        // anything until the user re-enables notifications in system settings.
+        val context = LocalContext.current
+        val notificationsBlocked = isAtLeastTiramisu() && !areAppNotificationsEnabled(context)
+        if (notificationsBlocked) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.settings_notifications_denied_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            FilledTonalButton(
+                onClick = { openAppNotificationSettings(context) },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.settings_notifications_open_settings))
+            }
+        }
+    }
+}
+
+private fun areAppNotificationsEnabled(context: Context): Boolean {
+    val nm = context.getSystemService(NotificationManager::class.java) ?: return true
+    return nm.areNotificationsEnabled()
+}
+
+private fun openAppNotificationSettings(context: Context) {
+    try {
+        context.startActivity(
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    } catch (_: android.content.ActivityNotFoundException) {
+        context.startActivity(
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                "package:${context.packageName}".toUri(),
+            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     }
 }

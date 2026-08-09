@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
 
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) { /* Result not needed - media session works without it, just no notification */ }
+    ) { /* Granted: media session notification works. Denied: Settings offers a deep link when permanently blocked. */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -245,7 +245,34 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestNotificationPermissionIfNeeded() {
+        // POST_NOTIFICATIONS only exists on API 33+; below that notifications
+        // are granted at install time and the runtime prompt is a no-op.
+        // Flavor-safe gate: required for compat (minSdk 26), always true on future.
+        if (!isAtLeastTiramisu()) return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        // Remember we asked so a permanent denial (rationale == false after a
+        // prior prompt) does not re-spam the system dialog on every cold start.
+        // Settings -> Storage still deep-links into app notification settings.
+        val prefs = getPreferences(MODE_PRIVATE)
+        val asked = prefs.getBoolean(PREF_NOTIFICATION_PERMISSION_ASKED, false)
+        if (!asked) {
+            prefs.edit().putBoolean(PREF_NOTIFICATION_PERMISSION_ASKED, true).apply()
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        if (shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     private companion object {
+        const val PREF_NOTIFICATION_PERMISSION_ASKED = "notification_permission_asked"
+
         /**
          * Process-wide guard so Activity recreation (rotation, theme change)
          * never re-runs the local-music rescan. A ViewModel would only survive
@@ -253,18 +280,6 @@ class MainActivity : ComponentActivity() {
          * finished Activity being relaunched in a warm process.
          */
         val localRescanTriggered = java.util.concurrent.atomic.AtomicBoolean(false)
-    }
-
-    private fun requestNotificationPermissionIfNeeded() {
-        // POST_NOTIFICATIONS only exists on API 33+; below that notifications
-        // are granted at install time and the runtime prompt is a no-op.
-        // Flavor-safe gate: required for compat (minSdk 26), always true on future.
-        if (!isAtLeastTiramisu()) return
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
     }
 }
 

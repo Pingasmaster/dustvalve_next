@@ -7,6 +7,7 @@ import com.dustvalve.next.android.ui.navigation.NavDestination
 import com.dustvalve.next.android.util.DeepLinkAction
 import com.dustvalve.next.android.util.DetectedLink
 import com.dustvalve.next.android.util.LinkResourceType
+import com.dustvalve.next.android.util.NetworkUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
@@ -49,6 +50,12 @@ class BandcampDomainSniffer @Inject constructor(
             "https://$trimmed"
         }
         val httpUrl = normalized.toHttpUrlOrNull() ?: return@withContext null
+        // SSRF guard: never fetch loopback / RFC1918 / link-local / CGNAT / ULA,
+        // including hostnames that DNS-resolve into those ranges.
+        val host = httpUrl.host
+        if (NetworkUtils.isDisallowedPrivateHost(host)) {
+            return@withContext null
+        }
         val request = Request.Builder().url(httpUrl).header("User-Agent", USER_AGENT).build()
         val call = client.newCall(request)
         coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }

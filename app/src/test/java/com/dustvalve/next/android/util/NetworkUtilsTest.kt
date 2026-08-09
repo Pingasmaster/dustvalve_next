@@ -112,4 +112,77 @@ class NetworkUtilsTest {
     @Test fun `sanitizeFileName unicode replaced`() {
         assertThat(NetworkUtils.sanitizeFileName("café")).isEqualTo("caf_")
     }
+
+    @Test fun `isLiteralDisallowedHost catches loopback and RFC1918 literals`() {
+        assertThat(NetworkUtils.isLiteralDisallowedHost("127.0.0.1")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("localhost")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("10.0.0.1")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("192.168.1.1")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("172.16.5.5")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("169.254.1.1")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("100.64.0.1")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("fc00::1")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("fe80::1")).isTrue()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("example.com")).isFalse()
+        assertThat(NetworkUtils.isLiteralDisallowedHost("bandcamp.com")).isFalse()
+    }
+
+    @Test fun `sanitizeImportedMediaUrl blanks non-https and unknown hosts`() {
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "http://f4.bcbits.com/img/a1_0.jpg",
+                "bandcamp",
+            ),
+        ).isEmpty()
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "https://evil.example/stream.mp3",
+                "bandcamp",
+            ),
+        ).isEmpty()
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "https://f4.bcbits.com/img/a1_0.jpg",
+                "bandcamp",
+            ),
+        ).isEqualTo("https://f4.bcbits.com/img/a1_0.jpg")
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "https://i.ytimg.com/vi/abc/hqdefault.jpg",
+                "youtube",
+            ),
+        ).isEqualTo("https://i.ytimg.com/vi/abc/hqdefault.jpg")
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "https://f4.bcbits.com/img/a1_0.jpg",
+                "youtube",
+            ),
+        ).isEmpty()
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "https://127.0.0.1/secret",
+                "bandcamp",
+            ),
+        ).isEmpty()
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "https://sndcdn.com/foo.mp3",
+                "soundcloud",
+            ),
+        ).isEqualTo("https://sndcdn.com/foo.mp3")
+        assertThat(
+            NetworkUtils.sanitizeImportedMediaUrl(
+                "https://sndcdn.com/foo.mp3",
+                "local",
+            ),
+        ).isEmpty()
+    }
+
+    @Test fun `requirePublicRemoteUrl rejects loopback`() {
+        val ex = runCatching {
+            NetworkUtils.requirePublicRemoteUrl("https://127.0.0.1/x")
+        }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(ex!!.message).contains("private")
+    }
 }

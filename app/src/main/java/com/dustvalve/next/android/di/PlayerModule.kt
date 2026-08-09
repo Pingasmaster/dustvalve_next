@@ -1,8 +1,11 @@
 package com.dustvalve.next.android.di
 
+import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Looper
 import androidx.annotation.OptIn
@@ -168,6 +171,16 @@ object PlayerModule {
 
         val callback = object : MediaSession.Callback {
             override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+                // Full transport + custom favorite only for this app and
+                // system/OEM media controllers. Everyone else gets Media3's
+                // untrusted (read-mostly) command sets so a random third-party
+                // MediaController cannot drive playback.
+                if (!isTrustedMediaController(context, controller)) {
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
+                        .setAvailableSessionCommands(MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_SESSION_COMMANDS)
+                        .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_PLAYER_COMMANDS)
+                        .build()
+                }
                 val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
                     .add(MediaSessionConstants.COMMAND_TOGGLE_FAVORITE)
                     .build()
@@ -184,6 +197,9 @@ object PlayerModule {
                 customCommand: SessionCommand,
                 args: Bundle,
             ): ListenableFuture<SessionResult> {
+                if (!isTrustedMediaController(context, controller)) {
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_PERMISSION_DENIED))
+                }
                 if (customCommand.customAction == MediaSessionConstants.ACTION_TOGGLE_FAVORITE) {
                     scope.launch {
                         val track = queueManager.currentTrack.value ?: return@launch
@@ -231,4 +247,40 @@ object PlayerModule {
             .build()
         session.setMediaButtonPreferences(listOf(favoriteButton))
     }
+
+    /**
+     * Own app, packages holding MEDIA_CONTENT_CONTROL, and system/OEM apps
+     * get full player commands. Third-party MediaControllers are limited to
+     * Media3's DEFAULT_UNTRUSTED_* sets (metadata / read-mostly).
+     */
+    private fun isTrustedMediaController(context: Context, controller: MediaSession.ControllerInfo): Boolean {
+        val pkg = controller.packageName
+        if (pkg.isNullOrBlank()) return false
+        if (pkg == context.packageName) return true
+        if (pkg in TRUSTED_MEDIA_PACKAGES) return true
+        val pm = context.packageManager
+        if (pm.checkPermission(Manifest.permission.MEDIA_CONTENT_CONTROL, pkg) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return true
+        }
+        return try {
+            val flags = pm.getApplicationInfo(pkg, 0).flags
+            flags and ApplicationInfo.FLAG_SYSTEM != 0 ||
+                flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0
+        } catch (_: PackageManager.NameNotFoundException) {
+            false
+        }
+    }
+
+    /** Well-known system/OEM media surfaces that may lack MEDIA_CONTENT_CONTROL. */
+    private val TRUSTED_MEDIA_PACKAGES = setOf(
+        "com.android.systemui",
+        "com.google.android.systemui",
+        "com.android.bluetooth",
+        "com.google.android.projection.gearhead",
+        "com.google.android.wearable.app",
+        "com.google.android.apps.wearable.companion",
+        "com.samsung.android.app.routines",
+    )
 }

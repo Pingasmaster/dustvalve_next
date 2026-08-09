@@ -243,6 +243,8 @@
     <string name="settings_auto_download_favorites_desc">Also download every favorited track in the background</string>
     <string name="settings_download_notifications">Download notifications</string>
     <string name="settings_download_notifications_desc">Show a live notification with progress while songs are downloading</string>
+    <string name="settings_notifications_denied_hint">Notifications are blocked for this app. Enable them in system settings to see download and playback alerts.</string>
+    <string name="settings_notifications_open_settings">Open notification settings</string>
     <string name="settings_live_updates_title">Live Updates are off</string>
     <string name="settings_live_updates_desc">Allow Live Updates in notification settings to see download progress as a status-bar chip</string>
     <string name="settings_live_updates_action">Open settings</string>

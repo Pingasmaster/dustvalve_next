@@ -3,7 +3,9 @@ package com.dustvalve.next.android.update
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -158,11 +160,24 @@ open class AppUpdateService @Inject constructor(
     protected open fun isTrustedDownloadUrl(url: String): Boolean = isGitHubAssetUrl(url)
 
     /**
+     * Production requires a GitHub asset SHA-256 digest before install.
+     * Tests that exercise the Content-Length-only path may override to false.
+     */
+    protected open fun requireApkDigest(): Boolean = true
+
+    /**
+     * Overridable so unit tests (no real PackageManager signing info) can
+     * skip the APK signing-cert gate. Production always verifies.
+     */
+    protected open fun requireSigningMatch(): Boolean = true
+
+    /**
      * Streams the APK to `cacheDir/updates/update.apk` and emits progress.
      * The flow completes once the file is fully written and verified:
      * against [expectedSha256] when the release asset carried a digest,
      * otherwise (at minimum) against the Content-Length byte count. On any
      * verification failure the temp file is deleted and the flow throws.
+     * Production ([requireApkDigest]) refuses a missing digest entirely.
      */
     fun downloadApk(url: String, expectedSha256: String? = null): Flow<DownloadProgress> = flow {
         requireTrustedDownloadUrl(url)
@@ -214,27 +229,35 @@ open class AppUpdateService @Inject constructor(
 
     /**
      * Post-download integrity gate: SHA-256 against the release asset digest
-     * when GitHub provided one, byte count against Content-Length otherwise.
-     * Deletes [tempFile] and throws on any mismatch.
+     * when GitHub provided one (required in production), byte count against
+     * Content-Length only when [requireApkDigest] is false (tests). Deletes
+     * [tempFile] and throws on any mismatch or missing required digest.
      */
     private fun verifyDownload(tempFile: File, actualSha256: ByteArray, expectedSha256: String?, downloaded: Long, totalBytes: Long) {
-        if (expectedSha256 != null) {
-            val actual = actualSha256.joinToString("") { "%02x".format(Locale.US, it) }
-            if (!actual.equals(expectedSha256, ignoreCase = true)) {
+        if (expectedSha256 == null) {
+            if (requireApkDigest()) {
                 tempFile.delete()
-                throw IOException("APK SHA-256 mismatch: expected $expectedSha256, got $actual")
+                throw IOException("APK digest required but missing from release asset")
             }
-        } else if (totalBytes > 0L && downloaded != totalBytes) {
+            if (totalBytes > 0L && downloaded != totalBytes) {
+                tempFile.delete()
+                throw IOException("truncated APK download: got $downloaded of $totalBytes bytes")
+            }
+            return
+        }
+        val actual = actualSha256.joinToString("") { "%02x".format(Locale.US, it) }
+        if (!actual.equals(expectedSha256, ignoreCase = true)) {
             tempFile.delete()
-            throw IOException("truncated APK download: got $downloaded of $totalBytes bytes")
+            throw IOException("APK SHA-256 mismatch: expected $expectedSha256, got $actual")
         }
     }
 
     /**
      * Hands the downloaded APK to the system installer via FileProvider.
-     * Throws if the file is missing, or if the user has not granted
-     * "install unknown apps" for this package (after deep-linking them to
-     * [Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES]).
+     * Verifies the APK's signing certificates match the installed app first
+     * (fail closed when digests cannot be read). Throws if the file is missing,
+     * or if the user has not granted "install unknown apps" for this package
+     * (after deep-linking them to [Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES]).
      */
     fun launchInstaller() {
         if (!context.packageManager.canRequestPackageInstalls()) {
@@ -247,6 +270,9 @@ open class AppUpdateService @Inject constructor(
         }
         val apk = File(File(context.cacheDir, "updates"), "update.apk")
         if (!apk.exists()) throw IOException("APK not downloaded")
+        if (requireSigningMatch()) {
+            verifyApkSigningMatchesInstalled(apk)
+        }
         val uri = FileProvider.getUriForFile(
             context,
             context.packageName + ".fileprovider",
@@ -266,6 +292,67 @@ open class AppUpdateService @Inject constructor(
             Log.w(TAG, "no system package installer resolved; falling back to unpinned intent")
         }
         context.startActivity(intent)
+    }
+
+    /**
+     * Fail-closed signing identity check: the downloaded APK must share at
+     * least one signing-cert SHA-256 digest with the currently installed app.
+     * Missing digests on either side abort install (never "skip if unknown").
+     */
+    private fun verifyApkSigningMatchesInstalled(apk: File) {
+        val pm = context.packageManager
+        val installedDigests = signingCertSha256Digests(installedPackageInfo(pm))
+        if (installedDigests.isEmpty()) {
+            throw IOException("cannot read installed app signing certificates; refusing update")
+        }
+        val apkInfo = pm.getPackageArchiveInfo(apk.absolutePath, packageInfoSigningFlags())
+            ?: throw IOException("cannot parse downloaded APK; refusing update")
+        // getPackageArchiveInfo leaves applicationInfo.sourceDir unset on some
+        // API levels; signingInfo still comes from the archive path flags.
+        val apkDigests = signingCertSha256Digests(apkInfo)
+        if (apkDigests.isEmpty()) {
+            throw IOException("cannot read downloaded APK signing certificates; refusing update")
+        }
+        if (installedDigests.intersect(apkDigests).isEmpty()) {
+            apk.delete()
+            throw IOException("downloaded APK signing certificates do not match installed app")
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun installedPackageInfo(pm: PackageManager): PackageInfo =
+        if (Build.VERSION.SDK_INT >= 28) {
+            pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+        } else {
+            pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+        }
+
+    @Suppress("DEPRECATION")
+    private fun packageInfoSigningFlags(): Int =
+        if (Build.VERSION.SDK_INT >= 28) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else {
+            PackageManager.GET_SIGNATURES
+        }
+
+    @Suppress("DEPRECATION")
+    private fun signingCertSha256Digests(info: PackageInfo): Set<String> {
+        val digester = MessageDigest.getInstance("SHA-256")
+        fun digest(bytes: ByteArray): String =
+            digester.digest(bytes).joinToString("") { "%02x".format(Locale.US, it) }
+                .also { digester.reset() }
+
+        return if (Build.VERSION.SDK_INT >= 28) {
+            val signingInfo = info.signingInfo ?: return emptySet()
+            val signers = if (signingInfo.hasMultipleSigners()) {
+                signingInfo.apkContentsSigners
+            } else {
+                signingInfo.signingCertificateHistory
+            }
+            signers?.map { digest(it.toByteArray()) }?.toSet() ?: emptySet()
+        } else {
+            info.signatures?.map { digest(it.toByteArray()) }?.toSet() ?: emptySet()
+        }
     }
 
     /**
