@@ -117,7 +117,9 @@ import com.dustvalve.next.android.ui.theme.AppMotion
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.util.DeepLinkRouter
+import com.dustvalve.next.android.util.onFailure
 import com.dustvalve.next.android.util.openInBrowser
+import com.dustvalve.next.android.util.runCatchingUi
 import com.dustvalve.next.android.util.shareUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -704,14 +706,10 @@ fun BandcampScreen(
                                                         SearchResultType.TRACK -> {
                                                             scope.launch {
                                                                 runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
-                                                                    val track = searchViewModel.resolveBandcampTrack(
-                                                                        result.url,
-                                                                        result.name,
-                                                                    )
-                                                                    if (track != null) {
-                                                                        playerViewModel.playTrack(track)
-                                                                        onExpandPlayer()
-                                                                    }
+                                                                    val track = searchViewModel.resolveBandcampTrack(result.url)
+                                                                        ?: error("no track match")
+                                                                    playerViewModel.playTrack(track)
+                                                                    onExpandPlayer()
                                                                 }
                                                             }
                                                         }
@@ -721,10 +719,9 @@ fun BandcampScreen(
                                                             scope.launch {
                                                                 runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                                                                     val track = searchViewModel.resolveLocalTrack(trackId)
-                                                                    if (track != null) {
-                                                                        playerViewModel.playTrack(track)
-                                                                        onExpandPlayer()
-                                                                    }
+                                                                        ?: error("no local track")
+                                                                    playerViewModel.playTrack(track)
+                                                                    onExpandPlayer()
                                                                 }
                                                             }
                                                         }
@@ -786,8 +783,9 @@ fun BandcampScreen(
                     }
                     scope.launch {
                         runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                            val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
-                            if (track != null) playerViewModel.playNext(track)
+                            val track = searchViewModel.resolveBandcampTrack(result.url)
+                                ?: error("no track match")
+                            playerViewModel.playNext(track)
                         }
                     }
                 },
@@ -796,8 +794,9 @@ fun BandcampScreen(
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
                         runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                            val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
-                            if (track != null) playerViewModel.addToQueue(track)
+                            val track = searchViewModel.resolveBandcampTrack(result.url)
+                                ?: error("no track match")
+                            playerViewModel.addToQueue(track)
                         }
                     }
                 },
@@ -807,8 +806,9 @@ fun BandcampScreen(
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
                         runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                            val track = searchViewModel.resolveBandcampTrack(ctx.url, ctx.name)
-                            if (track != null) addToPlaylistTrackId = track.id
+                            val track = searchViewModel.resolveBandcampTrack(ctx.url)
+                                ?: error("no track match")
+                            addToPlaylistTrackId = track.id
                         }
                     }
                 },

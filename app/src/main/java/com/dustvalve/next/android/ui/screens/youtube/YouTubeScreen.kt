@@ -114,7 +114,9 @@ import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.util.DeepLinkRouter
+import com.dustvalve.next.android.util.onFailure
 import com.dustvalve.next.android.util.openInBrowser
+import com.dustvalve.next.android.util.runCatchingUi
 import com.dustvalve.next.android.util.shareUrl
 import kotlinx.coroutines.launch
 

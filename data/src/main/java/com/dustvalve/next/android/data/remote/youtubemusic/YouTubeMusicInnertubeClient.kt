@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.remote.youtubemusic
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -15,6 +16,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 @Singleton
 open class YouTubeMusicInnertubeClient @Inject constructor(
@@ -121,7 +123,11 @@ open class YouTubeMusicInnertubeClient @Inject constructor(
                 .post(body.toString().toRequestBody(JSON_MEDIA_TYPE))
                 .build()
 
-            okHttpClient.newCall(request).execute().use { response ->
+            val call = okHttpClient.newCall(request)
+            // Cancel the Call (not the shared client) when the coroutine Job is
+            // cancelled so in-flight search/browse POSTs abort promptly.
+            coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+            call.execute().use { response ->
                 val text = response.body.string()
                 if (!response.isSuccessful) {
                     val message = "Innertube POST /$endpoint failed: HTTP ${response.code} - ${text.take(200)}"

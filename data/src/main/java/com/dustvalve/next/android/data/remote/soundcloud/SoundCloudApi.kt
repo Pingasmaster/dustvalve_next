@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.remote.soundcloud
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -17,6 +18,7 @@ import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 /**
  * Thin HTTP client for `api-v2.soundcloud.com`. Attaches [client_id] (and
@@ -187,7 +189,9 @@ class SoundCloudApi @Inject constructor(
             .header("Referer", "https://soundcloud.com/")
             .get()
             .build()
-        val response = okHttpClient.newCall(request).execute()
+        val call = okHttpClient.newCall(request)
+        coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+        val response = call.execute()
         if (response.code in HTTP_OK_MIN..HTTP_OK_MAX) {
             response.code to response.use { it.body.string() }
         } else {
@@ -203,7 +207,9 @@ class SoundCloudApi @Inject constructor(
             .header("Accept", "application/json")
             .get()
             .build()
-        okHttpClient.newCall(request).execute().use { response ->
+        val call = okHttpClient.newCall(request)
+        coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
+        call.execute().use { response ->
             if (!response.isSuccessful) {
                 throw IOException("HTTP ${response.code} fetching $url")
             }

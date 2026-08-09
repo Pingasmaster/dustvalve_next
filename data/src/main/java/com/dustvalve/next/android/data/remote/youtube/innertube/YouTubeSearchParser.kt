@@ -10,7 +10,8 @@ import javax.inject.Singleton
  * Parses standard YouTube /search responses (WEB client). Walks the
  * primary section list and emits domain SearchResults for the renderer
  * shapes we recognize: videoRenderer, channelRenderer, playlistRenderer,
- * and the newer lockupViewModel (used for some playlist results).
+ * lockupViewModel (used for some playlist results), and contents nested
+ * under officialCardViewModel (Official artist / playlist cards).
  *
  * Anything else (shelfRenderer, gridShelfViewModel, ads, etc.) is skipped
  * silently so the result list stays clean.
@@ -32,7 +33,7 @@ class YouTubeSearchParser @Inject constructor() {
             // Continuation lives at the section list level, not inside
             // itemSectionRenderer. Look for it on every iteration.
             sectionContinuationToken(section)?.let { continuation = it }
-            items += itemSectionRows(section).mapNotNull { parseRow(it) }
+            items += itemSectionRows(section).flatMap { collectRow(it) }
         }
         return Page(items, continuation)
     }
@@ -55,6 +56,23 @@ class YouTubeSearchParser @Inject constructor() {
             ?: contents.path("sectionListRenderer")
             ?: return null
         return sl.path("contents")?.arr()
+    }
+
+    /**
+     * officialCardViewModel wraps channel / playlist lockups for "Official
+     * artist" style cards. Flatten its contents through [parseRow]; anything
+     * else is a normal single-renderer row.
+     */
+    private fun collectRow(row: JsonElement): List<SearchResult> {
+        val card = row.path("officialCardViewModel") ?: return listOfNotNull(parseRow(row))
+        val nested = card.path("contents")?.arr()
+            ?: card.path("cards")?.arr()
+            ?: emptyList()
+        if (nested.isNotEmpty()) {
+            return nested.mapNotNull { parseRow(it) }
+        }
+        // Some payloads put a single renderer directly on the card.
+        return listOfNotNull(parseRow(card))
     }
 
     private fun parseRow(row: JsonElement): SearchResult? {
