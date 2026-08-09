@@ -114,6 +114,7 @@ import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitrar
 import com.dustvalve.next.android.ui.screens.player.playAlbum
 import com.dustvalve.next.android.ui.screens.player.playNext
 import com.dustvalve.next.android.ui.screens.player.playTrack
+import com.dustvalve.next.android.ui.screens.player.playTrackAwaiting
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
 import com.dustvalve.next.android.ui.theme.AppMotion
 import com.dustvalve.next.android.ui.theme.AppShapes
@@ -715,11 +716,12 @@ fun BandcampScreen(
                                                                 runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                                                                     val track = searchViewModel.resolveBandcampTrack(result.url)
                                                                         ?: error("no track match")
-                                                                    if (track.streamUrl.isNullOrBlank()) {
-                                                                        snackbarHostState.showSnackbar(previewUnavailableMsg)
-                                                                    } else {
-                                                                        playerViewModel.playTrack(track)
+                                                                    // Blank scrape URL still goes through playTrack so
+                                                                    // ResolveTrackForPlaybackUseCase can re-resolve.
+                                                                    if (playerViewModel.playTrackAwaiting(track)) {
                                                                         onExpandPlayer()
+                                                                    } else {
+                                                                        snackbarHostState.showSnackbar(previewUnavailableMsg)
                                                                     }
                                                                 }
                                                             }

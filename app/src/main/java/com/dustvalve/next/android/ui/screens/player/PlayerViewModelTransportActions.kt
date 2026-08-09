@@ -24,9 +24,17 @@ fun PlayerViewModel.onToggleRepeat() = library.onToggleRepeat()
 
 fun PlayerViewModel.playTrack(track: Track) = play.playTrack(track)
 
+suspend fun PlayerViewModel.playTrackAwaiting(track: Track): Boolean = play.playTrackAwaiting(track)
+
 fun PlayerViewModel.playTrackInList(tracks: List<Track>, index: Int) = play.playTrackInList(tracks, index)
 
+suspend fun PlayerViewModel.playTrackInListAwaiting(tracks: List<Track>, index: Int): Boolean =
+    play.playTrackInListAwaiting(tracks, index)
+
 fun PlayerViewModel.playAlbum(tracks: List<Track>, startIndex: Int) = play.playAlbum(tracks, startIndex)
+
+suspend fun PlayerViewModel.playAlbumAwaiting(tracks: List<Track>, startIndex: Int): Boolean =
+    play.playAlbumAwaiting(tracks, startIndex)
 
 fun PlayerViewModel.skipToQueueIndex(index: Int) = play.skipToQueueIndex(index)
 

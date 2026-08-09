@@ -493,6 +493,7 @@
     <string name="snackbar_create_playlist_failed">Falha ao criar a playlist</string>
     <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” vai tocar em seguida</string>
     <string name="snackbar_audio_stream_failed">Não foi possível carregar o stream de áudio</string>
+    <string name="snackbar_youtube_login_required">Este vídeo tem restrição de idade e exige login no YouTube</string>
     <string name="snackbar_bandcamp_preview_unavailable">Prévia indisponível. Compre no <xliff:g id="brand">Bandcamp</xliff:g>.</string>
     <string name="snackbar_scan_failed">Falha ao escanear: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
     <string name="snackbar_scan_needs_permission">Conceda a permissão da biblioteca de músicas para escanear de novo</string>

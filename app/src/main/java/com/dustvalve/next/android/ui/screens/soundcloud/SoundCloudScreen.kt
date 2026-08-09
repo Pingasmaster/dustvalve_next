@@ -83,9 +83,9 @@ import com.dustvalve.next.android.ui.screens.player.addAllToQueue
 import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addTrackToPlaylist
 import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitraryTrack
-import com.dustvalve.next.android.ui.screens.player.playAlbum
+import com.dustvalve.next.android.ui.screens.player.playAlbumAwaiting
 import com.dustvalve.next.android.ui.screens.player.playNext
-import com.dustvalve.next.android.ui.screens.player.playTrack
+import com.dustvalve.next.android.ui.screens.player.playTrackAwaiting
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.DetectedLink
@@ -137,7 +137,7 @@ private class SoundCloudSheetActions(
     val resolveCollectionTracks: suspend (String) -> List<Track>,
     val playNext: (Track) -> Unit,
     val addToQueue: (Track) -> Unit,
-    val playAlbum: (List<Track>, Int) -> Unit,
+    val playAlbumAwaiting: suspend (List<Track>, Int) -> Boolean,
     val addAllToQueue: (List<Track>) -> Unit,
     val addTrackToPlaylist: (String, Track) -> Unit,
     val createPlaylistAndAdd: (String, String?, String?, Track) -> Unit,
@@ -170,7 +170,7 @@ fun SoundCloudScreen(
         resolveCollectionTracks = viewModel::resolveCollectionTracks,
         playNext = playerViewModel::playNext,
         addToQueue = playerViewModel::addToQueue,
-        playAlbum = playerViewModel::playAlbum,
+        playAlbumAwaiting = playerViewModel::playAlbumAwaiting,
         addAllToQueue = playerViewModel::addAllToQueue,
         addTrackToPlaylist = playerViewModel::addTrackToPlaylist,
         createPlaylistAndAdd = playerViewModel::createPlaylistAndAddArbitraryTrack,
@@ -195,8 +195,9 @@ fun SoundCloudScreen(
     val playTrackUrl: (String) -> Unit = { url ->
         scope.launch {
             runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
-                playerViewModel.playTrack(viewModel.getTrack(url))
-                nav.onExpandPlayer()
+                if (playerViewModel.playTrackAwaiting(viewModel.getTrack(url))) {
+                    nav.onExpandPlayer()
+                }
             }
         }
     }
@@ -216,7 +217,7 @@ fun SoundCloudScreen(
                 snackbarHostState = snackbarHostState,
                 failedToPlayMsg = failedToPlayMsg,
                 getTrack = viewModel::getTrack,
-                playTrack = playerViewModel::playTrack,
+                playTrackAwaiting = playerViewModel::playTrackAwaiting,
                 nav = nav,
             )
         },
@@ -244,8 +245,11 @@ fun SoundCloudScreen(
             onGenreSelect = viewModel::selectGenre,
             onRetry = viewModel::retryHome,
             onPlayTrack = { track ->
-                playerViewModel.playTrack(track)
-                nav.onExpandPlayer()
+                scope.launch {
+                    if (playerViewModel.playTrackAwaiting(track)) {
+                        nav.onExpandPlayer()
+                    }
+                }
             },
             onShelfItemClick = { item ->
                 when (item.kind) {
@@ -554,7 +558,7 @@ private fun CoroutineScope.playSearchResult(
     snackbarHostState: SnackbarHostState,
     failedToPlayMsg: String,
     getTrack: suspend (String) -> Track,
-    playTrack: (Track) -> Unit,
+    playTrackAwaiting: suspend (Track) -> Boolean,
     nav: SoundCloudNavActions,
 ) {
     when (result.type) {
@@ -562,8 +566,9 @@ private fun CoroutineScope.playSearchResult(
             runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                 val track = getTrack(result.url)
                 searchBarState.animateToCollapsed()
-                playTrack(track)
-                nav.onExpandPlayer()
+                if (playTrackAwaiting(track)) {
+                    nav.onExpandPlayer()
+                }
             }
         }
 
@@ -639,8 +644,7 @@ private fun SoundCloudResultSheets(
                     scope.launch {
                         runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val tracks = actions.resolveCollectionTracks(result.url)
-                            if (tracks.isNotEmpty()) {
-                                actions.playAlbum(tracks, 0)
+                            if (tracks.isNotEmpty() && actions.playAlbumAwaiting(tracks, 0)) {
                                 onExpandPlayer()
                             }
                         }

@@ -4,11 +4,16 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.usecase.PlaybackResolveResult
 import com.dustvalve.next.android.util.UiText
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Play / resolve / progressive-download orchestration for the player. */
 internal class PlayerPlayCoordinator(
@@ -28,29 +33,34 @@ internal class PlayerPlayCoordinator(
     private var playJob: Job? = null
     private var loadingGeneration = 0
 
-    private suspend fun resolveTrackForPlayback(track: Track, updateState: Boolean = true): Track {
+    private suspend fun resolveTrackForPlayback(
+        track: Track,
+        updateState: Boolean = true,
+    ): PlaybackResolveResult {
         val result = resolveTrackForPlaybackUseCase(track, reportFailure = updateState)
         if (result.recordedRemoteResolution) {
             playbackStreamResolver.recordResolved(result.track.id)
         }
         if (updateState) {
-            extraState.update {
-                var next = it.copy(
-                    currentPlaybackFormat = result.playbackFormat,
-                    currentSourcePath = result.sourcePath,
-                )
-                if (result.streamFailed) {
-                    next = next.copy(
-                        snackbarMessage = result.streamFailedMessage
-                            ?.let { UiText.DynamicString(it) }
-                            ?: UiText.StringResource(R.string.snackbar_audio_stream_failed),
-                        isSnackbarError = true,
-                    )
-                }
-                next
-            }
+            applyResolveState(result)
         }
-        return result.track
+        return result
+    }
+
+    private fun applyResolveState(result: PlaybackResolveResult) {
+        extraState.update {
+            var next = it.copy(
+                currentPlaybackFormat = result.playbackFormat,
+                currentSourcePath = result.sourcePath,
+            )
+            if (result.streamFailed) {
+                next = next.copy(
+                    snackbarMessage = streamFailedUiText(result.streamFailedMessage),
+                    isSnackbarError = true,
+                )
+            }
+            next
+        }
     }
 
     private fun triggerProgressiveDownload(track: Track) {
@@ -107,43 +117,103 @@ internal class PlayerPlayCoordinator(
         downloadController.enqueueTrack(nextTrack)
     }
 
+    /**
+     * Resolves [track] and starts playback. Returns true when a playable URL
+     * was handed to ExoPlayer. Cancels any in-flight play job.
+     */
+    suspend fun playTrackAwaiting(track: Track): Boolean {
+        val generation = ++loadingGeneration
+        playJob?.cancel()
+        val result = CompletableDeferred<Boolean>()
+        playJob = scope.launch {
+            try {
+                result.complete(playResolvedTrack(track, generation))
+            } catch (e: CancellationException) {
+                result.complete(false)
+                throw e
+            }
+        }
+        return try {
+            result.await()
+        } catch (_: CancellationException) {
+            false
+        }
+    }
+
     fun playTrack(track: Track) {
         val generation = ++loadingGeneration
         playJob?.cancel()
         playJob = scope.launch {
-            val isYouTubeStream = track.source == TrackSource.YOUTUBE &&
-                downloadRepository.getDownloadInfo(track.id) == null
+            playResolvedTrack(track, generation)
+        }
+    }
 
-            // C1: do not pause current playback until resolve succeeds. A failed
-            // YouTube tap must leave the previous track playing.
-            if (isYouTubeStream) {
-                extraState.update { it.copy(isLoadingTrack = true) }
-            }
+    private suspend fun playResolvedTrack(track: Track, generation: Int): Boolean {
+        val isYouTubeStream = track.source == TrackSource.YOUTUBE &&
+            downloadRepository.getDownloadInfo(track.id) == null
 
-            val resolved = try {
-                resolveTrackForPlayback(track)
-            } finally {
-                if (isYouTubeStream && generation == loadingGeneration) {
-                    extraState.update { it.copy(isLoadingTrack = false) }
-                }
-            }
+        // C1: do not pause current playback until resolve succeeds. A failed
+        // YouTube tap must leave the previous track playing.
+        if (isYouTubeStream) {
+            extraState.update { it.copy(isLoadingTrack = true) }
+        }
 
-            if (resolved.streamUrl.isNullOrBlank()) return@launch
-            queueManager.setQueue(listOf(resolved), 0)
-            playbackManager.playTrack(resolved)
-            triggerProgressiveDownload(track)
-            runPlayerUiAction {
-                libraryRepository.addToRecent(track)
-                if (track.source == TrackSource.YOUTUBE) {
-                    settingsDataStore.setLastYoutubeVideoId(track.id.removePrefix("yt_"))
-                }
+        val result = try {
+            resolveTrackForPlayback(track)
+        } finally {
+            if (isYouTubeStream && generation == loadingGeneration) {
+                extraState.update { it.copy(isLoadingTrack = false) }
             }
+        }
+
+        val resolved = result.track
+        if (resolved.streamUrl.isNullOrBlank()) return false
+        queueManager.setQueue(listOf(resolved), 0)
+        playbackManager.playTrack(resolved)
+        triggerProgressiveDownload(track)
+        runPlayerUiAction {
+            libraryRepository.addToRecent(track)
+            if (track.source == TrackSource.YOUTUBE) {
+                settingsDataStore.setLastYoutubeVideoId(track.id.removePrefix("yt_"))
+            }
+        }
+        return true
+    }
+
+    /**
+     * Resolves and starts list playback. Returns true when a playable entry
+     * from [index] onward was started (skips blank/failed start indices).
+     */
+    suspend fun playTrackInListAwaiting(tracks: List<Track>, index: Int): Boolean {
+        if (tracks.getOrNull(index) == null) {
+            extraState.update {
+                it.copy(
+                    snackbarMessage = UiText.StringResource(R.string.common_failed_to_play),
+                    isSnackbarError = true,
+                )
+            }
+            return false
+        }
+        val generation = ++loadingGeneration
+        playJob?.cancel()
+        val result = CompletableDeferred<Boolean>()
+        playJob = scope.launch {
+            try {
+                result.complete(playListFromIndex(tracks, index, generation))
+            } catch (e: CancellationException) {
+                result.complete(false)
+                throw e
+            }
+        }
+        return try {
+            result.await()
+        } catch (_: CancellationException) {
+            false
         }
     }
 
     fun playTrackInList(tracks: List<Track>, index: Int) {
-        val targetTrack = tracks.getOrNull(index)
-        if (targetTrack == null) {
+        if (tracks.getOrNull(index) == null) {
             extraState.update {
                 it.copy(
                     snackbarMessage = UiText.StringResource(R.string.common_failed_to_play),
@@ -155,81 +225,88 @@ internal class PlayerPlayCoordinator(
         val generation = ++loadingGeneration
         playJob?.cancel()
         playJob = scope.launch {
-            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
-                downloadRepository.getDownloadInfo(targetTrack.id) == null
-
-            // C1/H1: do not pause or replace the queue until the target resolves
-            // to a playable URL. Failed YouTube taps must leave prior playback intact.
-            if (isYouTubeStream) {
-                extraState.update { it.copy(isLoadingTrack = true) }
-            }
-
-            val resolvedTarget = try {
-                resolveTrackForPlayback(targetTrack)
-            } finally {
-                if (isYouTubeStream && generation == loadingGeneration) {
-                    extraState.update { it.copy(isLoadingTrack = false) }
-                }
-            }
-
-            if (resolvedTarget.streamUrl.isNullOrBlank()) return@launch
-
-            val queueTracks = tracks.toMutableList().also { it[index] = resolvedTarget }
-            playbackManager.playQueue(queueTracks, index)
-            triggerProgressiveDownload(targetTrack)
-            runPlayerUiAction {
-                libraryRepository.addToRecent(targetTrack)
-            }
-            resolveRemainingTracks(queueTracks, index)
+            playListFromIndex(tracks, index, generation)
         }
     }
 
     fun playAlbum(tracks: List<Track>, startIndex: Int) {
-        val targetTrack = tracks.getOrNull(startIndex)
-        if (targetTrack == null) {
+        playTrackInList(tracks, startIndex)
+    }
+
+    suspend fun playAlbumAwaiting(tracks: List<Track>, startIndex: Int): Boolean =
+        playTrackInListAwaiting(tracks, startIndex)
+
+    /**
+     * Like [com.dustvalve.next.android.player.PlaybackMediaPreparer.resolveAndPlay]:
+     * walk forward from [startIndex] until a playable URL resolves, then
+     * [playQueue] there. Leaves the prior queue intact when every candidate
+     * from [startIndex] fails.
+     */
+    private suspend fun playListFromIndex(
+        tracks: List<Track>,
+        startIndex: Int,
+        generation: Int,
+    ): Boolean {
+        val first = tracks[startIndex]
+        val showYtLoading = first.source == TrackSource.YOUTUBE &&
+            downloadRepository.getDownloadInfo(first.id) == null
+        if (showYtLoading) {
+            extraState.update { it.copy(isLoadingTrack = true) }
+        }
+
+        try {
+            for (i in startIndex until tracks.size) {
+                currentCoroutineContext().ensureActive()
+                val candidate = tracks[i]
+                // Report snackbar for the user-requested index (age-gate etc.);
+                // silent skip for successors so Play All is not a snackbar storm.
+                val result = resolveTrackForPlayback(candidate, updateState = i == startIndex)
+                val resolved = result.track
+                if (resolved.streamUrl.isNullOrBlank()) continue
+
+                if (i != startIndex) {
+                    applyResolveState(result)
+                }
+                clearYtLoading(showYtLoading, generation)
+
+                val queueTracks = tracks.toMutableList().also { it[i] = resolved }
+                playbackManager.playQueue(queueTracks, i)
+                triggerProgressiveDownload(candidate)
+                runPlayerUiAction {
+                    libraryRepository.addToRecent(candidate)
+                }
+                resolveRemainingTracks(queueTracks, i)
+                return true
+            }
+        } finally {
+            clearYtLoading(showYtLoading, generation)
+        }
+
+        if (extraState.value.snackbarMessage == null) {
             extraState.update {
                 it.copy(
                     snackbarMessage = UiText.StringResource(R.string.common_failed_to_play),
                     isSnackbarError = true,
                 )
             }
-            return
         }
-        val generation = ++loadingGeneration
-        playJob?.cancel()
-        playJob = scope.launch {
-            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
-                downloadRepository.getDownloadInfo(targetTrack.id) == null
+        return false
+    }
 
-            if (isYouTubeStream) {
-                extraState.update { it.copy(isLoadingTrack = true) }
-            }
-
-            val resolvedTarget = try {
-                resolveTrackForPlayback(targetTrack)
-            } finally {
-                if (isYouTubeStream && generation == loadingGeneration) {
-                    extraState.update { it.copy(isLoadingTrack = false) }
-                }
-            }
-
-            if (resolvedTarget.streamUrl.isNullOrBlank()) return@launch
-
-            val queueTracks = tracks.toMutableList().also { it[startIndex] = resolvedTarget }
-            playbackManager.playQueue(queueTracks, startIndex)
-            triggerProgressiveDownload(targetTrack)
-            runPlayerUiAction {
-                libraryRepository.addToRecent(targetTrack)
-            }
-            resolveRemainingTracks(queueTracks, startIndex)
+    private fun clearYtLoading(showYtLoading: Boolean, generation: Int) {
+        if (showYtLoading && generation == loadingGeneration) {
+            extraState.update { it.copy(isLoadingTrack = false) }
         }
     }
 
     private suspend fun resolveRemainingTracks(tracks: List<Track>, skipIndex: Int) {
-        for (i in tracks.indices) {
+        val from = (skipIndex - RESOLVE_REMAINING_WINDOW).coerceAtLeast(0)
+        val to = (skipIndex + RESOLVE_REMAINING_WINDOW).coerceAtMost(tracks.lastIndex)
+        for (i in from..to) {
+            currentCoroutineContext().ensureActive()
             if (i == skipIndex) continue
             val original = tracks[i]
-            val resolved = resolveTrackForPlayback(original, updateState = false)
+            val resolved = resolveTrackForPlayback(original, updateState = false).track
             if (resolved != original) {
                 queueManager.applyResolvedTracks(mapOf(resolved.id to resolved))
             }
@@ -243,5 +320,18 @@ internal class PlayerPlayCoordinator(
                 queueManager.queue.value.getOrNull(index)?.let { libraryRepository.addToRecent(it) }
             }
         }
+    }
+
+    companion object {
+        /** Indices around the playing entry to pre-resolve after list play. */
+        internal const val RESOLVE_REMAINING_WINDOW = 5
+
+        internal fun streamFailedUiText(detail: String?): UiText =
+            when {
+                detail?.contains("LOGIN_REQUIRED") == true ->
+                    UiText.StringResource(R.string.snackbar_youtube_login_required)
+                !detail.isNullOrBlank() -> UiText.DynamicString(detail)
+                else -> UiText.StringResource(R.string.snackbar_audio_stream_failed)
+            }
     }
 }
