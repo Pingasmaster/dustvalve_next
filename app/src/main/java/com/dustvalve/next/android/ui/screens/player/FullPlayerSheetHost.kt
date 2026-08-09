@@ -2,14 +2,17 @@ package com.dustvalve.next.android.ui.screens.player
 
 import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 
 @Composable
 internal fun FullPlayerSheetHost(
+    adaptiveInfo: AdaptiveLayoutInfo,
     state: PlayerUiState,
     sheets: FullPlayerSheetState,
     playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     FullPlayerVolumeSheet(
+        adaptiveInfo = adaptiveInfo,
         visible = sheets.showVolumeSheet,
         volumeLevel = state.volumeLevel,
         audioOutputDevices = state.audioOutputDevices,
@@ -29,6 +32,7 @@ internal fun FullPlayerSheetHost(
     )
 
     FullPlayerDebugSheet(
+        adaptiveInfo = adaptiveInfo,
         track = state.currentTrack?.takeIf { sheets.showDebugSheet },
         currentSourcePath = state.currentSourcePath,
         currentPlaybackFormat = state.currentPlaybackFormat,
@@ -52,6 +56,7 @@ internal fun FullPlayerSheetHost(
     )
 
     FullPlayerUpNextContextSheet(
+        adaptiveInfo = adaptiveInfo,
         contextEntry = sheets.upNextContextEntry,
         onDismiss = { sheets.upNextContextEntry = null },
         onToggleFavorite = playerViewModel::toggleFavoriteById,
@@ -80,6 +85,7 @@ internal fun FullPlayerSheetHost(
     )
 
     FullPlayerQueueSheet(
+        adaptiveInfo = adaptiveInfo,
         visible = sheets.showQueueSheet,
         currentQueueIndex = state.currentQueueIndex,
         currentTrackId = state.currentTrack?.id,

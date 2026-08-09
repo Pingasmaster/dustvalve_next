@@ -1,18 +1,14 @@
 package com.dustvalve.next.android.ui.screens.settings
 
-import kotlin.coroutines.cancellation.CancellationException
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 
 /**
- * Shared Settings preference-write catch. Matches the prior ViewModel style
- * (swallow non-cancellation failures); specificity rewrite is owned elsewhere.
+ * Shared Settings preference-write catch. Delegates to [runCatchingUiIgnore]
+ * so TooGenericExceptionCaught stays confined to UiResult.kt.
  */
 internal object SettingsPrefWrite {
     suspend fun run(block: suspend () -> Unit) {
-        try {
-            block()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-        }
+        runCatchingUiIgnore(block = block)
     }
 }
 

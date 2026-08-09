@@ -11,14 +11,8 @@
     Mix playlistId wire offsets (protocol literals clearer as numbers).
   - MaxLineLength on test fixtures / SQL / ytcfg HTML samples.
   - ParameterNaming on Compose onXyz callbacks (past-tense event names).
-<<<<<<< HEAD
-  - TooGenericExceptionCaught on ViewModel catch (Exception) UI error surfaces.
-=======
   - TooGenericExceptionCaught confined to UiResult.kt (shared ViewModel
     failure choke point); AppUpdateController still pending.
-  - LoopWithTooManyJumpStatements / NestedBlockDepth / ReturnCount / ThrowsCount
-    on HTML/JSON parsers where early-continue is the natural shape.
->>>>>>> wip/lint-hard-vm-errors
   - SwallowedException on intentional best-effort scrape/download paths.
   - MultipleEmitters on PlaylistContent (Compose list + empty state).
   - ComplexCondition on pagination / deeplink host matching.
@@ -27,6 +21,9 @@
   Cleared (scrape/parse flatten): NestedBlockDepth / LoopWithTooManyJumpStatements
   / ReturnCount / ThrowsCount / CyclomaticComplexMethod on Dustvalve scrapers,
   HtmlUtils, and YouTube/YouTube Music parsers.
+  Cleared (compose-screens): FullPlayer LongMethod / CyclomaticComplexMethod.
+  Cleared (vm-errors + split playback): per-ViewModel TooGenericExceptionCaught
+  (now UiResult.kt / AppUpdateController only).
 -->
 <SmellBaseline>
   <ManuallySuppressedIssues/>
@@ -40,14 +37,6 @@
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@Composable private fun SearchResultItem</ID>
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>CyclomaticComplexMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
-<<<<<<< HEAD
-    <ID>CyclomaticComplexMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
-=======
-    <ID>CyclomaticComplexMethod:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$suspend fun scrapeAlbum: Album</ID>
-    <ID>CyclomaticComplexMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
-    <ID>CyclomaticComplexMethod:DustvalveSearchScraper.kt:DustvalveSearchScraper$suspend fun search: List&lt;SearchResult&gt;</ID>
-    <ID>CyclomaticComplexMethod:HtmlUtils.kt:HtmlUtils$fun extractJsonFromScript: String?</ID>
->>>>>>> wip/lint-hard-compose-screens
     <ID>CyclomaticComplexMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>CyclomaticComplexMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
     <ID>CyclomaticComplexMethod:MiniPlayer.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable fun MiniPlayer</ID>
@@ -56,12 +45,7 @@
     <ID>LongMethod:ArtistDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun ArtistDetailScreen</ID>
     <ID>LongMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>LongMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
-<<<<<<< HEAD
-    <ID>LongMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
     <ID>LongMethod:FullPlayerControls.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun FullPlayerSeekBar</ID>
-=======
-    <ID>LongMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
->>>>>>> wip/lint-hard-compose-screens
     <ID>LongMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>LongMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable private fun LibraryList</ID>
     <ID>LongMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
@@ -112,26 +96,8 @@
     <ID>SwallowedException:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$e: IOException</ID>
     <ID>ThrowsCount:DownloadAlbumUseCase.kt:DownloadAlbumUseCase$suspend fun downloadArtist</ID>
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToInternal: Pair&lt;String, Long&gt;</ID>
-<<<<<<< HEAD
-    <ID>TooGenericExceptionCaught:AlbumDetailViewModel.kt:AlbumDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:ArtistDetailViewModel.kt:ArtistDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:BandcampViewModel.kt:BandcampViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:CollectionDetailViewModel.kt:CollectionDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:LibraryViewModel.kt:LibraryViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:LocalViewModel.kt:LocalViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:NavigationViewModel.kt:NavigationViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:PlayerUiActionCatch.kt:PlayerUiActionCatch$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:PlaylistDetailViewModel.kt:PlaylistDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:SearchViewModel.kt:SearchViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:SettingsPrefWrite.kt:SettingsPrefWrite$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:YouTubeViewModel.kt:YouTubeViewModel$e: Exception</ID>
-=======
-    <ID>ThrowsCount:YouTubeMusicParser.kt:YouTubeMusicParser$fun parseHome: YouTubeMusicHomeFeed</ID>
-    <ID>ThrowsCount:YouTubePlayerParser.kt:YouTubePlayerParser$fun parsePlayerStreamInfo: PlayerStreamInfo</ID>
     <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
     <ID>TooGenericExceptionCaught:UiResult.kt:e: Exception</ID>
->>>>>>> wip/lint-hard-vm-errors
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LocalViewModel.kt:LocalViewModel : ViewModel</ID>
     <ID>TooManyFunctions:PlaylistDao.kt:PlaylistDao</ID>

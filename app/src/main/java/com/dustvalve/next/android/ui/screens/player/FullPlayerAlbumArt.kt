@@ -52,7 +52,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.MorphShape
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.theme.AppShapes
@@ -65,6 +65,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun FullPlayerAlbumArtRow(
+    adaptiveInfo: AdaptiveLayoutInfo,
     track: Track,
     state: PlayerUiState,
     isCarouselMode: Boolean,
@@ -73,7 +74,7 @@ internal fun FullPlayerAlbumArtRow(
     chrome: FullPlayerChrome,
     playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
-    val adaptive = LocalAdaptiveLayoutInfo.current
+    val adaptive = adaptiveInfo
     val artMax = adaptive.heroMaxSize
     val artCapped = artMax != Dp.Unspecified
     BackHandler(enabled = isCarouselMode) {

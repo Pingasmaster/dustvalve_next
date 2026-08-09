@@ -53,13 +53,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.util.tick
 import com.dustvalve.next.android.ui.util.toggle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun FullPlayerScaffold(
+    adaptiveInfo: AdaptiveLayoutInfo,
     state: PlayerUiState,
     positionState: PlaybackPositionState,
     snackbarHostState: SnackbarHostState,
@@ -70,7 +71,7 @@ internal fun FullPlayerScaffold(
     modifier: Modifier = Modifier,
     playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
-    val adaptive = LocalAdaptiveLayoutInfo.current
+    val adaptive = adaptiveInfo
     val track = state.currentTrack
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -120,6 +121,7 @@ internal fun FullPlayerScaffold(
                     },
                 ) {
                     FullPlayerMainColumn(
+                        adaptiveInfo = adaptive,
                         track = track,
                         state = state,
                         positionState = positionState,
@@ -182,6 +184,7 @@ private fun FullPlayerQueueFab(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun FullPlayerMainColumn(
+    adaptiveInfo: AdaptiveLayoutInfo,
     track: Track,
     state: PlayerUiState,
     positionState: PlaybackPositionState,
@@ -202,6 +205,7 @@ private fun FullPlayerMainColumn(
         ) {
             Spacer(modifier = Modifier.height(86.dp))
             FullPlayerAlbumArtRow(
+                adaptiveInfo = adaptiveInfo,
                 track = track,
                 state = state,
                 isCarouselMode = layout.isCarouselMode,

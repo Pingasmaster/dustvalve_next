@@ -65,12 +65,7 @@ import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
-<<<<<<< HEAD
 import com.dustvalve.next.android.ui.adaptive.rememberAdaptiveLayoutInfo
-=======
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
-import com.dustvalve.next.android.ui.adaptive.ProvideAdaptiveLayout
->>>>>>> wip/lint-hard-compose-screens
 import com.dustvalve.next.android.ui.navigation.AppNavigation
 import com.dustvalve.next.android.ui.navigation.BottomNavBar
 import com.dustvalve.next.android.ui.navigation.BottomNavItem
@@ -283,14 +278,9 @@ private fun MainContent(activity: MainActivity) {
     )
 }
 
-<<<<<<< HEAD
 // ViewModels are obtained here via hiltViewModel() (same activity-scoped
 // instances) rather than forwarded from MainContent. Adaptive metrics are
 // computed once above and threaded as an explicit parameter.
-=======
-// Body is separated so ProvideAdaptiveLayout can establish LocalAdaptiveLayoutInfo
-// before chrome reads it. ViewModels are obtained here via hiltViewModel().
->>>>>>> wip/lint-hard-compose-screens
 @Composable
 private fun MainContentBody(
     activity: MainActivity,
@@ -301,6 +291,7 @@ private fun MainContentBody(
     MainContentKeepScreenOn(activity = activity, playerViewModel = playerViewModel)
     MainContentDeepLinks(activity = activity, navViewModel = navViewModel, playerViewModel = playerViewModel)
     MainContentPlayerChrome(
+        adaptiveInfo = adaptiveInfo,
         playerViewModel = playerViewModel,
         navViewModel = navViewModel,
     )
@@ -308,6 +299,7 @@ private fun MainContentBody(
 
 @Composable
 private fun MainContentPlayerChrome(
+    adaptiveInfo: AdaptiveLayoutInfo,
     playerViewModel: PlayerViewModel,
     navViewModel: NavigationViewModel,
 ) {
@@ -315,63 +307,6 @@ private fun MainContentPlayerChrome(
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
-    val useNavRail = adaptiveInfo.useNavRail
-
-<<<<<<< HEAD
-    // Screen wake lock
-    val isPlaying by remember {
-        playerViewModel.uiState.map { it.isPlaying }.distinctUntilChanged()
-    }.collectAsStateWithLifecycle(initialValue = false)
-    val keepScreenOnInApp by remember {
-        activity.settingsDataStore.keepScreenOnInApp
-    }.collectAsStateWithLifecycle(initialValue = false)
-    val keepScreenOnWhilePlaying by remember {
-        activity.settingsDataStore.keepScreenOnWhilePlaying
-    }.collectAsStateWithLifecycle(initialValue = false)
-
-    // keepScreenOnWhilePlaying is a sub-toggle of keepScreenOnInApp:
-    // - parent off            -> never keep screen on
-    // - parent on, sub off    -> screen on whenever the app is open
-    // - parent on, sub on     -> screen on only while the app is open AND playing
-    val shouldKeepScreenOn = keepScreenOnInApp && (!keepScreenOnWhilePlaying || isPlaying)
-
-    DisposableEffect(shouldKeepScreenOn) {
-        if (shouldKeepScreenOn) {
-            activity.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        onDispose {
-            activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
-
-    // The self-update flow has two entry points: a silent cold-start check
-    // (DustvalveNextApplication.onCreate -> AppUpdateController.checkSilently,
-    // gated by the "Automatic update checks" toggle in Settings -> About) and
-    // the manual "Search for updates" button. Both feed the dialog hosted above.
-
-    // Deep link handling
-    val deepLinkUrl by activity.deepLinkUrl.collectAsStateWithLifecycle()
-    val deepLinkTrack by navViewModel.deepLinkTrack.collectAsStateWithLifecycle()
-
-    LaunchedEffect(deepLinkUrl) {
-        val url = deepLinkUrl ?: return@LaunchedEffect
-        activity.consumeDeepLink()
-        navViewModel.handleDeepLink(url)
-    }
-
-    LaunchedEffect(deepLinkTrack) {
-        val track = deepLinkTrack ?: return@LaunchedEffect
-        navViewModel.consumeDeepLinkTrack()
-        playerViewModel.playTrack(track)
-    }
-
-    // Adaptive chrome: NavigationRail on Medium+ (WindowSizeClass), bottom bar on Compact
-    // (metrics come from rememberAdaptiveLayoutInfo above).
-
-=======
->>>>>>> wip/lint-hard-compose-screens
     val miniVisible by remember {
         playerViewModel.uiState.map { it.isMiniPlayerVisible }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
@@ -573,7 +508,7 @@ private fun MainContentNavShell(session: MainPlayerSession) {
                         },
                     ) { innerPadding ->
                         AppNavigation(
-                            adaptiveInfo = adaptiveInfo,
+                            adaptiveInfo = session.adaptiveInfo,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(innerPadding),
@@ -597,7 +532,7 @@ private fun MainContentNavShell(session: MainPlayerSession) {
                     },
                 ) { innerPadding ->
                     AppNavigation(
-                        adaptiveInfo = adaptiveInfo,
+                        adaptiveInfo = session.adaptiveInfo,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),
@@ -626,12 +561,8 @@ private fun BoxScope.MainContentPlayerOverlay(
                     val avScope = this
                     if (isFull) {
                         FullPlayer(
-<<<<<<< HEAD
-                            adaptiveInfo = adaptiveInfo,
-                            sharedScope = sts,
-=======
+                            adaptiveInfo = session.adaptiveInfo,
                             sharedScope = sharedScope,
->>>>>>> wip/lint-hard-compose-screens
                             visScope = avScope,
                             expandDistancePx = session.expandDistancePx,
                             onCollapse = { session.navViewModel.collapsePlayer() },

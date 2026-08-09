@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.player.QueueEntry
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -62,6 +62,7 @@ internal const val VOLUME_TICK_SEGMENTS = 15
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun FullPlayerVolumeSheet(
+    adaptiveInfo: AdaptiveLayoutInfo,
     visible: Boolean,
     volumeLevel: Float,
     audioOutputDevices: List<AudioDeviceInfo>,
@@ -71,7 +72,7 @@ internal fun FullPlayerVolumeSheet(
     onSelectDevice: (AudioDeviceInfo?) -> Unit,
 ) {
     if (!visible) return
-    val adaptive = LocalAdaptiveLayoutInfo.current
+    val adaptive = adaptiveInfo
     val hapticFeedback = LocalHapticFeedback.current
     val sheetVolumeState = androidx.compose.material3.rememberSliderState(
         value = volumeLevel,
@@ -291,6 +292,7 @@ internal fun FullPlayerDeleteDownloadDialog(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun FullPlayerDebugSheet(
+    adaptiveInfo: AdaptiveLayoutInfo,
     track: Track?,
     currentSourcePath: String?,
     currentPlaybackFormat: com.dustvalve.next.android.domain.model.AudioFormat?,
@@ -299,7 +301,7 @@ internal fun FullPlayerDebugSheet(
     onDismiss: () -> Unit,
 ) {
     if (track == null) return
-    val adaptive = LocalAdaptiveLayoutInfo.current
+    val adaptive = adaptiveInfo
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetMaxWidth = adaptive.sheetMaxWidth,
@@ -421,6 +423,7 @@ internal fun FullPlayerAddToPlaylistSheet(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun FullPlayerUpNextContextSheet(
+    adaptiveInfo: AdaptiveLayoutInfo,
     contextEntry: QueueEntry?,
     onDismiss: () -> Unit,
     onToggleFavorite: (String) -> Unit,
@@ -428,7 +431,7 @@ internal fun FullPlayerUpNextContextSheet(
     onRemoveFromQueue: (Long) -> Unit,
 ) {
     if (contextEntry == null) return
-    val adaptive = LocalAdaptiveLayoutInfo.current
+    val adaptive = adaptiveInfo
     val contextTrack = contextEntry.track
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -504,6 +507,7 @@ internal fun FullPlayerUpNextContextSheet(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun FullPlayerQueueSheet(
+    adaptiveInfo: AdaptiveLayoutInfo,
     visible: Boolean,
     currentQueueIndex: Int,
     currentTrackId: String?,
@@ -512,7 +516,7 @@ internal fun FullPlayerQueueSheet(
     onEntryLongClick: (QueueEntry) -> Unit,
 ) {
     if (!visible) return
-    val adaptive = LocalAdaptiveLayoutInfo.current
+    val adaptive = adaptiveInfo
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = androidx.compose.material3.rememberBottomSheetState(

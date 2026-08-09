@@ -10,6 +10,8 @@ import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.onSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.update
@@ -69,58 +71,48 @@ internal class PlayerLibraryCoordinator(
         if (extraState.value.downloadingTrackId != null) return
         extraState.update { it.copy(downloadingTrackId = track.id) }
         downloadJob = scope.launch {
-            val result = runPlayerUiActionResult {
+            runPlayerUiActionResult(R.string.snackbar_download_failed) {
                 downloadController.downloadTrackBlocking(track)
+            }.onSuccess {
+                extraState.update {
+                    it.copy(
+                        downloadingTrackId = null,
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, _ ->
+                extraState.update {
+                    it.copy(
+                        downloadingTrackId = null,
+                        snackbarMessage = error,
+                        isSnackbarError = true,
+                    )
+                }
             }
-            result.fold(
-                onSuccess = {
-                    extraState.update {
-                        it.copy(
-                            downloadingTrackId = null,
-                            snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)),
-                            isSnackbarError = false,
-                        )
-                    }
-                },
-                onFailure = { e ->
-                    extraState.update {
-                        it.copy(
-                            downloadingTrackId = null,
-                            snackbarMessage =
-                            e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
-                            isSnackbarError = true,
-                        )
-                    }
-                },
-            )
         }
     }
 
     fun onDeleteTrackDownload() {
         val track = currentTrack() ?: return
         scope.launch {
-            val result = runPlayerUiActionResult {
+            runPlayerUiActionResult(R.string.snackbar_delete_failed) {
                 downloadAlbumUseCase.deleteTrackDownload(track.id)
+            }.onSuccess {
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_deleted, listOf(track.title)),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, _ ->
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = error,
+                        isSnackbarError = true,
+                    )
+                }
             }
-            result.fold(
-                onSuccess = {
-                    extraState.update {
-                        it.copy(
-                            snackbarMessage = UiText.StringResource(R.string.snackbar_deleted, listOf(track.title)),
-                            isSnackbarError = false,
-                        )
-                    }
-                },
-                onFailure = { e ->
-                    extraState.update {
-                        it.copy(
-                            snackbarMessage =
-                            e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed),
-                            isSnackbarError = true,
-                        )
-                    }
-                },
-            )
         }
     }
 
@@ -184,61 +176,51 @@ internal class PlayerLibraryCoordinator(
 
     fun addTrackToPlaylist(playlistId: String, trackId: String) {
         scope.launch {
-            val result = runPlayerUiActionResult {
+            runPlayerUiActionResult(R.string.snackbar_add_to_playlist_failed) {
                 playlistRepository.addTrackToPlaylist(playlistId, trackId)
                 extraState.value.playlists.find { it.id == playlistId }
+            }.onSuccess { playlist ->
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(
+                            R.string.snackbar_added_to_playlist,
+                            listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
+                        ),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, _ ->
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = error,
+                        isSnackbarError = true,
+                    )
+                }
             }
-            result.fold(
-                onSuccess = { playlist ->
-                    extraState.update {
-                        it.copy(
-                            snackbarMessage = UiText.StringResource(
-                                R.string.snackbar_added_to_playlist,
-                                listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
-                            ),
-                            isSnackbarError = false,
-                        )
-                    }
-                },
-                onFailure = { e ->
-                    extraState.update {
-                        it.copy(
-                            snackbarMessage =
-                            e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
-                            isSnackbarError = true,
-                        )
-                    }
-                },
-            )
         }
     }
 
     fun createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, trackId: String) {
         scope.launch {
-            val result = runPlayerUiActionResult {
+            runPlayerUiActionResult(R.string.snackbar_create_playlist_failed) {
                 val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
                 playlistRepository.addTrackToPlaylist(playlist.id, trackId)
                 playlist
+            }.onSuccess { playlist ->
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist.name)),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, _ ->
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = error,
+                        isSnackbarError = true,
+                    )
+                }
             }
-            result.fold(
-                onSuccess = { playlist ->
-                    extraState.update {
-                        it.copy(
-                            snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist.name)),
-                            isSnackbarError = false,
-                        )
-                    }
-                },
-                onFailure = { e ->
-                    extraState.update {
-                        it.copy(
-                            snackbarMessage =
-                            e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
-                            isSnackbarError = true,
-                        )
-                    }
-                },
-            )
         }
     }
 

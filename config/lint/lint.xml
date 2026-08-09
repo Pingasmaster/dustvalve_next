@@ -61,24 +61,6 @@
     <issue id="UnrememberedMutableState"      severity="error" />
     <issue id="ModifierParameter"             severity="error" />
     <!--
-<<<<<<< HEAD
-        slack-compose-lints' ComposeUnstableCollections flags every composable
-        parameter typed as List<T>/Set<T>/Map<T>. The runtime concern (Compose
-        treats kotlin.collections.* as unstable so composables can't skip on
-        equal-reference recompositions) is addressed by the project's
-        compose_stability_config.conf, which the Compose Compiler reads and
-        which marks these as @Stable. The lint check doesn't read that config
-        file, so the warnings are noise here. Suppressed globally.
-=======
-        Adaptive width metrics are provided once at the activity root and read
-        by many screens (content max-width, hero caps, dual-pane, sheets).
-        Threading AdaptiveLayoutInfo through every call site would dwarf the
-        CompositionLocal cost; allow this one intentional local.
-    -->
-    <issue id="ComposeCompositionLocalUsage">
-        <option name="allowed-composition-locals" value="LocalAdaptiveLayoutInfo" />
-    </issue>
-    <!--
         ComposeUnstableCollections (slack-compose-lints) is enabledByDefault=false
         in 1.5.4+ and must stay that way here. Do not add
         enable += "ComposeUnstableCollections".
@@ -93,7 +75,6 @@
         the check would force an ImmutableList/Set migration across UI boundaries
         without changing compiler behavior already granted by the stability file.
         Detekt Compose.UnstableCollections stays inactive for the same reason.
->>>>>>> wip/lint-hard-unstable-collections
     -->
 
     <!--

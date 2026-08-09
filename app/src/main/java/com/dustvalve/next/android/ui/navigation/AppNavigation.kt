@@ -35,16 +35,6 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.TestTags
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
-import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
-import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
-import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
-import com.dustvalve.next.android.ui.screens.detail.CollectionDetailScreen
-import com.dustvalve.next.android.ui.screens.library.LibraryScreen
-import com.dustvalve.next.android.ui.screens.local.LocalScreen
-import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
-import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
-import com.dustvalve.next.android.ui.screens.soundcloud.SoundCloudScreen
-import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
 import com.dustvalve.next.android.ui.util.iconRes
 import com.dustvalve.next.android.util.LinkResourceType
 
@@ -121,166 +111,11 @@ fun AppNavigation(
                 },
                 label = "NavContent",
             ) { destination ->
-<<<<<<< HEAD
-                when (destination) {
-                    is NavDestination.LocalHome -> LocalScreen(
-                        onExpandPlayer = { navViewModel.expandPlayer() },
-                    )
-
-                    is NavDestination.BandcampHome -> BandcampScreen(
-                        adaptiveInfo = adaptiveInfo,
-                        onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                        onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
-                        onOpenLink = { navViewModel.openLink(it) },
-                        onExpandPlayer = { navViewModel.expandPlayer() },
-                    )
-
-                    is NavDestination.YouTubeHome -> YouTubeScreen(
-                        adaptiveInfo = adaptiveInfo,
-                        onPlaylistClick = { url, name, coverUrl ->
-                            navViewModel.navigateTo(
-                                NavDestination.CollectionDetail(
-                                    url = url,
-                                    sourceId = "youtube",
-                                    name = name,
-                                    coverUrl = coverUrl,
-                                ),
-                            )
-                        },
-                        onArtistClick = { url, name, imageUrl ->
-                            navViewModel.navigateTo(
-                                NavDestination.ArtistDetail(
-                                    url = url,
-                                    sourceId = "youtube",
-                                    name = name,
-                                    imageUrl = imageUrl,
-                                ),
-                            )
-                        },
-                        onOpenLink = { navViewModel.openLink(it) },
-                        onExpandPlayer = { navViewModel.expandPlayer() },
-                    )
-
-                    is NavDestination.SoundCloudHome -> SoundCloudScreen(
-                        adaptiveInfo = adaptiveInfo,
-                        onCollectionClick = { url, name, coverUrl ->
-                            navViewModel.navigateTo(
-                                NavDestination.CollectionDetail(
-                                    url = url,
-                                    sourceId = "soundcloud",
-                                    name = name,
-                                    coverUrl = coverUrl,
-                                ),
-                            )
-                        },
-                        onArtistClick = { url, name, imageUrl ->
-                            navViewModel.navigateTo(
-                                NavDestination.ArtistDetail(
-                                    url = url,
-                                    sourceId = "soundcloud",
-                                    name = name,
-                                    imageUrl = imageUrl,
-                                ),
-                            )
-                        },
-                        onOpenLink = { navViewModel.openLink(it) },
-                        onExpandPlayer = { navViewModel.expandPlayer() },
-                    )
-
-                    is NavDestination.Library -> LibraryScreen(
-                        adaptiveInfo = adaptiveInfo,
-                        onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                        onArtistClick = { url ->
-                            val sourceId = when {
-                                url.contains("soundcloud.com") -> "soundcloud"
-                                url.contains("youtube.com") || url.contains("youtu.be") -> "youtube"
-                                else -> "bandcamp"
-                            }
-                            navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
-                        },
-                        onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
-                    )
-
-                    is NavDestination.Settings -> SettingsScreen(adaptiveInfo = adaptiveInfo)
-
-                    // Detail destinations: the detail ViewModel is resolved against a
-                    // per-destination store owner (cleared once the destination leaves
-                    // every back stack). Only the detail VM is scoped this way - the
-                    // screens' PlayerViewModel/NavigationViewModel defaults still
-                    // resolve to the activity-scoped shared instances.
-                    is NavDestination.AlbumDetail -> {
-                        val storeKey = checkNotNull(detailStoreKey(destination)) {
-                            "detailStoreKey must be non-null for detail destination $destination"
-                        }
-                        AlbumDetailScreen(
-                            adaptiveInfo = adaptiveInfo,
-                            albumUrl = destination.url,
-                            onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
-                            onBack = { navViewModel.navigateBack() },
-                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
-                        )
-                    }
-
-                    is NavDestination.ArtistDetail -> {
-                        val storeKey = checkNotNull(detailStoreKey(destination)) {
-                            "detailStoreKey must be non-null for detail destination $destination"
-                        }
-                        ArtistDetailScreen(
-                            adaptiveInfo = adaptiveInfo,
-                            sourceId = destination.sourceId,
-                            artistUrl = destination.url,
-                            artistNameHint = destination.name,
-                            artistImageHint = destination.imageUrl,
-                            onAlbumClick = { url ->
-                                when (destination.sourceId) {
-                                    "youtube", "soundcloud" -> navViewModel.navigateTo(
-                                        NavDestination.CollectionDetail(
-                                            url = url,
-                                            sourceId = destination.sourceId,
-                                        ),
-                                    )
-
-                                    else -> navViewModel.navigateTo(NavDestination.AlbumDetail(url))
-                                }
-                            },
-                            onBack = { navViewModel.navigateBack() },
-                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
-                        )
-                    }
-
-                    is NavDestination.PlaylistDetail -> {
-                        val storeKey = checkNotNull(detailStoreKey(destination)) {
-                            "detailStoreKey must be non-null for detail destination $destination"
-                        }
-                        PlaylistDetailScreen(
-                            adaptiveInfo = adaptiveInfo,
-                            playlistId = destination.playlistId,
-                            onBack = { navViewModel.navigateBack() },
-                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
-                        )
-                    }
-
-                    is NavDestination.CollectionDetail -> {
-                        val storeKey = checkNotNull(detailStoreKey(destination)) {
-                            "detailStoreKey must be non-null for detail destination $destination"
-                        }
-                        CollectionDetailScreen(
-                            adaptiveInfo = adaptiveInfo,
-                            sourceId = destination.sourceId,
-                            collectionUrl = destination.url,
-                            collectionName = destination.name,
-                            collectionCoverHint = destination.coverUrl,
-                            onBack = { navViewModel.navigateBack() },
-                            viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
-                        )
-                    }
-                }
-=======
                 AppNavigationDestination(
                     destination = destination,
+                    adaptiveInfo = adaptiveInfo,
                     detailVmStores = detailVmStores,
                 )
->>>>>>> wip/lint-hard-compose-screens
             }
         }
 

@@ -23,29 +23,7 @@ import androidx.graphics.shapes.Morph
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.domain.model.Track
-<<<<<<< HEAD
-import com.dustvalve.next.android.player.QueueEntry
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
-import com.dustvalve.next.android.ui.components.FastScrollbar
-import com.dustvalve.next.android.ui.components.MorphShape
-import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
-import com.dustvalve.next.android.ui.components.lists.MusicRow
-import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
-import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
-import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
-import com.dustvalve.next.android.ui.theme.AppShapes
-import com.dustvalve.next.android.ui.theme.segmentedItemShape
-import com.dustvalve.next.android.ui.util.displayNameRes
-import com.dustvalve.next.android.ui.util.tick
-import com.dustvalve.next.android.ui.util.toggle
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
-
-/** Number of haptic segments across a volume slider. */
-private const val VOLUME_TICK_SEGMENTS = 15
-=======
->>>>>>> wip/lint-hard-compose-screens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -65,11 +43,7 @@ fun FullPlayer(
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
     val positionState by playerViewModel.positionState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-<<<<<<< HEAD
-    val adaptive = adaptiveInfo
-=======
     val sheets = remember { FullPlayerSheetState() }
->>>>>>> wip/lint-hard-compose-screens
 
     val snackbarText = state.snackbarMessage?.asString()
     LaunchedEffect(snackbarText) {
@@ -135,8 +109,9 @@ fun FullPlayer(
         )
     }
 
-    FullPlayerSheetHost(state = state, sheets = sheets)
+    FullPlayerSheetHost(adaptiveInfo = adaptiveInfo, state = state, sheets = sheets)
     FullPlayerScaffold(
+        adaptiveInfo = adaptiveInfo,
         state = state,
         positionState = positionState,
         snackbarHostState = snackbarHostState,

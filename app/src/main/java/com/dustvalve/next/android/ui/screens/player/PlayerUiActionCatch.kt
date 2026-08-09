@@ -1,37 +1,28 @@
 package com.dustvalve.next.android.ui.screens.player
 
-import kotlin.coroutines.cancellation.CancellationException
+import androidx.annotation.StringRes
+import com.dustvalve.next.android.util.UiResult
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.runCatchingUiOrNull
 
 /**
- * Shared player UI-action catch. Matches the prior ViewModel style (swallow
- * non-cancellation failures); specificity rewrite is owned elsewhere.
+ * Shared player UI-action catch. Delegates to [runCatchingUi] /
+ * [runCatchingUiIgnore] / [runCatchingUiOrNull] so TooGenericExceptionCaught
+ * stays confined to UiResult.kt.
  */
 internal object PlayerUiActionCatch {
     suspend fun run(block: suspend () -> Unit) {
-        try {
-            block()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-        }
+        runCatchingUiIgnore(block = block)
     }
 
-    suspend fun <T> runOrNull(block: suspend () -> T): T? {
-        return try {
-            block()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
-        }
-    }
+    suspend fun <T> runOrNull(block: suspend () -> T): T? = runCatchingUiOrNull(block)
 
-    suspend fun <T> runResult(block: suspend () -> T): Result<T> {
-        return try {
-            Result.success(block())
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Result.failure(e)
-        }
-    }
+    suspend fun <T> runResult(
+        @StringRes fallback: Int,
+        block: suspend () -> T,
+    ): UiResult<T> = runCatchingUi(fallback, block)
 }
 
 internal suspend fun runPlayerUiAction(block: suspend () -> Unit) = PlayerUiActionCatch.run(block)
@@ -39,5 +30,7 @@ internal suspend fun runPlayerUiAction(block: suspend () -> Unit) = PlayerUiActi
 internal suspend fun <T> runPlayerUiActionOrNull(block: suspend () -> T): T? =
     PlayerUiActionCatch.runOrNull(block)
 
-internal suspend fun <T> runPlayerUiActionResult(block: suspend () -> T): Result<T> =
-    PlayerUiActionCatch.runResult(block)
+internal suspend fun <T> runPlayerUiActionResult(
+    @StringRes fallback: Int,
+    block: suspend () -> T,
+): UiResult<T> = PlayerUiActionCatch.runResult(fallback, block)

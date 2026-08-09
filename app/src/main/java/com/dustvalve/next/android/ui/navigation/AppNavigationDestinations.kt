@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.navigation
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
 import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
@@ -18,6 +19,7 @@ import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
 @Composable
 internal fun AppNavigationDestination(
     destination: NavDestination,
+    adaptiveInfo: AdaptiveLayoutInfo,
     detailVmStores: DetailVmStoreRegistry,
     navViewModel: NavigationViewModel = hiltViewModel(),
 ) {
@@ -28,8 +30,8 @@ internal fun AppNavigationDestination(
         is NavDestination.SoundCloudHome,
         is NavDestination.Library,
         is NavDestination.Settings,
-        -> AppNavigationHomeDestination(destination)
-        else -> AppNavigationDetailDestination(destination, detailVmStores)
+        -> AppNavigationHomeDestination(destination, adaptiveInfo)
+        else -> AppNavigationDetailDestination(destination, adaptiveInfo, detailVmStores)
     }
 }
 
@@ -37,6 +39,7 @@ internal fun AppNavigationDestination(
 @Composable
 private fun AppNavigationHomeDestination(
     destination: NavDestination,
+    adaptiveInfo: AdaptiveLayoutInfo,
     navViewModel: NavigationViewModel = hiltViewModel(),
 ) {
     when (destination) {
@@ -45,6 +48,7 @@ private fun AppNavigationHomeDestination(
         )
 
         is NavDestination.BandcampHome -> BandcampScreen(
+            adaptiveInfo = adaptiveInfo,
             onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
             onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
             onOpenLink = { navViewModel.openLink(it) },
@@ -52,6 +56,7 @@ private fun AppNavigationHomeDestination(
         )
 
         is NavDestination.YouTubeHome -> YouTubeScreen(
+            adaptiveInfo = adaptiveInfo,
             onPlaylistClick = { url, name, coverUrl ->
                 navViewModel.navigateTo(
                     NavDestination.CollectionDetail(
@@ -77,6 +82,7 @@ private fun AppNavigationHomeDestination(
         )
 
         is NavDestination.SoundCloudHome -> SoundCloudScreen(
+            adaptiveInfo = adaptiveInfo,
             onCollectionClick = { url, name, coverUrl ->
                 navViewModel.navigateTo(
                     NavDestination.CollectionDetail(
@@ -102,6 +108,7 @@ private fun AppNavigationHomeDestination(
         )
 
         is NavDestination.Library -> LibraryScreen(
+            adaptiveInfo = adaptiveInfo,
             onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
             onArtistClick = { url ->
                 val sourceId = when {
@@ -114,7 +121,7 @@ private fun AppNavigationHomeDestination(
             onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
         )
 
-        is NavDestination.Settings -> SettingsScreen()
+        is NavDestination.Settings -> SettingsScreen(adaptiveInfo = adaptiveInfo)
 
         else -> error("expected home destination, got $destination")
     }
@@ -124,6 +131,7 @@ private fun AppNavigationHomeDestination(
 @Composable
 private fun AppNavigationDetailDestination(
     destination: NavDestination,
+    adaptiveInfo: AdaptiveLayoutInfo,
     detailVmStores: DetailVmStoreRegistry,
     navViewModel: NavigationViewModel = hiltViewModel(),
 ) {
@@ -138,6 +146,7 @@ private fun AppNavigationDetailDestination(
                 "detailStoreKey must be non-null for detail destination $destination"
             }
             AlbumDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 albumUrl = destination.url,
                 onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                 onBack = { navViewModel.navigateBack() },
@@ -150,6 +159,7 @@ private fun AppNavigationDetailDestination(
                 "detailStoreKey must be non-null for detail destination $destination"
             }
             ArtistDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 sourceId = destination.sourceId,
                 artistUrl = destination.url,
                 artistNameHint = destination.name,
@@ -176,6 +186,7 @@ private fun AppNavigationDetailDestination(
                 "detailStoreKey must be non-null for detail destination $destination"
             }
             PlaylistDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 playlistId = destination.playlistId,
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
@@ -187,6 +198,7 @@ private fun AppNavigationDetailDestination(
                 "detailStoreKey must be non-null for detail destination $destination"
             }
             CollectionDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 sourceId = destination.sourceId,
                 collectionUrl = destination.url,
                 collectionName = destination.name,
