@@ -89,6 +89,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
@@ -189,24 +190,20 @@ fun YouTubeScreen(
 
     val onPlayItem: (SearchResult) -> Unit = { item ->
         scope.launch {
-            try {
+            runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                 val track = viewModel.getTrackInfo(item.url)
                 playerViewModel.playTrack(track)
                 onExpandPlayer()
-            } catch (_: Exception) {
-                snackbarHostState.showSnackbar(failedToPlayMsg)
             }
         }
     }
 
     val onPlayVideoId: (String) -> Unit = { videoId ->
         scope.launch {
-            try {
+            runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                 val track = viewModel.getTrackInfo("https://www.youtube.com/watch?v=$videoId")
                 playerViewModel.playTrack(track)
                 onExpandPlayer()
-            } catch (_: Exception) {
-                snackbarHostState.showSnackbar(failedToPlayMsg)
             }
         }
     }
@@ -517,13 +514,11 @@ fun YouTubeScreen(
                                                     when (result.type) {
                                                         SearchResultType.YOUTUBE_TRACK -> {
                                                             scope.launch {
-                                                                try {
+                                                                runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                                                                     val track = viewModel.getTrackInfo(result.url)
                                                                     searchBarState.animateToCollapsed()
                                                                     playerViewModel.playTrack(track)
                                                                     onExpandPlayer()
-                                                                } catch (_: Exception) {
-                                                                    snackbarHostState.showSnackbar(failedToPlayMsg)
                                                                 }
                                                             }
                                                         }
@@ -667,11 +662,9 @@ fun YouTubeScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val track = viewModel.getTrackInfo(result.url)
                             playerViewModel.playNext(track)
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -679,11 +672,9 @@ fun YouTubeScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val track = viewModel.getTrackInfo(result.url)
                             playerViewModel.addToQueue(track)
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -692,11 +683,9 @@ fun YouTubeScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val track = viewModel.getTrackInfo(ctx.url)
                             addToPlaylistTrackId = track.id
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -704,14 +693,12 @@ fun YouTubeScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val tracks = viewModel.resolvePlaylistTracks(result.url)
                             if (tracks.isNotEmpty()) {
                                 playerViewModel.playAlbum(tracks, 0)
                                 onExpandPlayer()
                             }
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -719,11 +706,9 @@ fun YouTubeScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val tracks = viewModel.resolvePlaylistTracks(result.url)
                             playerViewModel.addAllToQueue(tracks)
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -1198,6 +1183,21 @@ private fun FeedErrorCard(message: String, onRetry: () -> Unit, modifier: Modifi
                 Text(stringResource(R.string.common_action_retry))
             }
         }
+    }
+}
+
+/** Rethrows [CancellationException]; surfaces [failedMsg] for other failures. */
+private suspend fun runCatchingPlayback(
+    snackbarHostState: SnackbarHostState,
+    failedMsg: String,
+    block: suspend () -> Unit,
+) {
+    try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        snackbarHostState.showSnackbar(failedMsg)
     }
 }
 

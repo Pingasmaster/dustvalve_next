@@ -28,7 +28,6 @@ class CookieStore @Inject constructor(
 ) : CookieJar {
 
     private companion object {
-        private const val INIT_AWAIT_TIMEOUT_MS = 500L
         private const val INIT_AWAIT_TIMEOUT_SEC = 3L
     }
 
@@ -96,10 +95,11 @@ class CookieStore @Inject constructor(
     )
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        if (!initLatch.await(INIT_AWAIT_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-            android.util.Log.w("CookieStore", "Cookie initialization timed out, proceeding without cookies")
-            return emptyList()
-        }
+        // Non-blocking: OkHttp can call this on dispatcher threads during cold
+        // start. Waiting on DataStore init stalled those threads; use whatever
+        // is already in the cache (empty until init finishes, or cookies that
+        // saveFromResponse already wrote under mutatedBeforeInit). Subsequent
+        // requests see cookies once init or a save has populated the cache.
         val cookies = synchronized(lock) { cachedCookies }
         val urlPath = url.encodedPath
         return cookies

@@ -133,6 +133,10 @@ class NavigationViewModel @Inject constructor(
     private val _unsupportedLinkEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val unsupportedLinkEvents: SharedFlow<Unit> = _unsupportedLinkEvents.asSharedFlow()
 
+    /** Fired when a deep-link play resolve (YouTube / SoundCloud) fails. */
+    private val _deepLinkPlayFailedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val deepLinkPlayFailedEvents: SharedFlow<Unit> = _deepLinkPlayFailedEvents.asSharedFlow()
+
     /**
      * Open a pasted/external link. Resolves it offline first, then (only for input with an
      * explicit http/https scheme) via a single network sniff for custom-domain Bandcamp
@@ -200,7 +204,12 @@ class NavigationViewModel @Inject constructor(
             is DeepLinkAction.PlayYouTubeVideo -> {
                 navigateTo(NavDestination.YouTubeHome)
                 viewModelScope.launch {
-                    runCatchingUiIgnore {
+                    runCatchingUiIgnore(
+                        onFailure = { cause ->
+                            Log.e(TAG, "Deep-link YouTube play failed", cause)
+                            _deepLinkPlayFailedEvents.tryEmit(Unit)
+                        },
+                    ) {
                         val track = youtubeRepository.getTrackInfo(action.videoUrl)
                         _deepLinkTrack.value = track
                     }
@@ -210,7 +219,12 @@ class NavigationViewModel @Inject constructor(
             is DeepLinkAction.PlaySoundCloudTrack -> {
                 navigateTo(NavDestination.SoundCloudHome)
                 viewModelScope.launch {
-                    runCatchingUiIgnore {
+                    runCatchingUiIgnore(
+                        onFailure = { cause ->
+                            Log.e(TAG, "Deep-link SoundCloud play failed", cause)
+                            _deepLinkPlayFailedEvents.tryEmit(Unit)
+                        },
+                    ) {
                         val track = soundCloudRepository.getTrack(action.url)
                         _deepLinkTrack.value = track
                     }

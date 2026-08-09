@@ -88,6 +88,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import kotlin.coroutines.cancellation.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
@@ -209,6 +210,7 @@ fun BandcampScreen(
     val loadingTrackMsg = stringResource(R.string.common_loading_track)
     val loadingAlbumMsg = stringResource(R.string.common_loading_album)
     val failedLoadMsg = stringResource(R.string.snackbar_failed_load)
+    val failedToPlayMsg = stringResource(R.string.common_failed_to_play)
 
     // Bridge TextFieldState changes to SearchViewModel
     LaunchedEffect(textFieldState) {
@@ -701,7 +703,7 @@ fun BandcampScreen(
 
                                                         SearchResultType.TRACK -> {
                                                             scope.launch {
-                                                                try {
+                                                                runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                                                                     val track = searchViewModel.resolveBandcampTrack(
                                                                         result.url,
                                                                         result.name,
@@ -710,8 +712,6 @@ fun BandcampScreen(
                                                                         playerViewModel.playTrack(track)
                                                                         onExpandPlayer()
                                                                     }
-                                                                } catch (_: Exception) {
-                                                                    // Best-effort - silent fail for track play
                                                                 }
                                                             }
                                                         }
@@ -719,14 +719,12 @@ fun BandcampScreen(
                                                         SearchResultType.LOCAL_TRACK -> {
                                                             val trackId = result.url.removePrefix("local://")
                                                             scope.launch {
-                                                                try {
+                                                                runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                                                                     val track = searchViewModel.resolveLocalTrack(trackId)
                                                                     if (track != null) {
                                                                         playerViewModel.playTrack(track)
                                                                         onExpandPlayer()
                                                                     }
-                                                                } catch (_: Exception) {
-                                                                    // Best-effort - silent fail for track play
                                                                 }
                                                             }
                                                         }
@@ -787,11 +785,9 @@ fun BandcampScreen(
                         snackbarHostState.showSnackbar(loadingTrackMsg)
                     }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
                             if (track != null) playerViewModel.playNext(track)
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -799,11 +795,9 @@ fun BandcampScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
                             if (track != null) playerViewModel.addToQueue(track)
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -812,11 +806,9 @@ fun BandcampScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val track = searchViewModel.resolveBandcampTrack(ctx.url, ctx.name)
                             if (track != null) addToPlaylistTrackId = track.id
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -824,14 +816,12 @@ fun BandcampScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
                             if (tracks.isNotEmpty()) {
                                 playerViewModel.playAlbum(tracks, 0)
                                 onExpandPlayer()
                             }
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -839,11 +829,9 @@ fun BandcampScreen(
                     contextResult = null
                     scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
                     scope.launch {
-                        try {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
                             playerViewModel.addAllToQueue(tracks)
-                        } catch (_: Exception) {
-                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
                     }
                 },
@@ -1289,6 +1277,21 @@ private fun StaggeredAnimatedItem(index: Int, itemKey: String, tracker: StaggerA
             },
     ) {
         content()
+    }
+}
+
+/** Rethrows [CancellationException]; surfaces [failedMsg] for other failures. */
+private suspend fun runCatchingPlayback(
+    snackbarHostState: SnackbarHostState,
+    failedMsg: String,
+    block: suspend () -> Unit,
+) {
+    try {
+        block()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        snackbarHostState.showSnackbar(failedMsg)
     }
 }
 

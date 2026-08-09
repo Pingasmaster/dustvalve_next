@@ -8,6 +8,7 @@ import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
 import java.io.IOException
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.cancellation.CancellationException
@@ -30,7 +31,9 @@ class PlaybackStreamResolver @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val resolveTrackForPlayback: ResolveTrackForPlaybackUseCase,
 ) {
-    private val streamResolvedAtMs = HashMap<String, Long>()
+    // Concurrent: PlaybackManager callbacks and PlayerViewModel resolve paths
+    // may stamp/read TTL from different threads on the singleton resolver.
+    private val streamResolvedAtMs = ConcurrentHashMap<String, Long>()
 
     fun recordResolved(trackId: String) {
         streamResolvedAtMs[trackId] = System.currentTimeMillis()

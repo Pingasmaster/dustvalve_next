@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.di
 
+import android.util.Log
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.ApplicationScope
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
@@ -9,6 +10,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,5 +37,12 @@ object DispatchersModule {
     @Singleton
     @ApplicationScope
     fun providesApplicationScope(@Dispatcher(AppDispatchers.Default) defaultDispatcher: CoroutineDispatcher): CoroutineScope =
-        CoroutineScope(SupervisorJob() + defaultDispatcher)
+        CoroutineScope(
+            SupervisorJob() + defaultDispatcher +
+                CoroutineExceptionHandler { _, throwable ->
+                    Log.e(TAG, "Unhandled application-scope coroutine error", throwable)
+                },
+        )
+
+    private const val TAG = "ApplicationScope"
 }

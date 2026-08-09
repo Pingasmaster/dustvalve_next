@@ -131,6 +131,30 @@ class NavigationViewModelTest {
         }
     }
 
+    @Test fun `youtube deep link play failure emits snackbar event`() = runTest(testDispatcher) {
+        coEvery { ytRepo.getTrackInfo(any()) } throws java.io.IOException("boom")
+        val vm = viewModel(setOf(MusicProvider.LOCAL, MusicProvider.YOUTUBE))
+        vm.deepLinkPlayFailedEvents.test {
+            vm.openLink("https://youtu.be/dQw4w9WgXcQ")
+            advanceUntilIdle()
+            awaitItem()
+            cancelAndConsumeRemainingEvents()
+        }
+        assertThat(vm.deepLinkTrack.value).isNull()
+    }
+
+    @Test fun `soundcloud deep link play failure emits snackbar event`() = runTest(testDispatcher) {
+        coEvery { scRepo.getTrack(any()) } throws java.io.IOException("boom")
+        val vm = viewModel(setOf(MusicProvider.LOCAL, MusicProvider.SOUNDCLOUD))
+        vm.deepLinkPlayFailedEvents.test {
+            vm.openLink("https://soundcloud.com/artist/track-name")
+            advanceUntilIdle()
+            awaitItem()
+            cancelAndConsumeRemainingEvents()
+        }
+        assertThat(vm.deepLinkTrack.value).isNull()
+    }
+
     @Test fun `scheme-less dotted text is never sniffed`() = runTest(testDispatcher) {
         val vm = viewModel(setOf(MusicProvider.LOCAL, MusicProvider.BANDCAMP))
         vm.unsupportedLinkEvents.test {
