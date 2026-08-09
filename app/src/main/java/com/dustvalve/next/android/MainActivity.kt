@@ -229,6 +229,12 @@ class MainActivity : ComponentActivity() {
         handleIncomingIntent(intent)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // After unknown-sources grant, retry install of the already-downloaded APK.
+        appUpdateController.retryPendingInstallIfReady()
+    }
+
     private fun handleIncomingIntent(intent: Intent?) {
         if (intent == null) return
         val url = when (intent.action) {

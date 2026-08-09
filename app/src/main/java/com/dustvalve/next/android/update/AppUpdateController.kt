@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -87,6 +88,15 @@ class AppUpdateController @Inject constructor(
     @Volatile
     private var silentCheckStarted = false
     private var downloadJob: Job? = null
+
+    /**
+     * Set when [launchInstaller] deep-linked to unknown-sources settings
+     * because REQUEST_INSTALL_PACKAGES was missing. Cleared after a successful
+     * retry or when the cached APK disappears. [retryPendingInstallIfReady]
+     * re-launches the installer without re-downloading.
+     */
+    @Volatile
+    private var pendingInstallAfterPermission = false
 
     /**
      * Idempotent per process. Fires once from [com.dustvalve.next.android.DustvalveNextApplication.onCreate].
@@ -162,17 +172,48 @@ class AppUpdateController @Inject constructor(
                     val frac = if (p.totalBytes > 0L) p.fraction else null
                     _state.value = UpdateUiState.Downloading(current.versionName, frac)
                 }
-                runCatchingUiIgnoreSync(
-                    onFailure = {
-                        _messages.tryEmit(UiText.StringResource(R.string.settings_update_install_failed))
-                    },
-                ) {
+                try {
                     service.launchInstaller()
+                    pendingInstallAfterPermission = false
+                } catch (_: InstallPermissionRequiredException) {
+                    // APK is on disk; resume will retry once unknown-sources is granted.
+                    pendingInstallAfterPermission = true
+                } catch (_: IOException) {
+                    _messages.tryEmit(UiText.StringResource(R.string.settings_update_install_failed))
                 }
                 _state.value = UpdateUiState.Idle
             }.onFailure { _, _ ->
                 _state.value = UpdateUiState.Idle
                 _messages.tryEmit(UiText.StringResource(R.string.settings_update_download_failed))
+            }
+        }
+    }
+
+    /**
+     * Called from Activity.onResume after the user may have granted
+     * REQUEST_INSTALL_PACKAGES. If we previously parked a downloaded APK
+     * waiting on that grant, launch the installer without re-downloading.
+     */
+    fun retryPendingInstallIfReady() {
+        if (!pendingInstallAfterPermission) return
+        if (!service.hasDownloadedApk()) {
+            pendingInstallAfterPermission = false
+            return
+        }
+        if (!service.canRequestPackageInstalls()) return
+        scope.launch {
+            runCatchingUiIgnoreSync(
+                onFailure = {
+                    // Keep pending so a later resume can try again if the grant
+                    // race lost; clear only when the APK is gone or install launched.
+                    if (!service.hasDownloadedApk()) {
+                        pendingInstallAfterPermission = false
+                    }
+                    _messages.tryEmit(UiText.StringResource(R.string.settings_update_install_failed))
+                },
+            ) {
+                service.launchInstaller()
+                pendingInstallAfterPermission = false
             }
         }
     }
@@ -189,6 +230,8 @@ class AppUpdateController @Inject constructor(
      * snapshot (release notes, apk URL) is cheap to rebuild on the next
      * foreground; an in-flight download is preserved so the notification
      * survives backgrounding. Mirrors the same contract as [dismiss].
+     * Does not clear [pendingInstallAfterPermission] - the cached APK
+     * install retry must survive trim.
      */
     fun releaseOnTrim() {
         if (_state.value is UpdateUiState.Available) {

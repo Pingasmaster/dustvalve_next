@@ -2,8 +2,6 @@ package com.dustvalve.next.android.ui.screens.settings
 
 import android.app.NotificationManager
 import android.content.Context
-import android.content.Intent
-import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -56,7 +54,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -535,18 +532,5 @@ private fun openLiveUpdatesSettings(context: Context) {
     // There is no dedicated promoted-notifications settings action in API 37;
     // the per-app "Live Updates" toggle lives in the app's notification
     // settings. Fall back to the app details page if that screen is unavailable.
-    try {
-        context.startActivity(
-            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
-    } catch (_: android.content.ActivityNotFoundException) {
-        context.startActivity(
-            Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                "package:${context.packageName}".toUri(),
-            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
-    }
+    com.dustvalve.next.android.util.openAppNotificationSettings(context)
 }

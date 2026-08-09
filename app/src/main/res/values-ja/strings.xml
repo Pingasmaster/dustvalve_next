@@ -253,8 +253,10 @@
     <string name="local_scan_subtitle">デバイスに保存された音楽を見つけて再生</string>
     <string name="local_enable">ローカル音楽を有効にする</string>
     <string name="local_grant_permission">許可する</string>
+    <string name="local_open_app_settings">アプリ設定を開く</string>
     <string name="local_permission_needed_title">音楽へのアクセスが必要です</string>
     <string name="local_permission_needed_subtitle">権限が取り消されました。この端末の音楽をスキャンして再生するには、アクセスを許可してください。</string>
+    <string name="local_permission_permanent_subtitle">権限がブロックされています。システム設定を開き、Dustvalve Next の音楽/オーディオへのアクセスを許可してください。</string>
     <string name="local_scanning">音楽をスキャン中…</string>
     <string name="local_cd_mix">ミックス</string>
     <string name="local_tab_favorites">お気に入り</string>
@@ -497,6 +499,9 @@
     <string name="snackbar_bandcamp_preview_unavailable">プレビューは利用できません。<xliff:g id="brand">Bandcamp</xliff:g>で購入してください。</string>
     <string name="snackbar_scan_failed">スキャンに失敗しました：<xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
     <string name="snackbar_scan_needs_permission">再スキャンするには音楽ライブラリの権限を許可してください</string>
+    <string name="snackbar_folder_persist_failed">そのフォルダへのアクセスを保持できませんでした。もう一度選び、アクセスを許可してください。</string>
+    <string name="snackbar_folder_needs_repick">保存済みフォルダの書き込みアクセスが失われました。削除してから再度追加すると、そのフォルダから曲を削除できます。</string>
+    <string name="settings_local_permission_open_settings">アプリ設定を開く</string>
 
     <!-- Crash reporting (opt-in, on-device only) -->
     <string name="crash_report_title">前回、問題が発生しました</string>

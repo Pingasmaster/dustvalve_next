@@ -179,6 +179,35 @@ internal class LocalMusicSettingsCoordinator(
         }
     }
 
+    /**
+     * Cold-start / folder-list: upgrade saved trees to READ|WRITE when possible.
+     * Surfaces a snackbar when any folder still lacks write (user must re-pick).
+     */
+    fun ensurePersistableWriteGrants() {
+        scope.launch {
+            try {
+                if (settingsDataStore.getLocalMusicUseMediaStoreSync()) return@launch
+                if (settingsDataStore.getLocalMusicFolderUrisSync().isEmpty()) return@launch
+                val missing = localMusicRepository.ensurePersistableWriteGrants()
+                if (missing.isNotEmpty()) {
+                    uiState.update {
+                        it.copy(
+                            scanMessage = UiText.StringResource(R.string.snackbar_folder_needs_repick),
+                        )
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: IOException) {
+                // Silent: next delete/scan will surface permission issues.
+            } catch (_: SecurityException) {
+                // Silent
+            } catch (_: IllegalStateException) {
+                // Silent
+            }
+        }
+    }
+
     fun clearScanMessage() {
         uiState.update { it.copy(scanMessage = null) }
     }

@@ -253,8 +253,10 @@
     <string name="local_scan_subtitle">Encontre e toque as músicas salvas no seu dispositivo</string>
     <string name="local_enable">Ativar músicas locais</string>
     <string name="local_grant_permission">Conceder permissão</string>
+    <string name="local_open_app_settings">Abrir configurações do app</string>
     <string name="local_permission_needed_title">Acesso à música necessário</string>
     <string name="local_permission_needed_subtitle">A permissão foi revogada. Conceda o acesso para escanear e tocar músicas neste dispositivo.</string>
+    <string name="local_permission_permanent_subtitle">A permissão está bloqueada. Abra as configurações do sistema e permita acesso a música/áudio para o Dustvalve Next.</string>
     <string name="local_scanning">Escaneando suas músicas…</string>
     <string name="local_cd_mix">Mix</string>
     <string name="local_tab_favorites">Favoritas</string>
@@ -497,6 +499,9 @@
     <string name="snackbar_bandcamp_preview_unavailable">Prévia indisponível. Compre no <xliff:g id="brand">Bandcamp</xliff:g>.</string>
     <string name="snackbar_scan_failed">Falha ao escanear: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
     <string name="snackbar_scan_needs_permission">Conceda a permissão da biblioteca de músicas para escanear de novo</string>
+    <string name="snackbar_folder_persist_failed">Não foi possível manter o acesso a essa pasta. Escolha-a de novo e permita o acesso.</string>
+    <string name="snackbar_folder_needs_repick">Uma pasta salva perdeu acesso de escrita. Remova-a e adicione de novo para excluir músicas dessa pasta.</string>
+    <string name="settings_local_permission_open_settings">Abrir configurações do app</string>
 
     <!-- Crash reporting (opt-in, on-device only) -->
     <string name="crash_report_title">Algo deu errado da última vez</string>

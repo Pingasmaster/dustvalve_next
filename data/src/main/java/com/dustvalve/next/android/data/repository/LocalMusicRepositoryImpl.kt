@@ -57,6 +57,11 @@ class LocalMusicRepositoryImpl(
         val folderUris = settingsDataStore.getLocalMusicFolderUrisSync()
         if (folderUris.isEmpty()) return ScanResult(0, 0, 0)
 
+        // Best-effort WRITE upgrade for trees that only had READ when first
+        // picked (pre-fix installs). Failures are reported by
+        // [ensurePersistableWriteGrants]; scan still walks readable trees.
+        ensurePersistableWriteGrants()
+
         var totalAdded = 0
         var totalRemoved = 0
         var totalCount = 0
@@ -71,6 +76,33 @@ class LocalMusicRepositoryImpl(
 
     override suspend fun addFolder(uri: String) {
         settingsDataStore.addLocalMusicFolderUri(uri)
+    }
+
+    /**
+     * Re-takes READ|WRITE for each saved tree. Returns URIs that still lack a
+     * durable write grant after the attempt (caller should prompt re-pick).
+     */
+    override suspend fun ensurePersistableWriteGrants(): List<String> {
+        val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        val missingWrite = mutableListOf<String>()
+        for (uriString in settingsDataStore.getLocalMusicFolderUrisSync()) {
+            val uri = uriString.toUri()
+            try {
+                context.contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (_: SecurityException) {
+                // Original grant was READ-only or revoked; cannot upgrade in place.
+            } catch (_: IllegalArgumentException) {
+                // URI no longer valid for persist.
+            }
+            val hasWrite = context.contentResolver.persistedUriPermissions.any { perm ->
+                perm.uri == uri && perm.isWritePermission
+            }
+            if (!hasWrite) {
+                missingWrite += uriString
+            }
+        }
+        return missingWrite
     }
 
     override suspend fun removeFolder(uri: String) {
