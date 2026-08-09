@@ -114,15 +114,8 @@ private fun AppNavigationHomeDestination(
 
         is NavDestination.Library -> LibraryScreen(
             adaptiveInfo = adaptiveInfo,
-            onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-            onArtistClick = { url ->
-                val sourceId = when {
-                    url.contains("soundcloud.com") -> "soundcloud"
-                    url.contains("youtube.com") || url.contains("youtu.be") -> "youtube"
-                    else -> "bandcamp"
-                }
-                navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
-            },
+            onAlbumClick = { url -> navViewModel.navigateTo(libraryAlbumDestination(url)) },
+            onArtistClick = { url -> navViewModel.navigateTo(libraryArtistDestination(url)) },
             onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
         )
 
@@ -172,16 +165,7 @@ private fun AppNavigationDetailDestination(
                     artistImageHint = destination.imageUrl,
                 ),
                 onAlbumClick = { url ->
-                    when (destination.sourceId) {
-                        "youtube", "soundcloud" -> navViewModel.navigateTo(
-                            NavDestination.CollectionDetail(
-                                url = url,
-                                sourceId = destination.sourceId,
-                            ),
-                        )
-
-                        else -> navViewModel.navigateTo(NavDestination.AlbumDetail(url))
-                    }
+                    navViewModel.navigateTo(artistAlbumDestination(url, destination.sourceId))
                 },
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
