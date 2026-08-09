@@ -146,6 +146,31 @@ open class YouTubeInnertubeClient @Inject constructor(
     }
 
     /**
+     * Search pagination. WEB body carries the opaque continuation token from
+     * the previous page (continuationItemRenderer); response shape is
+     * onResponseReceivedCommands / appendContinuationItemsAction rather than
+     * the initial twoColumnSearchResultsRenderer tree.
+     */
+    suspend fun searchContinuation(continuation: String): JsonElement {
+        val client = YouTubeClient.WebNoAuth
+        return postWithRetry(
+            client = client,
+            endpointPath = "search",
+            queryParams = "",
+        ) { cfg ->
+            buildJsonObject {
+                put(
+                    "context",
+                    buildJsonObject {
+                        put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                    },
+                )
+                put("continuation", continuation)
+            }
+        }
+    }
+
+    /**
      * Generic browse. For browseIds beginning with "VL" (playlist browse),
      * routes via MWEB on m.youtube.com so the response matches the playlist
      * parser's expected single-column sectionList shape. All other browseIds

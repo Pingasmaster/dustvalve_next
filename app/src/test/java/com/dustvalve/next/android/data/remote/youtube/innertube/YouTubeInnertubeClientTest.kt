@@ -153,6 +153,19 @@ class YouTubeInnertubeClientTest {
             .isEqualTo("\"WEB\"")
     }
 
+    @Test fun `searchContinuation posts continuation token on WEB search`() = runTest {
+        server.enqueue(MockResponse().setBody("""{"onResponseReceivedCommands":[]}"""))
+
+        client.searchContinuation("CONT_TOKEN_1")
+        val recorded = server.takeRequest()
+
+        assertThat(recorded.path).isEqualTo("/search?prettyPrint=false")
+        assertThat(recorded.headers["X-YouTube-Client-Name"]).isEqualTo("1")
+        val body = json.parseToJsonElement(recorded.body.readUtf8()).jsonObject
+        assertThat(body["continuation"]!!.toString()).isEqualTo("\"CONT_TOKEN_1\"")
+        assertThat(body.containsKey("query")).isFalse()
+    }
+
     @Test fun `search omits params when not supplied`() = runTest {
         server.enqueue(MockResponse().setBody("""{"contents":{}}"""))
         client.search(query = "q")

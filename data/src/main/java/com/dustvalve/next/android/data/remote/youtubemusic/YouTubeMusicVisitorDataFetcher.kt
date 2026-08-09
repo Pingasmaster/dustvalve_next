@@ -160,7 +160,7 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
     data class VisitorConfig(val visitorData: String, val clientVersion: String)
 
     companion object {
-        const val DEFAULT_CLIENT_VERSION = "1.20260417.03.00"
+        const val DEFAULT_CLIENT_VERSION = "1.20260804.16.00"
 
         private const val ERROR_BODY_PREVIEW_CHARS = 120
 

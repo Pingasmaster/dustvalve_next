@@ -337,8 +337,9 @@ class YouTubePlaylistParser @Inject constructor() {
      * Decodes the seed videoId from a Mix playlistId per NewPipe's rules.
      * Returns null for genre mixes (`RDGMEM*`), personalized mixes (`RDEM*`),
      * curated radio playlists (`RDCLAK*` - the suffix is an opaque playlist
-     * token, NOT a videoId), and unknown / non-Mix IDs; the /next endpoint
-     * accepts playlistId alone for those.
+     * token, NOT a videoId), album/playlist radio after RDAMPL strip, and
+     * unknown / non-Mix IDs; the /next endpoint accepts playlistId alone for
+     * the known seedless families ([isSeedlessMixId]).
      */
     fun extractMixSeedVideoId(playlistId: String): String? {
         if (!playlistId.startsWith("RD")) return null
@@ -357,11 +358,23 @@ class YouTubePlaylistParser @Inject constructor() {
 
             playlistId.startsWith("RDEM") -> null
 
+            // RDAMPL* should be stripped by the repository before seed decode;
+            // if one still arrives here it has no 11-char seed video.
+            playlistId.startsWith("RDAMPL") -> null
+
             playlistId.length == 13 -> safe(playlistId.substring(2, 13))
 
             else -> null
         }
     }
+
+    /**
+     * Mix families that /next accepts with playlistId alone (no seed videoId).
+     * Unknown RD* shapes without a seed are unsupported and should error.
+     */
+    fun isSeedlessMixId(playlistId: String): Boolean = playlistId.startsWith("RDGMEM") ||
+        playlistId.startsWith("RDEM") ||
+        playlistId.startsWith("RDCLAK")
 
     private companion object {
         private const val SECONDS_PER_MINUTE = 60

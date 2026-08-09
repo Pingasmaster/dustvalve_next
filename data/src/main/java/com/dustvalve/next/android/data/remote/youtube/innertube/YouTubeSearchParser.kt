@@ -10,14 +10,14 @@ import javax.inject.Singleton
  * Parses standard YouTube /search responses (WEB client). Walks the
  * primary section list and emits domain SearchResults for the renderer
  * shapes we recognize: videoRenderer, channelRenderer, playlistRenderer,
- * lockupViewModel (used for some playlist results), and contents nested
- * under officialCardViewModel (official artist / playlist promo cards).
+ * lockupViewModel (playlist + podcast lockups), and contents nested under
+ * officialCardViewModel (official artist / playlist promo cards).
  *
  * Anything else (shelfRenderer, gridShelfViewModel, ads, etc.) is skipped
  * silently so the result list stays clean.
  *
  * Returns the response's continuation token alongside results so callers
- * can paginate via /search?continuation=<token>.
+ * can paginate via [YouTubeInnertubeClient.searchContinuation].
  */
 @Singleton
 class YouTubeSearchParser @Inject constructor() {
@@ -34,6 +34,28 @@ class YouTubeSearchParser @Inject constructor() {
             // itemSectionRenderer. Look for it on every iteration.
             sectionContinuationToken(section)?.let { continuation = it }
             items += itemSectionRows(section).flatMap { collectRow(it) }
+        }
+        return Page(items, continuation)
+    }
+
+    /**
+     * Continuation pages land under onResponseReceivedCommands as
+     * appendContinuationItemsAction.continuationItems: typically an
+     * itemSectionRenderer of rows plus a trailing continuationItemRenderer.
+     */
+    fun parseContinuation(root: JsonElement): Page {
+        val continuationItems = resolveContinuationItems(root) ?: return Page(emptyList(), null)
+        val items = mutableListOf<SearchResult>()
+        var continuation: String? = null
+        for (entry in continuationItems) {
+            sectionContinuationToken(entry)?.let { continuation = it }
+            val sectionRows = itemSectionRows(entry)
+            if (sectionRows.isNotEmpty()) {
+                items += sectionRows.flatMap { collectRow(it) }
+            } else {
+                // Some continuations flatten rows directly into continuationItems.
+                collectRow(entry).let { items += it }
+            }
         }
         return Page(items, continuation)
     }
@@ -58,6 +80,18 @@ class YouTubeSearchParser @Inject constructor() {
         return sl.path("contents")?.arr()
     }
 
+    private fun resolveContinuationItems(root: JsonElement): List<JsonElement>? {
+        val commands = root.path("onResponseReceivedCommands")?.arr() ?: return null
+        for (command in commands) {
+            val items = command.path("appendContinuationItemsAction")
+                ?.path("continuationItems")?.arr()
+                ?: command.path("reloadContinuationItemsCommand")
+                    ?.path("continuationItems")?.arr()
+            if (items != null) return items
+        }
+        return null
+    }
+
     /**
      * officialCardViewModel wraps channel / playlist lockups for "Official
      * artist" style cards. Flatten its contents through [parseRow]; anything
@@ -71,8 +105,8 @@ class YouTubeSearchParser @Inject constructor() {
         if (nested.isNotEmpty()) {
             return nested.mapNotNull { parseRow(it) }
         }
-        // Some payloads put a single renderer directly on the card.
-        return listOfNotNull(parseRow(card))
+        // primaryContent / other nested lockups: walk the card tree.
+        return listOfNotNull(parseOfficialCard(card))
     }
 
     private fun parseRow(row: JsonElement): SearchResult? {
@@ -187,14 +221,31 @@ class YouTubeSearchParser @Inject constructor() {
     }
 
     /**
-     * Newer "view model" rendering used for playlist search results.
-     * contentType="LOCKUP_CONTENT_TYPE_PLAYLIST" -> playlist; we ignore
-     * other content types (videos still come back as videoRenderer for now).
+     * Newer "view model" rendering used for playlist (and podcast) search
+     * results. PLAYLIST and PODCAST lockups share the same contentId +
+     * metadata shape and are both openable as playlist URLs (NewPipe maps
+     * both through YoutubeMixOrPlaylistLockupInfoItemExtractor). VIDEO
+     * lockups are ignored here - videos still arrive as videoRenderer for
+     * WEB search. Other content types are skipped with an explicit gate so
+     * the playlists filter does not silently drop unknown lockups without
+     * a documented reason.
      */
     private fun parseLockup(lvm: JsonElement): SearchResult? {
         val type = lvm.str("contentType") ?: return null
-        if (type != "LOCKUP_CONTENT_TYPE_PLAYLIST") return null
-        val playlistId = lvm.str("contentId") ?: return null
+        when (type) {
+            "LOCKUP_CONTENT_TYPE_PLAYLIST",
+            "LOCKUP_CONTENT_TYPE_PODCAST",
+            -> Unit
+            // VIDEO lockups exist on some surfaces; WEB search still emits
+            // videoRenderer for tracks, so skip rather than double-count.
+            "LOCKUP_CONTENT_TYPE_VIDEO" -> return null
+            else -> return null
+        }
+        val playlistId = lvm.str("contentId")
+            ?: lvm.path("rendererContext")?.path("commandContext")
+                ?.path("onTap")?.path("innertubeCommand")
+                ?.path("watchEndpoint")?.str("playlistId")
+            ?: return null
         val meta = lvm.path("metadata")?.path("lockupMetadataViewModel") ?: return null
         val title = meta.path("title")?.str("content") ?: return null
         val owner = meta.path("metadata")?.path("contentMetadataViewModel")

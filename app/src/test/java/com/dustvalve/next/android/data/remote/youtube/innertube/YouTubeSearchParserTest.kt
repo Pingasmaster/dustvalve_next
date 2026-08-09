@@ -194,4 +194,61 @@ class YouTubeSearchParserTest {
             assertThat(url).isEqualTo("https://www.youtube.com/playlist?list=PLofficial0001")
         }
     }
+
+    @Test fun `LOCKUP_CONTENT_TYPE_PODCAST maps as playlist`() {
+        val v = json.parseToJsonElement(
+            """
+            {"contents":{"twoColumnSearchResultsRenderer":{"primaryContents":{
+              "sectionListRenderer":{"contents":[
+                {"itemSectionRenderer":{"contents":[
+                  {"lockupViewModel":{
+                    "contentType":"LOCKUP_CONTENT_TYPE_PODCAST",
+                    "contentId":"PLpodcast00001",
+                    "metadata":{"lockupMetadataViewModel":{
+                      "title":{"content":"Some Podcast"},
+                      "metadata":{"contentMetadataViewModel":{"metadataRows":[
+                        {"metadataParts":[{"text":{"content":"Host Name"}}]}
+                      ]}}
+                    }},
+                    "contentImage":{"collectionThumbnailViewModel":{"primaryThumbnail":{
+                      "thumbnailViewModel":{"image":{"sources":[{"url":"https://t.example/p","width":120}]}}
+                    }}}
+                  }}
+                ]}}
+              ]}
+            }}}}
+            """.trimIndent(),
+        )
+        val out = parser.parse(v)
+        assertThat(out.items).hasSize(1)
+        with(out.items.first()) {
+            assertThat(type).isEqualTo(SearchResultType.YOUTUBE_PLAYLIST)
+            assertThat(name).isEqualTo("Some Podcast")
+            assertThat(url).isEqualTo("https://www.youtube.com/playlist?list=PLpodcast00001")
+            assertThat(artist).isEqualTo("Host Name")
+        }
+    }
+
+    @Test fun `parseContinuation walks appendContinuationItemsAction`() {
+        val v = json.parseToJsonElement(
+            """
+            {"onResponseReceivedCommands":[{"appendContinuationItemsAction":{"continuationItems":[
+              {"itemSectionRenderer":{"contents":[
+                {"videoRenderer":{
+                  "videoId":"contvid0001",
+                  "title":{"runs":[{"text":"Page Two Video"}]},
+                  "ownerText":{"runs":[{"text":"Chan"}]}
+                }}
+              ]}},
+              {"continuationItemRenderer":{"continuationEndpoint":{"continuationCommand":{
+                "token":"NEXT_TOK"
+              }}}}
+            ]}}]}
+            """.trimIndent(),
+        )
+        val out = parser.parseContinuation(v)
+        assertThat(out.items).hasSize(1)
+        assertThat(out.items.first().name).isEqualTo("Page Two Video")
+        assertThat(out.continuation).isEqualTo("NEXT_TOK")
+    }
 }

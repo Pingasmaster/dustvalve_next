@@ -19,8 +19,8 @@ class YouTubeMusicParserTest {
         assertThat(feed.chips).isNotEmpty()
         assertThat(feed.chips.first().title).isNotEmpty()
         assertThat(feed.chips.first().params).isNotEmpty()
-        // Podcasts mood uses unsupported multi-row renderers; chip is hidden.
-        assertThat(feed.chips.none { it.title.equals("Podcasts", ignoreCase = true) }).isTrue()
+        // Podcasts chip is visible; multi-row shelves parse once that mood loads.
+        assertThat(feed.chips.any { it.title.equals("Podcasts", ignoreCase = true) }).isTrue()
 
         assertThat(feed.shelves).hasSize(3)
         feed.shelves.forEach { shelf ->
@@ -117,5 +117,47 @@ class YouTubeMusicParserTest {
         assertThat(ex!!.message).isEqualTo(
             "YouTube Music: YouTube Music isn't available in your country - Try again later.",
         )
+    }
+
+    @Test fun `parseHome maps musicMultiRowListItemRenderer podcast episodes`() {
+        val root = json.parseToJsonElement(
+            """
+            {"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
+              "sectionListRenderer":{"contents":[
+                {"musicCarouselShelfRenderer":{
+                  "header":{"musicCarouselShelfBasicHeaderRenderer":{"title":{"runs":[{"text":"Episodes for you"}]}}},
+                  "contents":[
+                    {"musicMultiRowListItemRenderer":{
+                      "title":{"runs":[{"text":"Episode One"}]},
+                      "subtitle":{"runs":[{"text":"Show Name"}]},
+                      "thumbnail":{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[
+                        {"url":"https://yt3.example/ep=w0-h0","width":120}
+                      ]}}},
+                      "onTap":{"watchEndpoint":{"videoId":"episodevid1"}}
+                    }},
+                    {"musicMultiRowListItemRenderer":{
+                      "title":{"runs":[{"text":"Podcast Show"}]},
+                      "subtitle":{"runs":[{"text":"12 episodes"}]},
+                      "thumbnail":{"musicThumbnailRenderer":{"thumbnail":{"thumbnails":[
+                        {"url":"https://yt3.example/show=w0-h0","width":120}
+                      ]}}},
+                      "onTap":{"browseEndpoint":{"browseId":"MPSP_podcast_show1"}}
+                    }}
+                  ]
+                }}
+              ]}
+            }}}]}}}
+            """.trimIndent(),
+        )
+        val feed = parser.parseHome(root)
+        assertThat(feed.shelves).hasSize(1)
+        val tiles = feed.shelves.first() as Shelf.Tiles
+        assertThat(tiles.title).isEqualTo("Episodes for you")
+        assertThat(tiles.items).hasSize(2)
+        assertThat(tiles.items[0].kind).isEqualTo(com.dustvalve.next.android.domain.model.TileKind.SONG)
+        assertThat(tiles.items[0].id).isEqualTo("episodevid1")
+        assertThat(tiles.items[0].title).isEqualTo("Episode One")
+        assertThat(tiles.items[1].kind).isEqualTo(com.dustvalve.next.android.domain.model.TileKind.PLAYLIST)
+        assertThat(tiles.items[1].id).isEqualTo("MPSP_podcast_show1")
     }
 }

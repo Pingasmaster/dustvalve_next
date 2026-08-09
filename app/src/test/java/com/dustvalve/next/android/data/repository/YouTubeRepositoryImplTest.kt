@@ -52,6 +52,10 @@ class YouTubeRepositoryImplTest {
         playerParser = mockk()
         searchParser = mockk()
         playlistParser = mockk()
+        every { playlistParser.isSeedlessMixId(any()) } answers {
+            val id = firstArg<String>()
+            id.startsWith("RDGMEM") || id.startsWith("RDEM") || id.startsWith("RDCLAK")
+        }
         channelParser = mockk()
         nextParser = mockk()
         albumResolver = mockk()
@@ -354,8 +358,21 @@ class YouTubeRepositoryImplTest {
         val (out, page) = repo.search("q", filter = "songs")
         assertThat(out).hasSize(1)
         assertThat(out.first().type).isEqualTo(SearchResultType.YOUTUBE_TRACK)
-        // Continuation surfacing not yet wired; repository returns null for now.
-        assertThat(page).isNull()
+        assertThat(page).isEqualTo("TOK")
+    }
+
+    @Test fun `search continuation uses searchContinuation and parseContinuation`() = runTest {
+        val page2 = listOf(
+            SearchResult(SearchResultType.YOUTUBE_TRACK, "v2", "u2", null, null, null, null, null),
+        )
+        coEvery { client.searchContinuation("TOK1") } returns empty
+        every { searchParser.parseContinuation(empty) } returns YouTubeSearchParser.Page(page2, "TOK2")
+
+        val (out, page) = repo.search("q", filter = null, page = "TOK1")
+        assertThat(out).hasSize(1)
+        assertThat(page).isEqualTo("TOK2")
+        coVerify(exactly = 0) { client.search(any(), any()) }
+        coVerify { client.searchContinuation("TOK1") }
     }
 
     @Test fun `search sends playlist filter params for playlists chip`() = runTest {
@@ -401,6 +418,53 @@ class YouTubeRepositoryImplTest {
         assertThat(result.title).isEqualTo("Mix Title")
         assertThat(result.tracks.map { it.id }).containsExactly("yt_mixvid00001")
         coVerify(exactly = 0) { client.browse(any(), any()) }
+    }
+
+    @Test fun `getPlaylistTracks strips RDAMPL and browses inner OLAK playlist`() = runTest {
+        coEvery { client.browse("VLOLAK5uy_albumradio01") } returns empty
+        every { playlistParser.parse(empty, "OLAK5uy_albumradio01") } returns YouTubePlaylistParser.PlaylistPage(
+            tracks = listOf(track("albumsong01")),
+            title = "Album Radio Source",
+            continuation = null,
+        )
+
+        val result = repo.getPlaylistTracks(
+            "https://www.youtube.com/playlist?list=RDAMPLOLAK5uy_albumradio01",
+        )
+        assertThat(result.title).isEqualTo("Album Radio Source")
+        assertThat(result.tracks.map { it.id }).containsExactly("yt_albumsong01")
+        coVerify(exactly = 0) { client.next(any(), any(), any(), any()) }
+    }
+
+    @Test fun `getPlaylistTracks strips RDAMPL and keeps inner RDCLAK on mix path`() = runTest {
+        every { playlistParser.extractMixSeedVideoId("RDCLAK5uy_inner000001") } returns null
+        every { playlistParser.isSeedlessMixId("RDCLAK5uy_inner000001") } returns true
+        coEvery { client.next(videoId = null, playlistId = "RDCLAK5uy_inner000001") } returns empty
+        every {
+            playlistParser.parseMix(empty, "RDCLAK5uy_inner000001", startIndex = 1, seenVideoIds = emptySet())
+        } returns YouTubePlaylistParser.MixPage(
+            tracks = listOf(track("claksong001")),
+            title = "Curated Mix",
+            continuation = null,
+        )
+
+        val result = repo.getPlaylistTracks(
+            "https://www.youtube.com/playlist?list=RDAMPLRDCLAK5uy_inner000001",
+        )
+        assertThat(result.title).isEqualTo("Curated Mix")
+        assertThat(result.tracks.map { it.id }).containsExactly("yt_claksong001")
+    }
+
+    @Test fun `getMixPage fails clearly for unsupported seedless RD ids`() = runTest {
+        every { playlistParser.extractMixSeedVideoId("RDzzzzunsupported") } returns null
+        every { playlistParser.isSeedlessMixId("RDzzzzunsupported") } returns false
+
+        val ex = runCatching {
+            repo.getMixPage("https://www.youtube.com/playlist?list=RDzzzzunsupported")
+        }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        assertThat(ex!!.message).contains("Unsupported Mix")
+        coVerify(exactly = 0) { client.next(any(), any(), any(), any()) }
     }
 
     @Test fun `getPlaylistTracks fails when mix page is empty`() = runTest {

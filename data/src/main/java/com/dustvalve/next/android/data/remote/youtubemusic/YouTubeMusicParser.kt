@@ -133,9 +133,6 @@ class YouTubeMusicParser @Inject constructor() {
         return chips.mapNotNull { chip ->
             val renderer = chip.path("chipCloudChipRenderer") ?: return@mapNotNull null
             val title = renderer.runsText("text") ?: return@mapNotNull null
-            // Podcast mood shelves use musicMultiRowListItemRenderer which we
-            // do not parse yet; hiding the chip avoids an empty-feed dead end.
-            if (title.equals("Podcasts", ignoreCase = true)) return@mapNotNull null
             val params = renderer.path("navigationEndpoint")
                 ?.path("browseEndpoint")?.path("params")?.str()
                 ?: return@mapNotNull null
@@ -169,6 +166,14 @@ class YouTubeMusicParser @Inject constructor() {
             firstChild.containsKey("musicResponsiveListItemRenderer") -> {
                 val items = contents.mapNotNull { parseResponsiveListItemAsSong(it) }
                 if (items.isEmpty()) null else Shelf.QuickPicks(title, items)
+            }
+
+            firstChild.containsKey("musicMultiRowListItemRenderer") -> {
+                // Podcasts mood (and episode carousels) use multi-row items:
+                // title + onTap watch/browse endpoints. Map to tiles so the
+                // Podcasts chip is no longer an empty-feed dead end.
+                val tiles = contents.mapNotNull { parseMultiRowItem(it) }
+                if (tiles.isEmpty()) null else Shelf.Tiles(title, tiles)
             }
 
             firstChild.containsKey("musicTwoRowItemRenderer") -> {
@@ -271,10 +276,50 @@ class YouTubeMusicParser @Inject constructor() {
             browseId != null && pageType?.contains("ARTIST") == true ->
                 RawTile(RawKind.ARTIST_PLACEHOLDER, browseId, title, subtitle, thumbnail)
 
+            // Podcast show pages (and other non-music audio) browse like a
+            // playlist collection; surface as PLAYLIST so tile open works.
+            browseId != null && pageType?.contains("PODCAST") == true ->
+                RawTile(RawKind.PLAYLIST, browseId.removePrefix("VL"), title, subtitle, thumbnail)
+
             browseId != null -> RawTile(RawKind.PLAYLIST, browseId, title, subtitle, thumbnail)
 
             else -> null
         }
+    }
+
+    /**
+     * Podcast episode / multi-line carousel rows. Prefer onTap.watchEndpoint
+     * (playable episode), then browseEndpoint (podcast show / playlist).
+     */
+    private fun parseMultiRowItem(wrapper: JsonElement): TileItem? {
+        val item = wrapper.path("musicMultiRowListItemRenderer") ?: return null
+        val title = item.runsText("title") ?: return null
+        val subtitle = item.runsText("subtitle")
+            ?: item.runsText("secondarySubtitle")
+            ?: item.runsText("secondSubtitle")
+            ?: ""
+        val thumbnail = item.extractMusicThumbnail()
+
+        val onTap = item.path("onTap")
+        val watchVideo = onTap?.path("watchEndpoint")?.path("videoId")?.str()
+            ?: item.path("navigationEndpoint")?.path("watchEndpoint")?.path("videoId")?.str()
+        if (watchVideo != null) {
+            return TileItem(TileKind.SONG, watchVideo, title, subtitle, thumbnail)
+        }
+
+        val browse = onTap?.path("browseEndpoint")
+            ?: item.path("navigationEndpoint")?.path("browseEndpoint")
+        val browseId = browse?.path("browseId")?.str()?.removePrefix("VL")
+        if (browseId != null) {
+            return TileItem(TileKind.PLAYLIST, browseId, title, subtitle, thumbnail)
+        }
+
+        val playlistId = onTap?.path("watchPlaylistEndpoint")?.path("playlistId")?.str()
+            ?: item.path("navigationEndpoint")?.path("watchPlaylistEndpoint")?.path("playlistId")?.str()
+        if (playlistId != null) {
+            return TileItem(TileKind.PLAYLIST, playlistId, title, subtitle, thumbnail)
+        }
+        return null
     }
 
     private fun parseTwoRowItemAsHero(wrapper: JsonElement): HeroItem? {
