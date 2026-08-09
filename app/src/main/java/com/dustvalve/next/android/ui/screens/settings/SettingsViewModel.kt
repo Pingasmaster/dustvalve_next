@@ -9,6 +9,8 @@ import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
+import com.dustvalve.next.android.player.PlaybackManager
+import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.update.AppUpdateController
 import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.util.UiText
@@ -29,7 +31,7 @@ data class SettingsUiState(
     val downloadFormat: String = "flac",
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
-    val seamlessQualityUpgrade: Boolean = true,
+    val seamlessQualityUpgrade: Boolean = false,
     val oledBlack: Boolean = false,
     val albumArtTheme: Boolean = false,
     val progressBarStyle: String = "wavy",
@@ -55,7 +57,7 @@ data class SettingsUiState(
     val playerDebugOverlay: Boolean = false,
     val youtubeDefaultSource: String = "youtube",
     val keepScreenOnInApp: Boolean = false,
-    val keepScreenOnWhilePlaying: Boolean = false,
+    val keepScreenOnWhilePlaying: Boolean = true,
     val keepLocalSort: Boolean = false,
     val keepLocalFilters: Boolean = false,
     val updateState: UpdateUiState = UpdateUiState.Idle,
@@ -71,6 +73,8 @@ class SettingsViewModel @Inject constructor(
     localMusicRepository: LocalMusicRepository,
     downloadRepository: DownloadRepository,
     recentSearchRepository: RecentSearchRepository,
+    playbackManager: PlaybackManager,
+    queueManager: QueueManager,
     private val appUpdateController: AppUpdateController,
 ) : ViewModel() {
 
@@ -97,6 +101,8 @@ class SettingsViewModel @Inject constructor(
         assetEvictionPolicy = assetEvictionPolicy,
         downloadRepository = downloadRepository,
         recentSearchRepository = recentSearchRepository,
+        playbackManager = playbackManager,
+        queueManager = queueManager,
     )
 
     init {

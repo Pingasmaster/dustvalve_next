@@ -706,7 +706,7 @@ private fun MainContentKeepScreenOn(activity: MainActivity, playerViewModel: Pla
     }.collectAsStateWithLifecycle(initialValue = false)
     val keepScreenOnWhilePlaying by remember {
         activity.settingsDataStore.keepScreenOnWhilePlaying
-    }.collectAsStateWithLifecycle(initialValue = false)
+    }.collectAsStateWithLifecycle(initialValue = true)
     val shouldKeepScreenOn = keepScreenOnInApp && (!keepScreenOnWhilePlaying || isPlaying)
     DisposableEffect(shouldKeepScreenOn) {
         if (shouldKeepScreenOn) {

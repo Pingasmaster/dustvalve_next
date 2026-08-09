@@ -23,15 +23,16 @@ import javax.inject.Singleton
 
 /**
  * Singleton background worker that auto-downloads every favorited track
- * whenever the "Auto-download favorites" toggle is on (sub-toggle of
- * "Auto-download future content").
+ * whenever BOTH "Auto-download future content" AND its "Auto-download
+ * favorites" sub-toggle are on.
  *
  * Lifecycle:
  * - [start] is called from [com.dustvalve.next.android.DustvalveNextApplication.onCreate].
  *   It launches a long-lived coroutine on the application scope.
- * - The coroutine `combine`s the toggle flow with the favorite-tracks flow.
- *   Whenever the toggle is on, every favorited track that isn't already
- *   downloaded gets enqueued via [DownloadRepository.downloadTrack].
+ * - The coroutine `combine`s the parent+child toggle flows with the
+ *   favorite-tracks flow. Whenever both toggles are on, every favorited
+ *   track that isn't already downloaded gets enqueued via
+ *   [DownloadRepository.downloadTrack].
  *
  * Initial scope: tracks-only. Album/artist favorites can be expanded later
  * by also observing `favoriteIds(FavoriteType.ALBUM)` / `favoriteIds(FavoriteType.ARTIST)`
@@ -69,10 +70,15 @@ class AutoDownloadFavoritesCoordinator @Inject constructor(
             // by work we enqueue below.
             downloadController.awaitColdStartPurge()
             combine(
+                settingsDataStore.autoDownloadFutureContent.distinctUntilChanged(),
                 settingsDataStore.autoDownloadFavorites.distinctUntilChanged(),
                 favoriteRepository.favoriteIds(FavoriteType.TRACK),
                 downloadRepository.getDownloadedTrackIds().distinctUntilChanged(),
-            ) { enabled, favorites, downloaded -> Triple(enabled, favorites, downloaded) }
+            ) { futureContent, favoritesToggle, favorites, downloaded ->
+                // Favorites is a sub-toggle of "auto-download future content":
+                // parent off must stop enqueueing even if the child key is still true.
+                Triple(futureContent && favoritesToggle, favorites, downloaded)
+            }
                 .collectLatest { (enabled, favorites, downloaded) ->
                     if (!enabled) return@collectLatest
                     val missing = favorites.filter { it !in downloaded }

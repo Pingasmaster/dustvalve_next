@@ -26,6 +26,12 @@ internal class LocalMusicSettingsCoordinator(
     private var scanJob: Job? = null
 
     fun setEnabled(enabled: Boolean) {
+        if (!enabled) {
+            // Cancel any in-flight scan before wiping the local library so a
+            // late scan() completion cannot re-insert tracks / schedule sync.
+            scanJob?.cancel()
+            scanJob = null
+        }
         scope.launch {
             try {
                 settingsDataStore.setLocalMusicEnabled(enabled)
@@ -62,7 +68,9 @@ internal class LocalMusicSettingsCoordinator(
                             scanMessage = UiText.PluralsResource(R.plurals.scan_found, result.total),
                         )
                     }
-                    localMusicRepository.scheduleSyncWork()
+                    if (settingsDataStore.getLocalMusicEnabledSync()) {
+                        localMusicRepository.scheduleSyncWork()
+                    }
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -89,7 +97,9 @@ internal class LocalMusicSettingsCoordinator(
                         scanMessage = UiText.PluralsResource(R.plurals.scan_found, result.total),
                     )
                 }
-                localMusicRepository.scheduleSyncWork()
+                if (settingsDataStore.getLocalMusicEnabledSync()) {
+                    localMusicRepository.scheduleSyncWork()
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: IOException) {

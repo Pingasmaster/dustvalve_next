@@ -4,8 +4,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
@@ -124,19 +126,22 @@ open class AppUpdateService @Inject constructor(
 
         // Pre-alpha: every CI build ships as a GitHub prerelease, so we
         // MUST include them here. Drafts (unpublished) are still skipped.
-        // Each release ships TWO apks: app-release.apk (compat / Android
-        // 8-16) and app-release-future.apk (future / Android 17). Match
-        // ONLY the asset for this build's api flavor so installs never
-        // cross-download. Releases without the matching asset are skipped.
-        val apkAssetName = selectedApkAsset()
+        // Each release ships TWO apks (compat + future). Prefer the
+        // documented app-release*.apk names, then fall back to the
+        // historically uploaded dustvalve_next*.apk names. Match ONLY
+        // this build's api flavor so installs never cross-download.
+        // Releases without any matching asset are skipped.
+        val apkAssetNames = selectedApkAssets()
         val latest = releases.firstOrNull { release ->
-            !release.draft && release.assets.any { it.name == apkAssetName }
+            !release.draft && release.assets.any { it.name in apkAssetNames }
         } ?: return@withContext null
 
         val latestVersion = latest.tagName.removePrefix("v")
         if (!isNewer(latestVersion, installedVersion)) return@withContext null
 
-        val apkAsset = latest.assets.first { it.name == apkAssetName }
+        val apkAsset = apkAssetNames.firstNotNullOf { name ->
+            latest.assets.firstOrNull { it.name == name }
+        }
         AvailableUpdate(
             versionName = latestVersion,
             apkDownloadUrl = apkAsset.browserDownloadUrl,
@@ -227,9 +232,19 @@ open class AppUpdateService @Inject constructor(
 
     /**
      * Hands the downloaded APK to the system installer via FileProvider.
-     * Throws if the file is missing.
+     * Throws if the file is missing, or if the user has not granted
+     * "install unknown apps" for this package (after deep-linking them to
+     * [Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES]).
      */
     fun launchInstaller() {
+        if (!context.packageManager.canRequestPackageInstalls()) {
+            val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                data = ("package:" + context.packageName).toUri()
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(settingsIntent)
+            throw IOException("REQUEST_INSTALL_PACKAGES not granted")
+        }
         val apk = File(File(context.cacheDir, "updates"), "update.apk")
         if (!apk.exists()) throw IOException("APK not downloaded")
         val uri = FileProvider.getUriForFile(
@@ -287,26 +302,47 @@ open class AppUpdateService @Inject constructor(
 
         const val REPO_URL = "https://github.com/Pingasmaster/dustvalve_next"
 
-        /** GitHub-release asset for the future api flavor (Android 17 / minSdk 37). */
+        /** Documented GitHub-release asset for the future api flavor (Android 17 / minSdk 37). */
         const val FUTURE_APK_ASSET = "app-release-future.apk"
 
-        /** GitHub-release asset for the compat api flavor (Android 8-16 / minSdk 26). */
+        /** Documented GitHub-release asset for the compat api flavor (Android 8-16 / minSdk 26). */
         const val COMPAT_APK_ASSET = "app-release.apk"
 
         /**
-         * APK asset name for the given product flavor (defaults to
-         * [BuildConfig.FLAVOR]). "future" -> future APK; "compat" (and any
-         * other/empty value while flavors land) -> compat APK when the
-         * flavor string contains "compat", otherwise future.
+         * Legacy upload name used by some published releases for the future
+         * flavor. Prefer [FUTURE_APK_ASSET] when both are present.
          */
-        fun selectedApkAsset(flavor: String = BuildConfig.FLAVOR): String {
+        const val FUTURE_APK_ASSET_FALLBACK = "dustvalve_next-future.apk"
+
+        /**
+         * Legacy upload name used by some published releases for the compat
+         * flavor. Prefer [COMPAT_APK_ASSET] when both are present.
+         */
+        const val COMPAT_APK_ASSET_FALLBACK = "dustvalve_next.apk"
+
+        /**
+         * Preferred then fallback APK asset names for the given product
+         * flavor (defaults to [BuildConfig.FLAVOR]). Documented
+         * app-release*.apk names come first; dustvalve_next*.apk second so
+         * older/live uploads still resolve. "compat" (and any name containing
+         * "compat") -> compat assets; otherwise future.
+         */
+        fun selectedApkAssets(flavor: String = BuildConfig.FLAVOR): List<String> {
             val normalized = flavor.lowercase()
             return if (normalized == "compat" || normalized.contains("compat")) {
-                COMPAT_APK_ASSET
+                listOf(COMPAT_APK_ASSET, COMPAT_APK_ASSET_FALLBACK)
             } else {
-                FUTURE_APK_ASSET
+                listOf(FUTURE_APK_ASSET, FUTURE_APK_ASSET_FALLBACK)
             }
         }
+
+        /**
+         * Preferred APK asset name for the given product flavor. Prefer
+         * [selectedApkAssets] when matching a release that may only ship the
+         * fallback name.
+         */
+        fun selectedApkAsset(flavor: String = BuildConfig.FLAVOR): String =
+            selectedApkAssets(flavor).first()
 
         /**
          * True only for https URLs on GitHub-owned hosts. browser_download_url

@@ -4,8 +4,11 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
+import com.dustvalve.next.android.player.PlaybackManager
+import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.UiText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,6 +27,8 @@ internal class SettingsStorageSourcesPrefsCoordinator(
     private val assetEvictionPolicy: AssetEvictionPolicy,
     private val downloadRepository: DownloadRepository,
     private val recentSearchRepository: RecentSearchRepository,
+    private val playbackManager: PlaybackManager,
+    private val queueManager: QueueManager,
 ) {
     fun setAutoDownloadFavorites(enabled: Boolean) = scope.launchSettingsPref {
         settingsDataStore.setAutoDownloadFavorites(enabled)
@@ -52,6 +57,11 @@ internal class SettingsStorageSourcesPrefsCoordinator(
 
     fun setAutoDownloadFutureContent(enabled: Boolean) = scope.launchSettingsPref {
         settingsDataStore.setAutoDownloadFutureContent(enabled)
+        // Parent off: clear the favorites child so UI + coordinator cannot keep
+        // auto-downloading after the nested row disappears.
+        if (!enabled) {
+            settingsDataStore.setAutoDownloadFavorites(false)
+        }
     }
 
     fun setDownloadFormat(formatKey: String) = scope.launchSettingsPref {
@@ -72,14 +82,24 @@ internal class SettingsStorageSourcesPrefsCoordinator(
 
     fun setBandcampEnabled(enabled: Boolean) = scope.launchSettingsPref {
         settingsDataStore.setBandcampEnabled(enabled)
+        if (!enabled) pauseIfPlayingFrom(TrackSource.BANDCAMP)
     }
 
     fun setYoutubeEnabled(enabled: Boolean) = scope.launchSettingsPref {
         settingsDataStore.setYoutubeEnabled(enabled)
+        if (!enabled) pauseIfPlayingFrom(TrackSource.YOUTUBE)
     }
 
     fun setSoundcloudEnabled(enabled: Boolean) = scope.launchSettingsPref {
         settingsDataStore.setSoundcloudEnabled(enabled)
+        if (!enabled) pauseIfPlayingFrom(TrackSource.SOUNDCLOUD)
+    }
+
+    private fun pauseIfPlayingFrom(source: TrackSource) {
+        val current = queueManager.currentTrack.value ?: return
+        if (current.source == source) {
+            playbackManager.pause()
+        }
     }
 
     fun setSearchHistoryEnabled(enabled: Boolean) = scope.launchSettingsPref {

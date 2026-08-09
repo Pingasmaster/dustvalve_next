@@ -186,10 +186,9 @@ Group 13: Persistence across restart (4) [all JVM]
   + relaunch, every flow re-emits (golden screenshot or per-key asserts).
 - set-persist-defaults-fresh-install: full default matrix (see
   SettingsDataStore.kt / SettingsDataStoreTest.kt).
-- set-persist-viewmodel-vs-store-divergence: SettingsUiState defaults
-  seamlessQualityUpgrade=true and albumCoverLongPressCarousel=true while
-  DataStore defaults are false - assert UI never renders pre-collection
-  defaults (bug risk).
+- set-persist-viewmodel-vs-store-divergence: SettingsUiState defaults must
+  match DataStore (seamlessQualityUpgrade=false, keepScreenOnWhilePlaying=true,
+  etc.) so UI never renders a pre-collection flash of wrong switch state.
 
 Key files: SettingsScreen.kt, SettingsViewModel.kt, SettingsDataStore.kt
 (core/datastore), CrashReportManager.kt, CrashReportSheet.kt,

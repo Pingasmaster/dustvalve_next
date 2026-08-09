@@ -56,7 +56,10 @@ class PlaylistDetailViewModel @Inject constructor(
     init {
         collectDownloadedTrackIds()
         viewModelScope.launch {
-            settingsDataStore.autoDownloadFavorites
+            combine(
+                settingsDataStore.autoDownloadFutureContent,
+                settingsDataStore.autoDownloadFavorites,
+            ) { future, favorites -> future && favorites }
                 .catch { /* ignore */ }
                 .collect { v -> _uiState.update { it.copy(autoDownloadFavorites = v) } }
         }
