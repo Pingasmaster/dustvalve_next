@@ -136,6 +136,8 @@ Compose:
     active: true
   RememberMissing:
     active: true
+  # Same rationale as lint.xml ComposeUnstableCollections: compiler stability
+  # config + Strong Skipping; do not activate without an Immutable* migration.
   UnstableCollections:
     active: false
   ViewModelForwarding:
