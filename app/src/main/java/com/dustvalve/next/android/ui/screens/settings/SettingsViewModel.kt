@@ -12,6 +12,7 @@ import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.update.AppUpdateController
 import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -121,6 +122,222 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+<<<<<<< HEAD
+=======
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setThemeMode(mode)
+            }
+        }
+    }
+
+    fun setDynamicColor(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setDynamicColor(enabled)
+            }
+        }
+    }
+
+    fun setOledBlack(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setOledBlack(enabled)
+            }
+        }
+    }
+
+    fun setAlbumArtTheme(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setAlbumArtTheme(enabled)
+            }
+        }
+    }
+
+    fun setProgressBarStyle(style: String) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setProgressBarStyle(style)
+            }
+        }
+    }
+
+    fun setProgressBarSizeDp(sizeDp: Int) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setProgressBarSizeDp(sizeDp)
+            }
+        }
+    }
+
+    fun setAutoDownloadFavorites(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setAutoDownloadFavorites(enabled)
+            }
+        }
+    }
+
+    fun setDownloadNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setDownloadNotificationsEnabled(enabled)
+            }
+        }
+    }
+
+    fun setStorageLimit(gb: Float) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                val bytes = when {
+                    gb < 0f -> Long.MAX_VALUE
+
+                    // unlimited
+                    else -> (gb * 1024 * 1024 * 1024).toLong()
+                }
+                settingsDataStore.setStorageLimit(bytes)
+                // Trim the unified pool's unpinned (auto-cached) entries down
+                // to the new limit. Pinned user downloads are never evicted.
+                val overage = storageTracker.getOverageBytes()
+                if (overage > 0L) {
+                    assetEvictionPolicy.evict(overage)
+                    storageTracker.notifyChanged()
+                }
+            }
+        }
+    }
+
+    fun setAutoDownloadFutureContent(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setAutoDownloadFutureContent(enabled)
+            }
+        }
+    }
+
+    fun setDownloadFormat(formatKey: String) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setDownloadFormat(formatKey)
+            }
+        }
+    }
+
+    fun setSaveDataOnMetered(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setSaveDataOnMetered(enabled)
+            }
+        }
+    }
+
+    fun setProgressiveDownload(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setProgressiveDownload(enabled)
+            }
+        }
+    }
+
+    fun setSeamlessQualityUpgrade(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setSeamlessQualityUpgrade(enabled)
+            }
+        }
+    }
+
+    fun setLocalMusicEnabled(enabled: Boolean) = localMusic.setEnabled(enabled)
+
+    fun setLocalMusicUseMediaStore(enabled: Boolean) = localMusic.setUseMediaStore(enabled)
+
+    fun addLocalMusicFolder(uri: String) = localMusic.addFolder(uri)
+
+    fun removeLocalMusicFolder(uri: String) = localMusic.removeFolder(uri)
+
+    fun rescanLocalMusic() = localMusic.rescan()
+
+    fun clearScanMessage() = localMusic.clearScanMessage()
+
+    fun setBandcampEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setBandcampEnabled(enabled)
+            }
+        }
+    }
+
+    fun setYoutubeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setYoutubeEnabled(enabled)
+            }
+        }
+    }
+
+    fun setSoundcloudEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setSoundcloudEnabled(enabled)
+            }
+        }
+    }
+
+    fun setShowInlineVolumeSlider(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setShowInlineVolumeSlider(enabled)
+            }
+        }
+    }
+
+    fun setShowVolumeButton(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setShowVolumeButton(enabled)
+            }
+        }
+    }
+
+    fun setSearchHistoryEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setSearchHistoryEnabled(enabled)
+            }
+        }
+    }
+
+    fun setSearchHistorySource(source: String, enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                when (source) {
+                    "bandcamp" -> settingsDataStore.setSearchHistoryBandcamp(enabled)
+                    "youtube" -> settingsDataStore.setSearchHistoryYoutube(enabled)
+                    "soundcloud" -> settingsDataStore.setSearchHistorySoundcloud(enabled)
+                    "local" -> settingsDataStore.setSearchHistoryLocal(enabled)
+                }
+            }
+        }
+    }
+
+    fun clearAllSearchHistory() {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                recentSearchRepository.clearAllSources()
+                _uiState.update {
+                    it.copy(searchHistoryClearedMessage = UiText.StringResource(R.string.settings_search_history_cleared))
+                }
+            }
+        }
+    }
+
+    fun clearSearchHistoryClearedMessage() {
+        _uiState.update { it.copy(searchHistoryClearedMessage = null) }
+    }
+
+>>>>>>> wip/lint-hard-vm-errors
     // --- App update --------------------------------------------------------
     //
     // Thin delegates over [AppUpdateController] so the cold-start dialog and
@@ -134,4 +351,71 @@ class SettingsViewModel @Inject constructor(
     fun clearUpdateMessage() {
         _uiState.update { it.copy(updateMessage = null) }
     }
+<<<<<<< HEAD
+=======
+
+    fun setAutoUpdateCheckEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setAutoUpdateCheckEnabled(enabled)
+            }
+        }
+    }
+
+    fun setYoutubeDefaultSource(source: String) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setYoutubeDefaultSource(source)
+            }
+        }
+    }
+
+    fun setPlayerDebugOverlay(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setPlayerDebugOverlay(enabled)
+            }
+        }
+    }
+
+    fun setKeepScreenOnInApp(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setKeepScreenOnInApp(enabled)
+            }
+        }
+    }
+
+    fun setKeepScreenOnWhilePlaying(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setKeepScreenOnWhilePlaying(enabled)
+            }
+        }
+    }
+
+    fun removeAllDownloads() {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                downloadRepository.clearAll()
+            }
+        }
+    }
+
+    fun setKeepLocalSort(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setKeepLocalSort(enabled)
+            }
+        }
+    }
+
+    fun setKeepLocalFilters(enabled: Boolean) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+                settingsDataStore.setKeepLocalFilters(enabled)
+            }
+        }
+    }
+>>>>>>> wip/lint-hard-vm-errors
 }

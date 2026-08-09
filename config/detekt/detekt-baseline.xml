@@ -11,7 +11,14 @@
     Mix playlistId wire offsets (protocol literals clearer as numbers).
   - MaxLineLength on test fixtures / SQL / ytcfg HTML samples.
   - ParameterNaming on Compose onXyz callbacks (past-tense event names).
+<<<<<<< HEAD
   - TooGenericExceptionCaught on ViewModel catch (Exception) UI error surfaces.
+=======
+  - TooGenericExceptionCaught confined to UiResult.kt (shared ViewModel
+    failure choke point); AppUpdateController still pending.
+  - LoopWithTooManyJumpStatements / NestedBlockDepth / ReturnCount / ThrowsCount
+    on HTML/JSON parsers where early-continue is the natural shape.
+>>>>>>> wip/lint-hard-vm-errors
   - SwallowedException on intentional best-effort scrape/download paths.
   - MultipleEmitters on PlaylistContent (Compose list + empty state).
   - ComplexCondition on pagination / deeplink host matching.
@@ -94,6 +101,7 @@
     <ID>SwallowedException:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$e: IOException</ID>
     <ID>ThrowsCount:DownloadAlbumUseCase.kt:DownloadAlbumUseCase$suspend fun downloadArtist</ID>
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToInternal: Pair&lt;String, Long&gt;</ID>
+<<<<<<< HEAD
     <ID>TooGenericExceptionCaught:AlbumDetailViewModel.kt:AlbumDetailViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ArtistDetailViewModel.kt:ArtistDetailViewModel$e: Exception</ID>
@@ -107,6 +115,12 @@
     <ID>TooGenericExceptionCaught:SearchViewModel.kt:SearchViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SettingsPrefWrite.kt:SettingsPrefWrite$e: Exception</ID>
     <ID>TooGenericExceptionCaught:YouTubeViewModel.kt:YouTubeViewModel$e: Exception</ID>
+=======
+    <ID>ThrowsCount:YouTubeMusicParser.kt:YouTubeMusicParser$fun parseHome: YouTubeMusicHomeFeed</ID>
+    <ID>ThrowsCount:YouTubePlayerParser.kt:YouTubePlayerParser$fun parsePlayerStreamInfo: PlayerStreamInfo</ID>
+    <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:UiResult.kt:e: Exception</ID>
+>>>>>>> wip/lint-hard-vm-errors
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LocalViewModel.kt:LocalViewModel : ViewModel</ID>
     <ID>TooManyFunctions:PlaylistDao.kt:PlaylistDao</ID>

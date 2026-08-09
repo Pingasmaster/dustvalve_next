@@ -14,6 +14,8 @@ import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.SearchDustvalveUseCase
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Job
@@ -28,7 +30,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class SearchUiState(
     val query: String = "",
@@ -186,7 +187,8 @@ class SearchViewModel @Inject constructor(
             )
         }
 
-        try {
+        runCatchingUi(R.string.common_search_failed) {
+
             // Fetch local results on first page if local search is enabled
             val localResults = if (resetResults && localSearchEnabled.value &&
                 (state.selectedType == null || isLocalFilter)
@@ -223,14 +225,14 @@ class SearchViewModel @Inject constructor(
                     searchGeneration = if (resetResults) it.searchGeneration + 1 else it.searchGeneration,
                 )
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        }.onFailure { error, cause ->
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    error = UiText.orResource(e.message, R.string.common_search_failed),
+                    error = error,
                 )
             }
+        
         }
     }
 

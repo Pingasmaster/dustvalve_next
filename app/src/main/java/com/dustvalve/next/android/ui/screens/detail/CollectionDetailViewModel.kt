@@ -15,6 +15,10 @@ import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.ExpandSourceTracksUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.runCatchingUiOrNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +27,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class CollectionDetailUiState(
     val sourceId: String = "youtube",
@@ -112,7 +115,8 @@ class CollectionDetailViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = UiText.StringResource(R.string.error_source_no_collections)) }
                 return@launch
             }
-            try {
+            runCatchingUi(R.string.detail_error_load_collection) {
+
                 val collection: MusicCollection = source.getCollection(url)
                 paginationCursor = collection.continuation
                 val isFav = favoriteRepository.isFavorite(url)
@@ -134,11 +138,11 @@ class CollectionDetailViewModel @Inject constructor(
                         isImported = alreadyImported || it.importedPlaylistId != null,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _uiState.update {
-                    it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_collection))
+                    it.copy(isLoading = false, error = error)
                 }
+            
             }
         }
     }
@@ -155,7 +159,15 @@ class CollectionDetailViewModel @Inject constructor(
         loadMoreJob?.cancel()
         _uiState.update { it.copy(isLoadingMore = true) }
         loadMoreJob = viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                // Surface failure as "no more" to stop further scroll-triggered
+                // loads, but don't blow the screen away.
+                _uiState.update { it.copy(isLoadingMore = false, hasMore = false) }
+            
+                },
+            ) {
+
                 val page = source.getCollection(state.collectionUrl, cursor)
                 val existingIds = state.tracks.mapTo(HashSet()) { it.id }
                 val deduped = page.tracks.filter { it.id !in existingIds }
@@ -167,11 +179,6 @@ class CollectionDetailViewModel @Inject constructor(
                         hasMore = page.hasMore && deduped.isNotEmpty(),
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // Surface failure as "no more" to stop further scroll-triggered
-                // loads, but don't blow the screen away.
-                _uiState.update { it.copy(isLoadingMore = false, hasMore = false) }
             }
         }
     }
@@ -181,7 +188,12 @@ class CollectionDetailViewModel @Inject constructor(
         if (state.isImported || state.isImporting || state.tracks.isEmpty()) return
         _uiState.update { it.copy(isImporting = true) }
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                    _uiState.update { it.copy(isImporting = false, error = failedImport(cause)) }
+                },
+            ) {
+
                 val tracks = expandLoadedTracks()
                 if (tracks.isEmpty()) {
                     _uiState.update { it.copy(isImporting = false) }
@@ -194,9 +206,6 @@ class CollectionDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(isImported = true, isImporting = false, importedPlaylistId = playlist.id)
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(isImporting = false, error = failedImport(e)) }
             }
         }
     }
@@ -207,7 +216,13 @@ class CollectionDetailViewModel @Inject constructor(
         val prev = state.isFavorite
         _uiState.update { it.copy(isFavorite = !prev) }
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                _uiState.update { it.copy(isFavorite = prev) }
+            
+                },
+            ) {
+
                 if (prev) {
                     favoriteRepository.remove(url)
                     // Delete ONLY the playlist this session imported (id captured in
@@ -229,9 +244,6 @@ class CollectionDetailViewModel @Inject constructor(
                     favoriteRepository.add(url, favType)
                     importToLibrary()
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(isFavorite = prev) }
             }
         }
     }
@@ -263,7 +275,8 @@ class CollectionDetailViewModel @Inject constructor(
         if (_uiState.value.isDownloading) return
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_download_failed) {
+
                 val tracks = expandLoadedTracks()
                 val pending = tracks.filter { it.id !in _uiState.value.downloadedTrackIds }
                 if (pending.isEmpty()) {
@@ -281,18 +294,17 @@ class CollectionDetailViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 retryAction = { downloadAll() }
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
                         snackbarMessage =
-                        e.message?.let { m -> UiText.DynamicString(m) }
-                            ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
@@ -306,7 +318,7 @@ class CollectionDetailViewModel @Inject constructor(
         val source = sources[state.sourceId] ?: return state.tracks
         if (state.tracks.isEmpty() && !state.hasMore) return emptyList()
         _uiState.update { it.copy(isLoadingMore = true) }
-        return try {
+        return runCatchingUiOrNull {
             val expanded = expandSourceTracks.expandCollection(
                 source = source,
                 url = state.collectionUrl,
@@ -325,8 +337,7 @@ class CollectionDetailViewModel @Inject constructor(
                 )
             }
             expanded
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } ?: run {
             _uiState.update { it.copy(isLoadingMore = false) }
             state.tracks
         }
@@ -335,10 +346,9 @@ class CollectionDetailViewModel @Inject constructor(
     fun deleteAllDownloads() {
         viewModelScope.launch {
             for (track in _uiState.value.tracks) {
-                try {
+                runCatchingUiIgnore {
+
                     downloadAlbumUseCase.deleteTrackDownload(track.id)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
                 }
             }
             _uiState.update {
@@ -355,7 +365,7 @@ class CollectionDetailViewModel @Inject constructor(
         _uiState.update { it.copy(snackbarMessage = null, isSnackbarError = false) }
     }
 
-    private fun failedImport(e: Exception): UiText = UiText.StringResource(
+    private fun failedImport(e: Throwable): UiText = UiText.StringResource(
         R.string.error_import_playlist,
         listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
     )

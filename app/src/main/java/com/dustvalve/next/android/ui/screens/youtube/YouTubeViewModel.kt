@@ -15,6 +15,10 @@ import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.UiResult
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
@@ -29,7 +33,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class DiscoverSection(
     val title: UiText? = null,
@@ -236,7 +239,8 @@ class YouTubeViewModel @Inject constructor(
         ytmHomeJob?.cancel()
         _uiState.update { it.copy(ytmHomeLoading = true, ytmHomeError = null) }
         ytmHomeJob = viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_failed_load) {
+
                 val feed = if (params == null) {
                     youtubeMusicRepository.getHome()
                 } else {
@@ -249,11 +253,11 @@ class YouTubeViewModel @Inject constructor(
                         ytmSelectedChipParams = params,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _uiState.update {
-                    it.copy(ytmHomeLoading = false, ytmHomeError = UiText.orResource(e.message, R.string.snackbar_failed_load))
+                    it.copy(ytmHomeLoading = false, ytmHomeError = error)
                 }
+            
             }
         }
     }
@@ -305,7 +309,20 @@ class YouTubeViewModel @Inject constructor(
     }
 
     private suspend fun loadRecommendationsSection() {
-        try {
+        runCatchingUiIgnore(
+            onFailure = { cause ->
+            _uiState.update {
+                it.copy(
+                    recommendationsSection = it.recommendationsSection.copy(
+                        isLoading = false,
+                        error = cause.message,
+                    ),
+                )
+            }
+        
+            },
+        ) {
+
             val videoId = settingsDataStore.lastYoutubeVideoId.firstOrNull()
             if (videoId == null) {
                 _uiState.update {
@@ -340,21 +357,19 @@ class YouTubeViewModel @Inject constructor(
                     ),
                 )
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _uiState.update {
-                it.copy(
-                    recommendationsSection = it.recommendationsSection.copy(
-                        isLoading = false,
-                        error = e.message,
-                    ),
-                )
-            }
         }
     }
 
     private suspend fun loadTrendingSection() {
-        try {
+        runCatchingUiIgnore(
+            onFailure = { cause ->
+            _uiState.update {
+                it.copy(trendingSection = it.trendingSection.copy(isLoading = false, error = cause.message))
+            }
+        
+            },
+        ) {
+
             val (results, _) = youtubeRepository.search(
                 query = "trending music",
                 filter = "songs",
@@ -363,16 +378,23 @@ class YouTubeViewModel @Inject constructor(
             _uiState.update {
                 it.copy(trendingSection = it.trendingSection.copy(items = results, isLoading = false))
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _uiState.update {
-                it.copy(trendingSection = it.trendingSection.copy(isLoading = false, error = e.message))
-            }
         }
     }
 
     private suspend fun loadGenreSection(index: Int, genre: GenreQuery) {
-        try {
+        runCatchingUiIgnore(
+            onFailure = { cause ->
+            _uiState.update {
+                val updated = it.genreSections.toMutableList()
+                if (index < updated.size) {
+                    updated[index] = updated[index].copy(isLoading = false, error = cause.message)
+                }
+                it.copy(genreSections = updated)
+            }
+        
+            },
+        ) {
+
             val (results, _) = youtubeRepository.search(
                 query = genre.searchQuery,
                 filter = "songs",
@@ -382,15 +404,6 @@ class YouTubeViewModel @Inject constructor(
                 val updated = it.genreSections.toMutableList()
                 if (index < updated.size) {
                     updated[index] = updated[index].copy(items = results, isLoading = false)
-                }
-                it.copy(genreSections = updated)
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _uiState.update {
-                val updated = it.genreSections.toMutableList()
-                if (index < updated.size) {
-                    updated[index] = updated[index].copy(isLoading = false, error = e.message)
                 }
                 it.copy(genreSections = updated)
             }
@@ -448,18 +461,19 @@ class YouTubeViewModel @Inject constructor(
 
         moodJob?.cancel()
         moodJob = viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_failed_load) {
+
                 val (results, _) = youtubeRepository.search(
                     query = mood.query,
                     filter = "songs",
                     page = null,
                 )
                 _uiState.update { it.copy(moodResults = results, isMoodLoading = false) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _uiState.update {
-                    it.copy(isMoodLoading = false, moodError = UiText.orResource(e.message, R.string.snackbar_failed_load))
+                    it.copy(isMoodLoading = false, moodError = error)
                 }
+            
             }
         }
     }
@@ -575,7 +589,8 @@ class YouTubeViewModel @Inject constructor(
         // overwrite nextPage. (Cancellation covers most cases; this closes the race.)
         val generationAtStart = _uiState.value.searchGeneration
         _uiState.update { it.copy(isLoading = true, error = null) }
-        try {
+        runCatchingUi(R.string.common_search_failed) {
+
             val source = _uiState.value.activeSource
             val uiFilter = _uiState.value.selectedFilter
             val page = if (resetResults) null else nextPage
@@ -615,11 +630,11 @@ class YouTubeViewModel @Inject constructor(
                     searchGeneration = if (resetResults) it.searchGeneration + 1 else it.searchGeneration,
                 )
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        }.onFailure { error, cause ->
             _uiState.update {
-                it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.common_search_failed))
+                it.copy(isLoading = false, error = error)
             }
+        
         }
     }
 
@@ -632,7 +647,7 @@ class YouTubeViewModel @Inject constructor(
      * completed - false means it failed (and [YouTubeUiState.error] was set).
      */
     fun importPlaylist(playlistUrl: String, name: String): Deferred<Boolean> = viewModelScope.async {
-        try {
+        runCatchingUi(R.string.error_unknown) {
             val result = youtubeRepository.getPlaylistTracks(playlistUrl)
             // The favorite is created in the SAME transaction as the import
             // itself: cancellation between the two used to leave an
@@ -644,17 +659,21 @@ class YouTubeViewModel @Inject constructor(
                 favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
             )
             true
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _uiState.update {
-                it.copy(
-                    error = UiText.StringResource(
-                        R.string.error_import_playlist,
-                        listOf(e.message ?: UiText.StringResource(R.string.error_unknown)),
-                    ),
-                )
+        }.let { outcome ->
+            when (outcome) {
+                is UiResult.Success -> true
+                is UiResult.Failure -> {
+                    _uiState.update {
+                        it.copy(
+                            error = UiText.StringResource(
+                                R.string.error_import_playlist,
+                                listOf(outcome.cause.message ?: UiText.StringResource(R.string.error_unknown)),
+                            ),
+                        )
+                    }
+                    false
+                }
             }
-            false
         }
     }
 

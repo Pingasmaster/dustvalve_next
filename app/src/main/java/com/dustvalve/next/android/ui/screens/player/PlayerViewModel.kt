@@ -20,6 +20,10 @@ import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueEntry
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiOrNull
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +32,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
+<<<<<<< HEAD
+=======
+import kotlin.math.roundToInt
+>>>>>>> wip/lint-hard-vm-errors
 
 data class PlayerUiState(
     val currentTrack: Track? = null,
@@ -119,13 +127,267 @@ class PlayerViewModel @Inject constructor(
         val resolver = playbackStreamResolver
         playbackManager.streamIsStale = resolver::isResolutionStale
         playbackManager.streamResolver = { track -> resolver.resolveOnDemand(track) }
+<<<<<<< HEAD
         audio.register()
+=======
+        audioManager.registerAudioDeviceCallback(audioDeviceCallback, Handler(Looper.getMainLooper()))
+    }
+
+    // Surface player errors as a snackbar - unless a one-shot automatic
+    // re-resolve can transparently recover an expired stream URL first.
+    // Historically onPlayerError only logged to logcat, so a failed
+    // stream/file looked like "track shown, stuck at 0:00, play button dead"
+    // with zero feedback.
+    private fun collectPlaybackErrors() {
+        viewModelScope.launch {
+            playbackManager.playbackError.collect { error ->
+                if (error == null) return@collect
+                playbackManager.clearPlaybackError()
+                if (tryAutoRecoverStream(error)) return@collect
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
+                        isSnackbarError = true,
+                    )
+                }
+            }
+        }
+    }
+
+    // A track that reaches READY genuinely played: re-arm its one-shot
+    // auto-recovery so a future expiry (multi-hour listening session) can be
+    // recovered again. A dead stream never reaches READY, so this cannot
+    // create a retry loop.
+    private fun collectPlaybackReadyForRetryReset() {
+        viewModelScope.launch {
+            playbackManager.playbackState.collect { state ->
+                if (state == Player.STATE_READY) {
+                    queueManager.currentTrack.value?.id?.let { autoRetriedTrackIds.remove(it) }
+                }
+            }
+        }
+    }
+
+    /**
+     * Error codes that typically mean the resolved stream URL went stale
+     * (expired CDN token -> HTTP 403/410/404 or an HTML error page) and a
+     * fresh resolution can fix it.
+     */
+    private fun isRecoverableStreamError(error: PlaybackException): Boolean = when (error.errorCode) {
+        PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
+        PlaybackException.ERROR_CODE_IO_INVALID_HTTP_CONTENT_TYPE,
+        PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND,
+        -> true
+
+        else -> false
+    }
+
+    /**
+     * One-shot automatic recovery from an expired stream URL: re-resolve the
+     * current track, patch the queue entry in place and retry playback at the
+     * position where it failed. Returns false when recovery is not applicable
+     * or failed - the caller then surfaces the normal error UI.
+     */
+    private suspend fun tryAutoRecoverStream(error: PlaybackException): Boolean {
+        val track = queueManager.currentTrack.value ?: return false
+        // Order matters: the one-shot guard (add) must only trip once the
+        // failure is actually recoverable for this track.
+        if (track.isLocal ||
+            !isRecoverableStreamError(error) ||
+            !autoRetriedTrackIds.add(track.id)
+        ) {
+            return false
+        }
+        val resumeAt = playbackManager.currentPosition.value
+        _extraState.update { it.copy(isLoadingTrack = true) }
+        val fresh = try {
+            runCatchingUiOrNull {
+                playbackStreamResolver.reResolve(track)
+            }
+        } finally {
+            _extraState.update { it.copy(isLoadingTrack = false) }
+        }
+        if (fresh?.streamUrl == null) return false
+        queueManager.applyResolvedTracks(mapOf(fresh.id to fresh))
+        playbackManager.playTrack(fresh)
+        if (resumeAt > 0L) playbackManager.seekTo(resumeAt)
+        return true
+    }
+
+    // Reactively patch the queue's per-track isFavorite from the DB so
+    // toggles done from album view / favorites tab show up on the player.
+    private fun collectFavoriteTrackIds() {
+        viewModelScope.launch {
+            favoriteRepository.favoriteIds(FavoriteType.TRACK)
+                .catch { /* ignore */ }
+                .collect { ids ->
+                    queueManager.applyFavoriteIds(ids)
+                }
+        }
+>>>>>>> wip/lint-hard-vm-errors
     }
 
     override fun onCleared() {
         audio.unregister()
     }
 
+<<<<<<< HEAD
+=======
+    /**
+     * Resolves the best available stream URL for a track and applies UI
+     * source/format state when [updateState] is true.
+     */
+    private suspend fun resolveTrackForPlayback(track: Track, updateState: Boolean = true): Track {
+        val result = resolveTrackForPlaybackUseCase(track, reportFailure = updateState)
+        if (result.recordedRemoteResolution) {
+            playbackStreamResolver.recordResolved(result.track.id)
+        }
+        if (updateState) {
+            _extraState.update {
+                var next = it.copy(
+                    currentPlaybackFormat = result.playbackFormat,
+                    currentSourcePath = result.sourcePath,
+                )
+                if (result.streamFailed) {
+                    next = next.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
+                        isSnackbarError = true,
+                    )
+                }
+                next
+            }
+        }
+        return result.track
+    }
+
+    /**
+     * Triggers a progressive HQ download in the background after playback starts.
+     * The next time this track is played, the local HQ file will be used.
+     */
+    private fun triggerProgressiveDownload(track: Track) {
+        if (track.isLocal) return // Local tracks don't need downloading
+        progressiveDownloadJob?.cancel()
+        progressiveDownloadJob = viewModelScope.launch {
+            runCatchingUiIgnore {
+
+                val progressiveEnabled = settingsDataStore.getProgressiveDownloadSync()
+                if (!progressiveEnabled) return@launch
+
+                // Check if already downloaded at HQ
+                val existingDownload = downloadRepository.getDownloadInfo(track.id)
+                if (existingDownload != null && existingDownload.format.qualityRank > AudioFormat.MP3_128.qualityRank) {
+                    precacheNextTrack()
+                    return@launch
+                }
+
+                // On metered + save-data enabled -> download MP3-320 instead of preferred format
+                // YouTube always gets best available stream, so skip format override
+                val formatOverride = if (track.source != TrackSource.YOUTUBE) {
+                    val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
+                    if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
+                        AudioFormat.MP3_320
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+
+                // Download in background
+                downloadRepository.downloadTrack(track, formatOverride)
+
+                // Seamless hot-swap: if the same track is still playing, switch to local HQ file
+                val downloadInfo = downloadRepository.getDownloadInfo(track.id)
+                if (downloadInfo != null) {
+                    val currentTrack = queueManager.currentTrack.value
+                    if (currentTrack != null && currentTrack.id == track.id) {
+                        val seamlessUpgrade = settingsDataStore.getSeamlessQualityUpgradeSync()
+                        if (seamlessUpgrade) {
+                            playbackManager.hotSwapSource(downloadInfo.streamUri, track.id)
+                        }
+                        _extraState.update {
+                            it.copy(
+                                currentPlaybackFormat = downloadInfo.format,
+                                currentSourcePath = downloadInfo.filePath,
+                            )
+                        }
+                    }
+                }
+
+                // Current track download complete - precache next track in queue
+                precacheNextTrack()
+            }
+        }
+    }
+
+    /**
+     * Precaches the next track in the queue by downloading it in the background.
+     * Skips if the next track is already downloaded or currently being downloaded.
+     */
+    private suspend fun precacheNextTrack() {
+        val queue = queueManager.queue.value
+        val currentIndex = queueManager.currentIndex.value
+        val nextTrack = queue.getOrNull(currentIndex + 1) ?: return
+
+        // Already downloaded - nothing to do
+        val existing = downloadRepository.getDownloadInfo(nextTrack.id)
+        if (existing != null && existing.format.qualityRank >= AudioFormat.MP3_128.qualityRank) return
+
+        // Already being manually downloaded - don't duplicate
+        if (_extraState.value.downloadingTrackId == nextTrack.id) return
+
+        runCatchingUiIgnore {
+
+            val formatOverride = if (nextTrack.source != TrackSource.YOUTUBE) {
+                val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
+                if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
+                    AudioFormat.MP3_320
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+            downloadRepository.downloadTrack(nextTrack, formatOverride)
+        }
+    }
+
+    private fun collectDownloadedTrackIds() {
+        viewModelScope.launch {
+            downloadRepository.getDownloadedTrackIds()
+                .catch { /* ignore */ }
+                .collect { ids ->
+                    _extraState.update { it.copy(downloadedTrackIds = ids.toSet()) }
+                }
+        }
+    }
+
+    private fun collectPlaylists() {
+        viewModelScope.launch {
+            playlistRepository.getAllPlaylists()
+                .catch { /* ignore */ }
+                .collect { playlists ->
+                    _extraState.update { it.copy(playlists = playlists) }
+                }
+        }
+    }
+
+    private fun collectUserPlaylistTrackIds() {
+        viewModelScope.launch {
+            playlistRepository.getTrackIdsInUserPlaylists()
+                .catch { /* ignore */ }
+                .collect { ids ->
+                    _extraState.update { it.copy(userPlaylistTrackIds = ids) }
+                }
+        }
+    }
+
+    // The 5 Hz playback-position tick is deliberately NOT part of this state:
+    // every browse screen collects uiState, and folding the tick in used to
+    // recompose all of them (and their visible list rows) 5x/sec for the whole
+    // playback session. Position/duration live in [positionState], collected
+    // only by the seek bar / progress consumers.
+>>>>>>> wip/lint-hard-vm-errors
     val uiState: StateFlow<PlayerUiState> = combine(
         queueManager.currentTrack,
         queueManager.queue,
@@ -208,5 +470,450 @@ class PlayerViewModel @Inject constructor(
         initialValue = PlaybackPositionState(),
     )
 
+<<<<<<< HEAD
     val queueEntries: StateFlow<List<QueueEntry>> = queueManager.entries
+=======
+    fun setAudioOutputDevice(device: AudioDeviceInfo?) {
+        _activeAudioDevice.value = device
+        playbackManager.setPreferredAudioDevice(device)
+    }
+
+    fun setVolume(level: Float) {
+        val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val newVol = (level * maxVol).roundToInt().coerceIn(0, maxVol)
+        try {
+            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+        } catch (_: SecurityException) {
+            // Do-Not-Disturb / volume policy can forbid the change. This is
+            // called from a drag-gesture snapshotFlow collector; an uncaught
+            // SecurityException there kills the whole app.
+        }
+    }
+
+    fun onPlayPause() {
+        playbackManager.togglePlayPause()
+    }
+
+    fun onNext() {
+        playbackManager.skipNext()
+    }
+
+    fun onPrevious() {
+        playbackManager.skipPrevious()
+    }
+
+    fun onSeek(ms: Long) {
+        playbackManager.seekTo(ms)
+    }
+
+    fun onStop() {
+        playbackManager.stop()
+        queueManager.clear()
+    }
+
+    fun onToggleShuffle() {
+        val newValue = !playbackManager.shuffleEnabled.value
+        playbackManager.setShuffleEnabled(newValue)
+    }
+
+    fun onToggleRepeat() {
+        val nextMode = when (playbackManager.repeatMode.value) {
+            RepeatMode.OFF -> RepeatMode.ALL
+            RepeatMode.ALL -> RepeatMode.ONE
+            RepeatMode.ONE -> RepeatMode.OFF
+        }
+        playbackManager.setRepeatMode(nextMode)
+    }
+
+    fun playTrack(track: Track) {
+        val generation = ++loadingGeneration
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            val isYouTubeStream = track.source == TrackSource.YOUTUBE &&
+                downloadRepository.getDownloadInfo(track.id) == null
+
+            // Resolve FIRST, mutate the queue only on success: replacing the
+            // queue before resolution destroyed the previous queue on failure
+            // and left the player/UI desynced (old audio under new track's UI).
+            if (isYouTubeStream) {
+                playbackManager.pause()
+                _extraState.update { it.copy(isLoadingTrack = true) }
+            }
+
+            val resolved = try {
+                resolveTrackForPlayback(track)
+            } finally {
+                if (isYouTubeStream && generation == loadingGeneration) {
+                    _extraState.update { it.copy(isLoadingTrack = false) }
+                }
+            }
+
+            // Stream resolution failed: leave the previous queue and player
+            // fully intact - resolveTrackForPlayback already raised the
+            // error snackbar.
+            if (resolved.streamUrl == null) return@launch
+            queueManager.setQueue(listOf(resolved), 0)
+            playbackManager.playTrack(resolved)
+            triggerProgressiveDownload(track)
+            runCatchingUiIgnore {
+
+                libraryRepository.addToRecent(track)
+                if (track.source == TrackSource.YOUTUBE) {
+                    settingsDataStore.setLastYoutubeVideoId(track.id.removePrefix("yt_"))
+                }
+            }
+        }
+    }
+
+    fun playTrackInList(tracks: List<Track>, index: Int) {
+        val generation = ++loadingGeneration
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            val targetTrack = tracks[index]
+            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
+                downloadRepository.getDownloadInfo(targetTrack.id) == null
+
+            if (isYouTubeStream) {
+                playbackManager.pause()
+                queueManager.setQueue(tracks, index)
+                _extraState.update { it.copy(isLoadingTrack = true) }
+            }
+
+            val resolvedTarget = try {
+                resolveTrackForPlayback(targetTrack)
+            } finally {
+                if (isYouTubeStream && generation == loadingGeneration) {
+                    _extraState.update { it.copy(isLoadingTrack = false) }
+                }
+            }
+
+            val queueTracks = tracks.toMutableList().also { it[index] = resolvedTarget }
+            playbackManager.playQueue(queueTracks, index)
+            triggerProgressiveDownload(targetTrack)
+            runCatchingUiIgnore {
+
+                libraryRepository.addToRecent(targetTrack)
+            }
+            // Resolve remaining tracks in background for seamless queue transitions
+            resolveRemainingTracks(queueTracks, index)
+        }
+    }
+
+    fun playAlbum(tracks: List<Track>, startIndex: Int) {
+        val generation = ++loadingGeneration
+        playJob?.cancel()
+        playJob = viewModelScope.launch {
+            val targetTrack = tracks[startIndex]
+            val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
+                downloadRepository.getDownloadInfo(targetTrack.id) == null
+
+            if (isYouTubeStream) {
+                playbackManager.pause()
+                queueManager.setQueue(tracks, startIndex)
+                _extraState.update { it.copy(isLoadingTrack = true) }
+            }
+
+            val resolvedTarget = try {
+                resolveTrackForPlayback(targetTrack)
+            } finally {
+                if (isYouTubeStream && generation == loadingGeneration) {
+                    _extraState.update { it.copy(isLoadingTrack = false) }
+                }
+            }
+
+            val queueTracks = tracks.toMutableList().also { it[startIndex] = resolvedTarget }
+            playbackManager.playQueue(queueTracks, startIndex)
+            triggerProgressiveDownload(targetTrack)
+            runCatchingUiIgnore {
+
+                libraryRepository.addToRecent(targetTrack)
+            }
+            // Resolve remaining tracks in background for seamless queue transitions
+            resolveRemainingTracks(queueTracks, startIndex)
+        }
+    }
+
+    private suspend fun resolveRemainingTracks(tracks: List<Track>, skipIndex: Int) {
+        // Patch each track into the live queue AS IT RESOLVES, by id and in
+        // place: partial progress immediately benefits skips, and - unlike the
+        // old wholesale setQueue at the end - queue edits made during the long
+        // resolution window (playNext/add/remove/reorder/shuffle) survive.
+        // [tracks] is a private copy; the list installed in the queue is never
+        // mutated here.
+        for (i in tracks.indices) {
+            if (i == skipIndex) continue
+            val original = tracks[i]
+            val resolved = resolveTrackForPlayback(original, updateState = false)
+            if (resolved != original) {
+                queueManager.applyResolvedTracks(mapOf(resolved.id to resolved))
+            }
+        }
+    }
+
+    fun skipToQueueIndex(index: Int) {
+        playbackManager.skipToQueueIndex(index)
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+
+                queueManager.queue.value.getOrNull(index)?.let { libraryRepository.addToRecent(it) }
+            }
+        }
+    }
+
+    private var favoriteJob: Job? = null
+
+    fun onToggleFavorite() {
+        if (favoriteJob?.isActive == true) return
+        val track = uiState.value.currentTrack ?: return
+        favoriteJob = viewModelScope.launch {
+            runCatchingUiIgnore {
+
+                libraryRepository.toggleTrackFavorite(track.id)
+                // Queue state is patched via collectFavoriteTrackIds -> applyFavoriteIds,
+                // which preserves the unshuffle snapshot. setQueue here would null it.
+            }
+        }
+    }
+
+    private var downloadJob: Job? = null
+
+    fun onDownloadTrack() {
+        val track = uiState.value.currentTrack ?: return
+        if (track.isLocal) return // Local tracks are already on-device
+        if (_extraState.value.downloadingTrackId != null) return
+        _extraState.update { it.copy(downloadingTrackId = track.id) }
+        downloadJob = viewModelScope.launch {
+            runCatchingUi(R.string.snackbar_download_failed) {
+
+                downloadController.downloadTrackBlocking(track)
+                _extraState.update {
+                    it.copy(
+                        downloadingTrackId = null,
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, cause ->
+                _extraState.update {
+                    it.copy(
+                        downloadingTrackId = null,
+                        snackbarMessage =
+                        error,
+                        isSnackbarError = true,
+                    )
+                }
+            
+            }
+        }
+    }
+
+    fun onDeleteTrackDownload() {
+        val track = uiState.value.currentTrack ?: return
+        viewModelScope.launch {
+            runCatchingUi(R.string.snackbar_delete_failed) {
+
+                downloadAlbumUseCase.deleteTrackDownload(track.id)
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_deleted, listOf(track.title)),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, cause ->
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage =
+                        error,
+                        isSnackbarError = true,
+                    )
+                }
+            
+            }
+        }
+    }
+
+    fun addToPlaylist(playlistId: String) {
+        val track = uiState.value.currentTrack ?: return
+        viewModelScope.launch {
+            runCatchingUi(R.string.snackbar_add_to_playlist_failed) {
+
+                playlistRepository.addTrackToPlaylist(playlistId, track.id)
+                val playlist = _extraState.value.playlists.find { it.id == playlistId }
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(
+                            R.string.snackbar_added_to_playlist,
+                            listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
+                        ),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, cause ->
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage =
+                        error,
+                        isSnackbarError = true,
+                    )
+                }
+            
+            }
+        }
+    }
+
+    fun createPlaylistAndAddTrack(name: String, shapeKey: String?, iconUrl: String?) {
+        val track = uiState.value.currentTrack ?: return
+        viewModelScope.launch {
+            runCatchingUi(R.string.snackbar_create_playlist_failed) {
+
+                val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
+                playlistRepository.addTrackToPlaylist(playlist.id, track.id)
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist.name)),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, cause ->
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage =
+                        error,
+                        isSnackbarError = true,
+                    )
+                }
+            
+            }
+        }
+    }
+
+    /**
+     * Live queue entries with stable per-insertion uids. The queue sheet keys
+     * its rows and commits edits by uid, so duplicate Track.ids can't crash
+     * the LazyColumn and edits can't land on a stale positional index.
+     */
+    val queueEntries: StateFlow<List<QueueEntry>> = queueManager.entries
+
+    fun playQueueEntry(uid: Long) {
+        val index = queueManager.entries.value.indexOfFirst { it.uid == uid }
+        if (index >= 0) skipToQueueIndex(index)
+    }
+
+    fun removeQueueEntry(uid: Long) {
+        queueManager.removeEntry(uid)
+    }
+
+    fun moveQueueEntry(fromUid: Long, toUid: Long) {
+        queueManager.moveEntry(fromUid, toUid)
+    }
+
+    fun toggleFavoriteById(trackId: String) {
+        viewModelScope.launch {
+            runCatchingUiIgnore {
+
+                libraryRepository.toggleTrackFavorite(trackId)
+                // Same as onToggleFavorite: applyFavoriteIds runs via the DB observer
+                // and preserves the unshuffle snapshot.
+            }
+        }
+    }
+
+    fun playNext(track: Track) {
+        queueManager.playNext(track)
+        _extraState.update {
+            it.copy(
+                snackbarMessage = UiText.StringResource(R.string.snackbar_playing_next, listOf(track.title)),
+                isSnackbarError = false,
+            )
+        }
+    }
+
+    fun addToQueue(track: Track) {
+        queueManager.addToQueue(track)
+        _extraState.update {
+            it.copy(
+                snackbarMessage = UiText.PluralsResource(R.plurals.snackbar_added_n_to_queue, 1),
+                isSnackbarError = false,
+            )
+        }
+    }
+
+    fun addAllToQueue(tracks: List<Track>) {
+        if (tracks.isEmpty()) return
+        for (t in tracks) queueManager.addToQueue(t)
+        _extraState.update {
+            it.copy(
+                snackbarMessage = UiText.PluralsResource(R.plurals.snackbar_added_n_to_queue, tracks.size),
+                isSnackbarError = false,
+            )
+        }
+    }
+
+    fun addTrackToPlaylist(playlistId: String, trackId: String) {
+        viewModelScope.launch {
+            runCatchingUi(R.string.snackbar_add_to_playlist_failed) {
+
+                playlistRepository.addTrackToPlaylist(playlistId, trackId)
+                val playlist = _extraState.value.playlists.find { it.id == playlistId }
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(
+                            R.string.snackbar_added_to_playlist,
+                            listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
+                        ),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, cause ->
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage =
+                        error,
+                        isSnackbarError = true,
+                    )
+                }
+            
+            }
+        }
+    }
+
+    fun createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, trackId: String) {
+        viewModelScope.launch {
+            runCatchingUi(R.string.snackbar_create_playlist_failed) {
+
+                val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
+                playlistRepository.addTrackToPlaylist(playlist.id, trackId)
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist.name)),
+                        isSnackbarError = false,
+                    )
+                }
+            }.onFailure { error, cause ->
+                _extraState.update {
+                    it.copy(
+                        snackbarMessage =
+                        error,
+                        isSnackbarError = true,
+                    )
+                }
+            
+            }
+        }
+    }
+
+    fun clearSnackbar() {
+        _extraState.update { it.copy(snackbarMessage = null) }
+    }
+
+    /** Feedback for the full-player Album button when the video has no YTM album. */
+    fun showNoAlbumSnackbar() {
+        _extraState.update {
+            it.copy(
+                snackbarMessage = UiText.StringResource(R.string.snackbar_no_album_for_track),
+                isSnackbarError = false,
+            )
+        }
+    }
+>>>>>>> wip/lint-hard-vm-errors
 }
