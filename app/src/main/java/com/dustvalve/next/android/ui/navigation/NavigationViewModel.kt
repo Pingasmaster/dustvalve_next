@@ -195,7 +195,7 @@ class NavigationViewModel @Inject constructor(
 
     private fun execute(action: DeepLinkAction) {
         when (action) {
-            is DeepLinkAction.Navigate -> navigateTo(action.destination)
+            is DeepLinkAction.Navigate -> navigateDeepLinkDetail(action.destination)
 
             is DeepLinkAction.PlayYouTubeVideo -> {
                 navigateTo(NavDestination.YouTubeHome)
@@ -219,6 +219,33 @@ class NavigationViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Deep-link Navigate targets a detail destination. Details normally push
+     * onto the *current* tab stack ([tabForDestination] is null for them), so
+     * without an explicit provider switch a Bandcamp album opened from Settings
+     * would sit under the wrong tab. Reset the provider tab to `[Home, Detail]`.
+     */
+    private fun navigateDeepLinkDetail(dest: NavDestination) {
+        if (!acceptDetailUrl(dest)) return
+        val tab = tabForDetailDestination(dest)
+        if (tab == null) {
+            navigateTo(dest)
+            return
+        }
+        if (tab != _currentTab.value) {
+            tabStacks[_currentTab.value] = _backStack.value
+            _lastNavigationForward.value = tab.ordinal >= _currentTab.value.ordinal
+            _currentTab.value = tab
+        } else {
+            _lastNavigationForward.value = true
+        }
+        val stack = listOf(tab.destination, dest)
+        tabStacks[tab] = stack
+        _backStack.value = stack
+        refreshAllDestinations()
+        persistState()
+    }
+
     fun navigateTo(dest: NavDestination) {
         val tab = tabForDestination(dest)
         if (tab != null) {
@@ -236,15 +263,7 @@ class NavigationViewModel @Inject constructor(
                 _backStack.value = tabStacks[tab] ?: listOf(dest)
             }
         } else {
-            when (dest) {
-                is NavDestination.AlbumDetail ->
-                    if (!NetworkUtils.isValidHttpsUrl(dest.url)) return
-
-                is NavDestination.ArtistDetail ->
-                    if (!NetworkUtils.isValidHttpsUrl(dest.url)) return
-
-                else -> {}
-            }
+            if (!acceptDetailUrl(dest)) return
             val currentStack = _backStack.value
             if (currentStack.lastOrNull() == dest) return
             val newStack = if (currentStack.size >= MAX_STACK_DEPTH) {
@@ -307,6 +326,36 @@ class NavigationViewModel @Inject constructor(
         is NavDestination.Library -> BottomNavItem.LIBRARY
         is NavDestination.Settings -> BottomNavItem.SETTINGS
         else -> null
+    }
+
+    /** Provider tab that owns a detail destination opened via deep link / share. */
+    private fun tabForDetailDestination(dest: NavDestination): BottomNavItem? = when (dest) {
+        is NavDestination.AlbumDetail -> BottomNavItem.BANDCAMP
+        is NavDestination.ArtistDetail -> when (dest.sourceId) {
+            "youtube" -> BottomNavItem.YOUTUBE
+            "soundcloud" -> BottomNavItem.SOUNDCLOUD
+            else -> BottomNavItem.BANDCAMP
+        }
+        is NavDestination.CollectionDetail -> when (dest.sourceId) {
+            "youtube" -> BottomNavItem.YOUTUBE
+            "soundcloud" -> BottomNavItem.SOUNDCLOUD
+            else -> BottomNavItem.BANDCAMP
+        }
+        is NavDestination.PlaylistDetail -> BottomNavItem.LIBRARY
+        else -> null
+    }
+
+    /** Reject garbage detail URLs and surface the same snackbar as unsupported links. */
+    private fun acceptDetailUrl(dest: NavDestination): Boolean {
+        val url = when (dest) {
+            is NavDestination.AlbumDetail -> dest.url
+            is NavDestination.ArtistDetail -> dest.url
+            is NavDestination.CollectionDetail -> dest.url
+            else -> return true
+        }
+        if (NetworkUtils.isValidHttpsUrl(url)) return true
+        _unsupportedLinkEvents.tryEmit(Unit)
+        return false
     }
 
     private fun refreshAllDestinations() {

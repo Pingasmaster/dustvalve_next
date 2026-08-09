@@ -79,11 +79,46 @@ class NavigationViewModelTest {
 
     @Test fun `link to enabled provider executes immediately without dialog`() = runTest(testDispatcher) {
         val vm = viewModel(setOf(MusicProvider.LOCAL, MusicProvider.BANDCAMP))
+        // Start on Settings so a naive detail push would land on the wrong tab.
+        vm.navigateTo(NavDestination.Settings)
+        advanceUntilIdle()
+
         vm.openLink("https://artist.bandcamp.com/album/the-album")
         advanceUntilIdle()
 
         assertThat(vm.pendingLinkConfirmation.value).isNull()
-        assertThat(vm.backStack.value.last()).isInstanceOf(NavDestination.AlbumDetail::class.java)
+        assertThat(vm.currentTab.value).isEqualTo(BottomNavItem.BANDCAMP)
+        assertThat(vm.backStack.value)
+            .containsExactly(
+                NavDestination.BandcampHome,
+                NavDestination.AlbumDetail("https://artist.bandcamp.com/album/the-album"),
+            )
+            .inOrder()
+    }
+
+    @Test fun `soundcloud artist deep link switches to the SoundCloud tab`() = runTest(testDispatcher) {
+        val vm = viewModel(setOf(MusicProvider.LOCAL, MusicProvider.SOUNDCLOUD))
+        vm.navigateTo(NavDestination.Settings)
+        advanceUntilIdle()
+
+        vm.openLink("https://soundcloud.com/cool-artist")
+        advanceUntilIdle()
+
+        assertThat(vm.currentTab.value).isEqualTo(BottomNavItem.SOUNDCLOUD)
+        assertThat(vm.backStack.value.last()).isEqualTo(
+            NavDestination.ArtistDetail(url = "https://soundcloud.com/cool-artist", sourceId = "soundcloud"),
+        )
+    }
+
+    @Test fun `invalid detail url emits unsupported snackbar event`() = runTest(testDispatcher) {
+        val vm = viewModel(setOf(MusicProvider.LOCAL))
+        advanceUntilIdle()
+        vm.unsupportedLinkEvents.test {
+            vm.navigateTo(NavDestination.AlbumDetail("not a url"))
+            awaitItem()
+            cancelAndConsumeRemainingEvents()
+        }
+        assertThat(vm.backStack.value).containsExactly(NavDestination.LocalHome)
     }
 
     @Test fun `unsupported link emits event`() = runTest(testDispatcher) {

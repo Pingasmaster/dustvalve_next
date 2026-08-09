@@ -302,15 +302,15 @@ class ArtistDetailViewModel @Inject constructor(
                     val artistId = state.artist?.id ?: return@launch
                     artistRepository.toggleFavorite(artistId)
                 } else {
-                    // YT path - the Artist id IS the URL; the repository
+                    // Remote path - the Artist id IS the URL; the repository
                     // persists the entity so library INNER JOINs on artist_id
-                    // resolve.
+                    // resolve. sourceId is youtube or soundcloud.
                     if (prev) {
                         artistRepository.unfavoriteArtist(url)
                     } else {
                         val art = state.artist
                         if (art != null) {
-                            artistRepository.favoriteRemoteArtist(art, source = "youtube")
+                            artistRepository.favoriteRemoteArtist(art, source = state.sourceId)
                         } else {
                             // No loaded artist metadata: historically the
                             // favorite row was still inserted (only the

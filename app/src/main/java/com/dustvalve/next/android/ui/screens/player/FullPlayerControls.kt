@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.ui.navigation.isSoundCloudCollectionUrl
 import com.dustvalve.next.android.ui.util.tick
 import com.dustvalve.next.android.ui.util.toggle
 import java.util.Locale
@@ -66,7 +68,12 @@ internal fun FullPlayerTrackActionButtons(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val isLocalTrack = track.isLocal
-    val albumNavEnabled = track.albumUrl.isNotEmpty()
+    // SoundCloud standalone tracks reuse albumUrl for the track permalink;
+    // only /sets/ URLs navigate to a collection.
+    val albumNavEnabled = when (track.source) {
+        TrackSource.SOUNDCLOUD -> isSoundCloudCollectionUrl(track.albumUrl)
+        else -> track.albumUrl.isNotEmpty()
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

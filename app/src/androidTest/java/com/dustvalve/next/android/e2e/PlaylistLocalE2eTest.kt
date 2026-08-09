@@ -22,6 +22,7 @@ import com.dustvalve.next.android.testing.Flows.waitForContentDescription
 import com.dustvalve.next.android.testing.Flows.waitForTag
 import com.dustvalve.next.android.testing.Flows.waitForText
 import com.dustvalve.next.android.testing.LocalMusicSeeder
+import com.dustvalve.next.android.testing.ProviderStateRule
 import com.dustvalve.next.android.testing.QuarantineRule
 import com.dustvalve.next.android.ui.TestTags
 import org.junit.Before
@@ -47,7 +48,11 @@ class PlaylistLocalE2eTest {
     @get:Rule(order = 1)
     val quarantine = QuarantineRule()
 
+    /** Local-only suite: keep remote provider tabs off regardless of prior e2e classes. */
     @get:Rule(order = 2)
+    val providerState = ProviderStateRule(bandcamp = false, youtube = false, soundcloud = false)
+
+    @get:Rule(order = 3)
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Before fun seed() {

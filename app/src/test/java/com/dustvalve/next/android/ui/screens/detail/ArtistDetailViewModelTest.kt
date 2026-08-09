@@ -432,6 +432,43 @@ class ArtistDetailViewModelTest {
         coVerify(exactly = 0) { artistRepository.toggleFavorite(any()) }
     }
 
+    @Test fun `soundcloud toggleFavorite persists sourceId soundcloud not youtube`() = runTest(dispatcher) {
+        val scSource = sourceWith("soundcloud", setOf(SourceConcept.ARTIST, SourceConcept.ARTIST_TRACKS))
+        val url = "https://soundcloud.com/cool-artist"
+        val artist = Artist(
+            id = url,
+            name = "Cool",
+            url = url,
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = emptyList(),
+        )
+        coEvery { scSource.getArtist(url) } returns artist
+        coEvery { scSource.getArtistTracks(url, continuation = null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "Cool",
+            owner = "Cool",
+            coverUrl = null,
+            tracks = listOf(track("sc_1")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["soundcloud"] } returns scSource
+        coEvery { favoriteRepository.isFavorite(url) } returns false
+
+        val vm = newVm()
+        vm.load(sourceId = "soundcloud", url = url)
+        advanceUntilIdle()
+
+        vm.toggleFavorite()
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.isFavorite).isTrue()
+        coVerify(exactly = 1) { artistRepository.favoriteRemoteArtist(any(), source = "soundcloud") }
+        coVerify(exactly = 0) { artistRepository.favoriteRemoteArtist(any(), source = "youtube") }
+    }
+
     @Test fun `downloadAll skips an undownloadable track, retries it last, and reports it unavailable`() = runTest(dispatcher) {
         val vm = loadedYoutubeArtist(listOf("t1", "bad", "t3"))
         val attempts = mutableListOf<String>()

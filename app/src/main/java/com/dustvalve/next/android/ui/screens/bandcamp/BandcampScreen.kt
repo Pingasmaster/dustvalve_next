@@ -706,12 +706,14 @@ fun BandcampScreen(
                                                                         result.url,
                                                                         result.name,
                                                                     )
-                                                                    if (track != null) playerViewModel.playTrack(track)
+                                                                    if (track != null) {
+                                                                        playerViewModel.playTrack(track)
+                                                                        onExpandPlayer()
+                                                                    }
                                                                 } catch (_: Exception) {
                                                                     // Best-effort - silent fail for track play
                                                                 }
                                                             }
-                                                            onExpandPlayer()
                                                         }
 
                                                         SearchResultType.LOCAL_TRACK -> {
@@ -719,12 +721,14 @@ fun BandcampScreen(
                                                             scope.launch {
                                                                 try {
                                                                     val track = searchViewModel.resolveLocalTrack(trackId)
-                                                                    if (track != null) playerViewModel.playTrack(track)
+                                                                    if (track != null) {
+                                                                        playerViewModel.playTrack(track)
+                                                                        onExpandPlayer()
+                                                                    }
                                                                 } catch (_: Exception) {
                                                                     // Best-effort - silent fail for track play
                                                                 }
                                                             }
-                                                            onExpandPlayer()
                                                         }
 
                                                         SearchResultType.YOUTUBE_TRACK, SearchResultType.YOUTUBE_ALBUM,

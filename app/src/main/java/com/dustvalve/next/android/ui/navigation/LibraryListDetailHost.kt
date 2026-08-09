@@ -55,15 +55,8 @@ internal fun LibraryListDetailHost(
         ) {
             LibraryScreen(
                 adaptiveInfo = adaptiveInfo,
-                onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-                onArtistClick = { url ->
-                    val sourceId = if (url.contains("youtube.com") || url.contains("youtu.be")) {
-                        "youtube"
-                    } else {
-                        "bandcamp"
-                    }
-                    navViewModel.navigateTo(NavDestination.ArtistDetail(url = url, sourceId = sourceId))
-                },
+                onAlbumClick = { url -> navViewModel.navigateTo(libraryAlbumDestination(url)) },
+                onArtistClick = { url -> navViewModel.navigateTo(libraryArtistDestination(url)) },
                 onPlaylistClick = { playlistId ->
                     navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId))
                 },
@@ -131,7 +124,9 @@ private fun LibraryDetailPane(
                     artistNameHint = destination.name,
                     artistImageHint = destination.imageUrl,
                 ),
-                onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
+                onAlbumClick = { url ->
+                    navViewModel.navigateTo(artistAlbumDestination(url, destination.sourceId))
+                },
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
             )

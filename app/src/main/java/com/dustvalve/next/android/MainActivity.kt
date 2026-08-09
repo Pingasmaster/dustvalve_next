@@ -72,6 +72,7 @@ import com.dustvalve.next.android.ui.navigation.BottomNavItem
 import com.dustvalve.next.android.ui.navigation.NavDestination
 import com.dustvalve.next.android.ui.navigation.NavigationViewModel
 import com.dustvalve.next.android.ui.navigation.SideNavRail
+import com.dustvalve.next.android.ui.navigation.isSoundCloudCollectionUrl
 import com.dustvalve.next.android.ui.screens.player.FullPlayer
 import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -609,6 +610,15 @@ private fun BoxScope.MainContentPlayerOverlay(session: MainPlayerSession, shared
                                     ),
                                 )
 
+                                track.source == TrackSource.SOUNDCLOUD -> session.nav.navigateTo(
+                                    NavDestination.ArtistDetail(
+                                        url = track.artistUrl,
+                                        sourceId = "soundcloud",
+                                        name = track.artist,
+                                        imageUrl = track.artUrl.takeIf { it.isNotBlank() },
+                                    ),
+                                )
+
                                 else -> session.nav.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
                             }
                         },
@@ -627,6 +637,23 @@ private fun BoxScope.MainContentPlayerOverlay(session: MainPlayerSession, shared
                                     } else {
                                         // Pre-fetch already ran (albumLookupDone=true);
                                         // empty means the video has no YTM album.
+                                        session.player.showNoAlbumSnackbar()
+                                    }
+                                }
+
+                                track.source == TrackSource.SOUNDCLOUD -> {
+                                    // Standalone SC tracks stash the track permalink in
+                                    // albumUrl; only /sets/ URLs are openable collections.
+                                    if (isSoundCloudCollectionUrl(track.albumUrl)) {
+                                        session.nav.collapsePlayer()
+                                        session.nav.navigateTo(
+                                            NavDestination.CollectionDetail(
+                                                url = track.albumUrl,
+                                                sourceId = "soundcloud",
+                                                name = track.albumTitle,
+                                            ),
+                                        )
+                                    } else {
                                         session.player.showNoAlbumSnackbar()
                                     }
                                 }
