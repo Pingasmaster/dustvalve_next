@@ -13,6 +13,14 @@ interface LocalMusicRepository {
     suspend fun cancelSyncWork()
 
     /**
+     * Re-takes READ|WRITE persistable grants for every saved SAF tree when the
+     * platform still allows it. Returns URIs that lack a durable write grant
+     * (pre-fix READ-only trees, or revoked access) so the UI can prompt a
+     * re-pick.
+     */
+    suspend fun ensurePersistableWriteGrants(): List<String>
+
+    /**
      * All local tracks decorated with live favorite flags: re-emits when a
      * favorite toggles, not only when the track list changes.
      */

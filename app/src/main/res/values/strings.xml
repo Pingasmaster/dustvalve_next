@@ -298,8 +298,10 @@
     <string name="local_scan_subtitle">Find and play music stored on your device</string>
     <string name="local_enable">Enable local music</string>
     <string name="local_grant_permission">Grant permission</string>
+    <string name="local_open_app_settings">Open app settings</string>
     <string name="local_permission_needed_title">Music access needed</string>
     <string name="local_permission_needed_subtitle">Permission was revoked. Grant access to scan and play music on this device.</string>
+    <string name="local_permission_permanent_subtitle">Permission is blocked. Open system settings and allow music / audio access for Dustvalve Next.</string>
     <string name="local_scanning">Scanning your music…</string>
     <string name="local_cd_mix">Mix</string>
     <string name="local_tab_favorites">Favorites</string>
@@ -591,6 +593,9 @@
     <string name="snackbar_bandcamp_preview_unavailable">Preview unavailable. Buy on <xliff:g id="brand">Bandcamp</xliff:g>.</string>
     <string name="snackbar_scan_failed">Scan failed: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
     <string name="snackbar_scan_needs_permission">Grant music library permission to rescan</string>
+    <string name="snackbar_folder_persist_failed">Could not keep access to that folder. Pick it again and allow access.</string>
+    <string name="snackbar_folder_needs_repick">A saved folder lost write access. Remove it and add it again to delete songs from that folder.</string>
+    <string name="settings_local_permission_open_settings">Open app settings</string>
 
     <!-- Crash reporting (opt-in, on-device only) -->
     <string name="crash_report_title">Something went wrong last time</string>

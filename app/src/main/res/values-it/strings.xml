@@ -253,8 +253,10 @@
     <string name="local_scan_subtitle">Trova e riproduci la musica salvata sul tuo dispositivo</string>
     <string name="local_enable">Attiva la musica locale</string>
     <string name="local_grant_permission">Concedi autorizzazione</string>
+    <string name="local_open_app_settings">Apri impostazioni app</string>
     <string name="local_permission_needed_title">Accesso alla musica necessario</string>
     <string name="local_permission_needed_subtitle">L’autorizzazione è stata revocata. Concedila per scansionare e riprodurre la musica su questo dispositivo.</string>
+    <string name="local_permission_permanent_subtitle">L’autorizzazione è bloccata. Apri le impostazioni di sistema e consenti l’accesso a musica/audio per Dustvalve Next.</string>
     <string name="local_scanning">Scansione della tua musica…</string>
     <string name="local_cd_mix">Mix</string>
     <string name="local_tab_favorites">Preferiti</string>
@@ -497,6 +499,9 @@
     <string name="snackbar_bandcamp_preview_unavailable">Anteprima non disponibile. Acquista su <xliff:g id="brand">Bandcamp</xliff:g>.</string>
     <string name="snackbar_scan_failed">Scansione non riuscita: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
     <string name="snackbar_scan_needs_permission">Concedi l’autorizzazione alla libreria musicale per rieseguire la scansione</string>
+    <string name="snackbar_folder_persist_failed">Impossibile mantenere l’accesso a quella cartella. Selezionala di nuovo e concedi l’accesso.</string>
+    <string name="snackbar_folder_needs_repick">Una cartella salvata ha perso l’accesso in scrittura. Rimuovila e aggiungila di nuovo per eliminare brani da quella cartella.</string>
+    <string name="settings_local_permission_open_settings">Apri impostazioni app</string>
 
     <!-- Crash reporting (opt-in, on-device only) -->
     <string name="crash_report_title">Qualcosa è andato storto l’ultima volta</string>

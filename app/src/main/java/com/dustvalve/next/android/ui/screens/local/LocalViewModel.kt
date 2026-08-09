@@ -345,11 +345,12 @@ class LocalViewModel @Inject constructor(
     /**
      * Permission denied during a first-enable attempt: roll the enable flag
      * back so the "Enable local music" button reappears. A re-grant denial
-     * (already enabled, MediaStore mode, permission still missing) must leave
-     * the flag on so the Local tab keeps showing the grant CTA.
+     * (already enabled, MediaStore mode, permission still missing) or a
+     * permanent denial must leave the flag on so the Local tab can show the
+     * grant / Open app settings CTA.
      */
-    fun onAudioPermissionDenied(wasRegrant: Boolean = false) {
-        if (wasRegrant) return
+    fun onAudioPermissionDenied(wasRegrant: Boolean = false, permanentlyDenied: Boolean = false) {
+        if (wasRegrant || permanentlyDenied) return
         viewModelScope.launch {
             runCatchingUiIgnore {
                 settingsDataStore.setLocalMusicEnabled(false)

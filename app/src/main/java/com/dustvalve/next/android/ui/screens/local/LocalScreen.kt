@@ -75,6 +75,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -110,6 +111,7 @@ import com.dustvalve.next.android.ui.screens.player.playTrackInList
 import com.dustvalve.next.android.ui.screens.player.toggleFavoriteById
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.legacyAudioPermission
+import com.dustvalve.next.android.util.openAppDetailsSettings
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -138,12 +140,24 @@ fun LocalScreen(
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
     val permissionCheckEpoch by viewModel.permissionCheckEpoch.collectAsStateWithLifecycle()
 
+    // Tracks whether the in-flight permission request is a re-grant (already
+    // enabled) so Deny does not roll localMusicEnabled back into a dead-end.
+    var permissionRequestIsRegrant by remember { mutableStateOf(false) }
+    // After "Don't ask again" / permanent deny, RequestPermission is a no-op;
+    // deep-link to app details instead (mirrors POST_NOTIFICATIONS Settings CTA).
+    var audioPermissionPermanentlyDenied by remember { mutableStateOf(false) }
+    val localContext = LocalContext.current
+    val activity = localContext as? Activity
+
     // Re-read runtime permission when returning from system Settings.
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.refreshPermissionCheck()
+                if (viewModel.hasAudioPermission()) {
+                    audioPermissionPermanentlyDenied = false
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -157,16 +171,23 @@ fun LocalScreen(
         localMusicEnabled && localMusicUseMediaStore && !viewModel.hasAudioPermission()
     }
 
-    // Tracks whether the in-flight permission request is a re-grant (already
-    // enabled) so Deny does not roll localMusicEnabled back into a dead-end.
-    var permissionRequestIsRegrant by remember { mutableStateOf(false) }
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted: Boolean ->
         if (granted) {
+            audioPermissionPermanentlyDenied = false
             viewModel.onAudioPermissionGranted()
         } else {
-            viewModel.onAudioPermissionDenied(wasRegrant = permissionRequestIsRegrant)
+            val permanentlyDenied = activity?.shouldShowRequestPermissionRationale(
+                legacyAudioPermission(),
+            ) == false
+            if (permanentlyDenied) {
+                audioPermissionPermanentlyDenied = true
+            }
+            viewModel.onAudioPermissionDenied(
+                wasRegrant = permissionRequestIsRegrant,
+                permanentlyDenied = permanentlyDenied,
+            )
         }
         permissionRequestIsRegrant = false
     }
@@ -344,29 +365,57 @@ fun LocalScreen(
                                 }
                             }
                         } else if (needsAudioPermissionRegrant) {
-                            // Enabled + MediaStore but permission revoked / never granted
+                            // Enabled + MediaStore but permission revoked / never granted.
+                            // Permanent deny: RequestPermission cannot show a dialog, so
+                            // deep-link to app details (same pattern as notification CTA).
                             EmptyState(
                                 icon = R.drawable.ic_phone_android,
                                 title = stringResource(R.string.local_permission_needed_title),
-                                subtitle = stringResource(R.string.local_permission_needed_subtitle),
-                            ) {
-                                Button(
-                                    onClick = {
-                                        permissionRequestIsRegrant = true
-                                        audioPermissionLauncher.launch(legacyAudioPermission())
+                                subtitle = stringResource(
+                                    if (audioPermissionPermanentlyDenied) {
+                                        R.string.local_permission_permanent_subtitle
+                                    } else {
+                                        R.string.local_permission_needed_subtitle
                                     },
-                                    shapes = ButtonDefaults.shapes(),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 16.dp),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_phone_android),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(stringResource(R.string.local_grant_permission))
+                                ),
+                            ) {
+                                if (audioPermissionPermanentlyDenied) {
+                                    Button(
+                                        onClick = {
+                                            openAppDetailsSettings(activity ?: localContext)
+                                        },
+                                        shapes = ButtonDefaults.shapes(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_settings),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.local_open_app_settings))
+                                    }
+                                } else {
+                                    Button(
+                                        onClick = {
+                                            permissionRequestIsRegrant = true
+                                            audioPermissionLauncher.launch(legacyAudioPermission())
+                                        },
+                                        shapes = ButtonDefaults.shapes(),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 16.dp),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_phone_android),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(stringResource(R.string.local_grant_permission))
+                                    }
                                 }
                             }
                         } else if (isScanning) {

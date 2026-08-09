@@ -241,4 +241,57 @@ class AppUpdateControllerTest {
 
         assertThat(controller.state.value).isInstanceOf(UpdateUiState.Downloading::class.java)
     }
+
+    @Test fun `confirmDownload parks pending install when unknown-sources is required`() = runTest(dispatcher) {
+        val url = "https://github.com/x/releases/download/v9.9.9/app-release-future.apk"
+        coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
+            versionName = "9.9.9",
+            apkDownloadUrl = url,
+            releaseNotes = "notes",
+        )
+        every { service.downloadApk(any(), any()) } returns emptyFlow()
+        every { service.launchInstaller() } throws InstallPermissionRequiredException()
+        every { service.hasDownloadedApk() } returns true
+        every { service.canRequestPackageInstalls() } returns false
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
+        controller.checkSilently()
+        advanceUntilIdle()
+
+        controller.confirmDownload()
+        advanceUntilIdle()
+
+        assertThat(controller.state.value).isEqualTo(UpdateUiState.Idle)
+        // Resume while still blocked: no second launchInstaller.
+        controller.retryPendingInstallIfReady()
+        advanceUntilIdle()
+        verify(exactly = 1) { service.launchInstaller() }
+    }
+
+    @Test fun `retryPendingInstallIfReady launches cached APK after unknown-sources grant`() = runTest(dispatcher) {
+        val url = "https://github.com/x/releases/download/v9.9.9/app-release-future.apk"
+        coEvery { service.checkForUpdate() } returns AppUpdateService.AvailableUpdate(
+            versionName = "9.9.9",
+            apkDownloadUrl = url,
+            releaseNotes = "notes",
+        )
+        every { service.downloadApk(any(), any()) } returns emptyFlow()
+        every { service.launchInstaller() } throws InstallPermissionRequiredException() andThen Unit
+        every { service.hasDownloadedApk() } returns true
+        every { service.canRequestPackageInstalls() } returnsMany listOf(false, true)
+        val controller = AppUpdateController(service, settingsDataStore, dispatcher).also { it.scope = this }
+        controller.checkSilently()
+        advanceUntilIdle()
+        controller.confirmDownload()
+        advanceUntilIdle()
+
+        every { service.canRequestPackageInstalls() } returns true
+        controller.retryPendingInstallIfReady()
+        advanceUntilIdle()
+
+        verify(exactly = 2) { service.launchInstaller() }
+        // Second resume must not re-launch.
+        controller.retryPendingInstallIfReady()
+        advanceUntilIdle()
+        verify(exactly = 2) { service.launchInstaller() }
+    }
 }

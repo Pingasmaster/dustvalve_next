@@ -260,15 +260,11 @@ open class AppUpdateService @Inject constructor(
      * (after deep-linking them to [Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES]).
      */
     fun launchInstaller() {
-        if (!context.packageManager.canRequestPackageInstalls()) {
-            val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                data = ("package:" + context.packageName).toUri()
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(settingsIntent)
-            throw IOException("REQUEST_INSTALL_PACKAGES not granted")
+        if (!canRequestPackageInstalls()) {
+            openUnknownSourcesSettings()
+            throw InstallPermissionRequiredException()
         }
-        val apk = File(File(context.cacheDir, "updates"), "update.apk")
+        val apk = downloadedApkFile()
         if (!apk.exists()) throw IOException("APK not downloaded")
         if (requireSigningMatch()) {
             verifyApkSigningMatchesInstalled(apk)
@@ -292,6 +288,23 @@ open class AppUpdateService @Inject constructor(
             Log.w(TAG, "no system package installer resolved; falling back to unpinned intent")
         }
         context.startActivity(intent)
+    }
+
+    /** True when a verified APK is waiting in cache/updates/update.apk. */
+    fun hasDownloadedApk(): Boolean = downloadedApkFile().exists()
+
+    /** True when this package may install unknown apps (REQUEST_INSTALL_PACKAGES). */
+    fun canRequestPackageInstalls(): Boolean =
+        context.packageManager.canRequestPackageInstalls()
+
+    private fun downloadedApkFile(): File = File(File(context.cacheDir, "updates"), "update.apk")
+
+    private fun openUnknownSourcesSettings() {
+        val settingsIntent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+            data = ("package:" + context.packageName).toUri()
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(settingsIntent)
     }
 
     /**
@@ -486,3 +499,12 @@ open class AppUpdateService @Inject constructor(
         }
     }
 }
+
+/**
+ * Thrown by [AppUpdateService.launchInstaller] after deep-linking to unknown-
+ * sources settings. Distinct from a hard install failure so
+ * [AppUpdateController] can retry the already-downloaded APK on resume.
+ */
+class InstallPermissionRequiredException :
+    IOException("REQUEST_INSTALL_PACKAGES not granted")
+

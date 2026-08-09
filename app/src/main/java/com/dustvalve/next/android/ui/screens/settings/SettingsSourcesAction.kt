@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.screens.settings
 
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -38,7 +39,11 @@ import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -49,6 +54,8 @@ import androidx.core.net.toUri
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.util.legacyAudioPermission
+import com.dustvalve.next.android.util.openAppDetailsSettings
+import kotlinx.coroutines.launch
 
 /** Actions emitted by [SettingsSourcesSection]. */
 internal sealed interface SettingsSourcesAction {
@@ -57,6 +64,7 @@ internal sealed interface SettingsSourcesAction {
     data class AddLocalMusicFolder(val uri: String) : SettingsSourcesAction
     data class RemoveLocalMusicFolder(val uri: String) : SettingsSourcesAction
     data object RescanLocalMusic : SettingsSourcesAction
+    data object EnsurePersistableWriteGrants : SettingsSourcesAction
     data class SetKeepLocalSort(val keep: Boolean) : SettingsSourcesAction
     data class SetKeepLocalFilters(val keep: Boolean) : SettingsSourcesAction
     data class SetBandcampEnabled(val enabled: Boolean) : SettingsSourcesAction
@@ -84,6 +92,9 @@ internal fun handleSettingsSourcesAction(viewModel: SettingsViewModel, action: S
 
         SettingsSourcesAction.RescanLocalMusic ->
             localMusic.rescan()
+
+        SettingsSourcesAction.EnsurePersistableWriteGrants ->
+            localMusic.ensurePersistableWriteGrants()
 
         is SettingsSourcesAction.SetKeepLocalSort ->
             storageSources.setKeepLocalSort(action.keep)
@@ -116,11 +127,17 @@ internal fun SettingsSourcesSection(
     onAction: (SettingsSourcesAction) -> Unit,
 ) {
     val localContext = LocalContext.current
+    val activity = localContext as? Activity
+    val folderPersistScope = rememberCoroutineScope()
+    var audioPermissionPermanentlyDenied by remember { mutableStateOf(false) }
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted: Boolean ->
         if (granted) {
+            audioPermissionPermanentlyDenied = false
             onAction(SettingsSourcesAction.SetLocalMusicUseMediaStore(true))
+        } else if (activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false) {
+            audioPermissionPermanentlyDenied = true
         }
     }
     // Used only when the permission request came from flipping the
@@ -131,9 +148,17 @@ internal fun SettingsSourcesSection(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted: Boolean ->
         if (granted) {
+            audioPermissionPermanentlyDenied = false
             onAction(SettingsSourcesAction.SetLocalMusicUseMediaStore(true))
         } else {
-            onAction(SettingsSourcesAction.SetLocalMusicEnabled(false))
+            val permanentlyDenied =
+                activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false
+            if (permanentlyDenied) {
+                // Keep Local enabled so the Open app settings CTA is reachable.
+                audioPermissionPermanentlyDenied = true
+            } else {
+                onAction(SettingsSourcesAction.SetLocalMusicEnabled(false))
+            }
         }
     }
     // Rescan with missing MediaStore permission: grant then rescan without
@@ -142,7 +167,10 @@ internal fun SettingsSourcesSection(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted: Boolean ->
         if (granted) {
+            audioPermissionPermanentlyDenied = false
             onAction(SettingsSourcesAction.RescanLocalMusic)
+        } else if (activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false) {
+            audioPermissionPermanentlyDenied = true
         }
     }
     val folderPickerLauncher = rememberLauncherForActivityResult(
@@ -152,14 +180,24 @@ internal fun SettingsSourcesSection(
             // READ|WRITE: deleteDocument needs a durable write grant across reboot.
             val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
                 Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            try {
+            val persisted = try {
                 localContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
+                true
             } catch (_: SecurityException) {
-                // Best effort
+                false
             } catch (_: IllegalArgumentException) {
-                // Best effort
+                false
             }
-            onAction(SettingsSourcesAction.AddLocalMusicFolder(uri.toString()))
+            if (persisted) {
+                onAction(SettingsSourcesAction.AddLocalMusicFolder(uri.toString()))
+            } else {
+                // Do not save a folder we cannot keep across process death.
+                folderPersistScope.launch {
+                    snackbarHostState.showSnackbar(
+                        localContext.getString(R.string.snackbar_folder_persist_failed),
+                    )
+                }
+            }
         }
     }
 
@@ -172,6 +210,19 @@ internal fun SettingsSourcesSection(
             } finally {
                 sourcesAction(SettingsSourcesAction.ClearScanMessage)
             }
+        }
+    }
+    // Folder list load / cold Settings visit: upgrade READ-only trees to WRITE.
+    LaunchedEffect(
+        state.localMusicEnabled,
+        state.localMusicUseMediaStore,
+        state.localMusicFolderUris,
+    ) {
+        if (state.localMusicEnabled &&
+            !state.localMusicUseMediaStore &&
+            state.localMusicFolderUris.isNotEmpty()
+        ) {
+            sourcesAction(SettingsSourcesAction.EnsurePersistableWriteGrants)
         }
     }
 
@@ -187,24 +238,30 @@ internal fun SettingsSourcesSection(
         ) {
             SourcesCardContent(
                 state = state,
+                audioPermissionPermanentlyDenied = audioPermissionPermanentlyDenied,
                 onAction = onAction,
                 onLocalEnableNeedsAudioPermission = {
                     localEnableAudioPermissionLauncher.launch(legacyAudioPermission())
                 },
                 onLocalEnableNeedsFolder = { folderPickerLauncher.launch(null) },
                 onRequestAudioPermission = {
-                    audioPermissionLauncher.launch(legacyAudioPermission())
+                    if (audioPermissionPermanentlyDenied) {
+                        openAppDetailsSettings(localContext)
+                    } else {
+                        audioPermissionLauncher.launch(legacyAudioPermission())
+                    }
                 },
+                onOpenAppPermissionSettings = { openAppDetailsSettings(localContext) },
                 onPickFolder = { folderPickerLauncher.launch(null) },
                 onRescanMediaStore = {
                     val granted = ContextCompat.checkSelfPermission(
                         localContext,
                         legacyAudioPermission(),
                     ) == PackageManager.PERMISSION_GRANTED
-                    if (granted) {
-                        onAction(SettingsSourcesAction.RescanLocalMusic)
-                    } else {
-                        rescanAudioPermissionLauncher.launch(legacyAudioPermission())
+                    when {
+                        granted -> onAction(SettingsSourcesAction.RescanLocalMusic)
+                        audioPermissionPermanentlyDenied -> openAppDetailsSettings(localContext)
+                        else -> rescanAudioPermissionLauncher.launch(legacyAudioPermission())
                     }
                 },
             )
@@ -216,10 +273,12 @@ internal fun SettingsSourcesSection(
 @Composable
 private fun SourcesCardContent(
     state: SettingsUiState,
+    audioPermissionPermanentlyDenied: Boolean,
     onAction: (SettingsSourcesAction) -> Unit,
     onLocalEnableNeedsAudioPermission: () -> Unit,
     onLocalEnableNeedsFolder: () -> Unit,
     onRequestAudioPermission: () -> Unit,
+    onOpenAppPermissionSettings: () -> Unit,
     onPickFolder: () -> Unit,
     onRescanMediaStore: () -> Unit,
 ) {
@@ -247,8 +306,10 @@ private fun SourcesCardContent(
         ) {
             LocalMusicSourceDetails(
                 state = state,
+                audioPermissionPermanentlyDenied = audioPermissionPermanentlyDenied,
                 onAction = onAction,
                 onRequestAudioPermission = onRequestAudioPermission,
+                onOpenAppPermissionSettings = onOpenAppPermissionSettings,
                 onPickFolder = onPickFolder,
                 onRescanMediaStore = onRescanMediaStore,
             )
@@ -311,8 +372,10 @@ private fun SourcesCardContent(
 @Composable
 private fun LocalMusicSourceDetails(
     state: SettingsUiState,
+    audioPermissionPermanentlyDenied: Boolean,
     onAction: (SettingsSourcesAction) -> Unit,
     onRequestAudioPermission: () -> Unit,
+    onOpenAppPermissionSettings: () -> Unit,
     onPickFolder: () -> Unit,
     onRescanMediaStore: () -> Unit,
 ) {
@@ -342,6 +405,23 @@ private fun LocalMusicSourceDetails(
             )
         } else {
             Spacer(modifier = Modifier.height(8.dp))
+            if (audioPermissionPermanentlyDenied) {
+                Column(modifier = Modifier.padding(start = SUB_TOGGLE_INDENT)) {
+                    Text(
+                        text = stringResource(R.string.local_permission_permanent_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FilledTonalButton(
+                        onClick = onOpenAppPermissionSettings,
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(R.string.settings_local_permission_open_settings))
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
