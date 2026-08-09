@@ -9,6 +9,7 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import kotlinx.coroutines.CompletableDeferred
@@ -124,6 +125,7 @@ class DownloadControllerTest {
             kept.absolutePath,
             "content://saf/doc/42",
         )
+        coEvery { downloadRepository.purgeOrphanDownloadRows() } returns 0
 
         controller.awaitColdStartPurge()
 
@@ -133,6 +135,7 @@ class DownloadControllerTest {
         assertThat(kept.exists()).isTrue()
         assertThat(fresh.exists()).isTrue()
         assertThat(image.exists()).isTrue()
+        coVerify { downloadRepository.purgeOrphanDownloadRows() }
     }
 
     @Test fun `cold-start sweep skips the orphan pass when the DB query fails but still purges partials`() = runBlocking {

@@ -88,6 +88,12 @@ internal fun SettingsStorageSection(
                     storageLimitIndex = state.storageLimitIndex,
                     onAction = onAction,
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.settings_storage_limit_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
                 FilledTonalButton(

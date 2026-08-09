@@ -10,6 +10,7 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.data.remote.DownloadPayloadValidator
 import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
@@ -31,6 +32,7 @@ import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -40,6 +42,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
+import android.os.StatFs
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -261,15 +264,19 @@ class DownloadRepositoryImpl(
 
         val safeAlbumId = NetworkUtils.sanitizeFileName(track.albumId)
         val safeTrackId = NetworkUtils.sanitizeFileName(track.id)
-        val fileName = "$safeTrackId.${format.extension}"
+        // Provisional extension from the resolved stream format; MIME / magic
+        // sniffing inside writeDownloadToInternal may replace it before commit.
+        val provisionalName = "$safeTrackId.${format.extension}"
 
         if (!downloadUrl.startsWith("https://")) {
             throw IOException("Download URL must use HTTPS: ${downloadUrl.take(ERROR_URL_PREVIEW_CHARS)}")
         }
 
+        assertEnoughFreeSpace()
+
         // Downloads always land in app-private storage: the write goes via a
         // temp sibling and an atomic rename.
-        val (finalPath, fileSize) = writeDownloadToInternal(safeAlbumId, fileName, downloadUrl, track.id)
+        val (finalPath, fileSize) = writeDownloadToInternal(safeAlbumId, provisionalName, downloadUrl, track.id)
 
         // Atomically insert the track row + the unified-pool download record.
         database.withTransaction {
@@ -301,7 +308,7 @@ class DownloadRepositoryImpl(
 
     private suspend fun writeDownloadToInternal(
         safeAlbumId: String,
-        fileName: String,
+        provisionalFileName: String,
         downloadUrl: String,
         trackId: String,
     ): Pair<String, Long> {
@@ -309,10 +316,13 @@ class DownloadRepositoryImpl(
         if (!downloadDir.mkdirs() && !downloadDir.exists()) {
             throw IOException("Failed to create download directory: ${downloadDir.absolutePath}")
         }
-        val targetFile = File(downloadDir, fileName)
-        val tempFile = File(downloadDir, "$fileName.tmp")
-        val metaFile = File(downloadDir, "$fileName.tmp.meta")
+        // Temp / meta keys use the provisional name so a paused transfer can
+        // still resume; the final committed name may swap extension after
+        // MIME/magic validation.
+        val tempFile = File(downloadDir, "$provisionalFileName.tmp")
+        val metaFile = File(downloadDir, "$provisionalFileName.tmp.meta")
         val identity = resumeSourceIdentity(downloadUrl)
+        var suggestedExtension: String? = null
 
         // A leftover .tmp means a prior transfer was paused - resume from its
         // current length via an HTTP Range request (append mode) instead of
@@ -335,7 +345,7 @@ class DownloadRepositoryImpl(
         suspend fun transfer(offset: Long, expectedTotal: Long?) {
             var metaPersisted = false
             FileOutputStream(tempFile, offset > 0L).use { out ->
-                RangeResumeDownloader.stream(
+                val result = RangeResumeDownloader.stream(
                     client = downloadClient,
                     url = downloadUrl,
                     sink = out,
@@ -350,6 +360,9 @@ class DownloadRepositoryImpl(
                         notificationCenter.trackProgress(trackId, written, total)
                     },
                 )
+                if (result.suggestedExtension != null) {
+                    suggestedExtension = result.suggestedExtension
+                }
             }
         }
 
@@ -382,6 +395,24 @@ class DownloadRepositoryImpl(
             throw e
         }
 
+        // Final sniff on the completed temp: catches resume paths that skipped
+        // the from-zero header check, and confirms MIME-suggested extensions.
+        val sniffBuf = ByteArray(64)
+        val sniffed = tempFile.inputStream().use { input ->
+            val n = input.read(sniffBuf)
+            if (n <= 0) {
+                tempFile.delete()
+                metaFile.delete()
+                throw DownloadPayloadValidator.InvalidPayloadException("Empty download for track: $trackId")
+            }
+            DownloadPayloadValidator.sniffExtensionOrReject(sniffBuf.copyOf(n), trackId)
+        }
+        val finalExtension = suggestedExtension ?: sniffed
+            ?: provisionalFileName.substringAfterLast('.', missingDelimiterValue = "mp3")
+        val baseName = provisionalFileName.substringBeforeLast('.', provisionalFileName)
+        val fileName = "$baseName.$finalExtension"
+        val targetFile = File(downloadDir, fileName)
+
         metaFile.delete()
         if (!tempFile.renameTo(targetFile)) {
             try {
@@ -397,6 +428,33 @@ class DownloadRepositoryImpl(
             throw IOException("Failed to write download file: ${targetFile.absolutePath}")
         }
         return targetFile.absolutePath to targetFile.length()
+    }
+
+    /**
+     * Refuses to start a transfer when the data partition is nearly full.
+     * Pinned user downloads are never evicted by the storage-limit slider, so
+     * a low-disk device would otherwise keep accepting downloads until writes
+     * fail mid-file. Leaves [MIN_FREE_BYTES] of headroom.
+     *
+     * Best-effort: when StatFs cannot measure (JVM unit tests, sealed paths)
+     * the check is skipped and the eventual write failure surfaces instead.
+     */
+    private fun assertEnoughFreeSpace() {
+        val free = try {
+            StatFs(context.filesDir.absolutePath).availableBytes
+        } catch (_: IllegalArgumentException) {
+            return
+        } catch (_: SecurityException) {
+            return
+        }
+        // Android stubs / broken mounts often report 0; treat as unmeasurable.
+        if (free <= 0L) return
+        if (free < MIN_FREE_BYTES) {
+            throw IOException(
+                "Not enough free storage to download " +
+                    "(${free / (1024L * 1024L)} MB free; need ${MIN_FREE_BYTES / (1024L * 1024L)} MB)",
+            )
+        }
     }
 
     private fun downloadPathExists(path: String): Boolean = path.isNotBlank() && File(path).exists()
@@ -440,7 +498,7 @@ class DownloadRepositoryImpl(
             trackId = trackId,
             startOffset = startOffset,
             onProgress = { written, total -> notificationCenter.trackProgress(trackId, written, total) },
-        )
+        ).bytesWritten
 
     /**
      * Stable identity of the *content* behind a download URL, persisted in the
@@ -479,7 +537,10 @@ class DownloadRepositoryImpl(
         }
     }
 
-    override suspend fun isTrackDownloaded(trackId: String): Boolean = downloadDao.getByTrackId(trackId) != null
+    override suspend fun isTrackDownloaded(trackId: String): Boolean {
+        val row = downloadDao.getByTrackId(trackId) ?: return false
+        return downloadPathExists(row.filePath)
+    }
 
     override suspend fun getDownloadInfo(trackId: String): DownloadInfo? {
         val download = downloadDao.getByTrackId(trackId) ?: return null
@@ -495,7 +556,9 @@ class DownloadRepositoryImpl(
         }
     }
 
-    override fun getDownloadedTrackIds(): Flow<List<String>> = downloadDao.getAllTrackIds()
+    override fun getDownloadedTrackIds(): Flow<List<String>> = downloadDao.getAll().map { rows ->
+        rows.filter { downloadPathExists(it.filePath) }.map { it.trackId }
+    }
 
     override fun getDownloadedAlbumIds(): Flow<List<String>> = downloadDao.getDownloadedAlbumIds()
 
@@ -503,6 +566,29 @@ class DownloadRepositoryImpl(
     // reconciliation owns the isNotBlank filtering and its own exception
     // handling.
     override suspend fun getAllDownloadFilePaths(): List<String> = downloadDao.getAllSync().map { it.filePath }
+
+    /**
+     * Drops download rows whose file is gone (process death between rename and
+     * insert is the inverse case; this covers delete-outside-app / wiped files).
+     * Called from [com.dustvalve.next.android.download.DownloadController]
+     * cold-start sweep.
+     */
+    override suspend fun purgeOrphanDownloadRows(): Int {
+        val all = downloadDao.getAllSync()
+        var removed = 0
+        for (row in all) {
+            if (!downloadPathExists(row.filePath)) {
+                try {
+                    downloadDao.delete(row.trackId)
+                    removed++
+                } catch (_: android.database.SQLException) {
+                } catch (_: IllegalStateException) {
+                }
+            }
+        }
+        if (removed > 0) storageTracker.notifyChanged()
+        return removed
+    }
 
     override suspend fun deleteDownload(trackId: String) {
         val download = downloadDao.getByTrackId(trackId) ?: return
@@ -564,5 +650,8 @@ class DownloadRepositoryImpl(
          */
         fun isDownloadCandidate(track: Track): Boolean =
             track.streamUrl != null || track.source == TrackSource.SOUNDCLOUD
+
+        /** Refuse new downloads when free space drops below this headroom. */
+        private const val MIN_FREE_BYTES = 64L * 1024L * 1024L
     }
 }

@@ -19,7 +19,6 @@ internal data class SettingsListHost(val contentMaxWidth: Dp, val state: Setting
 @Immutable
 internal data class SettingsListDialogActions(
     val onShowRemoveDownloads: () -> Unit,
-    val onShowFormatSheet: () -> Unit,
     val onSourcesAction: (SettingsSourcesAction) -> Unit,
     val onStorageAction: (SettingsStorageAction) -> Unit,
     val onAppearanceAction: (SettingsAppearanceAction) -> Unit,
@@ -27,7 +26,6 @@ internal data class SettingsListDialogActions(
 
 @Immutable
 internal data class SettingsListToggleActions(
-    val onSetSaveDataOnMetered: (Boolean) -> Unit,
     val onSetProgressiveDownload: (Boolean) -> Unit,
     val onSetSeamlessQualityUpgrade: (Boolean) -> Unit,
     val onSetShowInlineVolumeSlider: (Boolean) -> Unit,

@@ -53,15 +53,15 @@ class ResolveTrackForPlaybackUseCaseTest {
     @Test fun `bandcamp prefers local download when quality is high enough`() = runTest {
         val track = sampleTrack(source = TrackSource.BANDCAMP, streamUrl = "https://cdn.example/stream.mp3")
         coEvery { downloadRepository.getDownloadInfo(track.id) } returns DownloadInfo(
-            filePath = "content://downloads/track.flac",
+            filePath = "/data/data/com.dustvalve.next.android/files/downloads/a1/t1.flac",
             format = AudioFormat.FLAC,
         )
 
         val result = useCase(track)
 
-        assertThat(result.track.streamUrl).isEqualTo("content://downloads/track.flac")
+        assertThat(result.track.streamUrl).isEqualTo("file:///data/data/com.dustvalve.next.android/files/downloads/a1/t1.flac")
         assertThat(result.playbackFormat).isEqualTo(AudioFormat.FLAC)
-        assertThat(result.sourcePath).isEqualTo("content://downloads/track.flac")
+        assertThat(result.sourcePath).isEqualTo("/data/data/com.dustvalve.next.android/files/downloads/a1/t1.flac")
         coVerify(exactly = 0) { bandcampStreamUrlResolver.resolveStreamUrl(any()) }
     }
 

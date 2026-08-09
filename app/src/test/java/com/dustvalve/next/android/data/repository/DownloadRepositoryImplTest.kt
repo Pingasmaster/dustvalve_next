@@ -146,7 +146,8 @@ class DownloadRepositoryImplTest {
         coEvery {
             RangeResumeDownloader.stream(any(), any(), any(), any(), any(), any(), any(), any(), any())
         } coAnswers {
-            onCall(arg(2), arg(4), arg(6))
+            val written = onCall(arg(2), arg(4), arg(6))
+            RangeResumeDownloader.StreamResult(written, suggestedExtension = null)
         }
     }
 
@@ -341,7 +342,7 @@ class DownloadRepositoryImplTest {
             onProgress?.invoke(1024L, body.size.toLong())
             metaMidTransfer = metaFile.takeIf { it.exists() }?.readText()
             sink.write(body)
-            body.size.toLong()
+            RangeResumeDownloader.StreamResult(body.size.toLong(), suggestedExtension = null)
         }
 
         repo.downloadTrack(bandcampTrack("t1"))

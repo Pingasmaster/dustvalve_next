@@ -96,6 +96,10 @@ class DownloadNotificationCenter @Inject constructor(
     @Volatile
     private var foregroundOwned = false
 
+    /** Mirrors the DataStore toggle; read from the sync FGS entry point. */
+    @Volatile
+    private var notificationsEnabled = true
+
     fun setForegroundOwned(owned: Boolean) {
         foregroundOwned = owned
     }
@@ -137,7 +141,10 @@ class DownloadNotificationCenter @Inject constructor(
             combine(state, settingsDataStore.downloadNotificationsEnabled) { s, enabled -> s to enabled }
                 .debounce(NOTIFICATION_DEBOUNCE_MS)
                 .distinctUntilChanged()
-                .collect { (snapshot, enabled) -> refresh(snapshot, enabled) }
+                .collect { (snapshot, enabled) ->
+                    notificationsEnabled = enabled
+                    refresh(snapshot, enabled)
+                }
         }
     }
 
@@ -187,13 +194,19 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    override fun trackFinished(trackId: String, @Suppress("UNUSED_PARAMETER") success: Boolean) {
+    override fun trackFinished(trackId: String, success: Boolean) {
         state.update { s ->
             val newActive = s.activeTracks - trackId
             val inBatch = s.batchStack.isNotEmpty()
             s.copy(
                 activeTracks = newActive,
-                completedInBatch = if (inBatch) s.completedInBatch + 1 else s.completedInBatch,
+                // Failures must not advance the batch counter - otherwise the
+                // chip reports "3/5" after two errors + one success.
+                completedInBatch = if (inBatch && success) {
+                    s.completedInBatch + 1
+                } else {
+                    s.completedInBatch
+                },
             )
         }
     }
@@ -203,11 +216,23 @@ class DownloadNotificationCenter @Inject constructor(
             val hasWork = snapshot.activeTracks.isNotEmpty() ||
                 snapshot.batchStack.isNotEmpty() ||
                 snapshot.paused
-            if (!enabled || !hasPostPermission() || !hasWork) {
+            if (!hasPostPermission() || !hasWork) {
                 // When the service owns the foreground notification it drives
                 // teardown via stopForeground - cancelling here would fight it
                 // (and an FGS notification can't be cancelled while foregrounded).
                 if (!foregroundOwned) notificationManager.cancel(NOTIFICATION_ID)
+                return
+            }
+            // User disabled rich download notifications: still post a minimal
+            // ongoing card while the FGS owns this id. Skipping the notify
+            // leaves startForeground with a stale/empty notification and
+            // freezes the service on Android 12+.
+            if (!enabled) {
+                if (foregroundOwned) {
+                    notificationManager.notify(NOTIFICATION_ID, buildMinimalForegroundNotification())
+                } else {
+                    notificationManager.cancel(NOTIFICATION_ID)
+                }
                 return
             }
             val notification = buildNotification(snapshot) ?: run {
@@ -436,7 +461,46 @@ class DownloadNotificationCenter @Inject constructor(
      * Notification.ProgressStyle (API 36) with 36.1-only promoted-ongoing
      * calls. Both paths are now gated on [liveUpdateCapable].
      */
-    fun currentForegroundNotification(): Notification = buildNotification(state.value) ?: buildPlaceholderNotification()
+    fun currentForegroundNotification(): Notification {
+        // FGS always needs a posted notification. When the user disabled rich
+        // download notifications, hand the service a minimal ongoing card
+        // instead of the detailed progress chip.
+        if (!notificationsEnabled) return buildMinimalForegroundNotification()
+        return buildNotification(state.value) ?: buildPlaceholderNotification()
+    }
+
+    /** Bare ongoing notification that satisfies the FGS contract without progress chrome. */
+    private fun buildMinimalForegroundNotification(): Notification {
+        if (!liveUpdateCapable) {
+            return NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_download)
+                .setContentTitle(context.getString(R.string.notification_download_preparing))
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(contentIntent())
+                .addAction(compatCancelAction())
+                .build()
+        }
+        return buildLiveUpdateMinimalNotification()
+    }
+
+    @android.annotation.SuppressLint("NewApi")
+    private fun buildLiveUpdateMinimalNotification(): Notification {
+        val style = Notification.ProgressStyle()
+            .setProgress(0)
+            .setProgressSegments(listOf(Notification.ProgressStyle.Segment(UNIT_PER_TRACK)))
+        return Notification.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_download)
+            .setContentTitle(context.getString(R.string.notification_download_preparing))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setStyle(style)
+            .setShortCriticalText(context.getString(R.string.notification_download_preparing_chip))
+            .setRequestPromotedOngoing(true)
+            .setContentIntent(contentIntent())
+            .addAction(cancelAction())
+            .build()
+    }
 
     private fun buildPlaceholderNotification(): Notification {
         if (!liveUpdateCapable) {

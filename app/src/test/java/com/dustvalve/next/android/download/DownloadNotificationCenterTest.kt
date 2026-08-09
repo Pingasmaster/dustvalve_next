@@ -129,12 +129,14 @@ class DownloadNotificationCenterTest {
         assertThat(center.currentState.completedInBatch).isEqualTo(0)
     }
 
-    @Test fun `trackFinished inside a batch increments completedInBatch`() = runTest {
+    @Test fun `trackFinished inside a batch increments completedInBatch only on success`() = runTest {
         center.withBatch("Greatest Hits", 5, DownloadProgressReporter.BatchKind.ALBUM) {
             center.trackStarted("t1", "A")
             center.trackFinished("t1", true)
             center.trackStarted("t2", "B")
-            center.trackFinished("t2", true)
+            center.trackFinished("t2", false)
+            center.trackStarted("t3", "C")
+            center.trackFinished("t3", true)
 
             assertThat(center.currentState.completedInBatch).isEqualTo(2)
         }

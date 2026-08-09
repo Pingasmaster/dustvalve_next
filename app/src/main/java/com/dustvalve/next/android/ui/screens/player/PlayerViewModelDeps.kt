@@ -20,6 +20,7 @@ class PlayerCoreDeps @Inject constructor(
     val queueManager: QueueManager,
     val libraryRepository: LibraryRepository,
     val downloadRepository: DownloadRepository,
+    val downloadController: DownloadController,
     val settingsDataStore: SettingsDataStore,
     val resolveTrackForPlaybackUseCase: ResolveTrackForPlaybackUseCase,
     val playbackStreamResolver: PlaybackStreamResolver,

@@ -45,9 +45,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.ui.components.AppButtonGroup
-import com.dustvalve.next.android.ui.util.displayNameRes
 import com.dustvalve.next.android.update.UpdateUiState
 import kotlin.math.roundToInt
 
@@ -248,8 +246,6 @@ private fun ProgressBarAppearanceControls(state: SettingsUiState, onAction: (Set
 @Composable
 internal fun SettingsAudioQualitySection(
     state: SettingsUiState,
-    onShowFormatSheet: () -> Unit,
-    onSetSaveDataOnMetered: (Boolean) -> Unit,
     onSetProgressiveDownload: (Boolean) -> Unit,
     onSetSeamlessQualityUpgrade: (Boolean) -> Unit,
 ) {
@@ -264,38 +260,11 @@ internal fun SettingsAudioQualitySection(
             ),
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.settings_download_format),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    text = stringResource(R.string.settings_download_format_desc),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                val currentFormat = AudioFormat.fromKey(state.downloadFormat)
-                FilledTonalButton(
-                    onClick = onShowFormatSheet,
-                    shapes = ButtonDefaults.shapes(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(currentFormat?.displayNameRes ?: R.string.audio_format_flac))
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                SettingsToggleRow(
-                    title = stringResource(R.string.settings_mp3_on_metered),
-                    checked = state.saveDataOnMetered,
-                    onCheckedChange = onSetSaveDataOnMetered,
-                    extras = SettingsToggleExtras(
-                        description = stringResource(R.string.settings_mp3_on_metered_desc),
-                    ),
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
+                // Download-format picker + "MP3 only on metered" used to select
+                // HQ Bandcamp purchase encodes. Free/stream downloads are always
+                // the provider's stream format (mp3-128 / YouTube itag), so those
+                // toggles were lying UI after login was removed. Progressive
+                // download + seamless upgrade remain wired through the player.
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_progressive_download),
                     checked = state.progressiveDownload,
