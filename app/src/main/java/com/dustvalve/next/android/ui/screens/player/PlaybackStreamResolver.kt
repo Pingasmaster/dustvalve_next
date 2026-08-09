@@ -1,8 +1,8 @@
 package com.dustvalve.next.android.ui.screens.player
 
-import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.repository.BandcampStreamUrlResolver
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
@@ -27,7 +27,7 @@ import kotlin.coroutines.cancellation.CancellationException
 class PlaybackStreamResolver @Inject constructor(
     private val youtubeRepository: YouTubeRepository,
     private val soundCloudRepository: SoundCloudRepository,
-    private val dustvalveStreamResolver: DustvalveStreamResolver,
+    private val bandcampStreamUrlResolver: BandcampStreamUrlResolver,
     private val downloadRepository: DownloadRepository,
     private val resolveTrackForPlayback: ResolveTrackForPlaybackUseCase,
 ) {
@@ -35,8 +35,30 @@ class PlaybackStreamResolver @Inject constructor(
     // may stamp/read TTL from different threads on the singleton resolver.
     private val streamResolvedAtMs = ConcurrentHashMap<String, Long>()
 
+    /** One-shot auto-recovery guard; cleared on STATE_READY or user play-after-error. */
+    private val autoRetriedTrackIds = mutableSetOf<String>()
+
     fun recordResolved(trackId: String) {
         streamResolvedAtMs[trackId] = System.currentTimeMillis()
+    }
+
+    /**
+     * Marks [trackId] as older than the TTL so the next play path re-resolves
+     * instead of handing ExoPlayer the same dead URL.
+     */
+    fun invalidateResolution(trackId: String) {
+        streamResolvedAtMs[trackId] = 0L
+    }
+
+    /** Claims the one-shot auto-retry slot for [trackId]. False if already spent. */
+    fun tryClaimAutoRetry(trackId: String): Boolean = autoRetriedTrackIds.add(trackId)
+
+    fun clearAutoRetry(trackId: String? = null) {
+        if (trackId == null) {
+            autoRetriedTrackIds.clear()
+        } else {
+            autoRetriedTrackIds.remove(trackId)
+        }
     }
 
     /**
@@ -75,12 +97,7 @@ class PlaybackStreamResolver @Inject constructor(
     }
 
     suspend fun reResolveBandcamp(track: Track): Track? {
-        val pageUrl = track.albumUrl.takeIf { it.isNotBlank() } ?: track.bandcampTrackUrl
-        if (pageUrl.isNullOrBlank()) return null
-        // The resolver returns track.streamUrl untouched when it is set, so
-        // blank it to force a fresh album-page fetch.
-        val freshUrl = dustvalveStreamResolver.resolveStreamUrl(track.copy(streamUrl = null), pageUrl)
-            ?: return null
+        val freshUrl = bandcampStreamUrlResolver.resolveStreamUrl(track) ?: return null
         recordResolved(track.id)
         return track.copy(streamUrl = freshUrl)
     }
@@ -93,10 +110,10 @@ class PlaybackStreamResolver @Inject constructor(
      */
     suspend fun resolveOnDemand(track: Track): Track? {
         val resolved = try {
-            val staleBandcampStream = track.source == TrackSource.BANDCAMP &&
-                !track.streamUrl.isNullOrBlank() &&
-                isResolutionStale(track)
-            if (staleBandcampStream && downloadRepository.getDownloadInfo(track.id) == null) {
+            val needsBandcampRefresh = track.source == TrackSource.BANDCAMP &&
+                downloadRepository.getDownloadInfo(track.id) == null &&
+                (track.streamUrl.isNullOrBlank() || isResolutionStale(track))
+            if (needsBandcampRefresh) {
                 reResolveBandcamp(track)
             } else {
                 val result = resolveTrackForPlayback(track, reportFailure = false)

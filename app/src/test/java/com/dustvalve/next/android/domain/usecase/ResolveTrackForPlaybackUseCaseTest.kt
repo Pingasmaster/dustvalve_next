@@ -3,6 +3,7 @@ package com.dustvalve.next.android.domain.usecase
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.repository.BandcampStreamUrlResolver
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.SoundCloudRepository
@@ -21,13 +22,20 @@ class ResolveTrackForPlaybackUseCaseTest {
     private lateinit var downloadRepository: DownloadRepository
     private lateinit var youtubeRepository: YouTubeRepository
     private lateinit var soundCloudRepository: SoundCloudRepository
+    private lateinit var bandcampStreamUrlResolver: BandcampStreamUrlResolver
     private lateinit var useCase: ResolveTrackForPlaybackUseCase
 
     @Before fun setUp() {
         downloadRepository = mockk()
         youtubeRepository = mockk()
         soundCloudRepository = mockk()
-        useCase = ResolveTrackForPlaybackUseCase(downloadRepository, youtubeRepository, soundCloudRepository)
+        bandcampStreamUrlResolver = mockk()
+        useCase = ResolveTrackForPlaybackUseCase(
+            downloadRepository,
+            youtubeRepository,
+            soundCloudRepository,
+            bandcampStreamUrlResolver,
+        )
     }
 
     @Test fun `local track is returned as-is with stream path`() = runTest {
@@ -54,6 +62,37 @@ class ResolveTrackForPlaybackUseCaseTest {
         assertThat(result.track.streamUrl).isEqualTo("content://downloads/track.flac")
         assertThat(result.playbackFormat).isEqualTo(AudioFormat.FLAC)
         assertThat(result.sourcePath).isEqualTo("content://downloads/track.flac")
+        coVerify(exactly = 0) { bandcampStreamUrlResolver.resolveStreamUrl(any()) }
+    }
+
+    @Test fun `bandcamp with blank streamUrl re-resolves via Dustvalve`() = runTest {
+        val track = sampleTrack(
+            source = TrackSource.BANDCAMP,
+            streamUrl = null,
+            albumUrl = "https://artist.bandcamp.com/album/x",
+        )
+        coEvery { downloadRepository.getDownloadInfo(track.id) } returns null
+        coEvery { bandcampStreamUrlResolver.resolveStreamUrl(track) } returns "https://cdn.example/fresh.mp3"
+
+        val result = useCase(track)
+
+        assertThat(result.track.streamUrl).isEqualTo("https://cdn.example/fresh.mp3")
+        assertThat(result.recordedRemoteResolution).isTrue()
+        assertThat(result.streamFailed).isFalse()
+    }
+
+    @Test fun `bandcamp blank stream that still fails reports streamFailed`() = runTest {
+        val track = sampleTrack(source = TrackSource.BANDCAMP, streamUrl = "")
+        coEvery { downloadRepository.getDownloadInfo(track.id) } returns null
+        coEvery { bandcampStreamUrlResolver.resolveStreamUrl(track) } returns null
+
+        val reported = useCase(track, reportFailure = true)
+        assertThat(reported.streamFailed).isTrue()
+        assertThat(reported.track.streamUrl).isNull()
+
+        val silent = useCase(track, reportFailure = false)
+        assertThat(silent.streamFailed).isFalse()
+        assertThat(silent.track.streamUrl).isNull()
     }
 
     @Test fun `youtube resolves live stream and records remote resolution`() = runTest {
@@ -114,6 +153,7 @@ class ResolveTrackForPlaybackUseCaseTest {
         id: String = "t1",
         source: TrackSource = TrackSource.BANDCAMP,
         streamUrl: String? = null,
+        albumUrl: String = "",
     ) = Track(
         id = id,
         albumId = "a1",
@@ -125,5 +165,7 @@ class ResolveTrackForPlaybackUseCaseTest {
         artUrl = "",
         albumTitle = "Album",
         source = source,
+        albumUrl = albumUrl,
     )
 }
+

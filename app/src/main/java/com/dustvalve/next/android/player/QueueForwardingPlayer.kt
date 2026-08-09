@@ -4,6 +4,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import com.dustvalve.next.android.domain.model.RepeatMode
 
 /**
  * A [ForwardingPlayer] that exposes skip-next/previous commands and routes them
@@ -31,9 +32,18 @@ class QueueForwardingPlayer(player: Player, private val playbackManager: Playbac
         else -> super.isCommandAvailable(command)
     }
 
-    override fun hasNextMediaItem(): Boolean = queueManager.hasNext()
+    override fun hasNextMediaItem(): Boolean {
+        if (queueManager.hasNext()) return true
+        // M5: repeat-all wraps; keep the notification next button enabled.
+        return playbackManager.repeatMode.value == RepeatMode.ALL &&
+            queueManager.queue.value.isNotEmpty()
+    }
 
-    override fun hasPreviousMediaItem(): Boolean = queueManager.hasPrevious()
+    override fun hasPreviousMediaItem(): Boolean {
+        if (queueManager.hasPrevious()) return true
+        return playbackManager.repeatMode.value == RepeatMode.ALL &&
+            queueManager.queue.value.isNotEmpty()
+    }
 
     override fun seekToNext() {
         playbackManager.skipNext()

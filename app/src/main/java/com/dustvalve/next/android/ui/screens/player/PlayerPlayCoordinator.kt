@@ -132,8 +132,9 @@ internal class PlayerPlayCoordinator(
             val isYouTubeStream = track.source == TrackSource.YOUTUBE &&
                 downloadRepository.getDownloadInfo(track.id) == null
 
+            // C1: do not pause current playback until resolve succeeds. A failed
+            // YouTube tap must leave the previous track playing.
             if (isYouTubeStream) {
-                playbackManager.pause()
                 extraState.update { it.copy(isLoadingTrack = true) }
             }
 
@@ -145,7 +146,7 @@ internal class PlayerPlayCoordinator(
                 }
             }
 
-            if (resolved.streamUrl == null) return@launch
+            if (resolved.streamUrl.isNullOrBlank()) return@launch
             queueManager.setQueue(listOf(resolved), 0)
             playbackManager.playTrack(resolved)
             triggerProgressiveDownload(track)
@@ -175,9 +176,9 @@ internal class PlayerPlayCoordinator(
             val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
                 downloadRepository.getDownloadInfo(targetTrack.id) == null
 
+            // C1/H1: do not pause or replace the queue until the target resolves
+            // to a playable URL. Failed YouTube taps must leave prior playback intact.
             if (isYouTubeStream) {
-                playbackManager.pause()
-                queueManager.setQueue(tracks, index)
                 extraState.update { it.copy(isLoadingTrack = true) }
             }
 
@@ -188,6 +189,8 @@ internal class PlayerPlayCoordinator(
                     extraState.update { it.copy(isLoadingTrack = false) }
                 }
             }
+
+            if (resolvedTarget.streamUrl.isNullOrBlank()) return@launch
 
             val queueTracks = tracks.toMutableList().also { it[index] = resolvedTarget }
             playbackManager.playQueue(queueTracks, index)
@@ -217,8 +220,6 @@ internal class PlayerPlayCoordinator(
                 downloadRepository.getDownloadInfo(targetTrack.id) == null
 
             if (isYouTubeStream) {
-                playbackManager.pause()
-                queueManager.setQueue(tracks, startIndex)
                 extraState.update { it.copy(isLoadingTrack = true) }
             }
 
@@ -229,6 +230,8 @@ internal class PlayerPlayCoordinator(
                     extraState.update { it.copy(isLoadingTrack = false) }
                 }
             }
+
+            if (resolvedTarget.streamUrl.isNullOrBlank()) return@launch
 
             val queueTracks = tracks.toMutableList().also { it[startIndex] = resolvedTarget }
             playbackManager.playQueue(queueTracks, startIndex)
