@@ -22,18 +22,21 @@
     <issue id="RelativeOverlap"               severity="error" />
     <issue id="RtlHardcoded"                  severity="error" />
     <!--
-        Not an App Indexing / web deep-link product. In-app deep links are for
-        navigation inside Dustvalve, not Google App Indexing crawl targets.
+        KEEP: product is not Google App Indexing. Manifest https VIEW/BROWSABLE
+        filters (YouTube/Bandcamp/SoundCloud, autoVerify=false) are in-app open
+        handlers, not crawl targets. Removing the filters would break deep-link
+        open; enabling indexing would be a product change, not a lint cleanup.
     -->
     <issue id="GoogleAppIndexingWarning"      severity="ignore" />
     <issue id="ObsoleteSdkInt"                severity="error" />
 
     <!--
-        NewerVersionAvailable / AndroidGradlePluginVersion / GradleDependency
-        report that some catalog pin has a newer release. ./build.sh already
-        auto-bumps via scripts/check_latest_deps.py --apply on every build;
-        failing lintRelease on the same signal is redundant noise under
-        warningsAsErrors. Demote to informational so editor markers remain.
+        KEEP (demoted, not ignored): NewerVersionAvailable /
+        AndroidGradlePluginVersion / GradleDependency flag catalog pins that
+        already have a newer release. ./build.sh auto-bumps via
+        scripts/check_latest_deps.py --apply on every build; failing
+        lintRelease on the same signal is redundant under warningsAsErrors.
+        Informational keeps editor markers without breaking the gate.
     -->
     <issue id="NewerVersionAvailable"         severity="informational" />
     <issue id="AndroidGradlePluginVersion"    severity="informational" />

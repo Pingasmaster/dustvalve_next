@@ -11,12 +11,17 @@ ij_kotlin_allow_trailing_comma = true
 ij_kotlin_allow_trailing_comma_on_call_site = true
 ktlint_code_style = intellij_idea
 # @Composable PascalCase is standard; keep naming for non-composables.
+# (ktlint already supports this via ignore_when_annotated_with; do not disable
+# function-naming entirely.)
 ktlint_function_naming_ignore_when_annotated_with = Composable
-# Compose theme / CompositionLocal conventions (LocalFoo, AppTypography) clash
-# with lowerCamelCase property naming; keep disabled for those conventions.
+# KEEP disabled: Compose theme / CompositionLocal conventions (LocalFoo,
+# AppTypography) clash with lowerCamelCase. ktlint 1.8 property-naming has no
+# Local*/PascalCase allowlist - only constant_naming - so the rule must stay off.
 ktlint_standard_property-naming = disabled
-# StateFlow `_state` / `state.asStateFlow()` pattern is standard; ktlint's
-# backing-property-naming check rejects it.
+# KEEP disabled: several types use private `_state` MutableStateFlow with
+# derived public flows (not a matching `state` property). ktlint
+# backing-property-naming requires a same-name public property/function and
+# has no allowlist; enabling it fails QueueManager / PlayerViewModel / etc.
 ktlint_standard_backing-property-naming = disabled
 # Multi-declaration files (e.g. Shape.kt hosting AppShapes) are intentional;
 # filename matching would force artificial one-type-per-file churn.

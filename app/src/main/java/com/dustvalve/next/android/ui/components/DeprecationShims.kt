@@ -1,13 +1,15 @@
-// slack-lints' DeprecatedCall (slackhq/slack-lints#268) matches call sites by
-// function NAME: when any overload in an overload set carries @Deprecated,
-// every caller is flagged - including calls that resolve to non-deprecated
-// overloads (kotlinc emits no deprecation warning for them). FlowRow and
+// KEEP: slack-lints DeprecatedCall (slack-lint-checks 0.11.1, still current)
+// matches call sites by function NAME via AnnotatedClassOrMethodUsageDetector:
+// when any overload in an overload set carries @Deprecated, every caller is
+// flagged - including calls that resolve to non-deprecated overloads (kotlinc
+// emits no deprecation warning for them). Empirically re-checked: removing
+// this suppress fails lintCompatRelease on FlowRow here. FlowRow and
 // ButtonGroup both have one deprecated overload, so direct use forced
 // file-wide DeprecatedCall suppressions across feature screens.
 //
 // These thin pass-through shims confine the suppression to this file so the
 // feature files keep full DeprecatedCall coverage. Delete the shims and call
-// FlowRow/ButtonGroup directly once the upstream false positive is fixed.
+// FlowRow/ButtonGroup directly once upstream fixes overload resolution.
 @file:Suppress("DeprecatedCall")
 
 package com.dustvalve.next.android.ui.components
