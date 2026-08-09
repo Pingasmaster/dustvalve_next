@@ -201,7 +201,6 @@ private fun SourcesCardContent(
     Column(modifier = Modifier.padding(16.dp)) {
         SettingsToggleRow(
             title = stringResource(R.string.settings_source_local),
-            icon = R.drawable.ic_phone_android,
             checked = state.localMusicEnabled,
             onCheckedChange = { enabled ->
                 onAction(SettingsSourcesAction.SetLocalMusicEnabled(enabled))
@@ -211,6 +210,9 @@ private fun SourcesCardContent(
                     onLocalEnableNeedsFolder()
                 }
             },
+            extras = SettingsToggleExtras(
+                icon = R.drawable.ic_phone_android,
+            ),
         )
 
         AnimatedVisibility(
@@ -230,23 +232,27 @@ private fun SourcesCardContent(
 
         SettingsToggleRow(
             title = stringResource(R.string.settings_source_bandcamp),
-            icon = R.drawable.ic_cloud,
             checked = state.bandcampEnabled,
             onCheckedChange = {
                 onAction(SettingsSourcesAction.SetBandcampEnabled(it))
             },
-            switchTag = com.dustvalve.next.android.ui.TestTags.settingsSwitch("bandcamp"),
+            extras = SettingsToggleExtras(
+                icon = R.drawable.ic_cloud,
+                switchTag = com.dustvalve.next.android.ui.TestTags.settingsSwitch("bandcamp"),
+            ),
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         SettingsToggleRow(
             title = stringResource(R.string.settings_source_youtube),
-            icon = R.drawable.ic_play_circle,
             checked = state.youtubeEnabled,
             onCheckedChange = {
                 onAction(SettingsSourcesAction.SetYoutubeEnabled(it))
             },
+            extras = SettingsToggleExtras(
+                icon = R.drawable.ic_play_circle,
+            ),
         )
 
         AnimatedVisibility(
@@ -264,11 +270,13 @@ private fun SourcesCardContent(
 
         SettingsToggleRow(
             title = stringResource(R.string.settings_source_soundcloud),
-            icon = R.drawable.ic_graphic_eq,
             checked = state.soundcloudEnabled,
             onCheckedChange = {
                 onAction(SettingsSourcesAction.SetSoundcloudEnabled(it))
             },
+            extras = SettingsToggleExtras(
+                icon = R.drawable.ic_graphic_eq,
+            ),
         )
     }
 }
@@ -284,7 +292,6 @@ private fun LocalMusicSourceDetails(
     Column(modifier = Modifier.padding(top = 12.dp)) {
         SettingsToggleRow(
             title = stringResource(R.string.settings_use_individual_folders),
-            description = stringResource(R.string.settings_use_individual_folders_desc),
             checked = !state.localMusicUseMediaStore,
             onCheckedChange = { useIndividualFolders ->
                 if (useIndividualFolders) {
@@ -293,7 +300,10 @@ private fun LocalMusicSourceDetails(
                     onRequestAudioPermission()
                 }
             },
-            subRow = true,
+            extras = SettingsToggleExtras(
+                description = stringResource(R.string.settings_use_individual_folders_desc),
+                subRow = true,
+            ),
         )
 
         if (!state.localMusicUseMediaStore) {
@@ -320,22 +330,26 @@ private fun LocalMusicSourceDetails(
         Spacer(modifier = Modifier.height(8.dp))
         SettingsToggleRow(
             title = stringResource(R.string.settings_local_keep_sort),
-            description = stringResource(R.string.settings_local_keep_sort_desc),
             checked = state.keepLocalSort,
             onCheckedChange = {
                 onAction(SettingsSourcesAction.SetKeepLocalSort(it))
             },
-            subRow = true,
+            extras = SettingsToggleExtras(
+                description = stringResource(R.string.settings_local_keep_sort_desc),
+                subRow = true,
+            ),
         )
         Spacer(modifier = Modifier.height(8.dp))
         SettingsToggleRow(
             title = stringResource(R.string.settings_local_keep_filters),
-            description = stringResource(R.string.settings_local_keep_filters_desc),
             checked = state.keepLocalFilters,
             onCheckedChange = {
                 onAction(SettingsSourcesAction.SetKeepLocalFilters(it))
             },
-            subRow = true,
+            extras = SettingsToggleExtras(
+                description = stringResource(R.string.settings_local_keep_filters_desc),
+                subRow = true,
+            ),
         )
     }
 }

@@ -43,8 +43,7 @@ fun <T : Any> ReorderableMusicList(
     modifier: Modifier = Modifier,
     lazyListState: LazyListState = rememberLazyListState(),
     contentPadding: PaddingValues = PaddingValues(bottom = 10.dp),
-    header: (LazyListScope.() -> Unit)? = null,
-    footer: (LazyListScope.() -> Unit)? = null,
+    slots: ReorderableListSlots = ReorderableListSlots(),
     itemContent: @Composable (
         index: Int,
         item: T,
@@ -83,7 +82,7 @@ fun <T : Any> ReorderableMusicList(
         modifier = modifier,
         contentPadding = contentPadding,
     ) {
-        header?.invoke(this)
+        slots.header?.invoke(this)
 
         itemsIndexed(
             items = displayList,
@@ -114,6 +113,12 @@ fun <T : Any> ReorderableMusicList(
             }
         }
 
-        footer?.invoke(this)
+        slots.footer?.invoke(this)
     }
 }
+
+
+data class ReorderableListSlots(
+    val header: (LazyListScope.() -> Unit)? = null,
+    val footer: (LazyListScope.() -> Unit)? = null,
+)

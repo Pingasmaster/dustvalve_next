@@ -108,20 +108,22 @@ import kotlinx.coroutines.launch
  * Replaces `ui/screens/artist/ArtistDetailScreen.kt` (Bandcamp) and
  * `ui/screens/youtube/YouTubeArtistDetailScreen.kt`.
  */
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ArtistDetailScreen(
     adaptiveInfo: AdaptiveLayoutInfo,
-    sourceId: String,
-    artistUrl: String,
-    artistNameHint: String?,
-    artistImageHint: String?,
+    args: ArtistDetailArgs,
     onAlbumClick: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: ArtistDetailViewModel = hiltViewModel(),
 ) {
+    val sourceId = args.sourceId
+    val artistUrl = args.artistUrl
+    val artistNameHint = args.artistNameHint
+    val artistImageHint = args.artistImageHint
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
@@ -157,7 +159,7 @@ fun ArtistDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
-            text = { Text(stringResource(R.string.detail_delete_artist_downloads_text, state.artist?.name ?: "")) },
+            text = { Text(stringResource(R.string.detail_delete_artist_downloads_text, state.artist?.name.orEmpty())) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -182,7 +184,7 @@ fun ArtistDetailScreen(
             LargeFlexibleTopAppBar(
                 title = {
                     Text(
-                        text = state.artist?.name ?: artistNameHint ?: "",
+                        text = (state.artist?.name ?: artistNameHint).orEmpty(),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -256,34 +258,38 @@ fun ArtistDetailScreen(
                         adaptiveInfo = adaptiveInfo,
                         state = state,
                         innerPadding = innerPadding,
-                        onPlayAll = {
-                            viewModel.playExpanded(0) { tracks, index ->
-                                playerViewModel.playAlbum(tracks, index)
-                            }
-                        },
-                        onShuffle = {
-                            viewModel.playMixShuffled { tracks, index ->
-                                playerViewModel.playAlbum(tracks, index)
-                            }
-                        },
-                        onToggleFavorite = viewModel::toggleFavorite,
-                        onDownload = {
-                            val allDownloaded = state.tracks.isNotEmpty() &&
-                                !state.hasMore &&
-                                state.tracks.all { it.id in state.downloadedTrackIds }
-                            if (allDownloaded) {
-                                showDeleteDialog = true
-                            } else {
-                                viewModel.downloadAll()
-                            }
-                        },
-                        onLoadMore = viewModel::loadMore,
-                        onTrackClick = { idx ->
-                            viewModel.playExpanded(idx) { tracks, index ->
-                                playerViewModel.playAlbum(tracks, index)
-                            }
-                        },
-                        onAlbumClick = onAlbumClick,
+                        actions = ArtistTracksActions(
+                            playback = DetailPlaybackActions(
+                                onPlayAll = {
+                                    viewModel.playExpanded(0) { tracks, index ->
+                                        playerViewModel.playAlbum(tracks, index)
+                                    }
+                                },
+                                onShuffle = {
+                                    viewModel.playMixShuffled { tracks, index ->
+                                        playerViewModel.playAlbum(tracks, index)
+                                    }
+                                },
+                                onToggleFavorite = viewModel::toggleFavorite,
+                                onDownload = {
+                                    val allDownloaded = state.tracks.isNotEmpty() &&
+                                        !state.hasMore &&
+                                        state.tracks.all { it.id in state.downloadedTrackIds }
+                                    if (allDownloaded) {
+                                        showDeleteDialog = true
+                                    } else {
+                                        viewModel.downloadAll()
+                                    }
+                                },
+                            ),
+                            onLoadMore = viewModel::loadMore,
+                            onTrackClick = { idx ->
+                                viewModel.playExpanded(idx) { tracks, index ->
+                                    playerViewModel.playAlbum(tracks, index)
+                                }
+                            },
+                            onAlbumClick = onAlbumClick,
+                        ),
                     )
                 } else {
                     AlbumGridLayout(
@@ -344,17 +350,23 @@ private fun AlbumGridLayout(
         }
         item(key = "actions", span = { GridItemSpan(maxLineSpan) }) {
             ActionBar(
-                playPrimaryLabel = stringResource(R.string.common_play_mix),
-                playPrimaryIconRes = R.drawable.ic_shuffle,
-                playPrimaryEnabled = !state.isLoadingMix && artist.albums.isNotEmpty(),
-                playPrimaryLoading = state.isLoadingMix,
-                isFavorite = state.isFavorite,
-                isDownloading = state.isDownloading,
-                allDownloaded = allAlbumsDownloaded,
-                downloadEnabled = !state.isDownloading && artist.albums.isNotEmpty(),
-                onPlayPrimary = onPlayMix,
-                onToggleFavorite = onToggleFavorite,
-                onDownload = onDownload,
+                primary = DetailActionBarPrimary(
+                    label = stringResource(R.string.common_play_mix),
+                    iconRes = R.drawable.ic_shuffle,
+                    enabled = !state.isLoadingMix && artist.albums.isNotEmpty(),
+                    loading = state.isLoadingMix,
+                    onClick = onPlayMix,
+                ),
+                state = DetailActionBarState(
+                    isFavorite = state.isFavorite,
+                    isDownloading = state.isDownloading,
+                    allDownloaded = allAlbumsDownloaded,
+                    downloadEnabled = !state.isDownloading && artist.albums.isNotEmpty(),
+                ),
+                extras = DetailActionBarExtras(
+                    onToggleFavorite = onToggleFavorite,
+                    onDownload = onDownload,
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -411,14 +423,15 @@ private fun FlatTracksLayout(
     adaptiveInfo: AdaptiveLayoutInfo,
     state: ArtistDetailUiState,
     innerPadding: PaddingValues,
-    onPlayAll: () -> Unit,
-    onShuffle: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onDownload: () -> Unit,
-    onLoadMore: () -> Unit,
-    onTrackClick: (Int) -> Unit,
-    onAlbumClick: (String) -> Unit = {},
+    actions: ArtistTracksActions,
 ) {
+    val onPlayAll = actions.playback.onPlayAll
+    val onShuffle = actions.playback.onShuffle
+    val onToggleFavorite = actions.playback.onToggleFavorite
+    val onDownload = actions.playback.onDownload
+    val onLoadMore = actions.onLoadMore
+    val onTrackClick = actions.onTrackClick
+    val onAlbumClick = actions.onAlbumClick
     val artist = state.artist ?: return
     val listState = rememberLazyListState()
     val allDownloaded = state.tracks.isNotEmpty() &&
@@ -454,19 +467,25 @@ private fun FlatTracksLayout(
         }
         item(key = "actions") {
             ActionBar(
-                playPrimaryLabel = stringResource(R.string.common_play_all),
-                playPrimaryIconRes = R.drawable.ic_play_arrow,
-                playPrimaryEnabled = state.tracks.isNotEmpty(),
-                playPrimaryLoading = false,
-                isFavorite = state.isFavorite,
-                isDownloading = state.isDownloading,
-                allDownloaded = allDownloaded,
-                downloadEnabled = !state.isDownloading && state.tracks.isNotEmpty(),
-                onPlayPrimary = onPlayAll,
-                onToggleFavorite = onToggleFavorite,
-                onDownload = onDownload,
-                onShuffle = onShuffle,
-                shuffleEnabled = !state.isLoadingMix && state.tracks.isNotEmpty(),
+                primary = DetailActionBarPrimary(
+                    label = stringResource(R.string.common_play_all),
+                    iconRes = R.drawable.ic_play_arrow,
+                    enabled = state.tracks.isNotEmpty(),
+                    loading = false,
+                    onClick = onPlayAll,
+                ),
+                state = DetailActionBarState(
+                    isFavorite = state.isFavorite,
+                    isDownloading = state.isDownloading,
+                    allDownloaded = allDownloaded,
+                    downloadEnabled = !state.isDownloading && state.tracks.isNotEmpty(),
+                ),
+                extras = DetailActionBarExtras(
+                    onToggleFavorite = onToggleFavorite,
+                    onDownload = onDownload,
+                    onShuffle = onShuffle,
+                    shuffleEnabled = !state.isLoadingMix && state.tracks.isNotEmpty(),
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -640,25 +659,24 @@ private fun EmptyState(message: String) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ActionBar(
-    playPrimaryLabel: String,
-    playPrimaryIconRes: Int,
-    playPrimaryEnabled: Boolean,
-    playPrimaryLoading: Boolean,
-    isFavorite: Boolean,
-    isDownloading: Boolean,
-    allDownloaded: Boolean,
-    downloadEnabled: Boolean,
-    onPlayPrimary: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onDownload: () -> Unit,
+    primary: DetailActionBarPrimary,
+    state: DetailActionBarState,
+    extras: DetailActionBarExtras,
     modifier: Modifier = Modifier,
-    /**
-     * Null on the album-grid layout, whose primary button IS the mix. The flat
-     * track feed plays in order, so it needs its own shuffle.
-     */
-    onShuffle: (() -> Unit)? = null,
-    shuffleEnabled: Boolean = false,
 ) {
+    val playPrimaryLabel = primary.label
+    val playPrimaryIconRes = primary.iconRes
+    val playPrimaryEnabled = primary.enabled
+    val playPrimaryLoading = primary.loading
+    val onPlayPrimary = primary.onClick
+    val isFavorite = state.isFavorite
+    val isDownloading = state.isDownloading
+    val allDownloaded = state.allDownloaded
+    val downloadEnabled = state.downloadEnabled
+    val onToggleFavorite = extras.onToggleFavorite
+    val onDownload = extras.onDownload
+    val onShuffle = extras.onShuffle
+    val shuffleEnabled = extras.shuffleEnabled
     Row(
         modifier = modifier.heightIn(min = 56.dp),
         horizontalArrangement = Arrangement.spacedBy(ActionBarSpacing),

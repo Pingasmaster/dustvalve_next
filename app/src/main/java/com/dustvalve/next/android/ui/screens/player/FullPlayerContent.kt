@@ -50,7 +50,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
@@ -61,28 +60,23 @@ import com.dustvalve.next.android.ui.util.toggle
 @Composable
 internal fun FullPlayerScaffold(
     adaptiveInfo: AdaptiveLayoutInfo,
-    state: PlayerUiState,
-    positionState: PlaybackPositionState,
-    snackbarHostState: SnackbarHostState,
-    shared: FullPlayerSharedModifiers,
-    motion: FullPlayerMotion,
-    chrome: FullPlayerChrome,
-    layout: FullPlayerLayout,
+    model: FullPlayerScaffoldModel,
     modifier: Modifier = Modifier,
-    playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val adaptive = adaptiveInfo
+    val state = model.playback.state
     val track = state.currentTrack
+    val chrome = model.chrome
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier
             .fillMaxSize()
-            .then(shared.surfaceShared),
+            .then(model.shared.surfaceShared),
     ) {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             contentWindowInsets = WindowInsets.systemBars,
-            snackbarHost = { SnackbarHost(snackbarHostState) },
+            snackbarHost = { SnackbarHost(model.snackbarHostState) },
             floatingActionButton = {
                 FullPlayerQueueFab(
                     useDualPane = adaptive.useDualPane,
@@ -123,13 +117,7 @@ internal fun FullPlayerScaffold(
                     FullPlayerMainColumn(
                         adaptiveInfo = adaptive,
                         track = track,
-                        state = state,
-                        positionState = positionState,
-                        shared = shared,
-                        layout = layout,
-                        motion = motion,
-                        chrome = chrome,
-                        playerViewModel = playerViewModel,
+                        model = model,
                     )
                 }
                 if (adaptive.useDualPane) {
@@ -144,7 +132,6 @@ internal fun FullPlayerScaffold(
                             currentTrackId = track.id,
                             downloadedTrackIds = state.downloadedTrackIds,
                             onEntryLongClick = chrome.onEntryLongClick,
-                            playerViewModel = playerViewModel,
                         )
                     }
                 }
@@ -186,14 +173,11 @@ private fun FullPlayerQueueFab(
 private fun FullPlayerMainColumn(
     adaptiveInfo: AdaptiveLayoutInfo,
     track: Track,
-    state: PlayerUiState,
-    positionState: PlaybackPositionState,
-    shared: FullPlayerSharedModifiers,
-    layout: FullPlayerLayout,
-    motion: FullPlayerMotion,
-    chrome: FullPlayerChrome,
-    playerViewModel: PlayerViewModel = hiltViewModel(),
+    model: FullPlayerScaffoldModel,
 ) {
+    val state = model.playback.state
+    val positionState = model.playback.positionState
+    val transport = model.actions.transport
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -208,17 +192,16 @@ private fun FullPlayerMainColumn(
                 adaptiveInfo = adaptiveInfo,
                 track = track,
                 state = state,
-                isCarouselMode = layout.isCarouselMode,
-                artSharedModifier = shared.artShared,
-                motion = motion,
-                chrome = chrome,
-                playerViewModel = playerViewModel,
+                isCarouselMode = model.layout.isCarouselMode,
+                modifier = model.shared.artShared,
+                motion = model.motion,
+                chrome = model.chrome,
+                artActions = model.actions.art,
             )
             FullPlayerTrackTitleSection(
                 track = track,
                 state = state,
-                chrome = chrome,
-                playerViewModel = playerViewModel,
+                actions = model.actions.track,
             )
             FullPlayerSeekBar(
                 trackId = track.id,
@@ -227,26 +210,26 @@ private fun FullPlayerMainColumn(
                 isLoadingTrack = state.isLoadingTrack,
                 progressBarStyle = state.progressBarStyle,
                 progressBarSizeDp = state.progressBarSizeDp,
-                onSeek = playerViewModel::onSeek,
+                onSeek = transport.onSeek,
             )
             FullPlayerTransportControls(
                 isPlaying = state.isPlaying,
-                onPrevious = playerViewModel::onPrevious,
-                onPlayPause = playerViewModel::onPlayPause,
-                onNext = playerViewModel::onNext,
+                onPrevious = transport.onPrevious,
+                onPlayPause = transport.onPlayPause,
+                onNext = transport.onNext,
             )
             FullPlayerShuffleRepeatRow(
                 shuffleEnabled = state.shuffleEnabled,
                 repeatMode = state.repeatMode,
-                onToggleShuffle = playerViewModel::onToggleShuffle,
-                onToggleRepeat = playerViewModel::onToggleRepeat,
+                onToggleShuffle = transport.onToggleShuffle,
+                onToggleRepeat = transport.onToggleRepeat,
             )
             Spacer(modifier = Modifier.height(80.dp))
         }
         FullPlayerCollapseBar(
-            expandDistancePx = layout.expandDistancePx,
+            expandDistancePx = model.layout.expandDistancePx,
             showVolumeButton = state.showVolumeButton,
-            chrome = chrome,
+            chrome = model.chrome,
         )
     }
 }
@@ -256,8 +239,7 @@ private fun FullPlayerMainColumn(
 private fun FullPlayerTrackTitleSection(
     track: Track,
     state: PlayerUiState,
-    chrome: FullPlayerChrome,
-    playerViewModel: PlayerViewModel,
+    actions: FullPlayerTrackActions,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -277,12 +259,7 @@ private fun FullPlayerTrackTitleSection(
             isTrackDownloaded = track.id in state.downloadedTrackIds,
             isDownloading = state.downloadingTrackId == track.id,
             isInUserPlaylist = track.id in state.userPlaylistTrackIds,
-            onArtistClick = chrome.onArtistClick,
-            onAlbumClick = chrome.onAlbumClick,
-            onToggleFavorite = playerViewModel::onToggleFavorite,
-            onRequestDeleteDownload = chrome.onShowDeleteDownloadDialog,
-            onDownloadTrack = playerViewModel::onDownloadTrack,
-            onAddToPlaylist = chrome.onShowPlaylistSheet,
+            actions = actions,
         )
     }
 }

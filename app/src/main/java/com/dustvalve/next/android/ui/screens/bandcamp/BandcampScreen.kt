@@ -102,6 +102,7 @@ import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
+import com.dustvalve.next.android.ui.components.sheet.RemoteResultActions
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.player.playAlbum
@@ -154,6 +155,14 @@ private val discoverCategories = listOf(
     GenreCategory("podcasts", "podcasts", Color(0xFFD6BE48)),
 )
 
+@androidx.compose.runtime.Immutable
+data class BandcampScreenNav(
+    val onAlbumClick: (String) -> Unit,
+    val onArtistClick: (String) -> Unit,
+    val onOpenLink: (String) -> Unit,
+    val onExpandPlayer: () -> Unit = {},
+)
+
 @OptIn(
     ExperimentalMaterial3Api::class,
     ExperimentalMaterial3ExpressiveApi::class,
@@ -163,15 +172,16 @@ private val discoverCategories = listOf(
 @Composable
 fun BandcampScreen(
     adaptiveInfo: AdaptiveLayoutInfo,
-    onAlbumClick: (String) -> Unit,
-    onArtistClick: (String) -> Unit,
-    onOpenLink: (String) -> Unit,
+    nav: BandcampScreenNav,
     modifier: Modifier = Modifier,
-    onExpandPlayer: () -> Unit = {},
     playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: BandcampViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel = hiltViewModel(),
 ) {
+    val onAlbumClick = nav.onAlbumClick
+    val onArtistClick = nav.onArtistClick
+    val onOpenLink = nav.onOpenLink
+    val onExpandPlayer = nav.onExpandPlayer
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
@@ -413,7 +423,7 @@ fun BandcampScreen(
                         items = discoverCategories,
                         key = { _, cat -> "cat_${cat.name}" },
                     ) { index, category ->
-                        val previews = state.categoryPreviews[category.tag] ?: emptyList()
+                        val previews = state.categoryPreviews[category.tag].orEmpty()
                         StaggeredAnimatedItem(index = index + 1, itemKey = "cat_${category.name}", tracker = staggerTracker) {
                             Surface(
                                 onClick = {
@@ -765,8 +775,9 @@ fun BandcampScreen(
     contextResult?.let { result ->
         RemoteResultActionSheet(
             result = result,
-            onDismiss = { contextResult = null },
-            onPlayNext = {
+            actions = RemoteResultActions(
+                onDismiss = { contextResult = null },
+                onPlayNext = {
                 contextResult = null
                 scope.launch {
                     snackbarHostState.showSnackbar(loadingTrackMsg)
@@ -780,7 +791,7 @@ fun BandcampScreen(
                     }
                 }
             },
-            onAddToQueue = {
+                onAddToQueue = {
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                 scope.launch {
@@ -792,7 +803,7 @@ fun BandcampScreen(
                     }
                 }
             },
-            onAddToPlaylist = {
+                onAddToPlaylist = {
                 val ctx = result
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
@@ -805,7 +816,7 @@ fun BandcampScreen(
                     }
                 }
             },
-            onPlayAll = {
+                onPlayAll = {
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
                 scope.launch {
@@ -820,7 +831,7 @@ fun BandcampScreen(
                     }
                 }
             },
-            onEnqueueAll = {
+                onEnqueueAll = {
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
                 scope.launch {
@@ -832,14 +843,15 @@ fun BandcampScreen(
                     }
                 }
             },
-            onShare = {
+                onShare = {
                 contextResult = null
                 context.shareUrl(result.url, result.name)
             },
-            onOpenInBrowser = {
+                onOpenInBrowser = {
                 contextResult = null
                 context.openInBrowser(result.url)
             },
+            ),
         )
     }
 

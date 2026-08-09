@@ -101,6 +101,7 @@ import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
+import com.dustvalve.next.android.ui.components.sheet.RemoteResultActions
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.player.playAlbum
@@ -324,38 +325,40 @@ fun YouTubeScreen(
                         YouTubeSource.YouTubeMusic -> YouTubeMusicHome(
                             adaptiveInfo = adaptiveInfo,
                             state = state,
-                            onChipSelected = viewModel::onYtmChipSelected,
-                            onPlaySong = { song -> onPlayVideoId(song.videoId) },
-                            onPlayHero = { hero ->
-                                val videoId = hero.videoId
-                                val playlistId = hero.playlistId
-                                when {
-                                    videoId != null -> onPlayVideoId(videoId)
-                                    playlistId != null -> openPlaylistById(playlistId, hero.title, hero.thumbnailUrl)
-                                    else -> scope.launch { snackbarHostState.showSnackbar(failedLoadMsg) }
-                                }
-                            },
-                            onOpenTile = { tile ->
-                                when (tile.kind) {
-                                    com.dustvalve.next.android.domain.model.TileKind.SONG,
-                                    com.dustvalve.next.android.domain.model.TileKind.VIDEO,
-                                    ->
-                                        onPlayVideoId(tile.id)
+                            actions = YouTubeMusicHomeActions(
+                                onChipSelected = viewModel::onYtmChipSelected,
+                                onPlaySong = { song -> onPlayVideoId(song.videoId) },
+                                onPlayHero = { hero ->
+                                    val videoId = hero.videoId
+                                    val playlistId = hero.playlistId
+                                    when {
+                                        videoId != null -> onPlayVideoId(videoId)
+                                        playlistId != null -> openPlaylistById(playlistId, hero.title, hero.thumbnailUrl)
+                                        else -> scope.launch { snackbarHostState.showSnackbar(failedLoadMsg) }
+                                    }
+                                },
+                                onOpenTile = { tile ->
+                                    when (tile.kind) {
+                                        com.dustvalve.next.android.domain.model.TileKind.SONG,
+                                        com.dustvalve.next.android.domain.model.TileKind.VIDEO,
+                                        ->
+                                            onPlayVideoId(tile.id)
 
-                                    com.dustvalve.next.android.domain.model.TileKind.ALBUM,
-                                    com.dustvalve.next.android.domain.model.TileKind.PLAYLIST,
-                                    ->
-                                        openPlaylistById(tile.id, tile.title, tile.thumbnailUrl)
-                                }
-                            },
-                            onOpenArtist = { artist ->
-                                onArtistClick(
-                                    "https://www.youtube.com/channel/${artist.browseId}",
-                                    artist.name,
-                                    artist.thumbnailUrl,
-                                )
-                            },
-                            onRetry = { viewModel.retryYtmHome() },
+                                        com.dustvalve.next.android.domain.model.TileKind.ALBUM,
+                                        com.dustvalve.next.android.domain.model.TileKind.PLAYLIST,
+                                        ->
+                                            openPlaylistById(tile.id, tile.title, tile.thumbnailUrl)
+                                    }
+                                },
+                                onOpenArtist = { artist ->
+                                    onArtistClick(
+                                        "https://www.youtube.com/channel/${artist.browseId}",
+                                        artist.name,
+                                        artist.thumbnailUrl,
+                                    )
+                                },
+                                onRetry = { viewModel.retryYtmHome() },
+                            ),
                         )
 
                         YouTubeSource.YouTube -> YouTubeSourceContent(
@@ -658,8 +661,9 @@ fun YouTubeScreen(
     contextResult?.let { result ->
         RemoteResultActionSheet(
             result = result,
-            onDismiss = { contextResult = null },
-            onPlayNext = {
+            actions = RemoteResultActions(
+                onDismiss = { contextResult = null },
+                onPlayNext = {
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                 scope.launch {
@@ -671,7 +675,7 @@ fun YouTubeScreen(
                     }
                 }
             },
-            onAddToQueue = {
+                onAddToQueue = {
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                 scope.launch {
@@ -683,7 +687,7 @@ fun YouTubeScreen(
                     }
                 }
             },
-            onAddToPlaylist = {
+                onAddToPlaylist = {
                 val ctx = result
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
@@ -696,7 +700,7 @@ fun YouTubeScreen(
                     }
                 }
             },
-            onPlayAll = {
+                onPlayAll = {
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
                 scope.launch {
@@ -711,7 +715,7 @@ fun YouTubeScreen(
                     }
                 }
             },
-            onEnqueueAll = {
+                onEnqueueAll = {
                 contextResult = null
                 scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
                 scope.launch {
@@ -723,14 +727,15 @@ fun YouTubeScreen(
                     }
                 }
             },
-            onShare = {
+                onShare = {
                 contextResult = null
                 context.shareUrl(result.url, result.name)
             },
-            onOpenInBrowser = {
+                onOpenInBrowser = {
                 contextResult = null
                 context.openInBrowser(result.url)
             },
+            ),
         )
     }
 

@@ -20,7 +20,9 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.EmptyState
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
+import com.dustvalve.next.android.ui.screens.detail.ArtistDetailArgs
 import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
+import com.dustvalve.next.android.ui.screens.detail.CollectionDetailArgs
 import com.dustvalve.next.android.ui.screens.detail.CollectionDetailScreen
 import com.dustvalve.next.android.ui.screens.library.LibraryScreen
 import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
@@ -123,10 +125,12 @@ private fun LibraryDetailPane(
             }
             ArtistDetailScreen(
                 adaptiveInfo = adaptiveInfo,
-                sourceId = destination.sourceId,
-                artistUrl = destination.url,
-                artistNameHint = destination.name,
-                artistImageHint = destination.imageUrl,
+                args = ArtistDetailArgs(
+                    sourceId = destination.sourceId,
+                    artistUrl = destination.url,
+                    artistNameHint = destination.name,
+                    artistImageHint = destination.imageUrl,
+                ),
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
@@ -151,10 +155,12 @@ private fun LibraryDetailPane(
             }
             CollectionDetailScreen(
                 adaptiveInfo = adaptiveInfo,
-                sourceId = destination.sourceId,
-                collectionUrl = destination.url,
-                collectionName = destination.name,
-                collectionCoverHint = destination.coverUrl,
+                args = CollectionDetailArgs(
+                    sourceId = destination.sourceId,
+                    collectionUrl = destination.url,
+                    collectionName = destination.name,
+                    collectionCoverHint = destination.coverUrl,
+                ),
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
             )

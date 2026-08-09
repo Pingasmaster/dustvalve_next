@@ -88,18 +88,13 @@ import com.dustvalve.next.android.ui.adaptive.WidthSizeClass
 fun YouTubeMusicHome(
     adaptiveInfo: AdaptiveLayoutInfo,
     state: YouTubeUiState,
-    onChipSelected: (String?) -> Unit,
-    onPlaySong: (SongItem) -> Unit,
-    onPlayHero: (HeroItem) -> Unit,
-    onOpenTile: (TileItem) -> Unit,
-    onOpenArtist: (ArtistItem) -> Unit,
-    onRetry: () -> Unit,
+    actions: YouTubeMusicHomeActions,
     modifier: Modifier = Modifier,
 ) {
     when {
         state.ytmHome == null && state.ytmHomeError != null -> YtmErrorState(
             message = state.ytmHomeError.asString(),
-            onRetry = onRetry,
+            onRetry = actions.onRetry,
             modifier = modifier,
         )
 
@@ -108,11 +103,7 @@ fun YouTubeMusicHome(
             feed = state.ytmHome,
             selectedChipParams = state.ytmSelectedChipParams,
             isRefreshing = state.ytmHomeLoading,
-            onChipSelected = onChipSelected,
-            onPlaySong = onPlaySong,
-            onPlayHero = onPlayHero,
-            onOpenTile = onOpenTile,
-            onOpenArtist = onOpenArtist,
+            actions = actions,
             modifier = modifier,
         )
 
@@ -129,13 +120,15 @@ private fun YtmFeed(
     feed: YouTubeMusicHomeFeed,
     selectedChipParams: String?,
     isRefreshing: Boolean,
-    onChipSelected: (String?) -> Unit,
-    onPlaySong: (SongItem) -> Unit,
-    onPlayHero: (HeroItem) -> Unit,
-    onOpenTile: (TileItem) -> Unit,
-    onOpenArtist: (ArtistItem) -> Unit,
+    actions: YouTubeMusicHomeActions,
     modifier: Modifier = Modifier,
 ) {
+    val onChipSelected = actions.onChipSelected
+    val onPlaySong = actions.onPlaySong
+    val onPlayHero = actions.onPlayHero
+    val onOpenTile = actions.onOpenTile
+    val onOpenArtist = actions.onOpenArtist
+
     val heroShelf = feed.shelves.firstOrNull { it is Shelf.Hero && it.items.isNotEmpty() } as? Shelf.Hero
     val hero = heroShelf?.items?.firstOrNull()
     // Shelves render in server order; the shelf that donated the hero keeps
@@ -154,7 +147,9 @@ private fun YtmFeed(
             if (lazyState.firstVisibleItemIndex == 0) lazyState.firstVisibleItemScrollOffset else 2000
         }
     }
-    var renderedBigTileCarousel = false
+    val firstTileShelfIndex = shelves.indexOfFirst { shelf ->
+        shelf is Shelf.Tiles && shelf.items.isNotEmpty()
+    }
 
     LazyColumn(
         state = lazyState,
@@ -212,8 +207,7 @@ private fun YtmFeed(
                 }
 
                 is Shelf.Tiles -> if (shelf.items.isNotEmpty()) {
-                    val big = !renderedBigTileCarousel
-                    renderedBigTileCarousel = true
+                    val big = index == firstTileShelfIndex
                     item(key = "ytm_shelf_${index}_header") { ShelfHeader(shelf.title) }
                     item(key = "ytm_shelf_$index") {
                         if (big) {

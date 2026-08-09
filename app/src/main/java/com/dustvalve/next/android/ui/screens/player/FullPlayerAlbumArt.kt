@@ -48,7 +48,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
@@ -69,10 +68,10 @@ internal fun FullPlayerAlbumArtRow(
     track: Track,
     state: PlayerUiState,
     isCarouselMode: Boolean,
-    artSharedModifier: Modifier,
     motion: FullPlayerMotion,
     chrome: FullPlayerChrome,
-    playerViewModel: PlayerViewModel = hiltViewModel(),
+    artActions: FullPlayerArtActions,
+    modifier: Modifier = Modifier,
 ) {
     val adaptive = adaptiveInfo
     val artMax = adaptive.heroMaxSize
@@ -115,7 +114,7 @@ internal fun FullPlayerAlbumArtRow(
                         currentQueueIndex = state.currentQueueIndex,
                         preferredItemWidth = adaptive.carouselItemWidth,
                         onSelectIndex = { index ->
-                            playerViewModel.skipToQueueIndex(index)
+                            artActions.onSkipToQueueIndex(index)
                             chrome.onCarouselModeChange(false)
                         },
                         onEmpty = { chrome.onCarouselModeChange(false) },
@@ -124,10 +123,10 @@ internal fun FullPlayerAlbumArtRow(
                     FullPlayerAlbumArtStack(
                         track = track,
                         state = state,
-                        artSharedModifier = artSharedModifier,
                         motion = motion,
                         chrome = chrome,
-                        playerViewModel = playerViewModel,
+                        artActions = artActions,
+                        modifier = modifier,
                     )
                 }
             }
@@ -135,7 +134,7 @@ internal fun FullPlayerAlbumArtRow(
         if (state.showInlineVolumeSlider) {
             FullPlayerInlineVolumeSlider(
                 volumeLevel = state.volumeLevel,
-                onVolumeChange = playerViewModel::setVolume,
+                onVolumeChange = artActions.onSetVolume,
             )
         }
     }
@@ -194,25 +193,25 @@ private fun FullPlayerAlbumCarousel(
 private fun FullPlayerAlbumArtStack(
     track: Track,
     state: PlayerUiState,
-    artSharedModifier: Modifier,
     motion: FullPlayerMotion,
     chrome: FullPlayerChrome,
-    playerViewModel: PlayerViewModel,
+    artActions: FullPlayerArtActions,
+    modifier: Modifier = Modifier,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         FullPlayerStackedCovers(
             queue = state.queue,
             currentQueueIndex = state.currentQueueIndex,
             heartMorph = motion.heartMorph,
-            onSkipToQueueIndex = playerViewModel::skipToQueueIndex,
+            onSkipToQueueIndex = artActions.onSkipToQueueIndex,
         )
         FullPlayerMainCover(
             track = track,
             state = state,
-            artSharedModifier = artSharedModifier,
             motion = motion,
             chrome = chrome,
-            playerViewModel = playerViewModel,
+            artActions = artActions,
+            modifier = modifier,
         )
     }
 }
@@ -269,10 +268,10 @@ private fun FullPlayerStackedCovers(
 private fun FullPlayerMainCover(
     track: Track,
     state: PlayerUiState,
-    artSharedModifier: Modifier,
     motion: FullPlayerMotion,
     chrome: FullPlayerChrome,
-    playerViewModel: PlayerViewModel,
+    artActions: FullPlayerArtActions,
+    modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     var showPlayPauseFeedback by remember { mutableStateOf(false) }
@@ -280,7 +279,7 @@ private fun FullPlayerMainCover(
     val swipeSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     val albumArtGestureModifier = Modifier
         .fillMaxSize()
-        .then(artSharedModifier)
+        .then(modifier)
         .zIndex(1f)
         .graphicsLayer {
             translationX = motion.albumSwipeOffsetX.value
@@ -294,13 +293,13 @@ private fun FullPlayerMainCover(
                     if (motion.albumSwipeOffsetX.value < -threshold) {
                         motion.scope.launch {
                             motion.albumSwipeOffsetX.animateTo(-size.width.toFloat(), swipeSpec)
-                            playerViewModel.onNext()
+                            artActions.onNext()
                             motion.albumSwipeOffsetX.snapTo(0f)
                         }
                     } else if (motion.albumSwipeOffsetX.value > threshold) {
                         motion.scope.launch {
                             motion.albumSwipeOffsetX.animateTo(size.width.toFloat(), swipeSpec)
-                            playerViewModel.onPrevious()
+                            artActions.onPrevious()
                             motion.albumSwipeOffsetX.snapTo(0f)
                         }
                     } else {
@@ -322,7 +321,7 @@ private fun FullPlayerMainCover(
             detectTapGestures(
                 onTap = {
                     feedbackIsPlaying = state.isPlaying
-                    playerViewModel.onPlayPause()
+                    artActions.onPlayPause()
                     motion.scope.launch {
                         motion.feedbackScale.snapTo(0f)
                         showPlayPauseFeedback = true
@@ -334,7 +333,7 @@ private fun FullPlayerMainCover(
                 },
                 onDoubleTap = {
                     hapticFeedback.toggle(!track.isFavorite)
-                    playerViewModel.onToggleFavorite()
+                    artActions.onToggleFavorite()
                     motion.scope.launch {
                         motion.heartProgress.animateTo(1f, motion.heartInSpec)
                         delay(1000L)

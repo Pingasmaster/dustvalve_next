@@ -48,6 +48,7 @@ import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -78,6 +79,9 @@ import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.getPlaylistIconRes
 import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.MusicRowActions
+import com.dustvalve.next.android.ui.components.lists.MusicRowFlags
+import com.dustvalve.next.android.ui.components.lists.ReorderableListSlots
 import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
@@ -239,32 +243,36 @@ fun PlaylistDetailScreen(
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     PlaylistContent(
-                        playlist = playlist,
-                        tracks = state.tracks,
-                        currentTrackId = playerState.currentTrack?.id,
-                        isPlaying = playerState.isPlaying,
-                        isDownloading = state.isDownloading,
-                        downloadedTrackIds = state.downloadedTrackIds,
-                        autoDownloadFavorites = state.autoDownloadFavorites,
-                        onTrackClick = { tracks, index ->
-                            playerViewModel.playTrackInList(tracks, index)
-                        },
-                        onMoveTrack = { from, to ->
-                            viewModel.moveTrack(from, to)
-                        },
-                        onPlayAll = {
-                            if (state.tracks.isNotEmpty()) {
-                                playerViewModel.playTrackInList(state.tracks, 0)
-                            }
-                        },
-                        onShufflePlay = {
-                            if (state.tracks.isNotEmpty()) {
-                                playerViewModel.playTrackInList(state.tracks.shuffled(), 0)
-                            }
-                        },
-                        onDownloadAll = { viewModel.downloadAll() },
-                        onRemoveTrack = { trackId -> viewModel.removeTrack(trackId) },
-                        onTogglePin = { viewModel.togglePin() },
+                        contentState = PlaylistContentState(
+                            playlist = playlist,
+                            tracks = state.tracks,
+                            currentTrackId = playerState.currentTrack?.id,
+                            isPlaying = playerState.isPlaying,
+                            isDownloading = state.isDownloading,
+                            downloadedTrackIds = state.downloadedTrackIds,
+                            autoDownloadFavorites = state.autoDownloadFavorites,
+                        ),
+                        actions = PlaylistContentActions(
+                            onTrackClick = { tracks, index ->
+                                playerViewModel.playTrackInList(tracks, index)
+                            },
+                            onMoveTrack = { from, to ->
+                                viewModel.moveTrack(from, to)
+                            },
+                            onPlayAll = {
+                                if (state.tracks.isNotEmpty()) {
+                                    playerViewModel.playTrackInList(state.tracks, 0)
+                                }
+                            },
+                            onShufflePlay = {
+                                if (state.tracks.isNotEmpty()) {
+                                    playerViewModel.playTrackInList(state.tracks.shuffled(), 0)
+                                }
+                            },
+                            onDownloadAll = { viewModel.downloadAll() },
+                            onRemoveTrack = { trackId -> viewModel.removeTrack(trackId) },
+                            onTogglePin = { viewModel.togglePin() },
+                        ),
                         listState = listState,
                         modifier = Modifier
                             .fillMaxSize()
@@ -276,26 +284,50 @@ fun PlaylistDetailScreen(
     }
 }
 
+@Immutable
+private data class PlaylistContentState(
+    val playlist: Playlist,
+    val tracks: List<Track>,
+    val currentTrackId: String?,
+    val isPlaying: Boolean,
+    val isDownloading: Boolean,
+    val downloadedTrackIds: Set<String>,
+    val autoDownloadFavorites: Boolean,
+)
+
+@Immutable
+private data class PlaylistContentActions(
+    val onTrackClick: (List<Track>, Int) -> Unit,
+    val onMoveTrack: (Int, Int) -> Unit,
+    val onPlayAll: () -> Unit,
+    val onShufflePlay: () -> Unit,
+    val onDownloadAll: () -> Unit,
+    val onRemoveTrack: (String) -> Unit,
+    val onTogglePin: () -> Unit,
+)
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun PlaylistContent(
-    playlist: Playlist,
-    tracks: List<Track>,
-    currentTrackId: String?,
-    isPlaying: Boolean,
-    isDownloading: Boolean,
-    downloadedTrackIds: Set<String>,
-    autoDownloadFavorites: Boolean,
-    onTrackClick: (List<Track>, Int) -> Unit,
-    onMoveTrack: (Int, Int) -> Unit,
-    onPlayAll: () -> Unit,
-    onShufflePlay: () -> Unit,
-    onDownloadAll: () -> Unit,
-    onRemoveTrack: (String) -> Unit,
-    onTogglePin: () -> Unit,
+    contentState: PlaylistContentState,
+    actions: PlaylistContentActions,
     listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
+    val playlist = contentState.playlist
+    val tracks = contentState.tracks
+    val currentTrackId = contentState.currentTrackId
+    val isPlaying = contentState.isPlaying
+    val isDownloading = contentState.isDownloading
+    val downloadedTrackIds = contentState.downloadedTrackIds
+    val autoDownloadFavorites = contentState.autoDownloadFavorites
+    val onTrackClick = actions.onTrackClick
+    val onMoveTrack = actions.onMoveTrack
+    val onPlayAll = actions.onPlayAll
+    val onShufflePlay = actions.onShufflePlay
+    val onDownloadAll = actions.onDownloadAll
+    val onRemoveTrack = actions.onRemoveTrack
+    val onTogglePin = actions.onTogglePin
     val hapticFeedback = LocalHapticFeedback.current
     val trackCount = tracks.size
     val removeTrack by rememberUpdatedState(onRemoveTrack)
@@ -375,8 +407,10 @@ private fun PlaylistContent(
                     MusicRow(
                         track = track,
                         onClick = { onTrackClick(tracks, index) },
-                        isPlaying = isTrackPlaying,
-                        isCurrentTrack = isCurrentTrack,
+                        flags = MusicRowFlags(
+                            isPlaying = isTrackPlaying,
+                            isCurrentTrack = isCurrentTrack,
+                        ),
                     )
                 }
             }
@@ -391,7 +425,7 @@ private fun PlaylistContent(
         lazyListState = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 10.dp),
-        header = headerBlock,
+        slots = ReorderableListSlots(header = headerBlock),
     ) { index, track, isDragging, dragHandleModifier ->
         val isCurrentTrack = currentTrackId == track.id
         val isTrackPlaying = isCurrentTrack && isPlaying
@@ -406,9 +440,12 @@ private fun PlaylistContent(
                 MusicRow(
                     track = track,
                     onClick = { onTrackClick(tracks, index) },
-                    isPlaying = isTrackPlaying,
-                    isCurrentTrack = isCurrentTrack,
-                    dragHandle = {
+                    flags = MusicRowFlags(
+                        isPlaying = isTrackPlaying,
+                        isCurrentTrack = isCurrentTrack,
+                    ),
+                    actions = MusicRowActions(
+                        dragHandle = {
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
@@ -423,6 +460,7 @@ private fun PlaylistContent(
                             )
                         }
                     },
+                    ),
                 )
             }
         }

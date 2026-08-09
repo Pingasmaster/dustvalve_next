@@ -3,12 +3,6 @@ package com.dustvalve.next.android.ui.screens.player
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.domain.repository.LibraryRepository
-import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
-import com.dustvalve.next.android.download.DownloadController
-import com.dustvalve.next.android.player.PlaybackManager
-import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.UiText
 import com.dustvalve.next.android.util.onFailure
 import com.dustvalve.next.android.util.onSuccess
@@ -21,14 +15,16 @@ import kotlinx.coroutines.launch
 internal class PlayerLibraryCoordinator(
     private val scope: CoroutineScope,
     private val extraState: PlayerExtraStateFlow,
-    private val playbackManager: PlaybackManager,
-    private val queueManager: QueueManager,
-    private val libraryRepository: LibraryRepository,
-    private val downloadAlbumUseCase: DownloadAlbumUseCase,
-    private val downloadController: DownloadController,
-    private val playlistRepository: PlaylistRepository,
+    core: PlayerCoreDeps,
+    libraryDeps: PlayerLibraryDeps,
     private val currentTrack: () -> Track?,
 ) {
+    private val playbackManager = core.playbackManager
+    private val queueManager = core.queueManager
+    private val libraryRepository = core.libraryRepository
+    private val downloadAlbumUseCase = libraryDeps.downloadAlbumUseCase
+    private val downloadController = libraryDeps.downloadController
+    private val playlistRepository = libraryDeps.playlistRepository
     private var favoriteJob: Job? = null
     private var downloadJob: Job? = null
 
@@ -73,17 +69,17 @@ internal class PlayerLibraryCoordinator(
         downloadJob = scope.launch {
             runPlayerUiActionResult(R.string.snackbar_download_failed) {
                 downloadController.downloadTrackBlocking(track)
-            }.onSuccess {
-                extraState.update {
-                    it.copy(
+            }.onSuccess { _ ->
+                extraState.update { state ->
+                    state.copy(
                         downloadingTrackId = null,
                         snackbarMessage = UiText.StringResource(R.string.snackbar_downloaded, listOf(track.title)),
                         isSnackbarError = false,
                     )
                 }
             }.onFailure { error, _ ->
-                extraState.update {
-                    it.copy(
+                extraState.update { state ->
+                    state.copy(
                         downloadingTrackId = null,
                         snackbarMessage = error,
                         isSnackbarError = true,
@@ -98,16 +94,16 @@ internal class PlayerLibraryCoordinator(
         scope.launch {
             runPlayerUiActionResult(R.string.snackbar_delete_failed) {
                 downloadAlbumUseCase.deleteTrackDownload(track.id)
-            }.onSuccess {
-                extraState.update {
-                    it.copy(
+            }.onSuccess { _ ->
+                extraState.update { state ->
+                    state.copy(
                         snackbarMessage = UiText.StringResource(R.string.snackbar_deleted, listOf(track.title)),
                         isSnackbarError = false,
                     )
                 }
             }.onFailure { error, _ ->
-                extraState.update {
-                    it.copy(
+                extraState.update { state ->
+                    state.copy(
                         snackbarMessage = error,
                         isSnackbarError = true,
                     )

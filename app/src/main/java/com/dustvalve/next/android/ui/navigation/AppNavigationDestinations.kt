@@ -6,7 +6,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreen
+import com.dustvalve.next.android.ui.screens.bandcamp.BandcampScreenNav
+import com.dustvalve.next.android.ui.screens.detail.ArtistDetailArgs
 import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
+import com.dustvalve.next.android.ui.screens.detail.CollectionDetailArgs
 import com.dustvalve.next.android.ui.screens.detail.CollectionDetailScreen
 import com.dustvalve.next.android.ui.screens.library.LibraryScreen
 import com.dustvalve.next.android.ui.screens.local.LocalScreen
@@ -48,10 +51,12 @@ private fun AppNavigationHomeDestination(
 
         is NavDestination.BandcampHome -> BandcampScreen(
             adaptiveInfo = adaptiveInfo,
-            onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
-            onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
-            onOpenLink = { navViewModel.openLink(it) },
-            onExpandPlayer = { navViewModel.expandPlayer() },
+            nav = BandcampScreenNav(
+                onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
+                onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
+                onOpenLink = { navViewModel.openLink(it) },
+                onExpandPlayer = { navViewModel.expandPlayer() },
+            ),
         )
 
         is NavDestination.YouTubeHome -> YouTubeScreen(
@@ -159,10 +164,12 @@ private fun AppNavigationDetailDestination(
             }
             ArtistDetailScreen(
                 adaptiveInfo = adaptiveInfo,
-                sourceId = destination.sourceId,
-                artistUrl = destination.url,
-                artistNameHint = destination.name,
-                artistImageHint = destination.imageUrl,
+                args = ArtistDetailArgs(
+                    sourceId = destination.sourceId,
+                    artistUrl = destination.url,
+                    artistNameHint = destination.name,
+                    artistImageHint = destination.imageUrl,
+                ),
                 onAlbumClick = { url ->
                     when (destination.sourceId) {
                         "youtube", "soundcloud" -> navViewModel.navigateTo(
@@ -198,10 +205,12 @@ private fun AppNavigationDetailDestination(
             }
             CollectionDetailScreen(
                 adaptiveInfo = adaptiveInfo,
-                sourceId = destination.sourceId,
-                collectionUrl = destination.url,
-                collectionName = destination.name,
-                collectionCoverHint = destination.coverUrl,
+                args = CollectionDetailArgs(
+                    sourceId = destination.sourceId,
+                    collectionUrl = destination.url,
+                    collectionName = destination.name,
+                    collectionCoverHint = destination.coverUrl,
+                ),
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
             )

@@ -1,16 +1,9 @@
 package com.dustvalve.next.android.ui.screens.player
 
-import android.content.Context
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
-import com.dustvalve.next.android.domain.repository.DownloadRepository
-import com.dustvalve.next.android.domain.repository.LibraryRepository
-import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
-import com.dustvalve.next.android.player.PlaybackManager
-import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.NetworkUtils
 import com.dustvalve.next.android.util.UiText
 import kotlinx.coroutines.CoroutineScope
@@ -22,15 +15,16 @@ import kotlinx.coroutines.launch
 internal class PlayerPlayCoordinator(
     private val scope: CoroutineScope,
     private val extraState: PlayerExtraStateFlow,
-    private val playbackManager: PlaybackManager,
-    private val queueManager: QueueManager,
-    private val libraryRepository: LibraryRepository,
-    private val downloadRepository: DownloadRepository,
-    private val settingsDataStore: SettingsDataStore,
-    private val resolveTrackForPlaybackUseCase: ResolveTrackForPlaybackUseCase,
-    private val playbackStreamResolver: PlaybackStreamResolver,
-    private val appContext: Context,
+    core: PlayerCoreDeps,
 ) {
+    private val playbackManager = core.playbackManager
+    private val queueManager = core.queueManager
+    private val libraryRepository = core.libraryRepository
+    private val downloadRepository = core.downloadRepository
+    private val settingsDataStore = core.settingsDataStore
+    private val resolveTrackForPlaybackUseCase = core.resolveTrackForPlaybackUseCase
+    private val playbackStreamResolver = core.playbackStreamResolver
+    private val appContext = core.appContext
     private var progressiveDownloadJob: Job? = null
     private var playJob: Job? = null
     private var loadingGeneration = 0

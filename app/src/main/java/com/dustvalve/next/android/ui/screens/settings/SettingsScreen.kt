@@ -142,27 +142,37 @@ fun SettingsScreen(
             contentAlignment = Alignment.TopCenter,
         ) {
             SettingsScreenList(
-                contentMaxWidth = adaptiveInfo.contentMaxWidth,
-                state = state,
-                snackbarHostState = snackbarHostState,
-                onShowRemoveDownloads = { showRemoveDownloadsDialog = true },
-                onShowFormatSheet = { showFormatSheet = true },
-                onSourcesAction = { handleSettingsSourcesAction(viewModel, it) },
-                onStorageAction = { handleSettingsStorageAction(viewModel, it) },
-                onAppearanceAction = { handleSettingsAppearanceAction(viewModel, it) },
-                onSetSaveDataOnMetered = viewModel.storageSources::setSaveDataOnMetered,
-                onSetProgressiveDownload = viewModel.storageSources::setProgressiveDownload,
-                onSetSeamlessQualityUpgrade = viewModel.storageSources::setSeamlessQualityUpgrade,
-                onSetShowInlineVolumeSlider = viewModel.appearance::setShowInlineVolumeSlider,
-                onSetShowVolumeButton = viewModel.appearance::setShowVolumeButton,
-                onSetKeepScreenOnInApp = viewModel.appearance::setKeepScreenOnInApp,
-                onSetKeepScreenOnWhilePlaying = viewModel.appearance::setKeepScreenOnWhilePlaying,
-                onSetSearchHistoryEnabled = viewModel.storageSources::setSearchHistoryEnabled,
-                onSetSearchHistorySource = viewModel.storageSources::setSearchHistorySource,
-                onClearAllSearchHistory = viewModel.storageSources::clearAllSearchHistory,
-                onCheckForAppUpdate = viewModel::checkForAppUpdate,
-                onSetAutoUpdateCheckEnabled = viewModel.storageSources::setAutoUpdateCheckEnabled,
-                onSetPlayerDebugOverlay = viewModel.appearance::setPlayerDebugOverlay,
+                host = SettingsListHost(
+                    contentMaxWidth = adaptiveInfo.contentMaxWidth,
+                    state = state,
+                    snackbarHostState = snackbarHostState,
+                ),
+                actions = SettingsListActions(
+                    dialogs = SettingsListDialogActions(
+                        onShowRemoveDownloads = { showRemoveDownloadsDialog = true },
+                        onShowFormatSheet = { showFormatSheet = true },
+                        onSourcesAction = { handleSettingsSourcesAction(viewModel, it) },
+                        onStorageAction = { handleSettingsStorageAction(viewModel, it) },
+                        onAppearanceAction = { handleSettingsAppearanceAction(viewModel, it) },
+                    ),
+                    toggles = SettingsListToggleActions(
+                        onSetSaveDataOnMetered = viewModel.storageSources::setSaveDataOnMetered,
+                        onSetProgressiveDownload = viewModel.storageSources::setProgressiveDownload,
+                        onSetSeamlessQualityUpgrade = viewModel.storageSources::setSeamlessQualityUpgrade,
+                        onSetShowInlineVolumeSlider = viewModel.appearance::setShowInlineVolumeSlider,
+                        onSetShowVolumeButton = viewModel.appearance::setShowVolumeButton,
+                        onSetKeepScreenOnInApp = viewModel.appearance::setKeepScreenOnInApp,
+                        onSetKeepScreenOnWhilePlaying = viewModel.appearance::setKeepScreenOnWhilePlaying,
+                        onSetSearchHistoryEnabled = viewModel.storageSources::setSearchHistoryEnabled,
+                    ),
+                    misc = SettingsListMiscActions(
+                        onSetSearchHistorySource = viewModel.storageSources::setSearchHistorySource,
+                        onClearAllSearchHistory = viewModel.storageSources::clearAllSearchHistory,
+                        onCheckForAppUpdate = viewModel::checkForAppUpdate,
+                        onSetAutoUpdateCheckEnabled = viewModel.storageSources::setAutoUpdateCheckEnabled,
+                        onSetPlayerDebugOverlay = viewModel.appearance::setPlayerDebugOverlay,
+                    ),
+                ),
             )
         }
 
@@ -274,28 +284,30 @@ private fun SettingsDownloadFormatSheet(downloadFormat: String, onSelect: (Strin
 
 @Composable
 private fun SettingsScreenList(
-    contentMaxWidth: Dp,
-    state: SettingsUiState,
-    snackbarHostState: SnackbarHostState,
-    onShowRemoveDownloads: () -> Unit,
-    onShowFormatSheet: () -> Unit,
-    onSourcesAction: (SettingsSourcesAction) -> Unit,
-    onStorageAction: (SettingsStorageAction) -> Unit,
-    onAppearanceAction: (SettingsAppearanceAction) -> Unit,
-    onSetSaveDataOnMetered: (Boolean) -> Unit,
-    onSetProgressiveDownload: (Boolean) -> Unit,
-    onSetSeamlessQualityUpgrade: (Boolean) -> Unit,
-    onSetShowInlineVolumeSlider: (Boolean) -> Unit,
-    onSetShowVolumeButton: (Boolean) -> Unit,
-    onSetKeepScreenOnInApp: (Boolean) -> Unit,
-    onSetKeepScreenOnWhilePlaying: (Boolean) -> Unit,
-    onSetSearchHistoryEnabled: (Boolean) -> Unit,
-    onSetSearchHistorySource: (String, Boolean) -> Unit,
-    onClearAllSearchHistory: () -> Unit,
-    onCheckForAppUpdate: () -> Unit,
-    onSetAutoUpdateCheckEnabled: (Boolean) -> Unit,
-    onSetPlayerDebugOverlay: (Boolean) -> Unit,
+    host: SettingsListHost,
+    actions: SettingsListActions,
 ) {
+    val contentMaxWidth = host.contentMaxWidth
+    val state = host.state
+    val snackbarHostState = host.snackbarHostState
+    val onShowRemoveDownloads = actions.dialogs.onShowRemoveDownloads
+    val onShowFormatSheet = actions.dialogs.onShowFormatSheet
+    val onSourcesAction = actions.dialogs.onSourcesAction
+    val onStorageAction = actions.dialogs.onStorageAction
+    val onAppearanceAction = actions.dialogs.onAppearanceAction
+    val onSetSaveDataOnMetered = actions.toggles.onSetSaveDataOnMetered
+    val onSetProgressiveDownload = actions.toggles.onSetProgressiveDownload
+    val onSetSeamlessQualityUpgrade = actions.toggles.onSetSeamlessQualityUpgrade
+    val onSetShowInlineVolumeSlider = actions.toggles.onSetShowInlineVolumeSlider
+    val onSetShowVolumeButton = actions.toggles.onSetShowVolumeButton
+    val onSetKeepScreenOnInApp = actions.toggles.onSetKeepScreenOnInApp
+    val onSetKeepScreenOnWhilePlaying = actions.toggles.onSetKeepScreenOnWhilePlaying
+    val onSetSearchHistoryEnabled = actions.toggles.onSetSearchHistoryEnabled
+    val onSetSearchHistorySource = actions.misc.onSetSearchHistorySource
+    val onClearAllSearchHistory = actions.misc.onClearAllSearchHistory
+    val onCheckForAppUpdate = actions.misc.onCheckForAppUpdate
+    val onSetAutoUpdateCheckEnabled = actions.misc.onSetAutoUpdateCheckEnabled
+    val onSetPlayerDebugOverlay = actions.misc.onSetPlayerDebugOverlay
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -423,12 +435,13 @@ internal fun SettingsToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    description: String? = null,
-    enabled: Boolean = true,
-    icon: Int? = null,
-    subRow: Boolean = false,
-    switchTag: String? = null,
+    extras: SettingsToggleExtras = SettingsToggleExtras(),
 ) {
+    val description = extras.description
+    val enabled = extras.enabled
+    val icon = extras.icon
+    val subRow = extras.subRow
+    val switchTag = extras.switchTag
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -502,10 +515,12 @@ internal fun SettingsSubToggle(
             title = title,
             checked = checked,
             onCheckedChange = onCheckedChange,
-            description = description,
-            enabled = enabled,
-            subRow = true,
             modifier = Modifier.padding(top = 12.dp),
+            extras = SettingsToggleExtras(
+                description = description,
+                enabled = enabled,
+                subRow = true,
+            ),
         )
     }
 }

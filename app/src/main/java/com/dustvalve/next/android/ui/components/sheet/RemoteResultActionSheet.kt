@@ -27,16 +27,17 @@ import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 @Composable
 fun RemoteResultActionSheet(
     result: SearchResult,
-    onDismiss: () -> Unit,
-    onPlayNext: () -> Unit,
-    onAddToQueue: () -> Unit,
-    onAddToPlaylist: () -> Unit,
-    onPlayAll: () -> Unit,
-    onEnqueueAll: () -> Unit,
-    onShare: () -> Unit,
-    onOpenInBrowser: () -> Unit,
+    actions: RemoteResultActions,
     modifier: Modifier = Modifier,
 ) {
+    val onDismiss = actions.onDismiss
+    val onPlayNext = actions.onPlayNext
+    val onAddToQueue = actions.onAddToQueue
+    val onAddToPlaylist = actions.onAddToPlaylist
+    val onPlayAll = actions.onPlayAll
+    val onEnqueueAll = actions.onEnqueueAll
+    val onShare = actions.onShare
+    val onOpenInBrowser = actions.onOpenInBrowser
     val kind = result.type.toRemoteKind() ?: return
 
     ModalBottomSheet(

@@ -45,7 +45,7 @@ internal fun FullPlayerSheetHost(
         visible = sheets.showPlaylistSheet,
         playlists = state.playlists,
         onDismiss = { sheets.showPlaylistSheet = false },
-        onPlaylistSelected = { playlistId ->
+        onSelectPlaylist = { playlistId ->
             sheets.showPlaylistSheet = false
             playerViewModel.addToPlaylist(playlistId)
         },
@@ -68,7 +68,7 @@ internal fun FullPlayerSheetHost(
         visible = sheets.showUpNextPlaylistSheet,
         playlists = state.playlists,
         onDismiss = { sheets.showUpNextPlaylistSheet = false },
-        onPlaylistSelected = { playlistId ->
+        onSelectPlaylist = { playlistId ->
             sheets.showUpNextPlaylistSheet = false
             sheets.upNextContextEntry?.let { entry ->
                 playerViewModel.addTrackToPlaylist(playlistId, entry.track.id)

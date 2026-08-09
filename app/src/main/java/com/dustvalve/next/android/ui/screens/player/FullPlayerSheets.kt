@@ -33,6 +33,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +75,7 @@ internal fun FullPlayerVolumeSheet(
     if (!visible) return
     val adaptive = adaptiveInfo
     val hapticFeedback = LocalHapticFeedback.current
+    val onVolumeChangeState = rememberUpdatedState(onVolumeChange)
     val sheetVolumeState = androidx.compose.material3.rememberSliderState(
         value = volumeLevel,
     )
@@ -82,7 +84,7 @@ internal fun FullPlayerVolumeSheet(
     }
     LaunchedEffect(Unit) {
         snapshotFlow { sheetVolumeState.value }
-            .collect { onVolumeChange(it) }
+            .collect { onVolumeChangeState.value(it) }
     }
     LaunchedEffect(sheetVolumeState) {
         snapshotFlow { (sheetVolumeState.value * VOLUME_TICK_SEGMENTS).toInt() }
@@ -408,14 +410,14 @@ internal fun FullPlayerAddToPlaylistSheet(
     visible: Boolean,
     playlists: List<com.dustvalve.next.android.domain.model.Playlist>,
     onDismiss: () -> Unit,
-    onPlaylistSelected: (String) -> Unit,
+    onSelectPlaylist: (String) -> Unit,
     onCreatePlaylist: (String, String?, String?) -> Unit,
 ) {
     if (!visible) return
     AddToPlaylistSheet(
         playlists = playlists,
         onDismiss = onDismiss,
-        onPlaylistSelected = onPlaylistSelected,
+        onPlaylistSelected = onSelectPlaylist,
         onCreatePlaylist = onCreatePlaylist,
     )
 }
