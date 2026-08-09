@@ -9,8 +9,8 @@ import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class SoundCloudModule {
+interface SoundCloudModule {
 
     @Binds
-    abstract fun bindSoundCloudRepository(impl: SoundCloudRepositoryImpl): SoundCloudRepository
+    fun bindSoundCloudRepository(impl: SoundCloudRepositoryImpl): SoundCloudRepository
 }

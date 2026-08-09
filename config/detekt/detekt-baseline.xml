@@ -12,7 +12,7 @@
   - MaxLineLength on test fixtures / SQL / ytcfg HTML samples.
   - ParameterNaming on Compose onXyz callbacks (past-tense event names).
   - TooGenericExceptionCaught confined to UiResult.kt (shared ViewModel
-    failure choke point); AppUpdateController still pending.
+    failure choke point).
   - SwallowedException on intentional best-effort scrape/download paths.
   - MultipleEmitters on PlaylistContent (Compose list + empty state).
   - ComplexCondition on pagination / deeplink host matching.
@@ -23,7 +23,7 @@
   HtmlUtils, and YouTube/YouTube Music parsers.
   Cleared (compose-screens): FullPlayer LongMethod / CyclomaticComplexMethod.
   Cleared (vm-errors + split playback): per-ViewModel TooGenericExceptionCaught
-  (now UiResult.kt / AppUpdateController only).
+  (now UiResult.kt only; AppUpdateController migrated to runCatchingUi*).
 -->
 <SmellBaseline>
   <ManuallySuppressedIssues/>
@@ -96,7 +96,6 @@
     <ID>SwallowedException:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$e: IOException</ID>
     <ID>ThrowsCount:DownloadAlbumUseCase.kt:DownloadAlbumUseCase$suspend fun downloadArtist</ID>
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToInternal: Pair&lt;String, Long&gt;</ID>
-    <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
     <ID>TooGenericExceptionCaught:UiResult.kt:e: Exception</ID>
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LocalViewModel.kt:LocalViewModel : ViewModel</ID>

@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
@@ -17,6 +18,7 @@ object AppShapes {
     /** Rounded shape for album art in cards - theme medium shape */
     val AlbumArt: Shape
         @Composable
+        @ReadOnlyComposable
         get() = MaterialTheme.shapes.medium
 
     /** Circular shape for user avatars */
@@ -25,11 +27,13 @@ object AppShapes {
     /** Large rounded shape for player and album detail hero art - theme extraLarge shape */
     val PlayerArt: Shape
         @Composable
+        @ReadOnlyComposable
         get() = MaterialTheme.shapes.extraLarge
 
     /** Small rounded shape for thumbnails and tags - theme small shape */
     val Thumbnail: Shape
         @Composable
+        @ReadOnlyComposable
         get() = MaterialTheme.shapes.small
 
     /** Expressive shape for the "now playing" indicator badge - a soft burst */

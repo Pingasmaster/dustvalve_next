@@ -21,7 +21,6 @@ internal fun AppNavigationDestination(
     destination: NavDestination,
     adaptiveInfo: AdaptiveLayoutInfo,
     detailVmStores: DetailVmStoreRegistry,
-    navViewModel: NavigationViewModel = hiltViewModel(),
 ) {
     when (destination) {
         is NavDestination.LocalHome,

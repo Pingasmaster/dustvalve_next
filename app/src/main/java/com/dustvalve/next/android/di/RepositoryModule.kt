@@ -29,38 +29,38 @@ import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class RepositoryModule {
+interface RepositoryModule {
 
     @Binds
-    abstract fun bindAlbumRepository(impl: AlbumRepositoryImpl): AlbumRepository
+    fun bindAlbumRepository(impl: AlbumRepositoryImpl): AlbumRepository
 
     @Binds
-    abstract fun bindArtistRepository(impl: ArtistRepositoryImpl): ArtistRepository
+    fun bindArtistRepository(impl: ArtistRepositoryImpl): ArtistRepository
 
     @Binds
-    abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
+    fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
 
     @Binds
-    abstract fun bindDiscoverRepository(impl: DiscoverRepositoryImpl): DiscoverRepository
+    fun bindDiscoverRepository(impl: DiscoverRepositoryImpl): DiscoverRepository
 
     @Binds
-    abstract fun bindDownloadRepository(impl: DownloadRepositoryImpl): DownloadRepository
+    fun bindDownloadRepository(impl: DownloadRepositoryImpl): DownloadRepository
 
     @Binds
-    abstract fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository
+    fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository
 
     @Binds
-    abstract fun bindPlaylistRepository(impl: PlaylistRepositoryImpl): PlaylistRepository
+    fun bindPlaylistRepository(impl: PlaylistRepositoryImpl): PlaylistRepository
 
     @Binds
-    abstract fun bindLocalMusicRepository(impl: LocalMusicRepositoryImpl): LocalMusicRepository
+    fun bindLocalMusicRepository(impl: LocalMusicRepositoryImpl): LocalMusicRepository
 
     @Binds
-    abstract fun bindRecentSearchRepository(impl: RecentSearchRepositoryImpl): RecentSearchRepository
+    fun bindRecentSearchRepository(impl: RecentSearchRepositoryImpl): RecentSearchRepository
 
     @Binds
-    abstract fun bindFavoriteRepository(impl: FavoriteRepositoryImpl): FavoriteRepository
+    fun bindFavoriteRepository(impl: FavoriteRepositoryImpl): FavoriteRepository
 
     @Binds
-    abstract fun bindTrackCacheRepository(impl: TrackCacheRepositoryImpl): TrackCacheRepository
+    fun bindTrackCacheRepository(impl: TrackCacheRepositoryImpl): TrackCacheRepository
 }

@@ -61,7 +61,8 @@ class DownloadController @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val notificationCenter: DownloadNotificationCenter,
-    @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
+    // Constructor param (not a property): only feeds [scope] below.
+    @param:Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) {
     sealed interface DownloadWork {
         val id: Long

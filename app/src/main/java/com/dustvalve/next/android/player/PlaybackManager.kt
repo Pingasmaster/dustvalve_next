@@ -36,7 +36,8 @@ import javax.inject.Singleton
 class PlaybackManager @Inject constructor(
     private val player: ExoPlayer,
     private val queueManager: QueueManager,
-    @param:ApplicationContext private val context: Context,
+    // Constructor param (not a property): only feeds [mediaPreparer] below.
+    @param:ApplicationContext context: Context,
 ) {
 
     private var scope = CoroutineScope(

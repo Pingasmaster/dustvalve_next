@@ -54,7 +54,8 @@ val soundCloudGenreChips = listOf(
 class SoundCloudViewModel @Inject constructor(
     private val soundCloudRepository: SoundCloudRepository,
     private val recentSearchRepository: RecentSearchRepository,
-    private val settingsDataStore: SettingsDataStore,
+    // Constructor param (not a property): feeds searchHistoryEnabled below.
+    settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SoundCloudUiState())
