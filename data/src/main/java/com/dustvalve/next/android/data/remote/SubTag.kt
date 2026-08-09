@@ -291,6 +291,13 @@ val genreSubTags: Map<String, List<SubTag>> = mapOf(
         SubTag("storytelling", "storytelling"),
         SubTag("self-help", "self-help"),
     ),
+    "kids" to listOf(
+        SubTag("family music", "family-music"),
+        SubTag("educational", "educational"),
+        SubTag("music therapy", "music-therapy"),
+        SubTag("lullaby", "lullaby"),
+        SubTag("baby", "baby"),
+    ),
     // Bandcamp lists no sub-genres for podcasts; keep empty (no chips).
     "podcasts" to emptyList<SubTag>(),
 )

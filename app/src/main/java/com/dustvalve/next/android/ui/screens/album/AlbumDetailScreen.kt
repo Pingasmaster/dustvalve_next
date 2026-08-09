@@ -346,13 +346,17 @@ fun AlbumDetailScreen(
                                 ),
                                 actions = AlbumActionBarActions(
                                     onPlayAll = {
-                                        if (album.tracks.isNotEmpty()) {
+                                        if (album.tracks.any { !it.streamUrl.isNullOrBlank() }) {
                                             playerViewModel.playAlbum(album.tracks, 0)
+                                        } else if (album.tracks.isNotEmpty()) {
+                                            viewModel.notifyPreviewUnavailable()
                                         }
                                     },
                                     onShuffle = {
-                                        if (album.tracks.isNotEmpty()) {
+                                        if (album.tracks.any { !it.streamUrl.isNullOrBlank() }) {
                                             playerViewModel.playAlbum(album.tracks.shuffled(), 0)
+                                        } else if (album.tracks.isNotEmpty()) {
+                                            viewModel.notifyPreviewUnavailable()
                                         }
                                     },
                                     onToggleFavorite = { viewModel.toggleFavorite() },

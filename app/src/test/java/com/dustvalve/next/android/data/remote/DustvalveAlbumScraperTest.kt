@@ -85,7 +85,7 @@ class DustvalveAlbumScraperTest {
         assertThat(album.tracks.single().artUrl).isEmpty()
     }
 
-    @Test fun `scrapeAlbum parses data-tralbum attribute fallback`() = runTest {
+    @Test fun `scrapeAlbum prefers data-tralbum attribute`() = runTest {
         val albumUrl = setup.url("/album/foo")
         val json = """{&quot;url&quot;:&quot;$albumUrl&quot;,&quot;current&quot;:{&quot;title&quot;:&quot;Via Attr&quot;,&quot;artist&quot;:&quot;Band&quot;,&quot;band_id&quot;:1},&quot;trackinfo&quot;:[],&quot;art_id&quot;:1,&quot;item_type&quot;:&quot;album&quot;}"""
         val html = """<html><div data-tralbum="$json"></div></html>"""

@@ -10,6 +10,7 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
@@ -59,6 +60,7 @@ class DownloadRepositoryImpl(
     private val storageTracker: StorageTracker,
     private val youtubeRepository: YouTubeRepository,
     private val soundCloudRepository: SoundCloudRepository,
+    private val dustvalveStreamResolver: DustvalveStreamResolver,
     private val notificationCenter: DownloadProgressReporter,
     private val mediaCacheClearer: MediaCacheClearer,
     private val context: Context,
@@ -70,7 +72,8 @@ class DownloadRepositoryImpl(
         @MediaHttp client: OkHttpClient,
         storageTracker: StorageTracker,
         youtubeRepository: YouTubeRepository,
-        soundCloudRepository: SoundCloudRepository,
+    private val soundCloudRepository: SoundCloudRepository,
+    private val dustvalveStreamResolver: DustvalveStreamResolver,
         notificationCenter: DownloadProgressReporter,
         mediaCacheClearer: MediaCacheClearer,
         @ApplicationContext context: Context,
@@ -83,6 +86,7 @@ class DownloadRepositoryImpl(
         storageTracker,
         youtubeRepository,
         soundCloudRepository,
+        dustvalveStreamResolver,
         notificationCenter,
         mediaCacheClearer,
         context,
@@ -199,7 +203,8 @@ class DownloadRepositoryImpl(
     private suspend fun downloadTrackInner(track: Track) {
         // YouTube watch-page -> resolved audio stream; SoundCloud resolves a
         // progressive CDN URL on demand (parsed tracks ship streamUrl=null);
-        // otherwise the raw streamUrl as mp3-128 (free / preview formats only).
+        // Bandcamp always re-resolves mp3-128 (CDN tokens expire ~24h);
+        // otherwise the raw streamUrl as mp3-128.
         // Format preference / metered overrides only applied to HQ purchase
         // downloads, which were removed with account login.
         val (downloadUrl, format) = when (track.source) {
@@ -219,6 +224,18 @@ class DownloadRepositoryImpl(
 
             TrackSource.SOUNDCLOUD -> soundCloudRepository.getDownloadableStream(track)
 
+            TrackSource.BANDCAMP -> {
+                val pageUrl = track.albumUrl.takeIf { it.isNotBlank() }
+                    ?: track.bandcampTrackUrl
+                    ?: throw IOException("Track '${track.title}' has no Bandcamp page URL to re-resolve")
+                // DustvalveStreamResolver returns an existing streamUrl untouched,
+                // so blank it first - same as PlaybackStreamResolver.reResolveBandcamp.
+                val freshUrl = dustvalveStreamResolver.resolveStreamUrl(
+                    track.copy(streamUrl = null),
+                    pageUrl,
+                ) ?: throw IOException("Track '${track.title}' has no downloadable stream after re-resolve")
+                freshUrl to AudioFormat.MP3_128
+            }
             else -> track.streamUrl to AudioFormat.MP3_128
         }
 

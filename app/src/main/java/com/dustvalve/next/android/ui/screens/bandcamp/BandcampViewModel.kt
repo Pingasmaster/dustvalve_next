@@ -36,6 +36,11 @@ data class BandcampUiState(
     val selectedGenreTag: String = "",
     val categoryAlbums: List<Album> = emptyList(),
     val isCategoryLoading: Boolean = false,
+    /** True while appending the next discover page (infinite scroll). */
+    val isCategoryLoadingMore: Boolean = false,
+    /** Opaque cursor from discover_web; null when no further pages. */
+    val categoryCursor: String? = null,
+    val categoryHasMore: Boolean = false,
     val categoryError: UiText? = null,
     val selectedSubTag: String? = null,
     val availableSubTags: List<SubTag> = emptyList(),
@@ -61,6 +66,7 @@ class BandcampViewModel @Inject constructor(
     val uiState: StateFlow<BandcampUiState> = _uiState.asStateFlow()
 
     private var loadCategoryJob: Job? = null
+    private var loadMoreCategoryJob: Job? = null
 
     init {
         loadPreviews()
@@ -155,6 +161,7 @@ class BandcampViewModel @Inject constructor(
 
     fun selectCategory(tag: String, name: String) {
         val subTags = genreSubTags[tag].orEmpty()
+        loadMoreCategoryJob?.cancel()
         _uiState.update {
             it.copy(
                 showCategorySheet = true,
@@ -163,7 +170,10 @@ class BandcampViewModel @Inject constructor(
                 selectedSubTag = null,
                 availableSubTags = subTags,
                 isCategoryLoading = true,
+                isCategoryLoadingMore = false,
                 categoryAlbums = emptyList(),
+                categoryCursor = null,
+                categoryHasMore = false,
                 categoryError = null,
             )
         }
@@ -171,11 +181,15 @@ class BandcampViewModel @Inject constructor(
     }
 
     fun selectSubTag(subTagSlug: String?) {
+        loadMoreCategoryJob?.cancel()
         _uiState.update {
             it.copy(
                 selectedSubTag = subTagSlug,
                 isCategoryLoading = true,
+                isCategoryLoadingMore = false,
                 categoryAlbums = emptyList(),
+                categoryCursor = null,
+                categoryHasMore = false,
                 categoryError = null,
             )
         }
@@ -185,9 +199,18 @@ class BandcampViewModel @Inject constructor(
 
     private fun loadCategoryAlbums(tag: String) {
         loadCategoryJob?.cancel()
+        loadMoreCategoryJob?.cancel()
         // Set at fetch start (not only in selectCategory/selectSubTag) so retry
         // shows the spinner, and clear any stale error from a previous attempt.
-        _uiState.update { it.copy(isCategoryLoading = true, categoryError = null) }
+        _uiState.update {
+            it.copy(
+                isCategoryLoading = true,
+                isCategoryLoadingMore = false,
+                categoryError = null,
+                categoryCursor = null,
+                categoryHasMore = false,
+            )
+        }
         loadCategoryJob = viewModelScope.launch {
             runCatchingUi(R.string.snackbar_failed_load) {
                 val genreParam = tag.takeIf { it.isNotEmpty() }
@@ -198,6 +221,8 @@ class BandcampViewModel @Inject constructor(
                         categoryAlbums = result.albums,
                         isCategoryLoading = false,
                         categoryError = null,
+                        categoryCursor = result.cursor,
+                        categoryHasMore = !result.cursor.isNullOrBlank() && result.albums.isNotEmpty(),
                     )
                 }
             }.onFailure { error, cause ->
@@ -206,6 +231,50 @@ class BandcampViewModel @Inject constructor(
                     it.copy(
                         isCategoryLoading = false,
                         categoryError = error,
+                        categoryHasMore = false,
+                    )
+                }
+            }
+        }
+    }
+
+    /** Append the next discover page when the category sheet scrolls near the end. */
+    fun loadMoreCategory() {
+        val current = _uiState.value
+        if (!current.showCategorySheet ||
+            !current.categoryHasMore ||
+            current.isCategoryLoading ||
+            current.isCategoryLoadingMore
+        ) {
+            return
+        }
+        val cursor = current.categoryCursor?.takeIf { it.isNotBlank() } ?: return
+        if (loadMoreCategoryJob?.isActive == true) return
+
+        val tagToLoad = current.selectedSubTag ?: current.selectedGenreTag
+        _uiState.update { it.copy(isCategoryLoadingMore = true) }
+        loadMoreCategoryJob = viewModelScope.launch {
+            runCatchingUi(R.string.snackbar_failed_load) {
+                val genreParam = tagToLoad.takeIf { it.isNotEmpty() }
+                val result = discoverDustvalveUseCase(genre = genreParam, cursor = cursor)
+                Log.d(TAG, "loadMoreCategory($tagToLoad): +${result.albums.size} albums")
+                _uiState.update { state ->
+                    val existingIds = state.categoryAlbums.mapTo(HashSet()) { it.id }
+                    val appended = result.albums.filter { it.id !in existingIds }
+                    state.copy(
+                        categoryAlbums = state.categoryAlbums + appended,
+                        isCategoryLoadingMore = false,
+                        categoryCursor = result.cursor,
+                        categoryHasMore = !result.cursor.isNullOrBlank() && appended.isNotEmpty(),
+                    )
+                }
+            }.onFailure { _, cause ->
+                Log.e(TAG, "loadMoreCategory($tagToLoad) failed", cause)
+                _uiState.update {
+                    it.copy(
+                        isCategoryLoadingMore = false,
+                        // Keep existing albums; load-more failures just stop paging.
+                        categoryHasMore = false,
                     )
                 }
             }
@@ -214,6 +283,7 @@ class BandcampViewModel @Inject constructor(
 
     fun dismissCategory() {
         loadCategoryJob?.cancel()
+        loadMoreCategoryJob?.cancel()
         _uiState.update {
             it.copy(
                 showCategorySheet = false,
@@ -223,6 +293,9 @@ class BandcampViewModel @Inject constructor(
                 availableSubTags = emptyList(),
                 categoryAlbums = emptyList(),
                 isCategoryLoading = false,
+                isCategoryLoadingMore = false,
+                categoryCursor = null,
+                categoryHasMore = false,
                 categoryError = null,
             )
         }
@@ -248,7 +321,7 @@ class BandcampViewModel @Inject constructor(
             "experimental", "pop", "jazz", "blues", "punk", "r-b-soul",
             "folk", "funk", "acoustic", "ambient", "soundtrack", "country",
             "classical", "reggae", "devotional", "comedy", "latin",
-            "audiobooks", "world", "spoken-word", "podcasts",
+            "audiobooks", "world", "spoken-word", "kids", "podcasts",
         )
     }
 }

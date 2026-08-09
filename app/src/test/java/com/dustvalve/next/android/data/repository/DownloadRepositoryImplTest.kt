@@ -7,6 +7,7 @@ import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
+import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
@@ -58,6 +59,7 @@ class DownloadRepositoryImplTest {
     private lateinit var trackDao: TrackDao
     private lateinit var youtubeRepository: YouTubeRepository
     private lateinit var soundCloudRepository: SoundCloudRepository
+    private lateinit var dustvalveStreamResolver: DustvalveStreamResolver
     private lateinit var mediaCacheClearer: MediaCacheClearer
     private lateinit var repo: DownloadRepositoryImpl
 
@@ -80,6 +82,13 @@ class DownloadRepositoryImplTest {
         coEvery { trackDao.getById(any()) } returns null
         youtubeRepository = mockk()
         soundCloudRepository = mockk()
+        dustvalveStreamResolver = mockk()
+        // Bandcamp downloads always blank streamUrl then re-resolve; return a
+        // stable per-track CDN URL so resume-sidecar identity tests still match.
+        coEvery { dustvalveStreamResolver.resolveStreamUrl(any(), any()) } coAnswers {
+            val track = firstArg<Track>()
+            "https://cdn.example.com/${track.id}.mp3"
+        }
         mediaCacheClearer = mockk()
 
         val context = mockk<Context>()
@@ -94,6 +103,7 @@ class DownloadRepositoryImplTest {
             storageTracker = mockk<StorageTracker>(relaxed = true),
             youtubeRepository = youtubeRepository,
             soundCloudRepository = soundCloudRepository,
+            dustvalveStreamResolver = dustvalveStreamResolver,
             notificationCenter = mockk<DownloadProgressReporter>(relaxed = true),
             mediaCacheClearer = mediaCacheClearer,
             context = context,
@@ -119,6 +129,7 @@ class DownloadRepositoryImplTest {
         streamUrl = "https://cdn.example.com/$id.mp3",
         artUrl = "",
         albumTitle = "Alb",
+        albumUrl = "https://artist.bandcamp.com/album/alb",
     )
 
     private fun youtubeTrack(id: String) = bandcampTrack(id).copy(
@@ -137,6 +148,27 @@ class DownloadRepositoryImplTest {
         } coAnswers {
             onCall(arg(2), arg(4), arg(6))
         }
+    }
+
+    @Test fun `bandcamp download force re-resolves via DustvalveStreamResolver`() = runBlocking {
+        val body = ByteArray(128) { 7 }
+        stubStream { sink, _, _ ->
+            sink.write(body)
+            body.size.toLong()
+        }
+        val inserted = slot<DownloadEntity>()
+        coEvery { downloadDao.insert(capture(inserted)) } just Runs
+
+        val stale = bandcampTrack("t1").copy(streamUrl = "https://cdn.example.com/expired.mp3")
+        repo.downloadTrack(stale)
+
+        coVerify(exactly = 1) {
+            dustvalveStreamResolver.resolveStreamUrl(
+                match { it.streamUrl == null && it.id == "t1" },
+                "https://artist.bandcamp.com/album/alb",
+            )
+        }
+        assertThat(File(filesRoot, "downloads/al1/t1.mp3").readBytes()).isEqualTo(body)
     }
 
     // --- M6: per-track single-flight ------------------------------------
