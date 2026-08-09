@@ -121,7 +121,7 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.player.QueueEntry
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.MorphShape
 import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
@@ -144,6 +144,7 @@ private const val VOLUME_TICK_SEGMENTS = 15
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun FullPlayer(
+    adaptiveInfo: AdaptiveLayoutInfo,
     sharedScope: SharedTransitionScope,
     visScope: AnimatedVisibilityScope,
     expandDistancePx: Float,
@@ -163,7 +164,7 @@ fun FullPlayer(
     val positionState by playerViewModel.positionState.collectAsStateWithLifecycle()
     val track = state.currentTrack
     val snackbarHostState = remember { SnackbarHostState() }
-    val adaptive = LocalAdaptiveLayoutInfo.current
+    val adaptive = adaptiveInfo
 
     // Snackbar handling
     val snackbarText = state.snackbarMessage?.asString()

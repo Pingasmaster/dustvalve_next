@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -71,7 +72,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.AudioFormat
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.update.AppUpdateDialog
 import com.dustvalve.next.android.ui.theme.AppShapes
@@ -91,6 +93,7 @@ internal val TOGGLE_LABEL_END_GAP = 16.dp
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -139,6 +142,7 @@ fun SettingsScreen(
             contentAlignment = Alignment.TopCenter,
         ) {
             SettingsScreenList(
+                contentMaxWidth = adaptiveInfo.contentMaxWidth,
                 state = state,
                 snackbarHostState = snackbarHostState,
                 onShowRemoveDownloads = { showRemoveDownloadsDialog = true },
@@ -234,7 +238,7 @@ private fun SettingsDownloadFormatSheet(downloadFormat: String, onSelect: (Strin
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
-        sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+        sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
     ) {
         Text(
             text = stringResource(R.string.settings_download_format),
@@ -270,6 +274,7 @@ private fun SettingsDownloadFormatSheet(downloadFormat: String, onSelect: (Strin
 
 @Composable
 private fun SettingsScreenList(
+    contentMaxWidth: Dp,
     state: SettingsUiState,
     snackbarHostState: SnackbarHostState,
     onShowRemoveDownloads: () -> Unit,
@@ -294,7 +299,7 @@ private fun SettingsScreenList(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .adaptiveContentWidth()
+            .adaptiveContentWidth(contentMaxWidth)
             .testTag(com.dustvalve.next.android.ui.TestTags.SETTINGS_LIST),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(bottom = 10.dp),

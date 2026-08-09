@@ -61,6 +61,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -71,6 +72,7 @@ import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.SoundCloudShelfItem
 import com.dustvalve.next.android.domain.model.SoundCloudShelfKind
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
@@ -143,6 +145,7 @@ private class SoundCloudSheetActions(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun SoundCloudScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     onCollectionClick: (url: String, name: String, coverUrl: String?) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
     onOpenLink: (String) -> Unit,
@@ -223,6 +226,7 @@ fun SoundCloudScreen(
     )
 
     SoundCloudScreenScaffold(
+        carouselItemWidth = adaptiveInfo.carouselItemWidth,
         inputs = SoundCloudScaffoldInputs(
             state = state,
             snackbarHostState = snackbarHostState,
@@ -289,6 +293,7 @@ private fun SoundCloudSearchErrorEffect(state: SoundCloudUiState, snackbarHostSt
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun SoundCloudScreenScaffold(
+    carouselItemWidth: Dp,
     inputs: SoundCloudScaffoldInputs,
     home: SoundCloudHomeHandlers,
     searchHandlers: SoundCloudSearchHandlers,
@@ -321,6 +326,7 @@ private fun SoundCloudScreenScaffold(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
                 SoundCloudHomeContent(
+                    carouselItemWidth = carouselItemWidth,
                     state = inputs.state,
                     onGenreSelect = home.onGenreSelect,
                     onRetry = home.onRetry,

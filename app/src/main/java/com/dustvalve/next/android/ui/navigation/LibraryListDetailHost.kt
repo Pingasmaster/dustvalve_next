@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.EmptyState
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
 import com.dustvalve.next.android.ui.screens.detail.ArtistDetailScreen
@@ -34,6 +35,7 @@ import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
  */
 @Composable
 internal fun LibraryListDetailHost(
+    adaptiveInfo: AdaptiveLayoutInfo,
     backStack: List<NavDestination>,
     detailVmStores: DetailVmStoreRegistry,
     modifier: Modifier = Modifier,
@@ -50,6 +52,7 @@ internal fun LibraryListDetailHost(
                 .fillMaxHeight(),
         ) {
             LibraryScreen(
+                adaptiveInfo = adaptiveInfo,
                 onAlbumClick = { url -> navViewModel.navigateTo(NavDestination.AlbumDetail(url)) },
                 onArtistClick = { url ->
                     val sourceId = if (url.contains("youtube.com") || url.contains("youtu.be")) {
@@ -74,6 +77,7 @@ internal fun LibraryListDetailHost(
                 .fillMaxHeight(),
         ) {
             LibraryDetailPane(
+                adaptiveInfo = adaptiveInfo,
                 destination = detailDestination,
                 detailVmStores = detailVmStores,
             )
@@ -83,6 +87,7 @@ internal fun LibraryListDetailHost(
 
 @Composable
 private fun LibraryDetailPane(
+    adaptiveInfo: AdaptiveLayoutInfo,
     destination: NavDestination?,
     detailVmStores: DetailVmStoreRegistry,
     navViewModel: NavigationViewModel = hiltViewModel(),
@@ -104,6 +109,7 @@ private fun LibraryDetailPane(
                 "AlbumDetail missing detail store key"
             }
             AlbumDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 albumUrl = destination.url,
                 onArtistClick = { url -> navViewModel.navigateTo(NavDestination.ArtistDetail(url)) },
                 onBack = { navViewModel.navigateBack() },
@@ -116,6 +122,7 @@ private fun LibraryDetailPane(
                 "ArtistDetail missing detail store key"
             }
             ArtistDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 sourceId = destination.sourceId,
                 artistUrl = destination.url,
                 artistNameHint = destination.name,
@@ -131,6 +138,7 @@ private fun LibraryDetailPane(
                 "PlaylistDetail missing detail store key"
             }
             PlaylistDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 playlistId = destination.playlistId,
                 onBack = { navViewModel.navigateBack() },
                 viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
@@ -142,6 +150,7 @@ private fun LibraryDetailPane(
                 "CollectionDetail missing detail store key"
             }
             CollectionDetailScreen(
+                adaptiveInfo = adaptiveInfo,
                 sourceId = destination.sourceId,
                 collectionUrl = destination.url,
                 collectionName = destination.name,

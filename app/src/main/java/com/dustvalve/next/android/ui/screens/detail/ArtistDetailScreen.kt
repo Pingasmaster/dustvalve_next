@@ -76,12 +76,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.AlbumCard
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
@@ -110,6 +111,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ArtistDetailScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     sourceId: String,
     artistUrl: String,
     artistNameHint: String?,
@@ -251,6 +253,7 @@ fun ArtistDetailScreen(
                         )
                 if (renderFlatTracks) {
                     FlatTracksLayout(
+                        adaptiveInfo = adaptiveInfo,
                         state = state,
                         innerPadding = innerPadding,
                         onPlayAll = {
@@ -284,6 +287,7 @@ fun ArtistDetailScreen(
                     )
                 } else {
                     AlbumGridLayout(
+                        adaptiveInfo = adaptiveInfo,
                         state = state,
                         innerPadding = innerPadding,
                         onAlbumClick = onAlbumClick,
@@ -312,6 +316,7 @@ fun ArtistDetailScreen(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AlbumGridLayout(
+    adaptiveInfo: AdaptiveLayoutInfo,
     state: ArtistDetailUiState,
     innerPadding: PaddingValues,
     onAlbumClick: (String) -> Unit,
@@ -324,12 +329,13 @@ private fun AlbumGridLayout(
         artist.albums.all { it.id in state.downloadedAlbumIds }
 
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = LocalAdaptiveLayoutInfo.current.gridMinSize),
+        columns = GridCells.Adaptive(minSize = adaptiveInfo.gridMinSize),
         modifier = Modifier.fillMaxSize().padding(innerPadding),
         contentPadding = PaddingValues(bottom = 10.dp),
     ) {
         item(key = "artist_hero", span = { GridItemSpan(maxLineSpan) }) {
             ArtistHero(
+                heroMaxSize = adaptiveInfo.heroMaxSize,
                 imageUrl = artist.imageUrl,
                 name = artist.name,
                 isFavorite = artist.isFavorite,
@@ -402,6 +408,7 @@ private fun AlbumGridLayout(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun FlatTracksLayout(
+    adaptiveInfo: AdaptiveLayoutInfo,
     state: ArtistDetailUiState,
     innerPadding: PaddingValues,
     onPlayAll: () -> Unit,
@@ -438,6 +445,7 @@ private fun FlatTracksLayout(
     ) {
         item(key = "artist_hero") {
             ArtistHero(
+                heroMaxSize = adaptiveInfo.heroMaxSize,
                 imageUrl = artist.imageUrl,
                 name = artist.name,
                 isFavorite = artist.isFavorite,
@@ -558,7 +566,13 @@ private fun LazyListScope.artistTracksSection(state: ArtistDetailUiState, onTrac
 }
 
 @Composable
-private fun ArtistHero(imageUrl: String?, name: String, isFavorite: Boolean, onDoubleTap: (() -> Unit)? = null) {
+private fun ArtistHero(
+    heroMaxSize: Dp,
+    imageUrl: String?,
+    name: String,
+    isFavorite: Boolean,
+    onDoubleTap: (() -> Unit)? = null,
+) {
     val hapticFeedback = LocalHapticFeedback.current
     val heartMorph = rememberHeartMorphState()
     val heartScope = rememberCoroutineScope()
@@ -584,7 +598,6 @@ private fun ArtistHero(imageUrl: String?, name: String, isFavorite: Boolean, onD
     val artModifier = Modifier
         .fillMaxSize()
         .heartMorphClip(heartMorph)
-    val adaptive = LocalAdaptiveLayoutInfo.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -593,7 +606,7 @@ private fun ArtistHero(imageUrl: String?, name: String, isFavorite: Boolean, onD
     ) {
         Box(
             modifier = Modifier
-                .adaptiveHeroSize(adaptive.heroMaxSize)
+                .adaptiveHeroSize(heroMaxSize)
                 .aspectRatio(1f),
         ) {
             if (imageUrl != null) {

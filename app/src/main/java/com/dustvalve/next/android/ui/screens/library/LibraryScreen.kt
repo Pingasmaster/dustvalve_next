@@ -69,7 +69,8 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.LoadingOverlay
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
@@ -81,6 +82,7 @@ import com.dustvalve.next.android.ui.theme.resolveLibraryItemShape
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LibraryScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     onAlbumClick: (String) -> Unit,
     onPlaylistClick: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -224,7 +226,7 @@ fun LibraryScreen(
                     onExportClick = { playlist -> viewModel.requestExport(playlist) },
                     modifier = Modifier
                         .fillMaxSize()
-                        .adaptiveContentWidth(),
+                        .adaptiveContentWidth(adaptiveInfo.contentMaxWidth),
                 )
             }
         }
@@ -440,7 +442,7 @@ private fun LibraryList(
     menuItem?.let { item ->
         ModalBottomSheet(
             onDismissRequest = { menuItem = null },
-            sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+            sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
         ) {
             Text(
                 text = item.name,

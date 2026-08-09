@@ -62,6 +62,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -73,7 +74,7 @@ import com.dustvalve.next.android.domain.model.Shelf
 import com.dustvalve.next.android.domain.model.SongItem
 import com.dustvalve.next.android.domain.model.TileItem
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.WidthSizeClass
 
 /**
@@ -85,6 +86,7 @@ import com.dustvalve.next.android.ui.adaptive.WidthSizeClass
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun YouTubeMusicHome(
+    adaptiveInfo: AdaptiveLayoutInfo,
     state: YouTubeUiState,
     onChipSelected: (String?) -> Unit,
     onPlaySong: (SongItem) -> Unit,
@@ -102,6 +104,7 @@ fun YouTubeMusicHome(
         )
 
         state.ytmHome != null -> YtmFeed(
+            adaptiveInfo = adaptiveInfo,
             feed = state.ytmHome,
             selectedChipParams = state.ytmSelectedChipParams,
             isRefreshing = state.ytmHomeLoading,
@@ -122,6 +125,7 @@ fun YouTubeMusicHome(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun YtmFeed(
+    adaptiveInfo: AdaptiveLayoutInfo,
     feed: YouTubeMusicHomeFeed,
     selectedChipParams: String?,
     isRefreshing: Boolean,
@@ -199,7 +203,11 @@ private fun YtmFeed(
                 is Shelf.QuickPicks -> if (shelf.items.isNotEmpty()) {
                     item(key = "ytm_shelf_${index}_header") { ShelfDisplayHeader(shelf.title) }
                     item(key = "ytm_shelf_$index") {
-                        QuickPicksPager(items = shelf.items, onPlay = onPlaySong)
+                        QuickPicksPager(
+                            adaptiveInfo = adaptiveInfo,
+                            items = shelf.items,
+                            onPlay = onPlaySong,
+                        )
                     }
                 }
 
@@ -209,9 +217,17 @@ private fun YtmFeed(
                     item(key = "ytm_shelf_${index}_header") { ShelfHeader(shelf.title) }
                     item(key = "ytm_shelf_$index") {
                         if (big) {
-                            ImmersiveTileCarousel(items = shelf.items, onOpen = onOpenTile)
+                            ImmersiveTileCarousel(
+                                carouselItemWidth = adaptiveInfo.carouselItemWidth,
+                                items = shelf.items,
+                                onOpen = onOpenTile,
+                            )
                         } else {
-                            TileCardRow(items = shelf.items, onOpen = onOpenTile)
+                            TileCardRow(
+                                adaptiveInfo = adaptiveInfo,
+                                items = shelf.items,
+                                onOpen = onOpenTile,
+                            )
                         }
                     }
                 }
@@ -231,7 +247,11 @@ private fun YtmFeed(
                 is Shelf.Hero -> if (shelf.items.isNotEmpty()) {
                     item(key = "ytm_shelf_${index}_header") { ShelfHeader(shelf.title) }
                     item(key = "ytm_shelf_$index") {
-                        HeroTileRow(items = shelf.items, onOpen = onPlayHero)
+                        HeroTileRow(
+                            adaptiveInfo = adaptiveInfo,
+                            items = shelf.items,
+                            onOpen = onPlayHero,
+                        )
                     }
                 }
             }
@@ -389,12 +409,15 @@ private fun ShelfHeader(title: String) {
 // -- Quick picks: horizontally paged 4-row grid --------------------------
 
 @Composable
-private fun QuickPicksPager(items: List<SongItem>, onPlay: (SongItem) -> Unit) {
-    val adaptive = LocalAdaptiveLayoutInfo.current
-    val pageWidth = when (adaptive.widthSizeClass) {
+private fun QuickPicksPager(
+    adaptiveInfo: AdaptiveLayoutInfo,
+    items: List<SongItem>,
+    onPlay: (SongItem) -> Unit,
+) {
+    val pageWidth = when (adaptiveInfo.widthSizeClass) {
         WidthSizeClass.Compact -> 316.dp
-        WidthSizeClass.Medium -> maxOf(316.dp, adaptive.carouselItemWidth)
-        WidthSizeClass.Expanded -> maxOf(316.dp, adaptive.carouselItemWidth) + 40.dp
+        WidthSizeClass.Medium -> maxOf(316.dp, adaptiveInfo.carouselItemWidth)
+        WidthSizeClass.Expanded -> maxOf(316.dp, adaptiveInfo.carouselItemWidth) + 40.dp
     }
     val pages = items.chunked(4)
     LazyRow(
@@ -476,12 +499,15 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
 // -- Tile shelves --------------------------------------------------------
 
 @Composable
-private fun ImmersiveTileCarousel(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
+private fun ImmersiveTileCarousel(
+    carouselItemWidth: Dp,
+    items: List<TileItem>,
+    onOpen: (TileItem) -> Unit,
+) {
     val carouselState = rememberCarouselState { items.size }
-    val preferredItemWidth = LocalAdaptiveLayoutInfo.current.carouselItemWidth
     HorizontalMultiBrowseCarousel(
         state = carouselState,
-        preferredItemWidth = preferredItemWidth,
+        preferredItemWidth = carouselItemWidth,
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp),
@@ -547,12 +573,15 @@ private fun ImmersiveTileCarousel(items: List<TileItem>, onOpen: (TileItem) -> U
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun TileCardRow(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
-    val adaptive = LocalAdaptiveLayoutInfo.current
-    val cardWidth = when (adaptive.widthSizeClass) {
+private fun TileCardRow(
+    adaptiveInfo: AdaptiveLayoutInfo,
+    items: List<TileItem>,
+    onOpen: (TileItem) -> Unit,
+) {
+    val cardWidth = when (adaptiveInfo.widthSizeClass) {
         WidthSizeClass.Compact -> 150.dp
-        WidthSizeClass.Medium -> adaptive.carouselItemWidth
-        WidthSizeClass.Expanded -> adaptive.carouselItemWidth + 40.dp
+        WidthSizeClass.Medium -> adaptiveInfo.carouselItemWidth
+        WidthSizeClass.Expanded -> adaptiveInfo.carouselItemWidth + 40.dp
     }
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -597,12 +626,15 @@ private fun TileCardRow(items: List<TileItem>, onOpen: (TileItem) -> Unit) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HeroTileRow(items: List<HeroItem>, onOpen: (HeroItem) -> Unit) {
-    val adaptive = LocalAdaptiveLayoutInfo.current
-    val cardWidth = when (adaptive.widthSizeClass) {
+private fun HeroTileRow(
+    adaptiveInfo: AdaptiveLayoutInfo,
+    items: List<HeroItem>,
+    onOpen: (HeroItem) -> Unit,
+) {
+    val cardWidth = when (adaptiveInfo.widthSizeClass) {
         WidthSizeClass.Compact -> 150.dp
-        WidthSizeClass.Medium -> adaptive.carouselItemWidth
-        WidthSizeClass.Expanded -> adaptive.carouselItemWidth + 40.dp
+        WidthSizeClass.Medium -> adaptiveInfo.carouselItemWidth
+        WidthSizeClass.Expanded -> adaptiveInfo.carouselItemWidth + 40.dp
     }
     LazyRow(
         modifier = Modifier.fillMaxWidth(),

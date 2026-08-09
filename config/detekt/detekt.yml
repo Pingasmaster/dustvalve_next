@@ -97,9 +97,7 @@ Compose:
     active: true
   CompositionLocalAllowlist:
     active: true
-    # Matches config/lint/lint.xml: one intentional activity-root local.
-    allowedCompositionLocals:
-      - 'LocalAdaptiveLayoutInfo'
+    allowedCompositionLocals: []
   ContentEmitterReturningValues:
     active: true
   ContentTrailingLambda:

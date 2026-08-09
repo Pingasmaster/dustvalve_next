@@ -74,7 +74,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.AppFlowRow
@@ -93,6 +93,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun AlbumDetailScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     albumUrl: String,
     onArtistClick: (String) -> Unit,
     onBack: () -> Unit,
@@ -263,12 +264,11 @@ fun AlbumDetailScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .adaptiveContentWidth(),
+                            .adaptiveContentWidth(adaptiveInfo.contentMaxWidth),
                         contentPadding = PaddingValues(bottom = 10.dp),
                     ) {
                         // Hero album art with gradient overlay
                         item(key = "album_art") {
-                            val adaptive = LocalAdaptiveLayoutInfo.current
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -277,7 +277,7 @@ fun AlbumDetailScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .adaptiveHeroSize(adaptive.heroMaxSize)
+                                        .adaptiveHeroSize(adaptiveInfo.heroMaxSize)
                                         .aspectRatio(1f),
                                 ) {
                                     AsyncImage(

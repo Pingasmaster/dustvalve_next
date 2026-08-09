@@ -86,6 +86,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -93,7 +94,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
@@ -118,6 +119,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun YouTubeScreen(
+    adaptiveInfo: AdaptiveLayoutInfo,
     onPlaylistClick: (url: String, name: String, coverUrl: String?) -> Unit,
     onArtistClick: (url: String, name: String, imageUrl: String?) -> Unit,
     onOpenLink: (String) -> Unit,
@@ -320,6 +322,7 @@ fun YouTubeScreen(
                 ) { source ->
                     when (source) {
                         YouTubeSource.YouTubeMusic -> YouTubeMusicHome(
+                            adaptiveInfo = adaptiveInfo,
                             state = state,
                             onChipSelected = viewModel::onYtmChipSelected,
                             onPlaySong = { song -> onPlayVideoId(song.videoId) },
@@ -356,6 +359,7 @@ fun YouTubeScreen(
                         )
 
                         YouTubeSource.YouTube -> YouTubeSourceContent(
+                            carouselItemWidth = adaptiveInfo.carouselItemWidth,
                             state = state,
                             onMoodSelect = viewModel::onMoodSelected,
                             onPlayItem = onPlayItem,
@@ -751,6 +755,7 @@ fun YouTubeScreen(
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun YouTubeSourceContent(
+    carouselItemWidth: Dp,
     state: YouTubeUiState,
     onMoodSelect: (MoodChip?) -> Unit,
     onPlayItem: (SearchResult) -> Unit,
@@ -823,6 +828,7 @@ private fun YouTubeSourceContent(
             if (reco.isLoading || reco.items.isNotEmpty()) {
                 item(key = "yt_reco") {
                     DiscoverShelf(
+                        carouselItemWidth = carouselItemWidth,
                         section = reco,
                         onItemClick = onPlayItem,
                         onRetry = { onRetrySection("recommendations") },
@@ -833,6 +839,7 @@ private fun YouTubeSourceContent(
 
             item(key = "yt_trending") {
                 DiscoverShelf(
+                    carouselItemWidth = carouselItemWidth,
                     section = state.trendingSection,
                     onItemClick = onPlayItem,
                     onRetry = { onRetrySection("trending") },
@@ -846,6 +853,7 @@ private fun YouTubeSourceContent(
                 key = { index, _ -> "yt_genre_$index" },
             ) { index, section ->
                 DiscoverShelf(
+                    carouselItemWidth = carouselItemWidth,
                     section = section,
                     onItemClick = onPlayItem,
                     onRetry = { onRetrySection("genre_$index") },
@@ -902,6 +910,7 @@ private fun MoodToggleRow(selectedMood: MoodChip?, onMoodSelect: (MoodChip?) -> 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DiscoverShelf(
+    carouselItemWidth: Dp,
     section: DiscoverSection,
     onItemClick: (SearchResult) -> Unit,
     onRetry: () -> Unit,
@@ -935,10 +944,18 @@ private fun DiscoverShelf(
                     )
                     if (section.items.size > 1) {
                         Spacer(Modifier.height(12.dp))
-                        VideoCarousel(items = section.items.drop(1), onItemClick = onItemClick)
+                        VideoCarousel(
+                            carouselItemWidth = carouselItemWidth,
+                            items = section.items.drop(1),
+                            onItemClick = onItemClick,
+                        )
                     }
                 } else {
-                    VideoCarousel(items = section.items, onItemClick = onItemClick)
+                    VideoCarousel(
+                        carouselItemWidth = carouselItemWidth,
+                        items = section.items,
+                        onItemClick = onItemClick,
+                    )
                 }
             }
         }
@@ -1015,12 +1032,15 @@ private fun VideoHeroCard(item: SearchResult, onClick: () -> Unit, modifier: Mod
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun VideoCarousel(items: List<SearchResult>, onItemClick: (SearchResult) -> Unit) {
+private fun VideoCarousel(
+    carouselItemWidth: Dp,
+    items: List<SearchResult>,
+    onItemClick: (SearchResult) -> Unit,
+) {
     val carouselState = rememberCarouselState { items.size }
-    val preferredItemWidth = LocalAdaptiveLayoutInfo.current.carouselItemWidth
     HorizontalMultiBrowseCarousel(
         state = carouselState,
-        preferredItemWidth = preferredItemWidth,
+        preferredItemWidth = carouselItemWidth,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),

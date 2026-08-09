@@ -27,7 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.crash.CrashReportManager
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 
 /**
  * Post-crash prompt, hosted by MainActivity when [CrashReportManager]
@@ -58,7 +58,7 @@ fun CrashReportSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
         sheetState = sheetState,
-        sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+        sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
     ) {
         Column(
             modifier = Modifier

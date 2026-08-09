@@ -31,7 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Playlist
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 import com.dustvalve.next.android.ui.components.PlaylistEditSheet
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
@@ -52,7 +52,7 @@ fun AddToPlaylistSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
-        sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+        sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
     ) {
         Box {
             Column(modifier = Modifier.fillMaxWidth()) {

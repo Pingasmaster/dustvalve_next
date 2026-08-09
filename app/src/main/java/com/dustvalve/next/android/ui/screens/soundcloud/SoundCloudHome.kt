@@ -50,12 +50,13 @@ import com.dustvalve.next.android.domain.model.SoundCloudShelf
 import com.dustvalve.next.android.domain.model.SoundCloudShelfItem
 import com.dustvalve.next.android.domain.model.SoundCloudShelfKind
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import androidx.compose.ui.unit.Dp
 import com.dustvalve.next.android.ui.theme.AppShapes
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SoundCloudHomeContent(
+    carouselItemWidth: Dp,
     state: SoundCloudUiState,
     onGenreSelect: (String) -> Unit,
     onRetry: () -> Unit,
@@ -96,6 +97,7 @@ internal fun SoundCloudHomeContent(
 
         state.feed != null -> {
             SoundCloudFeed(
+                carouselItemWidth = carouselItemWidth,
                 feed = state.feed,
                 selectedGenre = state.selectedGenre,
                 isRefreshing = state.isHomeLoading,
@@ -121,6 +123,7 @@ internal fun SoundCloudHomeContent(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SoundCloudFeed(
+    carouselItemWidth: Dp,
     feed: SoundCloudHomeFeed,
     selectedGenre: String,
     isRefreshing: Boolean,
@@ -178,6 +181,7 @@ private fun SoundCloudFeed(
             }
             item(key = "sc_trending") {
                 TrendingCarousel(
+                    carouselItemWidth = carouselItemWidth,
                     tracks = feed.trending,
                     onPlayTrack = onPlayTrack,
                 )
@@ -227,12 +231,15 @@ private fun SoundCloudFeed(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TrendingCarousel(tracks: List<Track>, onPlayTrack: (Track) -> Unit) {
+private fun TrendingCarousel(
+    carouselItemWidth: Dp,
+    tracks: List<Track>,
+    onPlayTrack: (Track) -> Unit,
+) {
     val carouselState = rememberCarouselState { tracks.size }
-    val preferredItemWidth = LocalAdaptiveLayoutInfo.current.carouselItemWidth
     HorizontalMultiBrowseCarousel(
         state = carouselState,
-        preferredItemWidth = preferredItemWidth,
+        preferredItemWidth = carouselItemWidth,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),

@@ -51,7 +51,7 @@ import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.TestTags
-import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 import com.dustvalve.next.android.ui.theme.PlaylistShapeOptions
 import com.dustvalve.next.android.ui.theme.resolvePlaylistShape
 
@@ -83,7 +83,7 @@ fun PlaylistEditSheet(
         onDismissRequest = onDismiss,
         modifier = modifier,
         sheetState = sheetState,
-        sheetMaxWidth = LocalAdaptiveLayoutInfo.current.sheetMaxWidth,
+        sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
     ) {
         Column(
             modifier = Modifier
