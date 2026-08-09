@@ -11,18 +11,30 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class FavoriteDaoTest : DbTestBase() {
 
-    @Test fun `insert and isFavorite`() = runTest {
+    @Test fun `insert and isFavorite are typed`() = runTest {
         val dao = db.favoriteDao()
         dao.insert(FavoriteEntity(id = "a1", type = "album"))
-        assertThat(dao.isFavorite("a1")).isTrue()
-        assertThat(dao.isFavorite("other")).isFalse()
+        assertThat(dao.isFavorite("a1", "album")).isTrue()
+        assertThat(dao.isFavorite("a1", "track")).isFalse()
+        assertThat(dao.isFavorite("other", "album")).isFalse()
     }
 
-    @Test fun `delete removes favorite`() = runTest {
+    @Test fun `same id can exist for album and track without clobber`() = runTest {
+        val dao = db.favoriteDao()
+        dao.insert(FavoriteEntity(id = "shared", type = "album"))
+        dao.insert(FavoriteEntity(id = "shared", type = "track"))
+        assertThat(dao.isFavorite("shared", "album")).isTrue()
+        assertThat(dao.isFavorite("shared", "track")).isTrue()
+        dao.delete("shared", "album")
+        assertThat(dao.isFavorite("shared", "album")).isFalse()
+        assertThat(dao.isFavorite("shared", "track")).isTrue()
+    }
+
+    @Test fun `delete removes favorite of that type only`() = runTest {
         val dao = db.favoriteDao()
         dao.insert(FavoriteEntity(id = "a1", type = "album"))
-        dao.delete("a1")
-        assertThat(dao.isFavorite("a1")).isFalse()
+        dao.delete("a1", "album")
+        assertThat(dao.isFavorite("a1", "album")).isFalse()
     }
 
     @Test fun `getFavoriteIds chunks across SQLite bind limit`() = runTest {
@@ -31,23 +43,26 @@ class FavoriteDaoTest : DbTestBase() {
         val ids = (1..2000).map { "id_$it" }
         ids.forEach { dao.insert(FavoriteEntity(id = it, type = "track")) }
 
-        val looked = dao.getFavoriteIds(ids)
+        val looked = dao.getFavoriteIds("track", ids)
         assertThat(looked).hasSize(2000)
         assertThat(looked.toSet()).isEqualTo(ids.toSet())
     }
 
     @Test fun `getFavoriteIds on empty list returns empty`() = runTest {
         val dao = db.favoriteDao()
-        assertThat(dao.getFavoriteIds(emptyList())).isEmpty()
+        assertThat(dao.getFavoriteIds("track", emptyList())).isEmpty()
     }
 
     @Test fun `setPinned and setShapeKey update in place`() = runTest {
         val dao = db.favoriteDao()
         dao.insert(FavoriteEntity(id = "a1", type = "album"))
-        dao.setPinned("a1", true)
-        dao.setShapeKey("a1", "circle")
+        dao.setPinned("a1", "album", true)
+        dao.setShapeKey("a1", "album", "circle")
 
-        val matching = dao.getFavoriteIds(listOf("a1"))
+        val matching = dao.getFavoriteIds("album", listOf("a1"))
         assertThat(matching).containsExactly("a1")
+        val row = dao.getAllSync().single()
+        assertThat(row.isPinned).isTrue()
+        assertThat(row.shapeKey).isEqualTo("circle")
     }
 }

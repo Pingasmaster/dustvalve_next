@@ -202,13 +202,13 @@ class LocalMusicRepositoryImpl(
 
     override suspend fun getLocalTrack(trackId: String): Track? {
         val entity = trackDao.getById(trackId) ?: return null
-        val isFavorite = favoriteDao.isFavorite(trackId)
+        val isFavorite = favoriteDao.isFavorite(trackId, "track")
         return entity.toDomain(isFavorite)
     }
 
     override suspend fun searchLocalTracks(query: String): List<Track> {
         val entities = trackDao.searchLocalTracks(query)
-        val favoriteIds = favoriteDao.getFavoriteIds(entities.map { it.id }).toSet()
+        val favoriteIds = favoriteDao.getFavoriteIds("track", entities.map { it.id }).toSet()
         return entities.map { it.toDomain(isFavorite = it.id in favoriteIds) }
     }
 

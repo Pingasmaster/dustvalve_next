@@ -15,7 +15,8 @@ class FavoriteRepositoryImpl(private val favoriteDao: FavoriteDao) : FavoriteRep
 
     @Inject constructor(gateway: DatabaseGateway) : this(gateway.favoriteDao)
 
-    override suspend fun isFavorite(id: String): Boolean = favoriteDao.isFavorite(id)
+    override suspend fun isFavorite(id: String, type: FavoriteType): Boolean =
+        favoriteDao.isFavorite(id, type.key)
 
     // Deliberately no distinctUntilChanged: the emission cadence feeding the
     // VMs' stateIn/collect chains is load-bearing (see FavoriteRepository KDoc).
@@ -26,15 +27,15 @@ class FavoriteRepositoryImpl(private val favoriteDao: FavoriteDao) : FavoriteRep
         favoriteDao.insert(FavoriteEntity(id = id, type = type.key))
     }
 
-    override suspend fun remove(id: String) {
-        favoriteDao.delete(id)
+    override suspend fun remove(id: String, type: FavoriteType) {
+        favoriteDao.delete(id, type.key)
     }
 
-    override suspend fun setPinned(id: String, isPinned: Boolean) {
-        favoriteDao.setPinned(id, isPinned)
+    override suspend fun setPinned(id: String, type: FavoriteType, isPinned: Boolean) {
+        favoriteDao.setPinned(id, type.key, isPinned)
     }
 
-    override suspend fun setShapeKey(id: String, shapeKey: String?) {
-        favoriteDao.setShapeKey(id, shapeKey)
+    override suspend fun setShapeKey(id: String, type: FavoriteType, shapeKey: String?) {
+        favoriteDao.setShapeKey(id, type.key, shapeKey)
     }
 }

@@ -648,6 +648,7 @@ class YouTubeViewModel @Inject constructor(
                 tracks = result.tracks,
                 favoriteId = playlistUrl,
                 favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+                sourceUrl = playlistUrl,
             )
             true
         }.let { outcome ->

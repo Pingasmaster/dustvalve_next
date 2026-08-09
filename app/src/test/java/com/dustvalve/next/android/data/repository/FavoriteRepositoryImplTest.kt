@@ -27,7 +27,7 @@ class FavoriteRepositoryImplTest : DbTestBase() {
             repo.add("a1", FavoriteType.ALBUM)
             assertThat(awaitItem()).containsExactly("t1")
 
-            repo.remove("t1")
+            repo.remove("t1", FavoriteType.TRACK)
             assertThat(awaitItem()).isEmpty()
 
             cancelAndIgnoreRemainingEvents()
@@ -56,29 +56,35 @@ class FavoriteRepositoryImplTest : DbTestBase() {
         )
     }
 
-    @Test fun `isFavorite has EXISTS semantics`() = runTest {
+    @Test fun `isFavorite is typed - same id different types do not collide`() = runTest {
         val repo = repo()
-        assertThat(repo.isFavorite("x")).isFalse()
+        assertThat(repo.isFavorite("x", FavoriteType.COLLECTION)).isFalse()
 
         repo.add("x", FavoriteType.COLLECTION)
-        assertThat(repo.isFavorite("x")).isTrue()
+        assertThat(repo.isFavorite("x", FavoriteType.COLLECTION)).isTrue()
+        assertThat(repo.isFavorite("x", FavoriteType.TRACK)).isFalse()
 
-        repo.remove("x")
-        assertThat(repo.isFavorite("x")).isFalse()
+        repo.add("x", FavoriteType.TRACK)
+        assertThat(repo.isFavorite("x", FavoriteType.COLLECTION)).isTrue()
+        assertThat(repo.isFavorite("x", FavoriteType.TRACK)).isTrue()
+
+        repo.remove("x", FavoriteType.COLLECTION)
+        assertThat(repo.isFavorite("x", FavoriteType.COLLECTION)).isFalse()
+        assertThat(repo.isFavorite("x", FavoriteType.TRACK)).isTrue()
     }
 
     @Test fun `setPinned and setShapeKey update the row in place`() = runTest {
         val repo = repo()
         repo.add("a1", FavoriteType.ALBUM)
 
-        repo.setPinned("a1", true)
-        repo.setShapeKey("a1", "hex")
+        repo.setPinned("a1", FavoriteType.ALBUM, true)
+        repo.setShapeKey("a1", FavoriteType.ALBUM, "hex")
         var row = db.favoriteDao().getAllSync().single()
         assertThat(row.isPinned).isTrue()
         assertThat(row.shapeKey).isEqualTo("hex")
 
-        repo.setPinned("a1", false)
-        repo.setShapeKey("a1", null)
+        repo.setPinned("a1", FavoriteType.ALBUM, false)
+        repo.setShapeKey("a1", FavoriteType.ALBUM, null)
         row = db.favoriteDao().getAllSync().single()
         assertThat(row.isPinned).isFalse()
         assertThat(row.shapeKey).isNull()

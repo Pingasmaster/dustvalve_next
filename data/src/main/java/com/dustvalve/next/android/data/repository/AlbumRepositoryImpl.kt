@@ -127,10 +127,10 @@ class AlbumRepositoryImpl(
         cachedAlbum: com.dustvalve.next.android.data.local.db.entity.AlbumEntity,
         trackEntities: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity>,
     ): Album {
-        val allIds = listOf(cachedAlbum.id) + trackEntities.map { it.id }
-        val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
-        val tracks = trackEntities.map { it.toDomain(it.id in favoriteIds) }
-        return cachedAlbum.toDomain(tracks, cachedAlbum.id in favoriteIds)
+        val trackFavIds = favoriteDao.getFavoriteIds("track", trackEntities.map { it.id }).toSet()
+        val albumFav = favoriteDao.isFavorite(cachedAlbum.id, "album")
+        val tracks = trackEntities.map { it.toDomain(it.id in trackFavIds) }
+        return cachedAlbum.toDomain(tracks, albumFav)
     }
 
     private suspend fun scrapeAndPersistAlbum(
@@ -170,13 +170,13 @@ class AlbumRepositoryImpl(
                     albumDao.updatePurchaseInfo(album.id, previousSaleItemId, previousSaleItemType)
                 }
 
-                val allIds = listOf(album.id) + album.tracks.map { it.id }
-                val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
+                val trackFavIds = favoriteDao.getFavoriteIds("track", album.tracks.map { it.id }).toSet()
+                val albumFav = favoriteDao.isFavorite(album.id, "album")
                 val tracksWithFavorites = album.tracks.map { track ->
-                    track.copy(isFavorite = track.id in favoriteIds)
+                    track.copy(isFavorite = track.id in trackFavIds)
                 }
                 album.copy(
-                    isFavorite = album.id in favoriteIds,
+                    isFavorite = albumFav,
                     tracks = tracksWithFavorites,
                     autoDownload = previousAutoDownload,
                 )
@@ -184,13 +184,13 @@ class AlbumRepositoryImpl(
         } else {
             // Content unchanged - just touch the timestamp
             albumDao.updateCachedAt(cachedAlbum?.id ?: album.id)
-            val allIds = listOf(album.id) + album.tracks.map { it.id }
-            val favoriteIds = favoriteDao.getFavoriteIds(allIds).toSet()
+            val trackFavIds = favoriteDao.getFavoriteIds("track", album.tracks.map { it.id }).toSet()
+            val albumFav = favoriteDao.isFavorite(album.id, "album")
             val tracksWithFavorites = album.tracks.map { track ->
-                track.copy(isFavorite = track.id in favoriteIds)
+                track.copy(isFavorite = track.id in trackFavIds)
             }
             album.copy(
-                isFavorite = album.id in favoriteIds,
+                isFavorite = albumFav,
                 tracks = tracksWithFavorites,
                 autoDownload = previousAutoDownload,
             )
@@ -219,9 +219,9 @@ class AlbumRepositoryImpl(
 
     override suspend fun toggleFavorite(albumId: String) {
         database.withTransaction {
-            val isFavorite = favoriteDao.isFavorite(albumId)
+            val isFavorite = favoriteDao.isFavorite(albumId, "album")
             if (isFavorite) {
-                favoriteDao.delete(albumId)
+                favoriteDao.delete(albumId, "album")
             } else {
                 favoriteDao.insert(FavoriteEntity(id = albumId, type = "album"))
             }

@@ -197,7 +197,7 @@ class YouTubeViewModelSearchDispatchTest {
 
         assertThat(imported).isFalse()
         assertThat(vm.uiState.value.error).isNotNull()
-        coVerify(exactly = 0) { playlistRepo.importTracksAsPlaylist(any(), any(), any(), any()) }
+        coVerify(exactly = 0) { playlistRepo.importTracksAsPlaylist(any(), any(), any(), any(), any()) }
     }
 
     @Test fun `importPlaylist imports via the repository with the favorite inside the transaction`() = runTest {
@@ -206,7 +206,7 @@ class YouTubeViewModelSearchDispatchTest {
         coEvery { ytRepo.getPlaylistTracks(playlistUrl) } returns
             YouTubePlaylistResult(tracks = tracks, title = "Mix")
         coEvery {
-            playlistRepo.importTracksAsPlaylist(any(), any(), any(), any())
+            playlistRepo.importTracksAsPlaylist(any(), any(), any(), any(), any())
         } returns Playlist(id = "imported_1", name = "Mix")
 
         val vm = newViewModel()
@@ -222,6 +222,7 @@ class YouTubeViewModelSearchDispatchTest {
                 tracks = tracks,
                 favoriteId = playlistUrl,
                 favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+                sourceUrl = playlistUrl,
             )
         }
     }

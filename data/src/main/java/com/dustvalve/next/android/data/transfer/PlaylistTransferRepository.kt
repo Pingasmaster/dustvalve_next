@@ -96,6 +96,7 @@ class PlaylistTransferRepository(
         ZipOutputStream(out.buffered()).use { zip ->
             val coverPaths = HashMap<String, String>() // albumId -> cover entry name (dedupe)
             val entries = ArrayList<BundleEntry>(tracks.size)
+            var allOfflineAudioPresent = true
 
             tracks.forEachIndexed { index, track ->
                 coroutineContext.ensureActive()
@@ -105,9 +106,9 @@ class PlaylistTransferRepository(
                         // Route through TrackDownloadGateway (DownloadController)
                         // so offline export shares queue durability, FGS, and
                         // DownloadPayloadValidator with UI downloads. Log and
-                        // export the track without local audio on failure.
-                        // CancellationException is rethrown so coroutine
-                        // cancellation propagates.
+                        // continue without local audio on failure; the manifest
+                        // offline flag is cleared below when any entry lacks
+                        // audioFile. CancellationException is rethrown.
                         try {
                             trackDownloadGateway.downloadTrack(track)
                         } catch (ce: CancellationException) {
@@ -126,6 +127,8 @@ class PlaylistTransferRepository(
                         zip.putNextEntry(ZipEntry(audioFile))
                         openDownload(info.filePath).use { it.copyTo(zip) }
                         zip.closeEntry()
+                    } else {
+                        allOfflineAudioPresent = false
                     }
                     val coverFile = if (track.artUrl.isNotBlank()) {
                         coverPaths.getOrPut(track.albumId) {
@@ -166,7 +169,9 @@ class PlaylistTransferRepository(
             }
 
             val manifest = PlaylistBundleManifest(
-                offline = offline,
+                // Honest offline flag: never claim offline=true when any
+                // requested track failed to download / lacked audioFile.
+                offline = offline && allOfflineAudioPresent,
                 playlist = playlist.toSnapshot(),
                 entries = entries,
             )
@@ -280,19 +285,17 @@ class PlaylistTransferRepository(
     }
 
     /**
-     * Soft upsert: keep an existing non-blank streamUrl/artUrl when the bundle
-     * would wipe them with blanks. Bundle non-blank values always win (offline
-     * covers repoint artUrl at a local file).
+     * Soft upsert: keep an existing non-blank streamUrl/artUrl/title/artist
+     * (and related metadata) when the bundle would wipe them with blanks.
+     * Bundle non-blank values always win (offline covers repoint artUrl at a
+     * local file).
      */
     private suspend fun mergeTracksForImport(incoming: List<TrackEntity>): List<TrackEntity> {
         if (incoming.isEmpty()) return incoming
         val existingById = trackDao.getByIds(incoming.map { it.id }).associateBy { it.id }
         return incoming.map { row ->
             val existing = existingById[row.id] ?: return@map row
-            row.copy(
-                streamUrl = row.streamUrl?.takeIf { it.isNotBlank() } ?: existing.streamUrl,
-                artUrl = row.artUrl.takeIf { it.isNotBlank() } ?: existing.artUrl,
-            )
+            mergeTrackEntityForImport(row, existing)
         }
     }
 
@@ -622,3 +625,25 @@ private fun Playlist.toSnapshot() = PlaylistSnapshot(
     createdAt = createdAt,
     updatedAt = updatedAt,
 )
+
+/**
+ * Soft-merge for playlist-bundle import: prefer non-blank incoming fields,
+ * otherwise keep the richer existing row. Duration keeps a positive incoming
+ * value, else the existing duration.
+ */
+fun mergeTrackEntityForImport(incoming: TrackEntity, existing: TrackEntity): TrackEntity =
+    incoming.copy(
+        streamUrl = incoming.streamUrl?.takeIf { it.isNotBlank() } ?: existing.streamUrl,
+        artUrl = incoming.artUrl.takeIf { it.isNotBlank() } ?: existing.artUrl,
+        title = incoming.title.takeIf { it.isNotBlank() } ?: existing.title,
+        artist = incoming.artist.takeIf { it.isNotBlank() } ?: existing.artist,
+        artistUrl = incoming.artistUrl.takeIf { it.isNotBlank() } ?: existing.artistUrl,
+        albumTitle = incoming.albumTitle.takeIf { it.isNotBlank() } ?: existing.albumTitle,
+        albumUrl = incoming.albumUrl.takeIf { it.isNotBlank() } ?: existing.albumUrl,
+        bandcampTrackUrl = incoming.bandcampTrackUrl?.takeIf { it.isNotBlank() }
+            ?: existing.bandcampTrackUrl,
+        duration = if (incoming.duration > 0f) incoming.duration else existing.duration,
+        year = if (incoming.year > 0) incoming.year else existing.year,
+        trackNumber = if (incoming.trackNumber > 0) incoming.trackNumber else existing.trackNumber,
+        albumId = incoming.albumId.takeIf { it.isNotBlank() } ?: existing.albumId,
+    )

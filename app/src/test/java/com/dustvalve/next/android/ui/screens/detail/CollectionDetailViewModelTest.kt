@@ -3,7 +3,6 @@ package com.dustvalve.next.android.ui.screens.detail
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.MusicCollection
-import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
@@ -73,8 +72,8 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteRepository.isFavorite(url) } returns false
-        coEvery { playlistRepository.playlistExistsByName("Chill Mix") } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.YOUTUBE_PLAYLIST) } returns false
+        coEvery { playlistRepository.getPlaylistIdForSourceUrl(url) } returns null
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "Chill Mix")
@@ -103,8 +102,8 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteRepository.isFavorite(url) } returns false
-        coEvery { playlistRepository.playlistExistsByName("Chill Mix") } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.YOUTUBE_PLAYLIST) } returns false
+        coEvery { playlistRepository.getPlaylistIdForSourceUrl(url) } returns null
 
         val vm = newVm()
         vm.load(
@@ -160,7 +159,7 @@ class CollectionDetailViewModelTest {
         assertThat(state.error).isNotNull()
     }
 
-    @Test fun `load marks isImported by name for display but never captures the foreign playlist id`() = runTest(dispatcher) {
+    @Test fun `load marks isImported from durable sourceUrl mapping not by name`() = runTest(dispatcher) {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
@@ -174,9 +173,10 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteRepository.isFavorite(url) } returns true
-        // A same-named playlist exists; the probe is a Boolean by design.
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.YOUTUBE_PLAYLIST) } returns true
+        // Same-named playlist may exist, but import state comes only from mapping.
         coEvery { playlistRepository.playlistExistsByName("My Mix") } returns true
+        coEvery { playlistRepository.getPlaylistIdForSourceUrl(url) } returns "mapped_pl"
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
@@ -184,13 +184,12 @@ class CollectionDetailViewModelTest {
 
         val state = vm.uiState.value
         assertThat(state.isImported).isTrue()
-        // Name matching is display-only: the id must NOT be captured, because
-        // importedPlaylistId authorizes deletion in toggleFavorite.
-        assertThat(state.importedPlaylistId).isNull()
+        assertThat(state.importedPlaylistId).isEqualTo("mapped_pl")
         assertThat(state.isFavorite).isTrue()
+        coVerify(exactly = 0) { playlistRepository.playlistExistsByName(any()) }
     }
 
-    @Test fun `unfavoriting never deletes a same-named user playlist`() = runTest(dispatcher) {
+    @Test fun `name collision alone does not mark isImported`() = runTest(dispatcher) {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
@@ -204,21 +203,44 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteRepository.isFavorite(url) } returns true
-        // A user's own playlist shares the collection's name: the repository
-        // reports only that SOME playlist exists, never which one.
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.YOUTUBE_PLAYLIST) } returns true
         coEvery { playlistRepository.playlistExistsByName("My Mix") } returns true
+        coEvery { playlistRepository.getPlaylistIdForSourceUrl(url) } returns null
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
         advanceUntilIdle()
 
-        // Not imported this session (importedPlaylistId == null): unfavoriting
-        // must not resolve a deletion target by name.
+        assertThat(vm.uiState.value.isImported).isFalse()
+        assertThat(vm.uiState.value.importedPlaylistId).isNull()
+    }
+
+    @Test fun `unfavoriting never deletes a same-named user playlist without mapping`() = runTest(dispatcher) {
+        val url = "https://youtube.com/playlist?list=PL1"
+        val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
+        coEvery { source.getCollection(url, null) } returns MusicCollection(
+            id = url,
+            url = url,
+            name = "My Mix",
+            owner = "",
+            coverUrl = null,
+            tracks = listOf(track("a")),
+            continuation = null,
+            hasMore = false,
+        )
+        every { sources["youtube"] } returns source
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.YOUTUBE_PLAYLIST) } returns true
+        coEvery { playlistRepository.getPlaylistIdForSourceUrl(url) } returns null
+
+        val vm = newVm()
+        vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
+        advanceUntilIdle()
+
         vm.toggleFavorite()
         advanceUntilIdle()
 
         coVerify(exactly = 0) { playlistRepository.deletePlaylist(any()) }
+        coVerify { favoriteRepository.remove(url, FavoriteType.YOUTUBE_PLAYLIST) }
         assertThat(vm.uiState.value.isFavorite).isFalse()
     }
 
@@ -246,8 +268,8 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteRepository.isFavorite(url) } returns false
-        coEvery { playlistRepository.playlistExistsByName(any()) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.YOUTUBE_PLAYLIST) } returns false
+        coEvery { playlistRepository.getPlaylistIdForSourceUrl(url) } returns null
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "Infinite Mix")
@@ -275,7 +297,7 @@ class CollectionDetailViewModelTest {
         assertThat(vm.uiState.value.hasMore).isFalse()
     }
 
-    @Test fun `unfavoriting deletes only the playlist imported this session`() = runTest(dispatcher) {
+    @Test fun `unfavoriting deletes the durably mapped imported playlist`() = runTest(dispatcher) {
         val url = "https://youtube.com/playlist?list=PL1"
         val source = sourceWith("youtube", setOf(SourceConcept.COLLECTION))
         coEvery { source.getCollection(url, null) } returns MusicCollection(
@@ -289,16 +311,17 @@ class CollectionDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns source
-        coEvery { favoriteRepository.isFavorite(url) } returns false
-        coEvery { playlistRepository.playlistExistsByName("My Mix") } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.YOUTUBE_PLAYLIST) } returns false
+        coEvery { playlistRepository.getPlaylistIdForSourceUrl(url) } returns null
         coEvery {
             playlistRepository.importTracksAsPlaylist(
                 name = "My Mix",
                 tracks = any(),
                 favoriteId = url,
                 favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+                sourceUrl = url,
             )
-        } returns Playlist(id = "imported_1", name = "My Mix")
+        } returns Playlist(id = "imported_1", name = "My Mix", sourceUrl = url)
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
@@ -320,9 +343,11 @@ class CollectionDetailViewModelTest {
                 tracks = any(),
                 favoriteId = url,
                 favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+                sourceUrl = url,
             )
         }
         coVerify(exactly = 1) { playlistRepository.deletePlaylist("imported_1") }
+        coVerify { favoriteRepository.remove(url, FavoriteType.YOUTUBE_PLAYLIST) }
         assertThat(vm.uiState.value.importedPlaylistId).isNull()
         assertThat(vm.uiState.value.isImported).isFalse()
     }

@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.screens.detail
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
+import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.MusicProvider
 import com.dustvalve.next.android.domain.model.Track
@@ -97,7 +98,7 @@ class ArtistDetailViewModelTest {
         coVerify(exactly = 0) { bandcampSource.getArtist(any()) }
         coVerify(exactly = 0) { bandcampSource.getArtistTracks(any(), any()) }
         // Favorite is the stable hash id from the Artist row, not the URL.
-        coVerify(exactly = 0) { favoriteRepository.isFavorite(any()) }
+        coVerify(exactly = 0) { favoriteRepository.isFavorite(any(), any()) }
     }
 
     @Test fun `youtube artist load fetches first page of tracks and propagates hasMore`() = runTest(dispatcher) {
@@ -133,7 +134,7 @@ class ArtistDetailViewModelTest {
         coEvery { ytSource.getArtist(url) } returns artist
         coEvery { ytSource.getArtistTracks(url, continuation = null) } returns firstPage
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.ARTIST) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, name = "YT Channel", imageUrl = "hint.jpg")
@@ -189,7 +190,7 @@ class ArtistDetailViewModelTest {
         coEvery { ytSource.getArtistTracks(url, continuation = null) } returns page1
         coEvery { ytSource.getArtistTracks(url, continuation = "T1") } returns page2
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.ARTIST) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url)
@@ -240,7 +241,7 @@ class ArtistDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.ARTIST) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url)
@@ -276,7 +277,7 @@ class ArtistDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.ARTIST) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, name = "Hint", imageUrl = "hint.jpg")
@@ -414,7 +415,7 @@ class ArtistDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.ARTIST) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url)
@@ -456,7 +457,7 @@ class ArtistDetailViewModelTest {
             hasMore = false,
         )
         every { sources["soundcloud"] } returns scSource
-        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.ARTIST) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "soundcloud", url = url)
@@ -557,7 +558,7 @@ class ArtistDetailViewModelTest {
             hasMore = false,
         )
         every { sources["youtube"] } returns ytSource
-        coEvery { favoriteRepository.isFavorite(url) } returns false
+        coEvery { favoriteRepository.isFavorite(url, FavoriteType.ARTIST) } returns false
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url)

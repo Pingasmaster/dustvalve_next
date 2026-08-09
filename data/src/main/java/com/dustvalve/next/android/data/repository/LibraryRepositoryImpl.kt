@@ -47,9 +47,9 @@ class LibraryRepositoryImpl(
     }
 
     private suspend fun toggleTrackFavoriteUnlocked(trackId: String): Boolean {
-        val isFavorite = favoriteDao.isFavorite(trackId)
+        val isFavorite = favoriteDao.isFavorite(trackId, "track")
         if (isFavorite) {
-            favoriteDao.delete(trackId)
+            favoriteDao.delete(trackId, "track")
             return false
         }
         // Refuse to write an orphan favorite that Favorites would hide.

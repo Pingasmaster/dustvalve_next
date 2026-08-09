@@ -18,6 +18,7 @@ fun PlaylistEntity.toDomain(): Playlist = Playlist(
     autoDownload = autoDownload,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    sourceUrl = sourceUrl,
 )
 
 fun Playlist.toEntity(): PlaylistEntity = PlaylistEntity(
@@ -33,4 +34,5 @@ fun Playlist.toEntity(): PlaylistEntity = PlaylistEntity(
     autoDownload = autoDownload,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    sourceUrl = sourceUrl,
 )

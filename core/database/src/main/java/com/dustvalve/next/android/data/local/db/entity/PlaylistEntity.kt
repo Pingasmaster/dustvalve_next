@@ -10,6 +10,10 @@ import androidx.room.PrimaryKey
         Index("isSystem"),
         Index("isPinned"),
         Index("sortOrder"),
+        // One imported playlist per remote collection URL. SQLite UNIQUE
+        // treats NULLs as distinct, so user-created playlists (sourceUrl null)
+        // are unaffected.
+        Index(value = ["sourceUrl"], unique = true),
     ],
 )
 data class PlaylistEntity(
@@ -25,4 +29,10 @@ data class PlaylistEntity(
     val autoDownload: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    /**
+     * Remote collection URL this playlist was imported from (YouTube /
+     * SoundCloud / generic collection). Null for user-created and system
+     * playlists. Used for durable isImported / unfavorite-delete targeting.
+     */
+    val sourceUrl: String? = null,
 )

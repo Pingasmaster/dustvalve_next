@@ -207,4 +207,81 @@ class PlaylistTransferRepositoryTest {
         assertThat(ex.message).contains("version ${PlaylistBundleManifest.SUPPORTED_VERSION + 1}")
         coVerify(exactly = 0) { playlistRepo.createPlaylist(any(), any(), any()) }
     }
+
+    @Test fun `offline export clears offline flag when downloadTrack fails`() = runBlocking {
+        val playlistRepo = mockk<PlaylistRepository>(relaxed = true)
+        val downloadRepo = mockk<DownloadRepository>()
+        coEvery { playlistRepo.getPlaylistByIdSync("p1") } returns Playlist(id = "p1", name = "Mix")
+        coEvery { playlistRepo.getTracksInPlaylistSync("p1") } returns listOf(track("t1", "One"))
+        coEvery { downloadRepo.getDownloadInfo("t1") } returns null
+        coEvery { downloadRepo.downloadTrack(any()) } throws java.io.IOException("nope")
+
+        val repo = PlaylistTransferRepository(
+            context = mockk(relaxed = true),
+            playlistRepository = playlistRepo,
+            downloadRepository = downloadRepo,
+            database = database,
+            trackDao = mockk(relaxed = true),
+            downloadDao = mockk(relaxed = true),
+            client = mockk(relaxed = true),
+            ioDispatcher = UnconfinedTestDispatcher(),
+        )
+        val baos = ByteArrayOutputStream()
+        repo.export("p1", offline = true, out = baos)
+
+        val manifestJson = java.util.zip.ZipInputStream(ByteArrayInputStream(baos.toByteArray())).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                if (entry.name == "manifest.json") {
+                    return@use zip.readBytes().decodeToString()
+                }
+                zip.closeEntry()
+                entry = zip.nextEntry
+            }
+            error("no manifest")
+        }
+        val manifest = PlaylistBundleSerializer.json.decodeFromString<PlaylistBundleManifest>(manifestJson)
+        assertThat(manifest.offline).isFalse()
+        assertThat(manifest.entries.single().audioFile).isNull()
+    }
+
+    @Test fun `mergeTrackEntityForImport keeps richer metadata over blank bundle fields`() {
+        val existing = TrackEntity(
+            id = "t1",
+            albumId = "a1",
+            title = "Rich Title",
+            artist = "Rich Artist",
+            artistUrl = "https://artist",
+            trackNumber = 3,
+            duration = 120f,
+            streamUrl = "https://stream",
+            artUrl = "https://art",
+            albumTitle = "Rich Album",
+            albumUrl = "https://album",
+            year = 2020,
+        )
+        val thin = existing.copy(
+            title = "",
+            artist = "",
+            artistUrl = "",
+            albumTitle = "",
+            albumUrl = "",
+            streamUrl = null,
+            artUrl = "",
+            duration = 0f,
+            year = 0,
+            trackNumber = 0,
+        )
+        val merged = mergeTrackEntityForImport(thin, existing)
+        assertThat(merged.title).isEqualTo("Rich Title")
+        assertThat(merged.artist).isEqualTo("Rich Artist")
+        assertThat(merged.artistUrl).isEqualTo("https://artist")
+        assertThat(merged.albumTitle).isEqualTo("Rich Album")
+        assertThat(merged.albumUrl).isEqualTo("https://album")
+        assertThat(merged.streamUrl).isEqualTo("https://stream")
+        assertThat(merged.artUrl).isEqualTo("https://art")
+        assertThat(merged.duration).isEqualTo(120f)
+        assertThat(merged.year).isEqualTo(2020)
+        assertThat(merged.trackNumber).isEqualTo(3)
+    }
 }

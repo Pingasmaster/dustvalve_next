@@ -134,6 +134,18 @@ class PlaylistRepositoryImplTest : DbTestBase() {
         assertThat(db.favoriteDao().getAllSync()).isEmpty()
     }
 
+    @Test fun `importTracksAsPlaylist persists sourceUrl for durable lookup`() = runTest {
+        val url = "https://youtube.com/playlist?list=durable"
+        val playlist = repo().importTracksAsPlaylist(
+            "Durable",
+            listOf(domainTrack("t1")),
+            sourceUrl = url,
+        )
+        assertThat(playlist.sourceUrl).isEqualTo(url)
+        assertThat(repo().getPlaylistIdForSourceUrl(url)).isEqualTo(playlist.id)
+        assertThat(repo().getPlaylistIdForSourceUrl("https://other")).isNull()
+    }
+
     @Test fun `importTracksAsPlaylist writes the favorite row exactly when favoriteId is given`() = runTest {
         repo().importTracksAsPlaylist(
             "YT list",

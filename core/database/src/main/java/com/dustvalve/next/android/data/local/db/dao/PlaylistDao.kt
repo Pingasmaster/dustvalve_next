@@ -66,6 +66,9 @@ interface PlaylistDao {
     @Query("SELECT * FROM playlists WHERE name = :name AND isSystem = 0 ORDER BY createdAt DESC LIMIT 1")
     suspend fun getPlaylistByName(name: String): PlaylistEntity?
 
+    @Query("SELECT * FROM playlists WHERE sourceUrl = :sourceUrl LIMIT 1")
+    suspend fun getPlaylistBySourceUrl(sourceUrl: String): PlaylistEntity?
+
     // Playlist tracks operations
 
     @Query(
