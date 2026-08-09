@@ -1,13 +1,11 @@
 package com.dustvalve.next.android.di
 
-import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Looper
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -28,6 +26,7 @@ import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.player.AudioPowerPolicy
 import com.dustvalve.next.android.player.MediaSessionConstants
+import com.dustvalve.next.android.player.MediaSessionTrust
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueForwardingPlayer
 import com.dustvalve.next.android.player.QueueManager
@@ -38,6 +37,7 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -157,7 +157,12 @@ object PlayerModule {
         libraryRepository: LibraryRepository,
     ): MediaSession {
         val forwardingPlayer = QueueForwardingPlayer(exoPlayer, playbackManager, queueManager)
-        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val scope = CoroutineScope(
+            SupervisorJob() + Dispatchers.Main.immediate +
+                CoroutineExceptionHandler { _, throwable ->
+                    Log.e(TAG, "Unhandled MediaSession coroutine error", throwable)
+                },
+        )
 
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -175,7 +180,7 @@ object PlayerModule {
                 // system/OEM media controllers. Everyone else gets Media3's
                 // untrusted (read-mostly) command sets so a random third-party
                 // MediaController cannot drive playback.
-                if (!isTrustedMediaController(context, controller)) {
+                if (!MediaSessionTrust.isTrustedController(context, controller.packageName)) {
                     return MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller)
                         .setAvailableSessionCommands(MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_SESSION_COMMANDS)
                         .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_UNTRUSTED_PLAYER_COMMANDS)
@@ -197,7 +202,7 @@ object PlayerModule {
                 customCommand: SessionCommand,
                 args: Bundle,
             ): ListenableFuture<SessionResult> {
-                if (!isTrustedMediaController(context, controller)) {
+                if (!MediaSessionTrust.isTrustedController(context, controller.packageName)) {
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_PERMISSION_DENIED))
                 }
                 if (customCommand.customAction == MediaSessionConstants.ACTION_TOGGLE_FAVORITE) {
@@ -248,39 +253,5 @@ object PlayerModule {
         session.setMediaButtonPreferences(listOf(favoriteButton))
     }
 
-    /**
-     * Own app, packages holding MEDIA_CONTENT_CONTROL, and system/OEM apps
-     * get full player commands. Third-party MediaControllers are limited to
-     * Media3's DEFAULT_UNTRUSTED_* sets (metadata / read-mostly).
-     */
-    private fun isTrustedMediaController(context: Context, controller: MediaSession.ControllerInfo): Boolean {
-        val pkg = controller.packageName
-        if (pkg.isNullOrBlank()) return false
-        if (pkg == context.packageName) return true
-        if (pkg in TRUSTED_MEDIA_PACKAGES) return true
-        val pm = context.packageManager
-        if (pm.checkPermission(Manifest.permission.MEDIA_CONTENT_CONTROL, pkg) ==
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return true
-        }
-        return try {
-            val flags = pm.getApplicationInfo(pkg, 0).flags
-            flags and ApplicationInfo.FLAG_SYSTEM != 0 ||
-                flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0
-        } catch (_: PackageManager.NameNotFoundException) {
-            false
-        }
-    }
-
-    /** Well-known system/OEM media surfaces that may lack MEDIA_CONTENT_CONTROL. */
-    private val TRUSTED_MEDIA_PACKAGES = setOf(
-        "com.android.systemui",
-        "com.google.android.systemui",
-        "com.android.bluetooth",
-        "com.google.android.projection.gearhead",
-        "com.google.android.wearable.app",
-        "com.google.android.apps.wearable.companion",
-        "com.samsung.android.app.routines",
-    )
+    private const val TAG = "MediaSession"
 }

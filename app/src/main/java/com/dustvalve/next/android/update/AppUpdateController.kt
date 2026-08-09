@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.update
 
+import android.util.Log
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
@@ -10,6 +11,7 @@ import com.dustvalve.next.android.util.runCatchingUi
 import com.dustvalve.next.android.util.runCatchingUiIgnore
 import com.dustvalve.next.android.util.runCatchingUiIgnoreSync
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -64,7 +66,12 @@ class AppUpdateController @Inject constructor(
     @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) {
     /** Overridable in tests so a TestDispatcher can drive the internal scope. Set once, before first call. */
-    internal var scope: CoroutineScope = CoroutineScope(SupervisorJob() + ioDispatcher)
+    internal var scope: CoroutineScope = CoroutineScope(
+        SupervisorJob() + ioDispatcher +
+            CoroutineExceptionHandler { _, throwable ->
+                Log.e(TAG, "Unhandled AppUpdateController coroutine error", throwable)
+            },
+    )
 
     private val _state = MutableStateFlow<UpdateUiState>(UpdateUiState.Idle)
     val state: StateFlow<UpdateUiState> = _state.asStateFlow()
@@ -187,5 +194,9 @@ class AppUpdateController @Inject constructor(
         if (_state.value is UpdateUiState.Available) {
             _state.value = UpdateUiState.Idle
         }
+    }
+
+    private companion object {
+        const val TAG = "AppUpdateController"
     }
 }

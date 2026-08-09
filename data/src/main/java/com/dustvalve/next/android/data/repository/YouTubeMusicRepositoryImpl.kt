@@ -14,6 +14,7 @@ import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -93,6 +94,8 @@ class YouTubeMusicRepositoryImpl(
         if (cached != null) {
             val parsed = try {
                 parser.parseHome(json.parseToJsonElement(cached.feedJson))
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Throwable) {
                 null
             }
@@ -100,6 +103,8 @@ class YouTubeMusicRepositoryImpl(
                 backgroundScope.launch {
                     try {
                         fetchAndCacheHome(key, params)
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (_: Throwable) {}
                 }
                 return parsed
@@ -119,6 +124,8 @@ class YouTubeMusicRepositoryImpl(
             homeCache.insert(
                 YouTubeMusicHomeCacheEntity(key = key, feedJson = response.toString()),
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Throwable) {}
         return feed
     }

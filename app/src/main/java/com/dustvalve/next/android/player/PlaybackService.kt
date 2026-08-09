@@ -3,6 +3,7 @@ package com.dustvalve.next.android.player
 import android.content.Intent
 import android.os.PerformanceHintManager
 import android.os.Process
+import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -12,6 +13,7 @@ import androidx.media3.session.MediaSessionService
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.util.isAtLeastS
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,7 +40,12 @@ class PlaybackService : MediaSessionService() {
     // tests substitute it globally via Dispatchers.setMain, so qualifying
     // it would only add ceremony.
     @Suppress("RawDispatchersUse")
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val serviceScope = CoroutineScope(
+        SupervisorJob() + Dispatchers.Main.immediate +
+            CoroutineExceptionHandler { _, throwable ->
+                Log.e(TAG, "Unhandled PlaybackService coroutine error", throwable)
+            },
+    )
     private var idleStopJob: Job? = null
 
     /**
@@ -146,6 +153,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     companion object {
+        private const val TAG = "PlaybackService"
         private const val IDLE_STOP_MINUTES = 5L
 
         // Target work-duration the OS uses to size CPU clocks.

@@ -187,6 +187,9 @@ class DustvalveNextApplication :
                 // see consistent freshness rather than diverging.
                 add(
                     OkHttpNetworkFetcherFactory(
+                        // Shared OkHttp carries PublicHostGuard (redirect
+                        // interceptor + DNS) so art URLs cannot redirect /
+                        // resolve into private or link-local targets.
                         callFactory = { entryPoint.okHttpClient() },
                         cacheStrategy = { CacheControlCacheStrategy() },
                     ),

@@ -3,6 +3,7 @@ package com.dustvalve.next.android.data.remote.youtubemusic
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeYtcfgExtractor
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -147,6 +148,8 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
         return okHttpClient.newCall(request).execute().use { response ->
             val body = try {
                 response.body.string()
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Throwable) {
                 ""
             }

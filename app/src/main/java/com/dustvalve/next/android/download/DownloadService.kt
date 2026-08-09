@@ -4,11 +4,13 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
+import android.util.Log
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.util.isAtLeastQ
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -75,7 +77,14 @@ class DownloadService : Service() {
     @Dispatcher(AppDispatchers.IO)
     lateinit var ioDispatcher: CoroutineDispatcher
 
-    private val scope by lazy { CoroutineScope(SupervisorJob() + ioDispatcher) }
+    private val scope by lazy {
+        CoroutineScope(
+            SupervisorJob() + ioDispatcher +
+                CoroutineExceptionHandler { _, throwable ->
+                    Log.e(TAG, "Unhandled DownloadService coroutine error", throwable)
+                },
+        )
+    }
     private var observing = false
 
     /** startId of the most recent [onStartCommand]; every self-stop is scoped to it. */
@@ -162,6 +171,8 @@ class DownloadService : Service() {
     }
 
     private companion object {
+        const val TAG = "DownloadService"
+
         /**
          * How long the service stays up after the queue drains. Batch
          * downloads re-enqueue within milliseconds of the previous item's
