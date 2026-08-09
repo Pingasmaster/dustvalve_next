@@ -186,8 +186,8 @@ object PlayerModule {
             ): ListenableFuture<SessionResult> {
                 if (customCommand.customAction == MediaSessionConstants.ACTION_TOGGLE_FAVORITE) {
                     scope.launch {
-                        val trackId = queueManager.currentTrack.value?.id ?: return@launch
-                        val newIsFavorite = libraryRepository.toggleTrackFavorite(trackId)
+                        val track = queueManager.currentTrack.value ?: return@launch
+                        val newIsFavorite = libraryRepository.toggleTrackFavorite(track)
                         // Queue state is patched via PlayerViewModel.collectFavoriteTrackIds
                         // -> applyFavoriteIds, which preserves the unshuffle snapshot.
                         // setQueue here would null it.

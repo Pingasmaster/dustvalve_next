@@ -33,14 +33,29 @@ class LibraryRepositoryImpl(
         private const val MAX_RECENT_TRACKS = 100
     }
 
+    override suspend fun toggleTrackFavorite(track: Track): Boolean = database.withTransaction {
+        // Favorites playlist is an INNER JOIN on tracks - a favorite row
+        // without a tracks row is invisible membership. Cache first.
+        if (trackDao.getById(track.id) == null) {
+            trackDao.insertAll(listOf(track.toEntity()))
+        }
+        toggleTrackFavoriteUnlocked(track.id)
+    }
+
     override suspend fun toggleTrackFavorite(trackId: String): Boolean = database.withTransaction {
+        toggleTrackFavoriteUnlocked(trackId)
+    }
+
+    private suspend fun toggleTrackFavoriteUnlocked(trackId: String): Boolean {
         val isFavorite = favoriteDao.isFavorite(trackId)
         if (isFavorite) {
             favoriteDao.delete(trackId)
-        } else {
-            favoriteDao.insert(FavoriteEntity(id = trackId, type = "track"))
+            return false
         }
-        !isFavorite
+        // Refuse to write an orphan favorite that Favorites would hide.
+        if (trackDao.getById(trackId) == null) return false
+        favoriteDao.insert(FavoriteEntity(id = trackId, type = "track"))
+        return true
     }
 
     override suspend fun addToRecent(track: Track) {

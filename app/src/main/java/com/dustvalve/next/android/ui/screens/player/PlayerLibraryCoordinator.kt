@@ -56,7 +56,7 @@ internal class PlayerLibraryCoordinator(
         val track = currentTrack() ?: return
         favoriteJob = scope.launch {
             runPlayerUiAction {
-                libraryRepository.toggleTrackFavorite(track.id)
+                libraryRepository.toggleTrackFavorite(track)
             }
         }
     }
@@ -114,12 +114,12 @@ internal class PlayerLibraryCoordinator(
 
     fun addToPlaylist(playlistId: String) {
         val track = currentTrack() ?: return
-        addTrackToPlaylist(playlistId, track.id)
+        addTrackToPlaylist(playlistId, track)
     }
 
     fun createPlaylistAndAddTrack(name: String, shapeKey: String?, iconUrl: String?) {
         val track = currentTrack() ?: return
-        createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, track.id)
+        createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, track)
     }
 
     fun playQueueEntry(uid: Long, skipToIndex: (Int) -> Unit) {
@@ -135,6 +135,14 @@ internal class PlayerLibraryCoordinator(
         scope.launch {
             runPlayerUiAction {
                 libraryRepository.toggleTrackFavorite(trackId)
+            }
+        }
+    }
+
+    fun toggleFavorite(track: Track) {
+        scope.launch {
+            runPlayerUiAction {
+                libraryRepository.toggleTrackFavorite(track)
             }
         }
     }
@@ -170,18 +178,68 @@ internal class PlayerLibraryCoordinator(
         }
     }
 
+    fun addTrackToPlaylist(playlistId: String, track: Track) {
+        scope.launch {
+            runPlayerUiActionResult(R.string.snackbar_add_to_playlist_failed) {
+                playlistRepository.addTrackToPlaylist(playlistId, track)
+            }.onSuccess { added ->
+                if (!added) return@onSuccess
+                showAddedToPlaylistSnackbar(playlistId)
+            }.onFailure { error, _ ->
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = error,
+                        isSnackbarError = true,
+                    )
+                }
+            }
+        }
+    }
+
+    /** Id-only path for callers that already cached the track; no success toast on miss. */
     fun addTrackToPlaylist(playlistId: String, trackId: String) {
         scope.launch {
             runPlayerUiActionResult(R.string.snackbar_add_to_playlist_failed) {
                 playlistRepository.addTrackToPlaylist(playlistId, trackId)
-                extraState.value.playlists.find { it.id == playlistId }
+            }.onSuccess { added ->
+                if (!added) return@onSuccess
+                showAddedToPlaylistSnackbar(playlistId)
+            }.onFailure { error, _ ->
+                extraState.update {
+                    it.copy(
+                        snackbarMessage = error,
+                        isSnackbarError = true,
+                    )
+                }
+            }
+        }
+    }
+
+    private fun showAddedToPlaylistSnackbar(playlistId: String) {
+        val name = extraState.value.playlists.find { it.id == playlistId }?.name
+            ?: UiText.StringResource(R.string.playlist_fallback_name)
+        extraState.update {
+            it.copy(
+                snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(name)),
+                isSnackbarError = false,
+            )
+        }
+    }
+
+    fun createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, track: Track) {
+        scope.launch {
+            runPlayerUiActionResult(R.string.snackbar_create_playlist_failed) {
+                val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
+                val added = playlistRepository.addTrackToPlaylist(playlist.id, track)
+                if (!added) {
+                    playlistRepository.deletePlaylist(playlist.id)
+                    error("Failed to add track to new playlist")
+                }
+                playlist
             }.onSuccess { playlist ->
                 extraState.update {
                     it.copy(
-                        snackbarMessage = UiText.StringResource(
-                            R.string.snackbar_added_to_playlist,
-                            listOf(playlist?.name ?: UiText.StringResource(R.string.playlist_fallback_name)),
-                        ),
+                        snackbarMessage = UiText.StringResource(R.string.snackbar_added_to_playlist, listOf(playlist.name)),
                         isSnackbarError = false,
                     )
                 }
@@ -200,7 +258,11 @@ internal class PlayerLibraryCoordinator(
         scope.launch {
             runPlayerUiActionResult(R.string.snackbar_create_playlist_failed) {
                 val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
-                playlistRepository.addTrackToPlaylist(playlist.id, trackId)
+                val added = playlistRepository.addTrackToPlaylist(playlist.id, trackId)
+                if (!added) {
+                    playlistRepository.deletePlaylist(playlist.id)
+                    error("Failed to add track to new playlist")
+                }
                 playlist
             }.onSuccess { playlist ->
                 extraState.update {

@@ -194,9 +194,9 @@ class CollectionDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isImporting = false) }
                     return@launch
                 }
-                // No favorite parameters: this screen's favorite row is inserted
-                // separately (in toggleFavorite, BEFORE the import) - the
-                // historical outside-the-transaction ordering is preserved.
+                // Standalone import button: no favorite parameters. Favoriting
+                // uses importTracksAsPlaylist(..., favoriteId, favoriteType)
+                // in one transaction via toggleFavorite.
                 val playlist = playlistRepository.importTracksAsPlaylist(_uiState.value.name, tracks)
                 _uiState.update {
                     it.copy(isImported = true, isImporting = false, importedPlaylistId = playlist.id)
@@ -219,10 +219,9 @@ class CollectionDetailViewModel @Inject constructor(
                 if (prev) {
                     favoriteRepository.remove(url)
                     // Delete ONLY the playlist this session imported (id captured in
-                    // importToLibrary). Never fall back to a name lookup: it could
-                    // resolve to - and destroy - an unrelated user playlist that
-                    // happens to share the collection's name. A leftover imported
-                    // playlist is acceptable; deleting a user playlist is not.
+                    // importToLibrary / favorited import). Never fall back to a name
+                    // lookup: it could resolve to - and destroy - an unrelated user
+                    // playlist that happens to share the collection's name.
                     val playlistId = state.importedPlaylistId
                     if (playlistId != null) {
                         playlistRepository.deletePlaylist(playlistId)
@@ -234,8 +233,28 @@ class CollectionDetailViewModel @Inject constructor(
                         "soundcloud" -> FavoriteType.SOUNDCLOUD_PLAYLIST
                         else -> FavoriteType.COLLECTION
                     }
-                    favoriteRepository.add(url, favType)
-                    importToLibrary()
+                    if (state.isImported || state.importedPlaylistId != null) {
+                        // Playlist already in library - just add the favorite row.
+                        favoriteRepository.add(url, favType)
+                    } else {
+                        val tracks = expandLoadedTracks()
+                        if (tracks.isEmpty()) {
+                            favoriteRepository.add(url, favType)
+                        } else {
+                            // Favorite + import in one Room transaction so
+                            // cancellation cannot leave a favorited-but-empty
+                            // or imported-but-unfavorited collection.
+                            val playlist = playlistRepository.importTracksAsPlaylist(
+                                name = _uiState.value.name,
+                                tracks = tracks,
+                                favoriteId = url,
+                                favoriteType = favType,
+                            )
+                            _uiState.update {
+                                it.copy(isImported = true, importedPlaylistId = playlist.id)
+                            }
+                        }
+                    }
                 }
             }
         }

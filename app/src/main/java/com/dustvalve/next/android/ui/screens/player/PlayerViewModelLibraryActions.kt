@@ -16,13 +16,20 @@ fun PlayerViewModel.createPlaylistAndAddTrack(name: String, shapeKey: String?, i
 
 fun PlayerViewModel.toggleFavoriteById(trackId: String) = library.toggleFavoriteById(trackId)
 
+fun PlayerViewModel.toggleFavorite(track: Track) = library.toggleFavorite(track)
+
 fun PlayerViewModel.playNext(track: Track) = library.playNext(track)
 
 fun PlayerViewModel.addToQueue(track: Track) = library.addToQueue(track)
 
 fun PlayerViewModel.addAllToQueue(tracks: List<Track>) = library.addAllToQueue(tracks)
 
+fun PlayerViewModel.addTrackToPlaylist(playlistId: String, track: Track) = library.addTrackToPlaylist(playlistId, track)
+
 fun PlayerViewModel.addTrackToPlaylist(playlistId: String, trackId: String) = library.addTrackToPlaylist(playlistId, trackId)
+
+fun PlayerViewModel.createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, track: Track) =
+    library.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, track)
 
 fun PlayerViewModel.createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, trackId: String) =
     library.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, trackId)

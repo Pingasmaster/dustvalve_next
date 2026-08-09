@@ -76,6 +76,15 @@ class LibraryRepositoryImplTest : DbTestBase() {
 
     @Test fun `toggleTrackFavorite flips the row and returns the new state`() = runTest {
         val repo = repo()
+        db.trackDao().insertAll(
+            listOf(
+                TrackEntity(
+                    id = "t1", albumId = "a", title = "T", artist = "x",
+                    trackNumber = 1, duration = 1f, streamUrl = null, artUrl = "",
+                    albumTitle = "", source = "bandcamp",
+                ),
+            ),
+        )
 
         assertThat(repo.toggleTrackFavorite("t1")).isTrue()
         val row = db.favoriteDao().getAllSync().single()
@@ -84,6 +93,23 @@ class LibraryRepositoryImplTest : DbTestBase() {
 
         assertThat(repo.toggleTrackFavorite("t1")).isFalse()
         assertThat(db.favoriteDao().getAllSync()).isEmpty()
+    }
+
+    @Test fun `toggleTrackFavorite by id refuses orphan favorite without a tracks row`() = runTest {
+        assertThat(repo().toggleTrackFavorite("missing")).isFalse()
+        assertThat(db.favoriteDao().getAllSync()).isEmpty()
+    }
+
+    @Test fun `toggleTrackFavorite with Track caches the row then favorites`() = runTest {
+        val track = Track(
+            id = "t1", albumId = "a", title = "T", artist = "x",
+            trackNumber = 1, duration = 1f, streamUrl = null, artUrl = "",
+            albumTitle = "",
+        )
+
+        assertThat(repo().toggleTrackFavorite(track)).isTrue()
+        assertThat(db.trackDao().getById("t1")).isNotNull()
+        assertThat(db.favoriteDao().getAllSync().single().id).isEqualTo("t1")
     }
 
     @Test fun `addToRecent inserts the track row when missing and records the play`() = runTest {

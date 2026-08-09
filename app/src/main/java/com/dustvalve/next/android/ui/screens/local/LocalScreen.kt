@@ -760,14 +760,14 @@ fun LocalScreen(
             onPlaylistSelected = { playlistId ->
                 showLocalPlaylistSheet = false
                 contextMenuTrack?.let { ctxTrack ->
-                    playerViewModel.addTrackToPlaylist(playlistId, ctxTrack.id)
+                    playerViewModel.addTrackToPlaylist(playlistId, ctxTrack)
                 }
                 contextMenuTrack = null
             },
             onCreatePlaylist = { name, shapeKey, iconUrl ->
                 showLocalPlaylistSheet = false
                 contextMenuTrack?.let { ctxTrack ->
-                    playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, ctxTrack.id)
+                    playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, ctxTrack)
                 }
                 contextMenuTrack = null
             },

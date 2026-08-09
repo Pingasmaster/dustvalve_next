@@ -417,7 +417,7 @@ internal fun FullPlayerUpNextContextSheet(
     adaptiveInfo: AdaptiveLayoutInfo,
     contextEntry: QueueEntry?,
     onDismiss: () -> Unit,
-    onToggleFavorite: (String) -> Unit,
+    onToggleFavorite: (Track) -> Unit,
     onAddToPlaylist: () -> Unit,
     onRemoveFromQueue: (Long) -> Unit,
 ) {
@@ -445,7 +445,7 @@ internal fun FullPlayerUpNextContextSheet(
                 )
             },
             modifier = Modifier.clickable {
-                onToggleFavorite(contextTrack.id)
+                onToggleFavorite(contextTrack)
                 onDismiss()
             },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),

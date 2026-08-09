@@ -24,7 +24,19 @@ interface PlaylistRepository {
     // Track management
     fun getTracksInPlaylist(playlistId: String): Flow<List<Track>>
     suspend fun getTracksInPlaylistSync(playlistId: String): List<Track>
-    suspend fun addTrackToPlaylist(playlistId: String, trackId: String)
+
+    /**
+     * Caches [track] into Room (upsert), then adds membership. Returns true when
+     * the membership write ran; false when the track still cannot be added
+     * (callers must not toast success on false).
+     */
+    suspend fun addTrackToPlaylist(playlistId: String, track: Track): Boolean
+
+    /**
+     * Adds an already-cached track by id. Returns false when the tracks row is
+     * missing - a silent historical no-op that used to still snackbar success.
+     */
+    suspend fun addTrackToPlaylist(playlistId: String, trackId: String): Boolean
     suspend fun addTracksToPlaylist(playlistId: String, trackIds: List<String>)
     suspend fun removeTrackFromPlaylist(playlistId: String, trackId: String)
     suspend fun moveTrackInPlaylist(playlistId: String, fromPosition: Int, toPosition: Int)
@@ -41,8 +53,8 @@ interface PlaylistRepository {
      * named [name], add the tracks to it, and - when [favoriteId] is given -
      * insert a favorites row of [favoriteType] in the SAME transaction, so
      * cancellation cannot leave an imported-but-unfavorited playlist.
-     * Callers that favorite OUTSIDE the import transaction (collection detail)
-     * simply omit the favorite parameters.
+     * Collection detail favoriting uses this with a real source URL as
+     * [favoriteId]; the standalone import button omits the favorite parameters.
      */
     suspend fun importTracksAsPlaylist(
         name: String,

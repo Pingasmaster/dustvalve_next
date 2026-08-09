@@ -4,11 +4,15 @@ import android.content.Context
 import android.net.Uri
 import android.os.storage.StorageManager
 import androidx.core.net.toUri
+import androidx.room.withTransaction
 import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.DatabaseGateway
+import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
+import com.dustvalve.next.android.data.local.db.dao.getByIds
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
+import com.dustvalve.next.android.data.local.db.entity.TrackEntity
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.AudioFormat
@@ -47,6 +51,7 @@ class PlaylistTransferRepository(
     private val context: Context,
     private val playlistRepository: PlaylistRepository,
     private val downloadRepository: DownloadRepository,
+    private val database: DustvalveNextDatabase,
     private val trackDao: TrackDao,
     private val downloadDao: DownloadDao,
     private val client: OkHttpClient,
@@ -60,7 +65,16 @@ class PlaylistTransferRepository(
         gateway: DatabaseGateway,
         client: OkHttpClient,
         @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
-    ) : this(context, playlistRepository, downloadRepository, gateway.trackDao, gateway.downloadDao, client, ioDispatcher)
+    ) : this(
+        context,
+        playlistRepository,
+        downloadRepository,
+        gateway.database,
+        gateway.trackDao,
+        gateway.downloadDao,
+        client,
+        ioDispatcher,
+    )
     private val json = PlaylistBundleSerializer.json
 
     /** Write [playlistId] to [out] as a `.dvplaylist` ZIP. [onProgress] reports (done, total). */
@@ -159,6 +173,11 @@ class PlaylistTransferRepository(
      * [MAX_METADATA_ENTRY_BYTES]); audio entries are spilled straight to a
      * temp directory and moved into place after the manifest is parsed, so an
      * offline bundle of any size imports without OOM.
+     *
+     * Playlist + tracks + membership (+ download rows) land in one Room
+     * transaction. Filesystem writes happen first; on DB failure the playlist
+     * is rolled back by the transaction and newly written media is cleaned
+     * best-effort.
      */
     suspend fun import(inp: InputStream, onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }): Playlist = withContext(ioDispatcher) {
         var tempDir: File? = null
@@ -170,6 +189,7 @@ class PlaylistTransferRepository(
                 tempDir = it
             }
 
+        val writtenFiles = ArrayList<File>()
         try {
             val smallFiles = HashMap<String, ByteArray>() // covers + misc small metadata
             val audioFiles = HashMap<String, File>() // zip entry name -> spilled temp file
@@ -205,24 +225,40 @@ class PlaylistTransferRepository(
                 )
             }
 
-            val playlist = playlistRepository.createPlaylist(
-                name = manifest.playlist.name,
-                shapeKey = manifest.playlist.shapeKey,
-                iconUrl = manifest.playlist.iconUrl,
-            )
             val total = manifest.entries.size
-            val trackEntities = ArrayList<com.dustvalve.next.android.data.local.db.entity.TrackEntity>(total)
-
+            val materialized = ArrayList<MaterializedEntry>(total)
             manifest.entries.forEachIndexed { index, bundleEntry ->
                 coroutineContext.ensureActive()
-                val snap = materializeEntry(manifest.offline, bundleEntry, audioFiles, smallFiles)
-                trackEntities.add(snap.toEntity())
+                materialized.add(
+                    materializeEntry(manifest.offline, bundleEntry, audioFiles, smallFiles, writtenFiles),
+                )
                 onProgress(index + 1, total)
             }
 
-            trackDao.insertAll(trackEntities)
-            playlistRepository.addTracksToPlaylist(playlist.id, manifest.entries.map { it.track.id })
-            playlist
+            val sanitizedIcon = sanitizeRemoteOrBlankUrl(manifest.playlist.iconUrl)
+            try {
+                database.withTransaction {
+                    val playlist = playlistRepository.createPlaylist(
+                        name = manifest.playlist.name,
+                        shapeKey = manifest.playlist.shapeKey,
+                        iconUrl = sanitizedIcon,
+                    )
+                    val incoming = materialized.map { it.track.toEntity() }
+                    trackDao.insertAll(mergeTracksForImport(incoming))
+                    playlistRepository.addTracksToPlaylist(playlist.id, manifest.entries.map { it.track.id })
+                    for (entry in materialized) {
+                        val download = entry.download ?: continue
+                        downloadDao.insert(download)
+                    }
+                    playlist
+                }
+            } catch (ce: CancellationException) {
+                cleanupWrittenFiles(writtenFiles)
+                throw ce
+            } catch (e: Exception) {
+                cleanupWrittenFiles(writtenFiles)
+                throw e
+            }
         } finally {
             try {
                 tempDir?.deleteRecursively()
@@ -231,6 +267,38 @@ class PlaylistTransferRepository(
             }
         }
     }
+
+    /**
+     * Soft upsert: keep an existing non-blank streamUrl/artUrl when the bundle
+     * would wipe them with blanks. Bundle non-blank values always win (offline
+     * covers repoint artUrl at a local file).
+     */
+    private suspend fun mergeTracksForImport(incoming: List<TrackEntity>): List<TrackEntity> {
+        if (incoming.isEmpty()) return incoming
+        val existingById = trackDao.getByIds(incoming.map { it.id }).associateBy { it.id }
+        return incoming.map { row ->
+            val existing = existingById[row.id] ?: return@map row
+            row.copy(
+                streamUrl = row.streamUrl?.takeIf { it.isNotBlank() } ?: existing.streamUrl,
+                artUrl = row.artUrl.takeIf { it.isNotBlank() } ?: existing.artUrl,
+            )
+        }
+    }
+
+    private fun cleanupWrittenFiles(files: List<File>) {
+        for (file in files) {
+            try {
+                if (file.exists()) file.delete()
+            } catch (_: SecurityException) {
+                // Best-effort filesystem rollback after a failed import txn.
+            }
+        }
+    }
+
+    private data class MaterializedEntry(
+        val track: TrackSnapshot,
+        val download: DownloadEntity?,
+    )
 
     /**
      * Dispatches one ZIP entry: records the manifest text via [onManifest],
@@ -341,15 +409,17 @@ class PlaylistTransferRepository(
     /**
      * Turns one bundle entry into the [TrackSnapshot] to persist. For offline
      * bundles it moves the spilled audio into the downloads layout (registering
-     * a pinned [DownloadEntity]) and writes the cover locally, repointing
-     * artUrl at it. Lightweight bundles return the snapshot unchanged.
+     * a pinned [DownloadEntity] unless a pinned download already exists) and
+     * writes the cover locally, repointing artUrl at it. Lightweight bundles
+     * return the snapshot unchanged.
      */
     private suspend fun materializeEntry(
         offline: Boolean,
         bundleEntry: BundleEntry,
         audioFiles: Map<String, File>,
         smallFiles: Map<String, ByteArray>,
-    ): TrackSnapshot {
+        writtenFiles: MutableList<File>,
+    ): MaterializedEntry {
         // Never persist a local-scheme artUrl from a foreign bundle: a hostile
         // file:// value would later be dereferenced by export's fetchBytes()
         // and embed an app-private file into a shared archive. Local-scheme
@@ -358,35 +428,42 @@ class PlaylistTransferRepository(
         var snap = bundleEntry.track.let {
             if (isRemoteOrBlankUrl(it.artUrl)) it else it.copy(artUrl = "")
         }
-        if (!offline) return snap
+        if (!offline) return MaterializedEntry(snap, download = null)
 
+        var download: DownloadEntity? = null
         val audioTemp = bundleEntry.audioFile?.let { audioFiles[it] }
         if (audioTemp != null && audioTemp.isFile) {
-            val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
-            val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
-            val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
-            val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
-            val audio = File(dir, "$safeTrack.${format.extension}")
-            moveFile(audioTemp, audio)
-            downloadDao.insert(
-                DownloadEntity(
+            val existing = downloadDao.getByTrackId(snap.id)
+            if (existing?.pinned == true) {
+                // Keep the user's pinned download; do not REPLACE the row or
+                // overwrite the audio file (old path would be orphaned).
+            } else {
+                val format = bundleEntry.format?.let { AudioFormat.fromKey(it) } ?: AudioFormat.MP3_128
+                val safeAlbum = NetworkUtils.sanitizeFileName(snap.albumId)
+                val safeTrack = NetworkUtils.sanitizeFileName(snap.id)
+                val dir = File(StoragePaths.downloadsDir(context), safeAlbum).also { it.mkdirs() }
+                val audio = File(dir, "$safeTrack.${format.extension}")
+                moveFile(audioTemp, audio)
+                writtenFiles.add(audio)
+                download = DownloadEntity(
                     trackId = snap.id,
                     albumId = snap.albumId,
                     filePath = audio.absolutePath,
                     sizeBytes = audio.length(),
                     format = format.key,
                     pinned = true,
-                ),
-            )
+                )
+            }
         }
         // Persist the cover locally and point artUrl at it so covers show offline.
         val coverBytes = bundleEntry.coverFile?.let { smallFiles[it] }
         if (coverBytes != null) {
             val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
             cover.writeBytes(coverBytes)
+            writtenFiles.add(cover)
             snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
         }
-        return snap
+        return MaterializedEntry(snap, download)
     }
 
     /**
@@ -449,6 +526,16 @@ class PlaylistTransferRepository(
 
     /** True for http(s) or blank artUrl values; local schemes are rejected on import. */
     private fun isRemoteOrBlankUrl(url: String): Boolean = url.isBlank() || url.startsWith("http://") || url.startsWith("https://")
+
+    /**
+     * Same remote/blank policy as artUrl for playlist iconUrl: reject local
+     * schemes from a foreign bundle (null out); keep http(s) or blank-as-null.
+     */
+    private fun sanitizeRemoteOrBlankUrl(url: String?): String? {
+        if (url == null) return null
+        if (!isRemoteOrBlankUrl(url)) return null
+        return url.takeIf { it.isNotBlank() }
+    }
 
     private companion object {
         /**

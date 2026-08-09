@@ -139,8 +139,8 @@ private class SoundCloudSheetActions(
     val addToQueue: (Track) -> Unit,
     val playAlbum: (List<Track>, Int) -> Unit,
     val addAllToQueue: (List<Track>) -> Unit,
-    val addTrackToPlaylist: (String, String) -> Unit,
-    val createPlaylistAndAdd: (String, String?, String?, String) -> Unit,
+    val addTrackToPlaylist: (String, Track) -> Unit,
+    val createPlaylistAndAdd: (String, String?, String?, Track) -> Unit,
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
@@ -177,7 +177,7 @@ fun SoundCloudScreen(
     )
 
     var contextResult by remember { mutableStateOf<SearchResult?>(null) }
-    var addToPlaylistTrackId by remember { mutableStateOf<String?>(null) }
+    var addToPlaylistTrack by remember { mutableStateOf<Track?>(null) }
 
     val failedToPlayMsg = stringResource(R.string.common_failed_to_play)
     val searchBarState = rememberSearchBarState()
@@ -265,13 +265,13 @@ fun SoundCloudScreen(
 
     SoundCloudResultSheets(
         contextResult = contextResult,
-        addToPlaylistTrackId = addToPlaylistTrackId,
+        addToPlaylistTrack = addToPlaylistTrack,
         playlists = playerState.playlists,
         snackbarHostState = snackbarHostState,
         actions = sheetActions,
         onExpandPlayer = nav.onExpandPlayer,
         onDismissContext = { contextResult = null },
-        onAddToPlaylistTrackId = { addToPlaylistTrackId = it },
+        onAddToPlaylistTrack = { addToPlaylistTrack = it },
     )
 }
 
@@ -586,13 +586,13 @@ private fun CoroutineScope.playSearchResult(
 @Composable
 private fun SoundCloudResultSheets(
     contextResult: SearchResult?,
-    addToPlaylistTrackId: String?,
+    addToPlaylistTrack: Track?,
     playlists: List<com.dustvalve.next.android.domain.model.Playlist>,
     snackbarHostState: SnackbarHostState,
     actions: SoundCloudSheetActions,
     onExpandPlayer: () -> Unit,
     onDismissContext: () -> Unit,
-    onAddToPlaylistTrackId: (String?) -> Unit,
+    onAddToPlaylistTrack: (Track?) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -629,7 +629,7 @@ private fun SoundCloudResultSheets(
                     scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                     scope.launch {
                         runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                            onAddToPlaylistTrackId(actions.getTrack(ctx.url).id)
+                            onAddToPlaylistTrack(actions.getTrack(ctx.url))
                         }
                     }
                 },
@@ -667,17 +667,17 @@ private fun SoundCloudResultSheets(
         )
     }
 
-    addToPlaylistTrackId?.let { trackId ->
+    addToPlaylistTrack?.let { track ->
         AddToPlaylistSheet(
             playlists = playlists,
-            onDismiss = { onAddToPlaylistTrackId(null) },
+            onDismiss = { onAddToPlaylistTrack(null) },
             onPlaylistSelected = { playlistId ->
-                actions.addTrackToPlaylist(playlistId, trackId)
-                onAddToPlaylistTrackId(null)
+                actions.addTrackToPlaylist(playlistId, track)
+                onAddToPlaylistTrack(null)
             },
             onCreatePlaylist = { name, shapeKey, iconUrl ->
-                actions.createPlaylistAndAdd(name, shapeKey, iconUrl, trackId)
-                onAddToPlaylistTrackId(null)
+                actions.createPlaylistAndAdd(name, shapeKey, iconUrl, track)
+                onAddToPlaylistTrack(null)
             },
         )
     }
