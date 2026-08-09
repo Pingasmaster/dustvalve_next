@@ -256,8 +256,6 @@
     <string name="settings_storage_limit_unlimited">Лимит хранилища: без ограничений</string>
     <string name="settings_storage_limit_mb">Лимит хранилища: <xliff:g id="size" example="500">%1$d</xliff:g> МБ</string>
     <string name="settings_storage_limit_gb">Лимит хранилища: <xliff:g id="size" example="2">%1$d</xliff:g> ГБ</string>
-    <string name="settings_sign_in_bandcamp">Войти в <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_sign_in_youtube">Войти в <xliff:g id="brand">YouTube Music</xliff:g></string>
 
     <string name="local_search_placeholder">Поиск локальной музыки…</string>
     <string name="local_scan_title">Просканируй свою музыку</string>
@@ -505,7 +503,6 @@
     <string name="error_unknown">Неизвестная ошибка</string>
     <string name="error_unknown_source">Неизвестный источник: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">Этот источник не поддерживает коллекции</string>
-    <string name="error_load_page">Не удалось загрузить страницу</string>
 
     <string name="snackbar_downloaded">Скачано: «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»</string>
     <string name="snackbar_deleted">Удалено: «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»</string>

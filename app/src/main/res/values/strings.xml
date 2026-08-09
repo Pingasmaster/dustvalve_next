@@ -287,8 +287,6 @@
     <string name="settings_storage_limit_unlimited">Storage limit: Unlimited</string>
     <string name="settings_storage_limit_mb">Storage limit: <xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
     <string name="settings_storage_limit_gb">Storage limit: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
-    <string name="settings_sign_in_bandcamp">Sign in to <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_sign_in_youtube">Sign in to <xliff:g id="brand">YouTube Music</xliff:g></string>
 
     <!-- Local screen -->
     <string name="local_search_placeholder">Search local music…</string>
@@ -566,7 +564,6 @@
     <string name="error_unknown">Unknown error</string>
     <string name="error_unknown_source">Unknown source: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">This source can’t show collections</string>
-    <string name="error_load_page">Failed to load page</string>
     <string name="playlist_gone_title">This playlist no longer exists</string>
     <string name="playlist_gone_subtitle">It may have been deleted from your library</string>
     <string name="common_action_back">Back</string>

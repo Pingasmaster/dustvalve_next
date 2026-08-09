@@ -223,7 +223,7 @@ internal fun FullPlayerSeekBar(
                     if (isLoadingTrack) {
                         Modifier
                     } else {
-                        seekGestureModifier(
+                        Modifier.seekGesture(
                             trackId = trackId,
                             duration = duration,
                             seek = SeekGestureCallbacks(
@@ -257,11 +257,7 @@ internal fun FullPlayerSeekBar(
     }
 }
 
-private fun seekGestureModifier(
-    trackId: String,
-    duration: Long,
-    seek: SeekGestureCallbacks,
-): Modifier = Modifier
+private fun Modifier.seekGesture(trackId: String, duration: Long, seek: SeekGestureCallbacks): Modifier = this
     .pointerInput(trackId) {
         detectTapGestures { offset ->
             val fraction = (offset.x / size.width).coerceIn(0f, 1f)
@@ -305,15 +301,9 @@ private class SeekGestureCallbacks(
     val hapticTick: () -> Unit,
 )
 
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerSeekProgressIndicator(
-    isLoadingTrack: Boolean,
-    isWavy: Boolean,
-    barHeightDp: Int,
-    sliderPosition: Float,
-) {
+private fun FullPlayerSeekProgressIndicator(isLoadingTrack: Boolean, isWavy: Boolean, barHeightDp: Int, sliderPosition: Float) {
     val barHeight = barHeightDp.dp
     when {
         isLoadingTrack && isWavy -> LinearWavyProgressIndicator(
@@ -321,11 +311,13 @@ private fun FullPlayerSeekProgressIndicator(
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
+
         isLoadingTrack -> LinearProgressIndicator(
             modifier = Modifier.fillMaxWidth().height(barHeight),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
+
         isWavy -> LinearWavyProgressIndicator(
             progress = { sliderPosition.coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().height(barHeight),
@@ -334,6 +326,7 @@ private fun FullPlayerSeekProgressIndicator(
             stroke = Stroke(width = barHeight.value),
             trackStroke = Stroke(width = barHeight.value),
         )
+
         else -> LinearProgressIndicator(
             progress = { sliderPosition.coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().height(barHeight),

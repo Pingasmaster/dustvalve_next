@@ -15,9 +15,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.SeekableTransitionState
-import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.Transition
-import androidx.compose.runtime.Stable
+import androidx.compose.animation.core.rememberTransition
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -35,6 +34,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -75,8 +75,8 @@ import com.dustvalve.next.android.ui.navigation.SideNavRail
 import com.dustvalve.next.android.ui.screens.player.FullPlayer
 import com.dustvalve.next.android.ui.screens.player.MiniPlayer
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.player.clearSnackbar
+import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.player.showNoAlbumSnackbar
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
@@ -279,10 +279,7 @@ private fun MainContent(activity: MainActivity) {
 }
 
 @Composable
-private fun MainContentBody(
-    activity: MainActivity,
-    adaptiveInfo: AdaptiveLayoutInfo,
-) {
+private fun MainContentBody(activity: MainActivity, adaptiveInfo: AdaptiveLayoutInfo) {
     MainContentKeepScreenOn(activity = activity)
     MainContentDeepLinks(activity = activity)
     MainContentPlayerChrome(adaptiveInfo = adaptiveInfo)
@@ -332,7 +329,6 @@ private fun MainContentPlayerChrome(
     // settled with velocity on release. No more maxOf() of two systems.
     val seekState = remember { SeekableTransitionState(false) }
     val playerTransition = rememberTransition(seekState, label = "player")
-
 
     // Gesture seek state (serialized through a single collector to avoid
     // racing concurrent seekTo calls).
@@ -398,17 +394,21 @@ private fun MainContentPlayerChrome(
         }
     }
 
-    val navActions = remember(navViewModel) {
+    // Do not key remember() on ViewModels: compose-lints DataFlowAnalyzer would
+    // treat the remember result (and anything built from it) as a forwarded
+    // ViewModel and flag MainContentSharedHost(session). Activity-scoped VMs
+    // are stable for this composition, so plain lambdas are enough.
+    val navActions = remember {
         MainNavActions(
-            navigateTo = navViewModel::navigateTo,
-            navigateBack = navViewModel::navigateBack,
-            expandPlayer = navViewModel::expandPlayer,
-            collapsePlayer = navViewModel::collapsePlayer,
-            requestLocalArtistFilter = navViewModel::requestLocalArtistFilter,
+            navigateTo = { dest -> navViewModel.navigateTo(dest) },
+            navigateBack = { navViewModel.navigateBack() },
+            expandPlayer = { navViewModel.expandPlayer() },
+            collapsePlayer = { navViewModel.collapsePlayer() },
+            requestLocalArtistFilter = { artist -> navViewModel.requestLocalArtistFilter(artist) },
         )
     }
-    val playerActions = remember(playerViewModel) {
-        MainPlayerActions(showNoAlbumSnackbar = playerViewModel::showNoAlbumSnackbar)
+    val playerActions = remember {
+        MainPlayerActions(showNoAlbumSnackbar = { playerViewModel.showNoAlbumSnackbar() })
     }
 
     val session = MainPlayerSession(
@@ -437,7 +437,6 @@ private fun MainContentPlayerChrome(
     MainContentSharedHost(session = session)
 }
 
-
 @Stable
 private class MainNavActions(
     val navigateTo: (NavDestination) -> Unit,
@@ -448,9 +447,7 @@ private class MainNavActions(
 )
 
 @Stable
-private class MainPlayerActions(
-    val showNoAlbumSnackbar: () -> Unit,
-)
+private class MainPlayerActions(val showNoAlbumSnackbar: () -> Unit)
 
 @Stable
 private class MainPlayerChromeState(
@@ -517,171 +514,163 @@ private fun MainContentSharedHost(session: MainPlayerSession) {
 @Composable
 private fun MainContentNavShell(session: MainPlayerSession) {
     if (session.adaptiveInfo.useNavRail) {
-                // Tablet / large screen layout: NavigationRail on the left
-                Row(modifier = Modifier.fillMaxSize()) {
-                    SideNavRail(
+        // Tablet / large screen layout: NavigationRail on the left
+        Row(modifier = Modifier.fillMaxSize()) {
+            SideNavRail(
+                currentTab = session.chrome.currentTab,
+                visibleTabs = session.chrome.visibleTabs,
+                onItemSelected = { dest -> session.nav.navigateTo(dest) },
+            )
+            Scaffold(
+                bottomBar = {
+                    // Reserve the mini-bar slot; the bar itself renders in
+                    // the shared-transition overlay so it can morph.
+                    if (session.chrome.miniVisible) {
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(MINI_BAR_HEIGHT)
+                                .onSizeChanged { session.bottomBarHeightPx = it.height },
+                        )
+                    }
+                },
+            ) { innerPadding ->
+                AppNavigation(
+                    adaptiveInfo = session.adaptiveInfo,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                )
+            }
+        }
+    } else {
+        // Compact layout: NavigationBar at the bottom
+        Scaffold(
+            bottomBar = {
+                Column(modifier = Modifier.onSizeChanged { session.bottomBarHeightPx = it.height }) {
+                    if (session.chrome.miniVisible) {
+                        Spacer(modifier = Modifier.fillMaxWidth().height(MINI_BAR_HEIGHT))
+                    }
+                    BottomNavBar(
                         currentTab = session.chrome.currentTab,
                         visibleTabs = session.chrome.visibleTabs,
                         onItemSelected = { dest -> session.nav.navigateTo(dest) },
                     )
-                    Scaffold(
-                        bottomBar = {
-                            // Reserve the mini-bar slot; the bar itself renders in
-                            // the shared-transition overlay so it can morph.
-                            if (session.chrome.miniVisible) {
-                                Spacer(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(MINI_BAR_HEIGHT)
-                                        .onSizeChanged { session.bottomBarHeightPx = it.height },
+                }
+            },
+        ) { innerPadding ->
+            AppNavigation(
+                adaptiveInfo = session.adaptiveInfo,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            )
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.MainContentPlayerOverlay(session: MainPlayerSession, sharedScope: SharedTransitionScope) {
+    // Player surface: the mini bar and full player are the two states of
+    // one container transform. The transparent host Box does not consume
+    // touches, so taps outside the docked mini bar reach the app behind it.
+    if (session.chrome.miniVisible) {
+        val dockDp = with(session.density) {
+            (session.bottomBarHeightPx - session.miniBarHeightPx).coerceAtLeast(0f).toDp()
+        }
+        session.gesture.playerTransition.AnimatedContent(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            contentAlignment = Alignment.BottomCenter,
+        ) { isFull ->
+            val avScope = this
+            if (isFull) {
+                FullPlayer(
+                    adaptiveInfo = session.adaptiveInfo,
+                    sharedScope = sharedScope,
+                    visScope = avScope,
+                    expandDistancePx = session.expandDistancePx,
+                    collapse = com.dustvalve.next.android.ui.screens.player.FullPlayerCollapseActions(
+                        onCollapse = { session.nav.collapsePlayer() },
+                        onCollapseSeek = session.gesture.onCollapseSeek,
+                        onCollapseSettle = session.gesture.onCollapseSettle,
+                    ),
+                    nav = com.dustvalve.next.android.ui.screens.player.FullPlayerNavActions(
+                        onArtistClick = { track ->
+                            session.nav.collapsePlayer()
+                            when {
+                                track.isLocal -> session.nav.requestLocalArtistFilter(track.artist)
+
+                                track.source == TrackSource.YOUTUBE -> session.nav.navigateTo(
+                                    NavDestination.ArtistDetail(
+                                        url = track.artistUrl,
+                                        sourceId = "youtube",
+                                        name = track.artist,
+                                        imageUrl = track.artUrl.takeIf { it.isNotBlank() },
+                                    ),
                                 )
+
+                                else -> session.nav.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
                             }
                         },
-                    ) { innerPadding ->
-                        AppNavigation(
-                            adaptiveInfo = session.adaptiveInfo,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding),
-                        )
-                    }
-                }
-            } else {
-                // Compact layout: NavigationBar at the bottom
-                Scaffold(
-                    bottomBar = {
-                        Column(modifier = Modifier.onSizeChanged { session.bottomBarHeightPx = it.height }) {
-                            if (session.chrome.miniVisible) {
-                                Spacer(modifier = Modifier.fillMaxWidth().height(MINI_BAR_HEIGHT))
+                        onAlbumClick = { track ->
+                            when {
+                                track.source == TrackSource.YOUTUBE -> {
+                                    if (track.albumUrl.isNotBlank()) {
+                                        session.nav.collapsePlayer()
+                                        session.nav.navigateTo(
+                                            NavDestination.CollectionDetail(
+                                                url = track.albumUrl,
+                                                sourceId = "youtube",
+                                                name = track.albumTitle,
+                                            ),
+                                        )
+                                    } else {
+                                        // Pre-fetch already ran (albumLookupDone=true);
+                                        // empty means the video has no YTM album.
+                                        session.player.showNoAlbumSnackbar()
+                                    }
+                                }
+
+                                track.albumUrl.isNotBlank() -> {
+                                    session.nav.collapsePlayer()
+                                    session.nav.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
+                                }
                             }
-                            BottomNavBar(
-                                currentTab = session.chrome.currentTab,
-                                visibleTabs = session.chrome.visibleTabs,
-                                onItemSelected = { dest -> session.nav.navigateTo(dest) },
-                            )
-                        }
-                    },
-                ) { innerPadding ->
-                    AppNavigation(
-                        adaptiveInfo = session.adaptiveInfo,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding),
+                        },
+                    ),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = dockDp),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    val miniMax = session.adaptiveInfo.miniPlayerMaxWidth
+                    MiniPlayer(
+                        sharedScope = sharedScope,
+                        visScope = avScope,
+                        expandDistancePx = session.expandDistancePx,
+                        onExpandClick = { session.nav.expandPlayer() },
+                        onExpandSeek = session.gesture.onExpandSeek,
+                        onExpandSettle = session.gesture.onExpandSettle,
+                        modifier = if (miniMax == Dp.Unspecified) {
+                            Modifier.fillMaxWidth()
+                        } else {
+                            Modifier
+                                .fillMaxWidth()
+                                .widthIn(max = miniMax)
+                        },
                     )
                 }
             }
-
+        }
+    }
 }
 
 @Composable
-private fun BoxScope.MainContentPlayerOverlay(
-    session: MainPlayerSession,
-    sharedScope: SharedTransitionScope,
-) {
-            // Player surface: the mini bar and full player are the two states of
-            // one container transform. The transparent host Box does not consume
-            // touches, so taps outside the docked mini bar reach the app behind it.
-            if (session.chrome.miniVisible) {
-                val dockDp = with(session.density) {
-                    (session.bottomBarHeightPx - session.miniBarHeightPx).coerceAtLeast(0f).toDp()
-                }
-                session.gesture.playerTransition.AnimatedContent(
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    contentAlignment = Alignment.BottomCenter,
-                ) { isFull ->
-                    val avScope = this
-                    if (isFull) {
-                        FullPlayer(
-                            adaptiveInfo = session.adaptiveInfo,
-                            sharedScope = sharedScope,
-                            visScope = avScope,
-                            expandDistancePx = session.expandDistancePx,
-                            collapse = com.dustvalve.next.android.ui.screens.player.FullPlayerCollapseActions(
-                                onCollapse = { session.nav.collapsePlayer() },
-                                onCollapseSeek = session.gesture.onCollapseSeek,
-                                onCollapseSettle = session.gesture.onCollapseSettle,
-                            ),
-                            nav = com.dustvalve.next.android.ui.screens.player.FullPlayerNavActions(
-                                onArtistClick = { track ->
-                                session.nav.collapsePlayer()
-                                when {
-                                    track.isLocal -> session.nav.requestLocalArtistFilter(track.artist)
-
-                                    track.source == TrackSource.YOUTUBE -> session.nav.navigateTo(
-                                        NavDestination.ArtistDetail(
-                                            url = track.artistUrl,
-                                            sourceId = "youtube",
-                                            name = track.artist,
-                                            imageUrl = track.artUrl.takeIf { it.isNotBlank() },
-                                        ),
-                                    )
-
-                                    else -> session.nav.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
-                                }
-                            },
-                                onAlbumClick = { track ->
-                                when {
-                                    track.source == TrackSource.YOUTUBE -> {
-                                        if (track.albumUrl.isNotBlank()) {
-                                            session.nav.collapsePlayer()
-                                            session.nav.navigateTo(
-                                                NavDestination.CollectionDetail(
-                                                    url = track.albumUrl,
-                                                    sourceId = "youtube",
-                                                    name = track.albumTitle,
-                                                ),
-                                            )
-                                        } else {
-                                            // Pre-fetch already ran (albumLookupDone=true);
-                                            // empty means the video has no YTM album.
-                                            session.player.showNoAlbumSnackbar()
-                                        }
-                                    }
-
-                                    track.albumUrl.isNotBlank() -> {
-                                        session.nav.collapsePlayer()
-                                        session.nav.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
-                                    }
-                                }
-                            },
-                            ),
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = dockDp),
-                            contentAlignment = Alignment.BottomCenter,
-                        ) {
-                            val miniMax = session.adaptiveInfo.miniPlayerMaxWidth
-                            MiniPlayer(
-                                sharedScope = sharedScope,
-                                visScope = avScope,
-                                expandDistancePx = session.expandDistancePx,
-                                onExpandClick = { session.nav.expandPlayer() },
-                                onExpandSeek = session.gesture.onExpandSeek,
-                                onExpandSettle = session.gesture.onExpandSettle,
-                                modifier = if (miniMax == Dp.Unspecified) {
-                                    Modifier.fillMaxWidth()
-                                } else {
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .widthIn(max = miniMax)
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-
-}
-
-@Composable
-private fun MainContentKeepScreenOn(
-    activity: MainActivity,
-    playerViewModel: PlayerViewModel = hiltViewModel(),
-) {
+private fun MainContentKeepScreenOn(activity: MainActivity, playerViewModel: PlayerViewModel = hiltViewModel()) {
     val isPlaying by remember {
         playerViewModel.uiState.map { it.isPlaying }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)

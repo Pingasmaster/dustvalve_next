@@ -248,8 +248,6 @@
     <string name="settings_storage_limit_unlimited">Limite de stockage : illimitée</string>
     <string name="settings_storage_limit_mb">Limite de stockage : <xliff:g id="size" example="500">%1$d</xliff:g> Mo</string>
     <string name="settings_storage_limit_gb">Limite de stockage : <xliff:g id="size" example="2">%1$d</xliff:g> Go</string>
-    <string name="settings_sign_in_bandcamp">Se connecter à <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_sign_in_youtube">Se connecter à <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="local_search_placeholder">Rechercher en local…</string>
     <string name="local_scan_title">Scanne ta musique</string>
     <string name="local_scan_subtitle">Trouve et écoute la musique stockée sur ton appareil</string>
@@ -481,7 +479,6 @@
     <string name="error_unknown">Erreur inconnue</string>
     <string name="error_unknown_source">Source inconnue : <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">Cette source ne peut pas afficher de collections</string>
-    <string name="error_load_page">Échec du chargement de la page</string>
     <string name="snackbar_downloaded">« <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g> » téléchargé</string>
     <string name="snackbar_deleted">« <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g> » supprimé</string>
     <string name="snackbar_deleted_downloads_for">Téléchargements de « <xliff:g id="item" example="Night Drive">%1$s</xliff:g> » supprimés</string>

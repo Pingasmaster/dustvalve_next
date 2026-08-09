@@ -248,8 +248,6 @@
     <string name="settings_storage_limit_unlimited">Límite de almacenamiento: ilimitado</string>
     <string name="settings_storage_limit_mb">Límite de almacenamiento: <xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
     <string name="settings_storage_limit_gb">Límite de almacenamiento: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
-    <string name="settings_sign_in_bandcamp">Iniciar sesión en <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_sign_in_youtube">Iniciar sesión en <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="local_search_placeholder">Buscar música local…</string>
     <string name="local_scan_title">Analiza tu música</string>
     <string name="local_scan_subtitle">Encuentra y reproduce la música guardada en tu dispositivo</string>
@@ -481,7 +479,6 @@
     <string name="error_unknown">Error desconocido</string>
     <string name="error_unknown_source">Fuente desconocida: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">Esta fuente no puede mostrar colecciones</string>
-    <string name="error_load_page">No se pudo cargar la página</string>
     <string name="snackbar_downloaded">Se descargó “<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”</string>
     <string name="snackbar_deleted">Se eliminó “<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>”</string>
     <string name="snackbar_deleted_downloads_for">Se eliminaron las descargas de “<xliff:g id="item" example="Night Drive">%1$s</xliff:g>”</string>

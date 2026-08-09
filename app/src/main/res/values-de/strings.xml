@@ -248,8 +248,6 @@
     <string name="settings_storage_limit_unlimited">Speicherlimit: Unbegrenzt</string>
     <string name="settings_storage_limit_mb">Speicherlimit: <xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
     <string name="settings_storage_limit_gb">Speicherlimit: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
-    <string name="settings_sign_in_bandcamp">Bei <xliff:g id="brand">Bandcamp</xliff:g> anmelden</string>
-    <string name="settings_sign_in_youtube">Bei <xliff:g id="brand">YouTube Music</xliff:g> anmelden</string>
     <string name="local_search_placeholder">Lokale Musik durchsuchen…</string>
     <string name="local_scan_title">Deine Musik scannen</string>
     <string name="local_scan_subtitle">Finde und spiele Musik, die auf deinem Gerät gespeichert ist</string>
@@ -481,7 +479,6 @@
     <string name="error_unknown">Unbekannter Fehler</string>
     <string name="error_unknown_source">Unbekannte Quelle: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">Diese Quelle kann keine Sammlungen anzeigen</string>
-    <string name="error_load_page">Seite konnte nicht geladen werden</string>
     <string name="snackbar_downloaded">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” heruntergeladen</string>
     <string name="snackbar_deleted">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” gelöscht</string>
     <string name="snackbar_deleted_downloads_for">Downloads für “<xliff:g id="item" example="Night Drive">%1$s</xliff:g>” gelöscht</string>
