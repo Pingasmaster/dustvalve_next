@@ -202,6 +202,8 @@ class YouTubeRepositoryImpl(
             val upgraded = cached.copy(albumUrl = resolvedAlbumUrl, albumLookupDone = true)
             try {
                 videoCache.insert(upgraded)
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Throwable) {}
             return cachedToTrack(upgraded)
         }
@@ -215,6 +217,8 @@ class YouTubeRepositoryImpl(
         // albumLookupDone=false so the next getTrackInfo retries it.
         try {
             videoCache.insert(track.toCacheEntity(videoId, albumLookupDone = albumUrl != null))
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Throwable) {}
         return track
     }
@@ -298,6 +302,8 @@ class YouTubeRepositoryImpl(
         if (cached != null) {
             val ids = try {
                 json.decodeFromString(stringListSerializer, cached.videoIdsJson)
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Throwable) {
                 emptyList()
             }
@@ -315,6 +321,8 @@ class YouTubeRepositoryImpl(
                                 playlistId = resolveBrowsablePlaylistId(extractedId),
                                 aliasId = extractedId,
                             )
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (_: Throwable) {}
                     }
                     // Cache entity has no cover column yet; first-track art is
@@ -404,6 +412,8 @@ class YouTubeRepositoryImpl(
                     ),
                 )
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Throwable) {}
         return YouTubePlaylistResult(all, title, coverUrl)
     }
@@ -438,6 +448,8 @@ class YouTubeRepositoryImpl(
         try {
             val entities = page.tracks.map { it.toCacheEntity(it.id.removePrefix("yt_")) }
             videoCache.insertAllIgnore(entities)
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Throwable) {}
         return Triple(page.tracks, page.title.orEmpty(), nextCursor)
     }

@@ -300,16 +300,11 @@ open class AppUpdateService @Inject constructor(
      * Missing digests on either side abort install (never "skip if unknown").
      */
     private fun verifyApkSigningMatchesInstalled(apk: File) {
-        val pm = context.packageManager
-        val installedDigests = signingCertSha256Digests(installedPackageInfo(pm))
+        val installedDigests = installedSigningCertSha256Digests()
         if (installedDigests.isEmpty()) {
             throw IOException("cannot read installed app signing certificates; refusing update")
         }
-        val apkInfo = pm.getPackageArchiveInfo(apk.absolutePath, packageInfoSigningFlags())
-            ?: throw IOException("cannot parse downloaded APK; refusing update")
-        // getPackageArchiveInfo leaves applicationInfo.sourceDir unset on some
-        // API levels; signingInfo still comes from the archive path flags.
-        val apkDigests = signingCertSha256Digests(apkInfo)
+        val apkDigests = apkSigningCertSha256Digests(apk)
         if (apkDigests.isEmpty()) {
             throw IOException("cannot read downloaded APK signing certificates; refusing update")
         }
@@ -317,6 +312,23 @@ open class AppUpdateService @Inject constructor(
             apk.delete()
             throw IOException("downloaded APK signing certificates do not match installed app")
         }
+    }
+
+    /**
+     * Overridable so unit tests can exercise the signing-match gate without a
+     * real PackageManager archive parse.
+     */
+    protected open fun installedSigningCertSha256Digests(): Set<String> {
+        val pm = context.packageManager
+        return signingCertSha256Digests(installedPackageInfo(pm))
+    }
+
+    /** Overridable twin of [installedSigningCertSha256Digests] for the APK file. */
+    protected open fun apkSigningCertSha256Digests(apk: File): Set<String> {
+        val pm = context.packageManager
+        val apkInfo = pm.getPackageArchiveInfo(apk.absolutePath, packageInfoSigningFlags())
+            ?: throw IOException("cannot parse downloaded APK; refusing update")
+        return signingCertSha256Digests(apkInfo)
     }
 
     @Suppress("DEPRECATION")

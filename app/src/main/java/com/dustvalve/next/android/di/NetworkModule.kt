@@ -2,6 +2,7 @@ package com.dustvalve.next.android.di
 
 import android.content.Context
 import com.dustvalve.next.android.data.remote.CookieStore
+import com.dustvalve.next.android.data.remote.PublicHostGuard
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import dagger.Module
 import dagger.Provides
@@ -61,6 +62,14 @@ object NetworkModule {
         return OkHttpClient.Builder()
             .cookieJar(cookieStore)
             .cache(Cache(cacheDir, HTTP_CACHE_BYTES))
+            // SSRF: manually follow redirects while re-validating public hosts
+            // on every hop, and refuse DNS answers that land in private /
+            // link-local / CGNAT / ULA. Shared by BandcampDomainSniffer,
+            // playlist fetchBytes, Coil (shared client), and all DI OkHttp.
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .dns(PublicHostGuard.dns())
+            .addInterceptor(PublicHostGuard.redirectInterceptor)
             // Brotli is ~20% smaller than gzip on JSON metadata with parity CPU
             // on ARM64, so net less radio time.
             .addInterceptor(BrotliInterceptor)

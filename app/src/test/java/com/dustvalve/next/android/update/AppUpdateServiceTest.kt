@@ -424,12 +424,63 @@ class AppUpdateServiceTest {
         assertThat(server.requestCount).isEqualTo(0)
     }
 
+    @Test fun `launchInstaller refuses when signing digests do not overlap`() {
+        val updates = File(cacheDir, "updates").apply { mkdirs() }
+        val apk = File(updates, "update.apk").apply { writeText("fake-apk") }
+        every { context.packageManager.canRequestPackageInstalls() } returns true
+
+        val svc = testService(
+            installed = "0.1.0",
+            requireSigning = true,
+            installedDigests = setOf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            apkDigests = setOf("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+        )
+        val ex = runCatching { svc.launchInstaller() }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IOException::class.java)
+        assertThat(ex!!.message).contains("signing")
+        assertThat(apk.exists()).isFalse()
+    }
+
+    @Test fun `launchInstaller refuses when installed signing digests are empty`() {
+        File(File(cacheDir, "updates").apply { mkdirs() }, "update.apk").writeText("fake-apk")
+        every { context.packageManager.canRequestPackageInstalls() } returns true
+
+        val svc = testService(
+            installed = "0.1.0",
+            requireSigning = true,
+            installedDigests = emptySet(),
+            apkDigests = setOf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+        )
+        val ex = runCatching { svc.launchInstaller() }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IOException::class.java)
+        assertThat(ex!!.message).contains("cannot read installed")
+    }
+
+    @Test fun `launchInstaller refuses when apk signing digests are empty`() {
+        val apk = File(File(cacheDir, "updates").apply { mkdirs() }, "update.apk").apply { writeText("fake-apk") }
+        every { context.packageManager.canRequestPackageInstalls() } returns true
+
+        val svc = testService(
+            installed = "0.1.0",
+            requireSigning = true,
+            installedDigests = setOf("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            apkDigests = emptySet(),
+        )
+        val ex = runCatching { svc.launchInstaller() }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IOException::class.java)
+        assertThat(ex!!.message).contains("cannot read downloaded")
+        assertThat(apk.exists()).isTrue()
+    }
+
     // --- helpers ------------------------------------------------------------
 
     private fun testService(
         installed: String,
         trustAllDownloadUrls: Boolean = false,
         requireDigest: Boolean = true,
+        requireSigning: Boolean = false,
+        installedDigests: Set<String>? = null,
+        apkDigests: Set<String>? = null,
     ): AppUpdateService = object : AppUpdateService(client, context, testDispatcher) {
         override val releasesUrl: String = server.url("/releases").toString()
         override val installedVersion: String = installed
@@ -440,8 +491,15 @@ class AppUpdateServiceTest {
 
         override fun requireApkDigest(): Boolean = requireDigest
 
-        // Unit tests have no real PackageManager signing info for the APK.
-        override fun requireSigningMatch(): Boolean = false
+        // Download-path unit tests skip PackageManager signing by default;
+        // signing-match tests opt in via [requireSigning] + digest fakes.
+        override fun requireSigningMatch(): Boolean = requireSigning
+
+        override fun installedSigningCertSha256Digests(): Set<String> =
+            installedDigests ?: super.installedSigningCertSha256Digests()
+
+        override fun apkSigningCertSha256Digests(apk: File): Set<String> =
+            apkDigests ?: super.apkSigningCertSha256Digests(apk)
     }
 
     private fun release(
