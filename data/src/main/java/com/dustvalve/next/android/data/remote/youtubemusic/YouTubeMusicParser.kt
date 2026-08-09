@@ -29,20 +29,24 @@ class YouTubeMusicParser @Inject constructor() {
         val shelves = flatShelves.mapNotNull { parseShelf(it) }
 
         if (chips.isEmpty() && shelves.isEmpty()) {
-            // Surface the actual API rejection text if we got a messageRenderer
-            // (e.g. "YouTube Music isn't available in your country", "Sign in
-            // to see your home feed"). Falls back to a renderer type-tree so
-            // unhandled cases still print a useful diagnostic.
-            extractMessageRendererText(rawShelves)?.let { msg ->
-                throw IllegalStateException("YouTube Music: $msg")
-            }
-            val typeTree = rawShelves.joinToString(",") { describeRenderer(it) }
-                .ifEmpty { "(none)" }
-            throw IllegalStateException(
-                "YouTube Music returned an empty home response (raw shelves: $typeTree)",
-            )
+            throw IllegalStateException(emptyHomeMessage(rawShelves))
         }
         return YouTubeMusicHomeFeed(chips = chips, shelves = shelves)
+    }
+
+    /**
+     * Surface the actual API rejection text if we got a messageRenderer
+     * (e.g. "YouTube Music isn't available in your country", "Sign in
+     * to see your home feed"). Falls back to a renderer type-tree so
+     * unhandled cases still print a useful diagnostic.
+     */
+    private fun emptyHomeMessage(rawShelves: List<JsonElement>): String {
+        extractMessageRendererText(rawShelves)?.let { msg ->
+            return "YouTube Music: $msg"
+        }
+        val typeTree = rawShelves.joinToString(",") { describeRenderer(it) }
+            .ifEmpty { "(none)" }
+        return "YouTube Music returned an empty home response (raw shelves: $typeTree)"
     }
 
     /**

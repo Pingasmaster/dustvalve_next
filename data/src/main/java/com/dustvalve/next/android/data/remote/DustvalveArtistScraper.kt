@@ -16,6 +16,8 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import java.io.IOException
 import java.security.MessageDigest
 import java.util.Locale
@@ -68,13 +70,21 @@ class DustvalveArtistScraper @Inject constructor(
         val id: Long = 0,
     )
 
+    /** Parsed artist landing HTML ready for album-grid extraction. */
+    private data class ArtistPageHtml(val artistUrl: String, val html: String, val document: Document)
+
+    /** Intermediate music-grid row before domain Album construction. */
+    private data class GridAlbumRow(val href: String, val title: String, val artUrl: String)
+
     suspend fun scrapeArtist(artistUrl: String): Artist = withContext(ioDispatcher) {
         require(NetworkUtils.isValidHttpsUrl(artistUrl)) { "Invalid URL: $artistUrl" }
+        val page = loadArtistPage(artistUrl)
+        ensureActive()
+        buildArtist(page)
+    }
 
-        val request = Request.Builder()
-            .url(artistUrl)
-            .build()
-
+    private suspend fun loadArtistPage(artistUrl: String): ArtistPageHtml {
+        val request = Request.Builder().url(artistUrl).build()
         val call = client.newCall(request)
         coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
         var html = call.execute().use { response ->
@@ -89,7 +99,6 @@ class DustvalveArtistScraper @Inject constructor(
                 response.body.string()
             }
         }
-        ensureActive()
 
         // Some artists (e.g. aawilliams.bandcamp.com) render the landing page
         // as a *merch* grid with no `#music-grid` - our album selectors come
@@ -97,151 +106,160 @@ class DustvalveArtistScraper @Inject constructor(
         // music-grid layout, so retry there once before giving up.
         if (!html.contains("music-grid-item") && html.contains("merch-grid-item")) {
             html = fetchArtistMusicPage(artistUrl)
-            ensureActive()
         }
+        return ArtistPageHtml(artistUrl = artistUrl, html = html, document = Jsoup.parse(html, artistUrl))
+    }
 
-        val document = Jsoup.parse(html, artistUrl)
-
-        val bandName = document.selectFirst("#band-name-location .title")?.text()?.trim()?.takeIf { it.isNotEmpty() }
-            ?: document.selectFirst("p#band-name-location span.title")?.text()?.trim()?.takeIf { it.isNotEmpty() }
-            ?: "Unknown Artist"
-
-        val bio = document.selectFirst(".signed-out-artists-bio-text")?.let { bioEl ->
-            // Bandcamp wraps long bios in a `bcTruncate` JS plugin: it hides the
-            // overflow inside `<span class="peekaboo-text">` and renders a
-            // `<span class="peekaboo-link"><span class="peekaboo-ellipsis">...</span>
-            // <a>more</a></span>` overlay that the user clicks to expand. We don't
-            // run the JS, so Jsoup's `.text()` would otherwise concatenate the
-            // hidden long form AND the literal "...more" link tail. Drop the link
-            // overlay (we keep `.peekaboo-text` so the FULL bio is returned).
-            val cleaned = bioEl.clone()
-            cleaned.select(".peekaboo-link, .peekaboo-ellipsis").remove()
-            cleaned.text().trim().takeIf { it.isNotEmpty() }
-        }
-
-        // Band photos are wrapped in an <a class="popupImage" href="..._N.jpg">
-        // around the small `<img class="band-photo" src="..._21.jpg">`. Prefer
-        // the popupImage href, then upgrade to full-original `_0`.
-        val rawImageUrl = document.selectFirst("a.popupImage:has(img.band-photo)")?.attr("abs:href")?.takeIf { it.isNotBlank() }
-            ?: document.selectFirst(".band-photo img")?.attr("abs:src")
-            ?: document.selectFirst("img.band-photo")?.attr("abs:src")
-        val imageUrl = rawImageUrl?.let { NetworkUtils.upgradeBandcampArtUrl(it) }
-
+    private fun buildArtist(page: ArtistPageHtml): Artist {
+        val document = page.document
+        val artistUrl = page.artistUrl
+        val bandName = extractBandName(document)
+        val bio = extractBio(document)
+        val imageUrl = extractBandImageUrl(document)
         val location = document.selectFirst("#band-name-location .location")?.text()?.trim()
-
-        val artistId = stableId(artistUrl)
-
-        val albums = mutableListOf<Album>()
-        document.select("#music-grid .music-grid-item a, .music-grid-item a").forEach { element ->
-            val albumHref = element.attr("abs:href").takeIf { it.isNotBlank() } ?: return@forEach
-            val albumTitle = element.selectFirst(".title")?.text()?.trim()
-                ?: element.selectFirst("p.title")?.text()?.trim()
-                ?: return@forEach
-
-            // Dustvalve uses data-original for lazy-loaded images (beyond ~8 albums)
-            val artImg = element.selectFirst("img")?.let { img ->
-                img.attr("abs:data-original").takeIf { it.isNotBlank() }
-                    ?: img.attr("abs:src").takeIf { it.isNotBlank() && !it.endsWith("/img/0.gif") }
-            }
-
-            albums.add(
-                Album(
-                    id = stableId(albumHref),
-                    url = albumHref,
-                    title = albumTitle,
-                    artist = bandName,
-                    artistUrl = artistUrl,
-                    artUrl = artImg ?: "",
-                    releaseDate = null,
-                    about = null,
-                    tracks = emptyList(),
-                    tags = emptyList(),
-                ),
-            )
-        }
-
-        // Prefer full-original art: upgrade music-grid thumbs first, then
-        // overlay buildArtUrl from data-client-items whenever art_id is present
-        // (not only when art was blank - grid URLs are often low-res lazy thumbs).
-        for (i in albums.indices) {
-            if (albums[i].artUrl.isNotBlank()) {
-                albums[i] = albums[i].copy(
-                    artUrl = NetworkUtils.upgradeBandcampArtUrl(albums[i].artUrl),
-                )
-            }
-        }
-
-        val clientItemsRaw = document.selectFirst("ol[data-client-items]")
-            ?.attr("data-client-items")
-            ?.takeIf { it.isNotBlank() }
-            ?.let { HtmlUtils.decodeHtmlEntities(it) }
-
-        if (clientItemsRaw != null) {
-            try {
-                val clientItems = json.decodeFromString<List<ClientItem>>(clientItemsRaw)
-                // Bandcamp stores relative page_url ("/album/foo") while the
-                // music-grid yields absolute abs:href. Key by path so both match.
-                val artIdByPath = clientItems
-                    .filter { it.artId > 0 && it.pageUrl.isNotBlank() }
-                    .associateBy(
-                        { pathKey(it.pageUrl) },
-                        { NetworkUtils.buildArtUrl(it.artId) },
-                    )
-
-                for (i in albums.indices) {
-                    val matchedArt = artIdByPath[pathKey(albums[i].url)]
-                    if (matchedArt != null) {
-                        albums[i] = albums[i].copy(artUrl = matchedArt)
-                    }
-                }
-            } catch (_: Exception) {
-                // JSON parsing failed - continue with whatever art URLs we have
-            }
-        }
-
-        // Single-album / single-track artists: the artist root URL redirects
-        // to the album/track page and Bandcamp doesn't render a music-grid for
-        // them on /music either. Fall back to the OpenGraph metadata so the
-        // artist screen still surfaces the one item instead of looking empty.
-        if (albums.isEmpty()) {
-            val ogUrl = document.selectFirst("meta[property=og:url]")?.attr("content")
-            if (!ogUrl.isNullOrBlank() && (ogUrl.contains("/album/") || ogUrl.contains("/track/"))) {
-                val ogTitle = document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty()
-                // Bandcamp formats og:title as "Album Title, by Artist Name".
-                val albumTitle = ogTitle.substringBefore(", by ").trim().takeIf { it.isNotEmpty() } ?: "Untitled"
-                val rawOgArt = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
-                val albumArt = if (rawOgArt.isNotBlank()) {
-                    NetworkUtils.upgradeBandcampArtUrl(rawOgArt)
-                } else {
-                    ""
-                }
-                albums.add(
-                    Album(
-                        id = stableId(ogUrl),
-                        url = ogUrl,
-                        title = albumTitle,
-                        artist = bandName,
-                        artistUrl = artistUrl,
-                        artUrl = albumArt,
-                        releaseDate = null,
-                        about = null,
-                        tracks = emptyList(),
-                        tags = emptyList(),
-                    ),
-                )
-            }
-        }
-
-        Artist(
-            id = artistId,
+        val albums = collectAlbums(document, artistUrl, bandName)
+        return Artist(
+            id = stableId(artistUrl),
             name = bandName,
             url = artistUrl,
             imageUrl = imageUrl,
             bio = bio,
             location = location,
             albums = albums,
-            hasDiscographyOffer = extractMeetsBuyFullDiscography(html),
+            hasDiscographyOffer = extractMeetsBuyFullDiscography(page.html),
         )
+    }
+
+    private fun extractBandName(document: Document): String =
+        document.selectFirst("#band-name-location .title")?.text()?.trim()?.takeIf { it.isNotEmpty() }
+            ?: document.selectFirst("p#band-name-location span.title")?.text()?.trim()?.takeIf { it.isNotEmpty() }
+            ?: "Unknown Artist"
+
+    private fun extractBio(document: Document): String? {
+        val bioEl = document.selectFirst(".signed-out-artists-bio-text") ?: return null
+        // Bandcamp wraps long bios in a `bcTruncate` JS plugin: it hides the
+        // overflow inside `<span class="peekaboo-text">` and renders a
+        // `<span class="peekaboo-link"><span class="peekaboo-ellipsis">...</span>
+        // <a>more</a></span>` overlay that the user clicks to expand. We don't
+        // run the JS, so Jsoup's `.text()` would otherwise concatenate the
+        // hidden long form AND the literal "...more" link tail. Drop the link
+        // overlay (we keep `.peekaboo-text` so the FULL bio is returned).
+        val cleaned = bioEl.clone()
+        cleaned.select(".peekaboo-link, .peekaboo-ellipsis").remove()
+        return cleaned.text().trim().takeIf { it.isNotEmpty() }
+    }
+
+    private fun extractBandImageUrl(document: Document): String? {
+        // Band photos are wrapped in an <a class="popupImage" href="..._N.jpg">
+        // around the small `<img class="band-photo" src="..._21.jpg">`. Prefer
+        // the popupImage href, then upgrade to full-original `_0`.
+        val rawImageUrl = document.selectFirst("a.popupImage:has(img.band-photo)")?.attr("abs:href")?.takeIf { it.isNotBlank() }
+            ?: document.selectFirst(".band-photo img")?.attr("abs:src")
+            ?: document.selectFirst("img.band-photo")?.attr("abs:src")
+        return rawImageUrl?.let { NetworkUtils.upgradeBandcampArtUrl(it) }
+    }
+
+    private fun collectAlbums(
+        document: Document,
+        artistUrl: String,
+        bandName: String,
+    ): List<Album> {
+        val rows = document.select("#music-grid .music-grid-item a, .music-grid-item a")
+            .mapNotNull { parseGridAlbumRow(it) }
+            .toMutableList()
+
+        // Prefer full-original art: upgrade music-grid thumbs first, then
+        // overlay buildArtUrl from data-client-items whenever art_id is present
+        // (not only when art was blank - grid URLs are often low-res lazy thumbs).
+        for (i in rows.indices) {
+            if (rows[i].artUrl.isNotBlank()) {
+                rows[i] = rows[i].copy(artUrl = NetworkUtils.upgradeBandcampArtUrl(rows[i].artUrl))
+            }
+        }
+        applyClientItemArt(document, rows)
+
+        if (rows.isEmpty()) {
+            openGraphAlbumFallback(document)?.let { rows.add(it) }
+        }
+
+        return rows.map { row ->
+            Album(
+                id = stableId(row.href),
+                url = row.href,
+                title = row.title,
+                artist = bandName,
+                artistUrl = artistUrl,
+                artUrl = row.artUrl,
+                releaseDate = null,
+                about = null,
+                tracks = emptyList(),
+                tags = emptyList(),
+            )
+        }
+    }
+
+    private fun parseGridAlbumRow(element: Element): GridAlbumRow? {
+        val albumHref = element.attr("abs:href").takeIf { it.isNotBlank() } ?: return null
+        val albumTitle = element.selectFirst(".title")?.text()?.trim()
+            ?: element.selectFirst("p.title")?.text()?.trim()
+            ?: return null
+        // Dustvalve uses data-original for lazy-loaded images (beyond ~8 albums)
+        val artImg = element.selectFirst("img")?.let { img ->
+            img.attr("abs:data-original").takeIf { it.isNotBlank() }
+                ?: img.attr("abs:src").takeIf { it.isNotBlank() && !it.endsWith("/img/0.gif") }
+        }
+        return GridAlbumRow(href = albumHref, title = albumTitle, artUrl = artImg.orEmpty())
+    }
+
+    private fun applyClientItemArt(document: Document, rows: MutableList<GridAlbumRow>) {
+        val clientItemsRaw = document.selectFirst("ol[data-client-items]")
+            ?.attr("data-client-items")
+            ?.takeIf { it.isNotBlank() }
+            ?.let { HtmlUtils.decodeHtmlEntities(it) }
+            ?: return
+        val clientItems = try {
+            json.decodeFromString<List<ClientItem>>(clientItemsRaw)
+        } catch (_: Exception) {
+            // JSON parsing failed - continue with whatever art URLs we have
+            return
+        }
+        // Bandcamp stores relative page_url ("/album/foo") while the
+        // music-grid yields absolute abs:href. Key by path so both match.
+        val artIdByPath = clientItems
+            .filter { it.artId > 0 && it.pageUrl.isNotBlank() }
+            .associateBy(
+                { pathKey(it.pageUrl) },
+                { NetworkUtils.buildArtUrl(it.artId) },
+            )
+        for (i in rows.indices) {
+            val matchedArt = artIdByPath[pathKey(rows[i].href)]
+            if (matchedArt != null) {
+                rows[i] = rows[i].copy(artUrl = matchedArt)
+            }
+        }
+    }
+
+    /**
+     * Single-album / single-track artists: the artist root URL redirects
+     * to the album/track page and Bandcamp doesn't render a music-grid for
+     * them on /music either. Fall back to the OpenGraph metadata so the
+     * artist screen still surfaces the one item instead of looking empty.
+     */
+    private fun openGraphAlbumFallback(document: Document): GridAlbumRow? {
+        val ogUrl = document.selectFirst("meta[property=og:url]")?.attr("content")
+        if (ogUrl.isNullOrBlank() || (!ogUrl.contains("/album/") && !ogUrl.contains("/track/"))) {
+            return null
+        }
+        val ogTitle = document.selectFirst("meta[property=og:title]")?.attr("content").orEmpty()
+        // Bandcamp formats og:title as "Album Title, by Artist Name".
+        val albumTitle = ogTitle.substringBefore(", by ").trim().takeIf { it.isNotEmpty() } ?: "Untitled"
+        val rawOgArt = document.selectFirst("meta[property=og:image]")?.attr("content").orEmpty()
+        val albumArt = if (rawOgArt.isNotBlank()) {
+            NetworkUtils.upgradeBandcampArtUrl(rawOgArt)
+        } else {
+            ""
+        }
+        return GridAlbumRow(href = ogUrl, title = albumTitle, artUrl = albumArt)
     }
 
     /**

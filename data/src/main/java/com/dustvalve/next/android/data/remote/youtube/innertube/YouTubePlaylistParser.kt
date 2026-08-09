@@ -34,30 +34,11 @@ class YouTubePlaylistParser @Inject constructor() {
 
         val tracks = mutableListOf<Track>()
         var continuation: String? = null
-
-        for (section in sectionContents) {
-            val isr = section.path("itemSectionRenderer") ?: continue
-            for (item in isr.path("contents")?.arr().orEmpty()) {
-                // Modern MWEB/WEB: lockupViewModel rows live directly under
-                // itemSectionRenderer.contents (no playlistVideoListRenderer).
-                val lockup = item.path("lockupViewModel")
-                if (lockup != null) {
-                    parseLockupItem(lockup, playlistId, tracks.size + 1)?.let { tracks += it }
-                    continue
-                }
-
-                item.extractContinuationToken()?.let { continuation = it }
-
-                // Legacy: playlistVideoListRenderer wrapping playlistVideoRenderer.
-                val pvlr = item.path("playlistVideoListRenderer") ?: continue
-                for (entry in pvlr.path("contents")?.arr().orEmpty()) {
-                    val pvr = entry.path("playlistVideoRenderer")
-                    if (pvr != null) {
-                        parseItem(pvr, playlistId, tracks.size + 1)?.let { tracks += it }
-                        continue
-                    }
-                    entry.extractContinuationToken()?.let { continuation = it }
-                }
+        for (entry in playlistSectionEntries(sectionContents)) {
+            when (val parsed = parsePlaylistEntry(entry, playlistId, tracks.size + 1)) {
+                is PlaylistEntry.TrackItem -> tracks += parsed.track
+                is PlaylistEntry.Token -> continuation = parsed.token
+                null -> Unit
             }
         }
         return PlaylistPage(tracks, title, continuation, coverUrl)
@@ -67,27 +48,58 @@ class YouTubePlaylistParser @Inject constructor() {
     fun parseContinuation(root: JsonElement, playlistId: String, startIndex: Int): PlaylistPage {
         val tracks = mutableListOf<Track>()
         var continuation: String? = null
-
-        // Continuation responses live under onResponseReceivedActions[*].appendContinuationItemsAction.continuationItems
-        val actions = root.path("onResponseReceivedActions")?.arr().orEmpty()
-        for (action in actions) {
-            val appended = action.path("appendContinuationItemsAction")
-                ?.path("continuationItems")?.arr().orEmpty()
-            for (entry in appended) {
-                val lockup = entry.path("lockupViewModel")
-                if (lockup != null) {
-                    parseLockupItem(lockup, playlistId, startIndex + tracks.size)?.let { tracks += it }
-                    continue
-                }
-                val pvr = entry.path("playlistVideoRenderer")
-                if (pvr != null) {
-                    parseItem(pvr, playlistId, startIndex + tracks.size)?.let { tracks += it }
-                    continue
-                }
-                entry.extractContinuationToken()?.let { continuation = it }
+        for (entry in continuationEntries(root)) {
+            when (val parsed = parsePlaylistEntry(entry, playlistId, startIndex + tracks.size)) {
+                is PlaylistEntry.TrackItem -> tracks += parsed.track
+                is PlaylistEntry.Token -> continuation = parsed.token
+                null -> Unit
             }
         }
         return PlaylistPage(tracks, null, continuation)
+    }
+
+    private sealed class PlaylistEntry {
+        data class TrackItem(val track: Track) : PlaylistEntry()
+        data class Token(val token: String) : PlaylistEntry()
+    }
+
+    private fun playlistSectionEntries(sectionContents: List<JsonElement>): List<JsonElement> =
+        sectionContents.flatMap { section ->
+            val isrContents = section.path("itemSectionRenderer")?.path("contents")?.arr().orEmpty()
+            isrContents.flatMap { item -> expandPlaylistItem(item) }
+        }
+
+    /**
+     * Modern MWEB/WEB: lockupViewModel rows live directly under
+     * itemSectionRenderer.contents. Legacy: playlistVideoListRenderer wraps
+     * playlistVideoRenderer rows. Continuation tokens may appear as sibling
+     * rows or nested under the list renderer.
+     */
+    private fun expandPlaylistItem(item: JsonElement): List<JsonElement> {
+        if (item.path("lockupViewModel") != null) return listOf(item)
+        val pvlr = item.path("playlistVideoListRenderer")
+        if (pvlr != null) {
+            val wrapperToken = item.takeIf { it.extractContinuationToken() != null }
+            val children = pvlr.path("contents")?.arr().orEmpty()
+            return listOfNotNull(wrapperToken) + children
+        }
+        return if (item.extractContinuationToken() != null) listOf(item) else emptyList()
+    }
+
+    private fun continuationEntries(root: JsonElement): List<JsonElement> =
+        root.path("onResponseReceivedActions")?.arr().orEmpty().flatMap { action ->
+            action.path("appendContinuationItemsAction")
+                ?.path("continuationItems")?.arr().orEmpty()
+        }
+
+    private fun parsePlaylistEntry(entry: JsonElement, playlistId: String, trackNumber: Int): PlaylistEntry? {
+        entry.path("lockupViewModel")?.let { lockup ->
+            return parseLockupItem(lockup, playlistId, trackNumber)?.let { PlaylistEntry.TrackItem(it) }
+        }
+        entry.path("playlistVideoRenderer")?.let { pvr ->
+            return parseItem(pvr, playlistId, trackNumber)?.let { PlaylistEntry.TrackItem(it) }
+        }
+        return entry.extractContinuationToken()?.let { PlaylistEntry.Token(it) }
     }
 
     private fun extractTitle(root: JsonElement): String? {
@@ -142,12 +154,10 @@ class YouTubePlaylistParser @Inject constructor() {
         val tabs = contents.path("singleColumnBrowseResultsRenderer")?.path("tabs")?.arr()
             ?: contents.path("twoColumnBrowseResultsRenderer")?.path("tabs")?.arr()
             ?: return null
-        for (tab in tabs) {
-            val sl = tab.path("tabRenderer")?.path("content")?.path("sectionListRenderer")
-                ?: continue
-            return sl.path("contents")?.arr()
+        return tabs.firstNotNullOfOrNull { tab ->
+            tab.path("tabRenderer")?.path("content")?.path("sectionListRenderer")
+                ?.path("contents")?.arr()
         }
-        return null
     }
 
     private fun parseItem(pvr: JsonElement, playlistId: String, trackNumber: Int): Track? {
@@ -234,23 +244,50 @@ class YouTubePlaylistParser @Inject constructor() {
         var lastParams: String? = null
 
         for (entry in toConsume) {
-            val pvr = entry.path("playlistPanelVideoRenderer") ?: continue
-            val videoId = pvr.str("videoId") ?: continue
-            if (videoId in seenVideoIds) continue
-            val track = parseMixItem(pvr, playlistId, startIndex + tracks.size) ?: continue
-            tracks += track
-            lastVideoId = videoId
-            // indexText lives under runs/simpleText, e.g. "5" - best-effort.
-            val idxText = pvr.runsText("indexText") ?: pvr.path("indexText")?.str("simpleText")
-            idxText?.toIntOrNull()?.let { lastIndex = it }
-            pvr.path("navigationEndpoint")?.path("watchEndpoint")?.str("params")
-                ?.let { lastParams = it }
+            val consumed = consumeMixEntry(
+                entry = entry,
+                playlistId = playlistId,
+                trackNumber = startIndex + tracks.size,
+                seenVideoIds = seenVideoIds,
+            ) ?: continue
+            tracks += consumed.track
+            lastVideoId = consumed.videoId
+            consumed.index?.let { lastIndex = it }
+            consumed.params?.let { lastParams = it }
         }
 
         val cont = lastVideoId?.let {
             MixContinuation(lastVideoId = it, playlistIndex = lastIndex, params = lastParams)
         }
         return MixPage(tracks = tracks, title = panelTitle, continuation = cont)
+    }
+
+    private data class MixEntry(
+        val track: Track,
+        val videoId: String,
+        val index: Int?,
+        val params: String?,
+    )
+
+    private fun consumeMixEntry(
+        entry: JsonElement,
+        playlistId: String,
+        trackNumber: Int,
+        seenVideoIds: Set<String>,
+    ): MixEntry? {
+        val pvr = entry.path("playlistPanelVideoRenderer") ?: return null
+        val videoId = pvr.str("videoId") ?: return null
+        if (videoId in seenVideoIds) return null
+        val track = parseMixItem(pvr, playlistId, trackNumber) ?: return null
+        // indexText lives under runs/simpleText, e.g. "5" - best-effort.
+        val idxText = pvr.runsText("indexText") ?: pvr.path("indexText")?.str("simpleText")
+        val params = pvr.path("navigationEndpoint")?.path("watchEndpoint")?.str("params")
+        return MixEntry(
+            track = track,
+            videoId = videoId,
+            index = idxText?.toIntOrNull(),
+            params = params,
+        )
     }
 
     private fun findPlaylistPanel(root: JsonElement): JsonElement? {
