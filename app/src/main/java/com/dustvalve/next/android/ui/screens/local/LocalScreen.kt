@@ -98,6 +98,11 @@ import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.screens.player.playTrackInList
+import com.dustvalve.next.android.ui.screens.player.playNext
+import com.dustvalve.next.android.ui.screens.player.addTrackToPlaylist
+import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitraryTrack
+import com.dustvalve.next.android.ui.screens.player.toggleFavoriteById
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.legacyAudioPermission
 

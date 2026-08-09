@@ -101,6 +101,13 @@ import com.dustvalve.next.android.ui.components.lists.segmentedItemPadding
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.screens.player.playTrack
+import com.dustvalve.next.android.ui.screens.player.playAlbum
+import com.dustvalve.next.android.ui.screens.player.playNext
+import com.dustvalve.next.android.ui.screens.player.addToQueue
+import com.dustvalve.next.android.ui.screens.player.addAllToQueue
+import com.dustvalve.next.android.ui.screens.player.addTrackToPlaylist
+import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitraryTrack
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.util.DeepLinkRouter

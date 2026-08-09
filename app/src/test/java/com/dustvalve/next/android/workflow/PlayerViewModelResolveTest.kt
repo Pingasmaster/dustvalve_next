@@ -22,6 +22,10 @@ import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
+import com.dustvalve.next.android.ui.screens.player.playTrack
+import com.dustvalve.next.android.ui.screens.player.playTrackInList
+import com.dustvalve.next.android.ui.screens.player.playAlbum
+import com.dustvalve.next.android.ui.screens.player.playNext
 import com.dustvalve.next.android.workflow.support.AudioFixture
 import com.dustvalve.next.android.workflow.support.FixtureTracks
 import com.google.common.truth.Truth.assertThat
