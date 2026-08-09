@@ -11,23 +11,24 @@ internal sealed interface SettingsAppearanceAction {
 }
 
 internal fun handleSettingsAppearanceAction(viewModel: SettingsViewModel, action: SettingsAppearanceAction) {
+    val appearance = viewModel.appearance
     when (action) {
         is SettingsAppearanceAction.SetThemeMode ->
-            viewModel.setThemeMode(action.mode)
+            appearance.setThemeMode(action.mode)
 
         is SettingsAppearanceAction.SetDynamicColor ->
-            viewModel.setDynamicColor(action.enabled)
+            appearance.setDynamicColor(action.enabled)
 
         is SettingsAppearanceAction.SetAlbumArtTheme ->
-            viewModel.setAlbumArtTheme(action.enabled)
+            appearance.setAlbumArtTheme(action.enabled)
 
         is SettingsAppearanceAction.SetOledBlack ->
-            viewModel.setOledBlack(action.enabled)
+            appearance.setOledBlack(action.enabled)
 
         is SettingsAppearanceAction.SetProgressBarStyle ->
-            viewModel.setProgressBarStyle(action.style)
+            appearance.setProgressBarStyle(action.style)
 
         is SettingsAppearanceAction.SetProgressBarSizeDp ->
-            viewModel.setProgressBarSizeDp(action.sizeDp)
+            appearance.setProgressBarSizeDp(action.sizeDp)
     }
 }

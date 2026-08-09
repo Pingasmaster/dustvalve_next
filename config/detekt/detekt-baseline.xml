@@ -38,7 +38,6 @@
     <ID>CyclomaticComplexMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
     <ID>CyclomaticComplexMethod:MiniPlayer.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable fun MiniPlayer</ID>
     <ID>CyclomaticComplexMethod:YouTubeScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun YouTubeScreen</ID>
-    <ID>LargeClass:PlayerViewModel.kt:PlayerViewModel : ViewModel</ID>
     <ID>LongMethod:AlbumDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun AlbumDetailScreen</ID>
     <ID>LongMethod:ArtistDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun ArtistDetailScreen</ID>
     <ID>LongMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
@@ -103,17 +102,13 @@
     <ID>TooGenericExceptionCaught:LibraryViewModel.kt:LibraryViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:LocalViewModel.kt:LocalViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:NavigationViewModel.kt:NavigationViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:PlayerViewModel.kt:PlayerViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PlayerUiActionCatch.kt:PlayerUiActionCatch$e: Exception</ID>
     <ID>TooGenericExceptionCaught:PlaylistDetailViewModel.kt:PlaylistDetailViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:SearchViewModel.kt:SearchViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:SettingsViewModel.kt:SettingsViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SettingsPrefWrite.kt:SettingsPrefWrite$e: Exception</ID>
     <ID>TooGenericExceptionCaught:YouTubeViewModel.kt:YouTubeViewModel$e: Exception</ID>
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LocalViewModel.kt:LocalViewModel : ViewModel</ID>
-    <ID>TooManyFunctions:PlaybackManager.kt:PlaybackManager</ID>
-    <ID>TooManyFunctions:PlayerViewModel.kt:PlayerViewModel : ViewModel</ID>
     <ID>TooManyFunctions:PlaylistDao.kt:PlaylistDao</ID>
-    <ID>TooManyFunctions:SettingsDataStore.kt:SettingsDataStore</ID>
-    <ID>TooManyFunctions:SettingsViewModel.kt:SettingsViewModel : ViewModel</ID>
   </CurrentIssues>
 </SmellBaseline>

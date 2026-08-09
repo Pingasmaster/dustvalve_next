@@ -65,42 +65,44 @@ internal sealed interface SettingsSourcesAction {
 }
 
 internal fun handleSettingsSourcesAction(viewModel: SettingsViewModel, action: SettingsSourcesAction) {
+    val localMusic = viewModel.localMusic
+    val storageSources = viewModel.storageSources
     when (action) {
         is SettingsSourcesAction.SetLocalMusicEnabled ->
-            viewModel.setLocalMusicEnabled(action.enabled)
+            localMusic.setEnabled(action.enabled)
 
         is SettingsSourcesAction.SetLocalMusicUseMediaStore ->
-            viewModel.setLocalMusicUseMediaStore(action.use)
+            localMusic.setUseMediaStore(action.use)
 
         is SettingsSourcesAction.AddLocalMusicFolder ->
-            viewModel.addLocalMusicFolder(action.uri)
+            localMusic.addFolder(action.uri)
 
         is SettingsSourcesAction.RemoveLocalMusicFolder ->
-            viewModel.removeLocalMusicFolder(action.uri)
+            localMusic.removeFolder(action.uri)
 
         SettingsSourcesAction.RescanLocalMusic ->
-            viewModel.rescanLocalMusic()
+            localMusic.rescan()
 
         is SettingsSourcesAction.SetKeepLocalSort ->
-            viewModel.setKeepLocalSort(action.keep)
+            storageSources.setKeepLocalSort(action.keep)
 
         is SettingsSourcesAction.SetKeepLocalFilters ->
-            viewModel.setKeepLocalFilters(action.keep)
+            storageSources.setKeepLocalFilters(action.keep)
 
         is SettingsSourcesAction.SetBandcampEnabled ->
-            viewModel.setBandcampEnabled(action.enabled)
+            storageSources.setBandcampEnabled(action.enabled)
 
         is SettingsSourcesAction.SetYoutubeEnabled ->
-            viewModel.setYoutubeEnabled(action.enabled)
+            storageSources.setYoutubeEnabled(action.enabled)
 
         is SettingsSourcesAction.SetSoundcloudEnabled ->
-            viewModel.setSoundcloudEnabled(action.enabled)
+            storageSources.setSoundcloudEnabled(action.enabled)
 
         is SettingsSourcesAction.SetYoutubeDefaultSource ->
-            viewModel.setYoutubeDefaultSource(action.source)
+            storageSources.setYoutubeDefaultSource(action.source)
 
         SettingsSourcesAction.ClearScanMessage ->
-            viewModel.clearScanMessage()
+            localMusic.clearScanMessage()
     }
 }
 

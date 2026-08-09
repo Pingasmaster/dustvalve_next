@@ -102,14 +102,14 @@ fun SettingsScreen(
     SettingsScreenSnackbars(
         state = state,
         snackbarHostState = snackbarHostState,
-        onClearSearchHistoryClearedMessage = viewModel::clearSearchHistoryClearedMessage,
+        onClearSearchHistoryClearedMessage = viewModel.storageSources::clearSearchHistoryClearedMessage,
         onClearUpdateMessage = viewModel::clearUpdateMessage,
     )
 
     if (showRemoveDownloadsDialog) {
         SettingsRemoveDownloadsDialog(
             onConfirm = {
-                viewModel.removeAllDownloads()
+                viewModel.storageSources.removeAllDownloads()
                 showRemoveDownloadsDialog = false
             },
             onDismiss = { showRemoveDownloadsDialog = false },
@@ -120,7 +120,7 @@ fun SettingsScreen(
         SettingsDownloadFormatSheet(
             downloadFormat = state.downloadFormat,
             onSelect = { key ->
-                viewModel.setDownloadFormat(key)
+                viewModel.storageSources.setDownloadFormat(key)
                 showFormatSheet = false
             },
             onDismiss = { showFormatSheet = false },
@@ -146,19 +146,19 @@ fun SettingsScreen(
                 onSourcesAction = { handleSettingsSourcesAction(viewModel, it) },
                 onStorageAction = { handleSettingsStorageAction(viewModel, it) },
                 onAppearanceAction = { handleSettingsAppearanceAction(viewModel, it) },
-                onSetSaveDataOnMetered = viewModel::setSaveDataOnMetered,
-                onSetProgressiveDownload = viewModel::setProgressiveDownload,
-                onSetSeamlessQualityUpgrade = viewModel::setSeamlessQualityUpgrade,
-                onSetShowInlineVolumeSlider = viewModel::setShowInlineVolumeSlider,
-                onSetShowVolumeButton = viewModel::setShowVolumeButton,
-                onSetKeepScreenOnInApp = viewModel::setKeepScreenOnInApp,
-                onSetKeepScreenOnWhilePlaying = viewModel::setKeepScreenOnWhilePlaying,
-                onSetSearchHistoryEnabled = viewModel::setSearchHistoryEnabled,
-                onSetSearchHistorySource = viewModel::setSearchHistorySource,
-                onClearAllSearchHistory = viewModel::clearAllSearchHistory,
+                onSetSaveDataOnMetered = viewModel.storageSources::setSaveDataOnMetered,
+                onSetProgressiveDownload = viewModel.storageSources::setProgressiveDownload,
+                onSetSeamlessQualityUpgrade = viewModel.storageSources::setSeamlessQualityUpgrade,
+                onSetShowInlineVolumeSlider = viewModel.appearance::setShowInlineVolumeSlider,
+                onSetShowVolumeButton = viewModel.appearance::setShowVolumeButton,
+                onSetKeepScreenOnInApp = viewModel.appearance::setKeepScreenOnInApp,
+                onSetKeepScreenOnWhilePlaying = viewModel.appearance::setKeepScreenOnWhilePlaying,
+                onSetSearchHistoryEnabled = viewModel.storageSources::setSearchHistoryEnabled,
+                onSetSearchHistorySource = viewModel.storageSources::setSearchHistorySource,
+                onClearAllSearchHistory = viewModel.storageSources::clearAllSearchHistory,
                 onCheckForAppUpdate = viewModel::checkForAppUpdate,
-                onSetAutoUpdateCheckEnabled = viewModel::setAutoUpdateCheckEnabled,
-                onSetPlayerDebugOverlay = viewModel::setPlayerDebugOverlay,
+                onSetAutoUpdateCheckEnabled = viewModel.storageSources::setAutoUpdateCheckEnabled,
+                onSetPlayerDebugOverlay = viewModel.appearance::setPlayerDebugOverlay,
             )
         }
 

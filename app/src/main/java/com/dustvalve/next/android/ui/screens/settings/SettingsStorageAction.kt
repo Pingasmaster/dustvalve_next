@@ -38,18 +38,19 @@ internal sealed interface SettingsStorageAction {
 }
 
 internal fun handleSettingsStorageAction(viewModel: SettingsViewModel, action: SettingsStorageAction) {
+    val storage = viewModel.storageSources
     when (action) {
         is SettingsStorageAction.SetStorageLimit ->
-            viewModel.setStorageLimit(action.limitGb)
+            storage.setStorageLimit(action.limitGb)
 
         is SettingsStorageAction.SetAutoDownloadFutureContent ->
-            viewModel.setAutoDownloadFutureContent(action.enabled)
+            storage.setAutoDownloadFutureContent(action.enabled)
 
         is SettingsStorageAction.SetAutoDownloadFavorites ->
-            viewModel.setAutoDownloadFavorites(action.enabled)
+            storage.setAutoDownloadFavorites(action.enabled)
 
         is SettingsStorageAction.SetDownloadNotificationsEnabled ->
-            viewModel.setDownloadNotificationsEnabled(action.enabled)
+            storage.setDownloadNotificationsEnabled(action.enabled)
     }
 }
 
