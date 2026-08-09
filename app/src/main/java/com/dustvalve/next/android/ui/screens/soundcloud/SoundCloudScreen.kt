@@ -126,7 +126,6 @@ private class SoundCloudScaffoldInputs(
 private class SoundCloudHomeHandlers(
     val onOpenLink: (String) -> Unit,
     val onSearch: () -> Unit,
-    val onGenreSelect: (String) -> Unit,
     val onRetry: () -> Unit,
     val onPlayTrack: (Track) -> Unit,
     val onShelfItemClick: (SoundCloudShelfItem) -> Unit,
@@ -242,7 +241,6 @@ fun SoundCloudScreen(
         home = SoundCloudHomeHandlers(
             onOpenLink = nav.onOpenLink,
             onSearch = viewModel::onSearch,
-            onGenreSelect = viewModel::selectGenre,
             onRetry = viewModel::retryHome,
             onPlayTrack = { track ->
                 scope.launch {
@@ -333,7 +331,6 @@ private fun SoundCloudScreenScaffold(
                 SoundCloudHomeContent(
                     carouselItemWidth = carouselItemWidth,
                     state = inputs.state,
-                    onGenreSelect = home.onGenreSelect,
                     onRetry = home.onRetry,
                     onPlayTrack = home.onPlayTrack,
                     onShelfItemClick = home.onShelfItemClick,

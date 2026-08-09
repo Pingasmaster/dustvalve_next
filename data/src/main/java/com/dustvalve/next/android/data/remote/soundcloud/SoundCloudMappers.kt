@@ -9,6 +9,7 @@ import com.dustvalve.next.android.domain.model.SoundCloudHomeFeed
 import com.dustvalve.next.android.domain.model.SoundCloudShelf
 import com.dustvalve.next.android.domain.model.SoundCloudShelfItem
 import com.dustvalve.next.android.domain.model.SoundCloudShelfKind
+import com.dustvalve.next.android.domain.model.StreamPolicy
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import kotlinx.serialization.json.JsonArray
@@ -123,6 +124,7 @@ object SoundCloudMappers {
             albumTitle = "",
             source = TrackSource.SOUNDCLOUD,
             albumUrl = permalink,
+            streamPolicy = inferStreamPolicy(element),
         )
     }
 
@@ -288,29 +290,51 @@ object SoundCloudMappers {
      * encrypted/Go+ DRM (no plain progressive or HLS left to try).
      */
     fun hasOnlyEncryptedTranscodings(trackElement: JsonElement): Boolean {
+        val summary = summarizeTranscodings(trackElement) ?: return false
+        return summary.hasEncrypted && !summary.hasProgressive && !summary.hasHls
+    }
+
+    /** True when any non-snipped encrypted/Go+ transcoding is present. */
+    fun hasEncryptedTranscodings(trackElement: JsonElement): Boolean =
+        summarizeTranscodings(trackElement)?.hasEncrypted == true
+
+    /**
+     * Infer [StreamPolicy] from media.transcodings without resolving URLs.
+     *
+     * Live charts often list plain progressive/HLS next to encrypted Go+
+     * entries; those plain URLs 404 for anonymous clients. Any encrypted
+     * listing therefore maps to [StreamPolicy.BLOCKED].
+     */
+    fun inferStreamPolicy(trackElement: JsonElement): StreamPolicy {
+        val summary = summarizeTranscodings(trackElement) ?: return StreamPolicy.UNKNOWN
+        if (summary.hasEncrypted) return StreamPolicy.BLOCKED
+        if (summary.hasProgressive) return StreamPolicy.DOWNLOADABLE
+        if (summary.hasHls) return StreamPolicy.STREAM_ONLY
+        return StreamPolicy.UNKNOWN
+    }
+
+    private data class TranscodingSummary(
+        val hasProgressive: Boolean,
+        val hasHls: Boolean,
+        val hasEncrypted: Boolean,
+    )
+
+    private fun summarizeTranscodings(trackElement: JsonElement): TranscodingSummary? {
         val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
-            ?: return false
-        var sawEncrypted = false
-        var sawPlain = false
+            ?: return null
+        var hasProgressive = false
+        var hasHls = false
+        var hasEncrypted = false
         for (t in transcodings) {
             if (t.bool("snipped") == true) continue
             val protocol = t.path("format")?.str("protocol")?.lowercase().orEmpty()
             when {
-                isEncryptedProtocol(protocol) -> sawEncrypted = true
-                protocol == "progressive" || protocol == "hls" -> sawPlain = true
+                isEncryptedProtocol(protocol) -> hasEncrypted = true
+                protocol == "progressive" -> hasProgressive = true
+                protocol == "hls" -> hasHls = true
             }
         }
-        return sawEncrypted && !sawPlain
-    }
-
-    /** True when any non-snipped encrypted/Go+ transcoding is present. */
-    fun hasEncryptedTranscodings(trackElement: JsonElement): Boolean {
-        val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
-            ?: return false
-        return transcodings.any { t ->
-            t.bool("snipped") != true &&
-                isEncryptedProtocol(t.path("format")?.str("protocol")?.lowercase().orEmpty())
-        }
+        return TranscodingSummary(hasProgressive, hasHls, hasEncrypted)
     }
 
     private fun isEncryptedProtocol(protocol: String): Boolean =

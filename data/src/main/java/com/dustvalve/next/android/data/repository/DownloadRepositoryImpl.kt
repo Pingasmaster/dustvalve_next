@@ -18,6 +18,7 @@ import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
+import com.dustvalve.next.android.domain.model.StreamPolicy
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
@@ -225,7 +226,18 @@ class DownloadRepositoryImpl(
                 youtubeRepository.getDownloadableStream(videoUrl)
             }
 
-            TrackSource.SOUNDCLOUD -> soundCloudRepository.getDownloadableStream(track)
+            TrackSource.SOUNDCLOUD -> {
+                if (track.isStreamOnlyOrBlocked) {
+                    throw IOException(
+                        when (track.streamPolicy) {
+                            StreamPolicy.STREAM_ONLY -> "HLS-only, play only"
+                            else ->
+                                "This SoundCloud track is DRM-protected or requires Go+ and cannot be downloaded"
+                        },
+                    )
+                }
+                soundCloudRepository.getDownloadableStream(track)
+            }
 
             TrackSource.BANDCAMP -> {
                 val pageUrl = track.albumUrl.takeIf { it.isNotBlank() }
@@ -647,9 +659,12 @@ class DownloadRepositoryImpl(
         /**
          * SoundCloud tracks ship with streamUrl=null and resolve on demand;
          * YouTube/Bandcamp already carry a usable URL (watch page or CDN).
+         * HLS-only / DRM SoundCloud tracks are not file-download candidates.
          */
-        fun isDownloadCandidate(track: Track): Boolean =
-            track.streamUrl != null || track.source == TrackSource.SOUNDCLOUD
+        fun isDownloadCandidate(track: Track): Boolean {
+            if (track.isStreamOnlyOrBlocked) return false
+            return track.streamUrl != null || track.source == TrackSource.SOUNDCLOUD
+        }
 
         /** Refuse new downloads when free space drops below this headroom. */
         private const val MIN_FREE_BYTES = 64L * 1024L * 1024L

@@ -1,12 +1,14 @@
 package com.dustvalve.next.android.domain.usecase
 
 import com.dustvalve.next.android.domain.model.AudioFormat
+import com.dustvalve.next.android.domain.model.StreamPolicy
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.BandcampStreamUrlResolver
 import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.SoundCloudRepository
+import com.dustvalve.next.android.domain.repository.SoundCloudResolvedStream
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
@@ -147,6 +149,33 @@ class ResolveTrackForPlaybackUseCaseTest {
         )
         assertThat(ResolveTrackForPlaybackUseCase.youtubeWatchUrl(track))
             .isEqualTo("https://www.youtube.com/watch?v=vid99")
+    }
+
+    @Test fun `soundcloud resolve stamps streamPolicy onto the queue track`() = runTest {
+        val track = sampleTrack(id = "sc_1", source = TrackSource.SOUNDCLOUD, streamUrl = null)
+        coEvery { downloadRepository.getDownloadInfo(track.id) } returns null
+        coEvery { soundCloudRepository.resolvePlayableStream(track) } returns SoundCloudResolvedStream(
+            url = "https://cf-media.sndcdn.com/x.mp3",
+            streamPolicy = StreamPolicy.STREAM_ONLY,
+        )
+
+        val result = useCase(track)
+
+        assertThat(result.track.streamUrl).isEqualTo("https://cf-media.sndcdn.com/x.mp3")
+        assertThat(result.track.streamPolicy).isEqualTo(StreamPolicy.STREAM_ONLY)
+        assertThat(result.recordedRemoteResolution).isTrue()
+        coVerify(exactly = 0) { soundCloudRepository.getStreamUrl(any()) }
+    }
+
+    @Test fun `soundcloud Go-plus failure surfaces streamFailedMessage`() = runTest {
+        val track = sampleTrack(id = "sc_2", source = TrackSource.SOUNDCLOUD, streamUrl = null)
+        coEvery { downloadRepository.getDownloadInfo(track.id) } returns null
+        coEvery { soundCloudRepository.resolvePlayableStream(track) } throws
+            IOException("This SoundCloud track is DRM-protected or requires Go+ and cannot be played")
+
+        val result = useCase(track, reportFailure = true)
+        assertThat(result.streamFailed).isTrue()
+        assertThat(result.streamFailedMessage).contains("Go+")
     }
 
     private fun sampleTrack(

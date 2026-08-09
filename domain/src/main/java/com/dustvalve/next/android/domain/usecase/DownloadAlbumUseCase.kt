@@ -74,7 +74,10 @@ class DownloadAlbumUseCase @Inject constructor(
         }
 
         val totalTracks = resolved.sumOf { album ->
-            album.tracks.count { t -> t.streamUrl != null || t.source == TrackSource.SOUNDCLOUD }
+            album.tracks.count { t ->
+                !t.isStreamOnlyOrBlocked &&
+                    (t.streamUrl != null || t.source == TrackSource.SOUNDCLOUD)
+            }
         }
         var lostAlbums = resolveResult.unavailable.size
         var firstError: Throwable? = resolveResult.error

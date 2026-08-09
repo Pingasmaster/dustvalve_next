@@ -63,7 +63,7 @@ internal class PlayerLibraryCoordinator(
 
     fun onDownloadTrack() {
         val track = currentTrack() ?: return
-        if (track.isLocal) return
+        if (track.isLocal || track.isStreamOnlyOrBlocked) return
         if (extraState.value.downloadingTrackId != null) return
         extraState.update { it.copy(downloadingTrackId = track.id) }
         downloadJob = scope.launch {

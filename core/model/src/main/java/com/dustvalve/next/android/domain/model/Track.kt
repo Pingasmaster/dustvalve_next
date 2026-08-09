@@ -34,6 +34,15 @@ data class Track(
      * (LOCAL, YouTube).
      */
     val bandcampTrackUrl: String? = null,
+    /**
+     * SoundCloud (and future sources): whether anonymous play/download can
+     * work without probing each transcoding URL. Defaults to [StreamPolicy.UNKNOWN].
+     */
+    val streamPolicy: StreamPolicy = StreamPolicy.UNKNOWN,
 ) {
     val isLocal: Boolean get() = source == TrackSource.LOCAL
+
+    /** Progressive file download is known unavailable (HLS-only or DRM). */
+    val isStreamOnlyOrBlocked: Boolean
+        get() = streamPolicy == StreamPolicy.STREAM_ONLY || streamPolicy == StreamPolicy.BLOCKED
 }

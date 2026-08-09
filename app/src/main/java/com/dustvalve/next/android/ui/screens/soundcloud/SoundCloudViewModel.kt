@@ -24,30 +24,14 @@ import java.io.IOException
 import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
-data class SoundCloudGenreChip(val slug: String, val label: String)
-
 data class SoundCloudUiState(
     val query: String = "",
     val results: List<SearchResult> = emptyList(),
     val isSearching: Boolean = false,
     val searchError: UiText? = null,
-    val selectedGenre: String = "all-music",
     val feed: SoundCloudHomeFeed? = null,
     val isHomeLoading: Boolean = false,
     val homeError: UiText? = null,
-)
-
-val soundCloudGenreChips = listOf(
-    SoundCloudGenreChip("all-music", "All music"),
-    SoundCloudGenreChip("electronic", "Electronic"),
-    SoundCloudGenreChip("hiphoprap", "Hip hop / Rap"),
-    SoundCloudGenreChip("pop", "Pop"),
-    SoundCloudGenreChip("rock", "Rock"),
-    SoundCloudGenreChip("danceedm", "Dance / EDM"),
-    SoundCloudGenreChip("ambient", "Ambient"),
-    SoundCloudGenreChip("soundtrack", "Soundtrack"),
-    SoundCloudGenreChip("classical", "Classical"),
-    SoundCloudGenreChip("alternative", "Alternative"),
 )
 
 @HiltViewModel
@@ -143,24 +127,18 @@ class SoundCloudViewModel @Inject constructor(
         }
     }
 
-    fun selectGenre(slug: String) {
-        if (slug == _uiState.value.selectedGenre && _uiState.value.feed != null) return
-        _uiState.update { it.copy(selectedGenre = slug) }
-        loadHome(slug)
-    }
-
     fun retryHome() {
-        loadHome(_uiState.value.selectedGenre)
+        loadHome()
     }
 
-    private fun loadHome(genre: String = _uiState.value.selectedGenre) {
+    private fun loadHome() {
         homeJob?.cancel()
         homeJob = viewModelScope.launch {
             _uiState.update { it.copy(isHomeLoading = true, homeError = null) }
             try {
-                val feed = soundCloudRepository.getHome(genre)
+                val feed = soundCloudRepository.getHome()
                 _uiState.update {
-                    it.copy(feed = feed, isHomeLoading = false, homeError = null, selectedGenre = genre)
+                    it.copy(feed = feed, isHomeLoading = false, homeError = null)
                 }
             } catch (e: CancellationException) {
                 throw e
