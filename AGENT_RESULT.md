@@ -5,7 +5,7 @@
 - Branch: `wip/lint-hard-split-playback`
 - Worktree: `/home/user/dustvalve_next_lint_split_playback`
 - Base: `f2c6019` (`wip/lint-hard-base`)
-- Tip SHA: (see git log -1 after commit)
+- Tip SHA: `dade40f6b78c70ba0cda9dbc72fddef405638ae2`
 
 ## Baseline IDs removed
 
