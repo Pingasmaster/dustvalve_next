@@ -214,17 +214,14 @@ class PlaylistTransferRepositoryTest {
         coEvery { playlistRepo.getPlaylistByIdSync("p1") } returns Playlist(id = "p1", name = "Mix")
         coEvery { playlistRepo.getTracksInPlaylistSync("p1") } returns listOf(track("t1", "One"))
         coEvery { downloadRepo.getDownloadInfo("t1") } returns null
-        coEvery { downloadRepo.downloadTrack(any()) } throws java.io.IOException("nope")
+        // Export routes downloads through TrackDownloadGateway, which the
+        // repo() helper wires to DownloadRepository.downloadTrack.
+        coEvery { downloadRepo.downloadTrack(any(), any()) } throws java.io.IOException("nope")
 
-        val repo = PlaylistTransferRepository(
+        val repo = repo(
             context = mockk(relaxed = true),
-            playlistRepository = playlistRepo,
+            playlistRepo = playlistRepo,
             downloadRepository = downloadRepo,
-            database = database,
-            trackDao = mockk(relaxed = true),
-            downloadDao = mockk(relaxed = true),
-            client = mockk(relaxed = true),
-            ioDispatcher = UnconfinedTestDispatcher(),
         )
         val baos = ByteArrayOutputStream()
         repo.export("p1", offline = true, out = baos)

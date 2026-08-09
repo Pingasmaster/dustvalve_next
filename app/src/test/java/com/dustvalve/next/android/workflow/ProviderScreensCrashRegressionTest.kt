@@ -89,7 +89,10 @@ class ProviderScreensCrashRegressionTest {
         composeRule.onNodeWithText(string(R.string.nav_label_soundcloud)).performClick()
         composeRule.waitForIdle()
 
-        waitForText(string(R.string.soundcloud_home_genres))
+        // Genre chips were removed in the DRM/ghosts fix. The search hint is
+        // always composed with SoundCloudScreen (unlike home feed chrome,
+        // which depends on a network fetch that may hang or succeed here).
+        waitForText(string(R.string.soundcloud_search_hint))
     }
 
     @Test
