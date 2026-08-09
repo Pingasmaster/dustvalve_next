@@ -35,6 +35,9 @@ internal class PlayerAudioController(appContext: Context, private val playbackMa
             if (active != null && _audioDevices.value.none { it.id == active.id }) {
                 _activeAudioDevice.value = null
                 playbackManager.setPreferredAudioDevice(null)
+                // Preferred BT/USB drop may not fire becoming-noisy; pause to
+                // avoid leaking audio onto the built-in speaker.
+                playbackManager.pause()
             }
         }
     }

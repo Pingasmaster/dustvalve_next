@@ -109,9 +109,9 @@ import com.dustvalve.next.android.ui.screens.player.addAllToQueue
 import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addTrackToPlaylist
 import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitraryTrack
-import com.dustvalve.next.android.ui.screens.player.playAlbum
+import com.dustvalve.next.android.ui.screens.player.playAlbumAwaiting
 import com.dustvalve.next.android.ui.screens.player.playNext
-import com.dustvalve.next.android.ui.screens.player.playTrack
+import com.dustvalve.next.android.ui.screens.player.playTrackAwaiting
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.util.DeepLinkRouter
@@ -195,8 +195,9 @@ fun YouTubeScreen(
         scope.launch {
             runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                 val track = viewModel.getTrackInfo(item.url)
-                playerViewModel.playTrack(track)
-                onExpandPlayer()
+                if (playerViewModel.playTrackAwaiting(track)) {
+                    onExpandPlayer()
+                }
             }
         }
     }
@@ -205,8 +206,9 @@ fun YouTubeScreen(
         scope.launch {
             runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                 val track = viewModel.getTrackInfo("https://www.youtube.com/watch?v=$videoId")
-                playerViewModel.playTrack(track)
-                onExpandPlayer()
+                if (playerViewModel.playTrackAwaiting(track)) {
+                    onExpandPlayer()
+                }
             }
         }
     }
@@ -520,8 +522,9 @@ fun YouTubeScreen(
                                                                 runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                                                                     val track = viewModel.getTrackInfo(result.url)
                                                                     searchBarState.animateToCollapsed()
-                                                                    playerViewModel.playTrack(track)
-                                                                    onExpandPlayer()
+                                                                    if (playerViewModel.playTrackAwaiting(track)) {
+                                                                        onExpandPlayer()
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -698,8 +701,7 @@ fun YouTubeScreen(
                     scope.launch {
                         runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val tracks = viewModel.resolvePlaylistTracks(result.url)
-                            if (tracks.isNotEmpty()) {
-                                playerViewModel.playAlbum(tracks, 0)
+                            if (tracks.isNotEmpty() && playerViewModel.playAlbumAwaiting(tracks, 0)) {
                                 onExpandPlayer()
                             }
                         }

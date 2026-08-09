@@ -493,6 +493,7 @@
     <string name="snackbar_create_playlist_failed">プレイリストの作成に失敗しました</string>
     <string name="snackbar_playing_next">「<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>」を次に再生します</string>
     <string name="snackbar_audio_stream_failed">オーディオストリームを読み込めませんでした</string>
+    <string name="snackbar_youtube_login_required">この動画は年齢制限があり、YouTubeへのログインが必要です</string>
     <string name="snackbar_bandcamp_preview_unavailable">プレビューは利用できません。<xliff:g id="brand">Bandcamp</xliff:g>で購入してください。</string>
     <string name="snackbar_scan_failed">スキャンに失敗しました：<xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
     <string name="snackbar_scan_needs_permission">再スキャンするには音楽ライブラリの権限を許可してください</string>

@@ -337,7 +337,7 @@ class PlayerViewModelResolveTest {
     }
 
     @Test
-    fun playTrackInList_youtubeFails_leavesPreviousQueueIntact() {
+    fun playTrackInList_youtubeFails_skipsForwardToNextPlayable() {
         viewModel.playTrackInList(listOf(FixtureTracks.localTrack()), 0)
         idle()
         TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
@@ -346,6 +346,26 @@ class PlayerViewModelResolveTest {
         coEvery { youtubeRepository.getStreamUrl(any()) } throws IllegalStateException("HTTP 403")
         viewModel.playTrackInList(
             listOf(FixtureTracks.youtubeTrack(), FixtureTracks.localTrack(id = "local_other")),
+            0,
+        )
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+
+        assertThat(queueManager.currentTrack.value?.id).isEqualTo("local_other")
+        assertThat(queueManager.queue.value.map { it.id }).containsExactly("yt_dQw4w9WgXcQ", "local_other").inOrder()
+        assertThat(player.playWhenReady).isTrue()
+    }
+
+    @Test
+    fun playTrackInList_allFromIndexFail_leavesPreviousQueueIntact() {
+        viewModel.playTrackInList(listOf(FixtureTracks.localTrack()), 0)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+        assertThat(player.playWhenReady).isTrue()
+
+        coEvery { youtubeRepository.getStreamUrl(any()) } throws IllegalStateException("HTTP 403")
+        viewModel.playTrackInList(
+            listOf(FixtureTracks.youtubeTrack(id = "yt_a"), FixtureTracks.youtubeTrack(id = "yt_b")),
             0,
         )
         idle()
@@ -367,6 +387,44 @@ class PlayerViewModelResolveTest {
 
         assertThat(queueManager.queue.value.map { it.id }).containsExactly("local_ms_1")
         assertThat(player.playWhenReady).isTrue()
+    }
+
+    @Test
+    fun playAlbum_unplayableStart_skipsForwardToPlayable() {
+        coEvery { youtubeRepository.getStreamUrl(any()) } throws
+            IllegalStateException("no audio adaptiveFormats (playabilityStatus=\"LOGIN_REQUIRED\")")
+
+        viewModel.playAlbum(
+            listOf(FixtureTracks.youtubeTrack(), FixtureTracks.localTrack(id = "album_ok")),
+            0,
+        )
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+
+        assertThat(queueManager.currentTrack.value?.id).isEqualTo("album_ok")
+        assertThat(queueManager.queue.value).hasSize(2)
+    }
+
+    @Test
+    fun playTrack_loginRequired_surfacesAgeGateSnackbar() {
+        coEvery { youtubeRepository.getStreamUrl(any()) } throws
+            IllegalStateException("no audio adaptiveFormats (playabilityStatus=\"LOGIN_REQUIRED\")")
+
+        val collected = mutableListOf<com.dustvalve.next.android.ui.screens.player.PlayerUiState>()
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val job = scope.launch { viewModel.uiState.collect { collected.add(it) } }
+
+        viewModel.playTrack(FixtureTracks.youtubeTrack())
+        idle()
+
+        RobolectricUtil.runMainLooperUntil {
+            collected.lastOrNull()?.snackbarMessage != null
+        }
+        val message = collected.last().snackbarMessage
+        assertThat(message).isInstanceOf(com.dustvalve.next.android.util.UiText.StringResource::class.java)
+        assertThat((message as com.dustvalve.next.android.util.UiText.StringResource).resId)
+            .isEqualTo(com.dustvalve.next.android.R.string.snackbar_youtube_login_required)
+        job.cancel()
     }
 
     // --- H4: queue edits made during background resolution survive ---
