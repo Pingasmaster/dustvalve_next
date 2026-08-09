@@ -50,10 +50,6 @@ import com.dustvalve.next.android.util.LinkResourceType
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-// LongMethod / CyclomaticComplexMethod: AppNavigation is the single NavDestination
-// when-router; its size and branching are intrinsic to that role (one arm per
-// destination), so they are suppressed rather than split into artificial helpers.
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 fun AppNavigation(
     adaptiveInfo: AdaptiveLayoutInfo,
     modifier: Modifier = Modifier,
@@ -125,6 +121,7 @@ fun AppNavigation(
                 },
                 label = "NavContent",
             ) { destination ->
+<<<<<<< HEAD
                 when (destination) {
                     is NavDestination.LocalHome -> LocalScreen(
                         onExpandPlayer = { navViewModel.expandPlayer() },
@@ -278,6 +275,12 @@ fun AppNavigation(
                         )
                     }
                 }
+=======
+                AppNavigationDestination(
+                    destination = destination,
+                    detailVmStores = detailVmStores,
+                )
+>>>>>>> wip/lint-hard-compose-screens
             }
         }
 
@@ -291,39 +294,53 @@ fun AppNavigation(
 
         // Enable-provider confirmation for a link pointing at a disabled source
         pendingLink?.let { pending ->
-            val typeNoun = stringResource(linkKindRes(pending.type))
-            AlertDialog(
-                modifier = Modifier.testTag(TestTags.PROVIDER_ENABLE_DIALOG),
-                onDismissRequest = { navViewModel.dismissPendingLink() },
-                icon = {
-                    Icon(
-                        painter = painterResource(pending.provider.iconRes),
-                        contentDescription = null,
-                    )
-                },
-                title = { Text(stringResource(R.string.provider_enable_title, pending.provider.label)) },
-                text = {
-                    Text(stringResource(R.string.provider_enable_text, pending.provider.label, typeNoun))
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = { navViewModel.confirmPendingLink() },
-                        shapes = ButtonDefaults.shapes(),
-                    ) {
-                        Text(stringResource(R.string.common_action_enable))
-                    }
-                },
-                dismissButton = {
-                    TextButton(
-                        onClick = { navViewModel.dismissPendingLink() },
-                        shapes = ButtonDefaults.shapes(),
-                    ) {
-                        Text(stringResource(R.string.common_action_cancel))
-                    }
-                },
+            ProviderEnableDialog(
+                pending = pending,
+                onConfirm = { navViewModel.confirmPendingLink() },
+                onDismiss = { navViewModel.dismissPendingLink() },
             )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ProviderEnableDialog(
+    pending: PendingLink,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val typeNoun = stringResource(linkKindRes(pending.type))
+    AlertDialog(
+        modifier = Modifier.testTag(TestTags.PROVIDER_ENABLE_DIALOG),
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                painter = painterResource(pending.provider.iconRes),
+                contentDescription = null,
+            )
+        },
+        title = { Text(stringResource(R.string.provider_enable_title, pending.provider.label)) },
+        text = {
+            Text(stringResource(R.string.provider_enable_text, pending.provider.label, typeNoun))
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.common_action_enable))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.common_action_cancel))
+            }
+        },
+    )
 }
 
 private fun linkKindRes(type: LinkResourceType): Int = when (type) {

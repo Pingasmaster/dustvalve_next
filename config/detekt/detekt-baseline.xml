@@ -40,7 +40,14 @@
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@Composable private fun SearchResultItem</ID>
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>CyclomaticComplexMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
+<<<<<<< HEAD
     <ID>CyclomaticComplexMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
+=======
+    <ID>CyclomaticComplexMethod:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$suspend fun scrapeAlbum: Album</ID>
+    <ID>CyclomaticComplexMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
+    <ID>CyclomaticComplexMethod:DustvalveSearchScraper.kt:DustvalveSearchScraper$suspend fun search: List&lt;SearchResult&gt;</ID>
+    <ID>CyclomaticComplexMethod:HtmlUtils.kt:HtmlUtils$fun extractJsonFromScript: String?</ID>
+>>>>>>> wip/lint-hard-compose-screens
     <ID>CyclomaticComplexMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>CyclomaticComplexMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
     <ID>CyclomaticComplexMethod:MiniPlayer.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable fun MiniPlayer</ID>
@@ -49,8 +56,12 @@
     <ID>LongMethod:ArtistDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun ArtistDetailScreen</ID>
     <ID>LongMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>LongMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
+<<<<<<< HEAD
     <ID>LongMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
     <ID>LongMethod:FullPlayerControls.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun FullPlayerSeekBar</ID>
+=======
+    <ID>LongMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
+>>>>>>> wip/lint-hard-compose-screens
     <ID>LongMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>LongMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable private fun LibraryList</ID>
     <ID>LongMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>

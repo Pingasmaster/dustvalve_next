@@ -200,10 +200,8 @@ internal fun FullPlayerSeekBar(
     val hapticFeedback = LocalHapticFeedback.current
     var isSeeking by remember(trackId) { mutableStateOf(false) }
     var seekPosition by remember(trackId) { mutableFloatStateOf(0f) }
-    // Tracks the last scrub segment so we tick once per step, not per frame.
     var lastSeekStep by remember(trackId) { mutableIntStateOf(-1) }
 
-    // Clear isSeeking once the player position catches up to the seek target
     SideEffect {
         if (isSeeking && duration > 0L) {
             val playerFraction = currentPosition.toFloat() / duration.toFloat()
@@ -215,12 +213,10 @@ internal fun FullPlayerSeekBar(
 
     val sliderPosition = if (isSeeking) {
         seekPosition
+    } else if (duration > 0L) {
+        currentPosition.toFloat() / duration.toFloat()
     } else {
-        if (duration > 0L) {
-            currentPosition.toFloat() / duration.toFloat()
-        } else {
-            0f
-        }
+        0f
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -229,116 +225,159 @@ internal fun FullPlayerSeekBar(
                 .fillMaxWidth()
                 .height(40.dp)
                 .then(
-                    if (!isLoadingTrack) {
+                    if (isLoadingTrack) {
                         Modifier
-                            .pointerInput(trackId) {
-                                detectTapGestures { offset ->
-                                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                                    seekPosition = fraction
-                                    val targetMs = (fraction * duration).toLong()
-                                    onSeek(targetMs)
-                                    hapticFeedback.tick()
-                                    lastSeekStep = -1
-                                    // Keep showing seekPosition until player catches up
-                                    isSeeking = true
-                                }
-                            }
-                            .pointerInput(trackId) {
-                                detectDragGestures(
-                                    onDragEnd = {
-                                        val targetMs = (seekPosition * duration).toLong()
-                                        onSeek(targetMs)
-                                        lastSeekStep = -1
-                                        // Keep showing seekPosition until player catches up
-                                    },
-                                    onDragCancel = {
-                                        isSeeking = false
-                                        lastSeekStep = -1
-                                    },
-                                ) { change, _ ->
-                                    change.consume()
-                                    val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                                    isSeeking = true
-                                    seekPosition = fraction
-                                    // Tick once per scrub segment for a textured feel.
-                                    val step = (fraction * SEEK_TICK_SEGMENTS).toInt()
-                                    if (step != lastSeekStep) {
-                                        hapticFeedback.tick()
-                                        lastSeekStep = step
-                                    }
-                                }
-                            }
                     } else {
-                        Modifier
+                        seekGestureModifier(
+                            trackId = trackId,
+                            duration = duration,
+                            seek = SeekGestureCallbacks(
+                                onSeek = onSeek,
+                                seekPosition = { seekPosition },
+                                onSeekFraction = { fraction -> seekPosition = fraction },
+                                setSeeking = { isSeeking = it },
+                                lastSeekStep = { lastSeekStep },
+                                setLastSeekStep = { lastSeekStep = it },
+                                hapticTick = { hapticFeedback.tick() },
+                            ),
+                        )
                     },
                 ),
             contentAlignment = Alignment.Center,
         ) {
-            val barHeight = progressBarSizeDp.dp
-            val isWavy = progressBarStyle == "wavy"
-            if (isLoadingTrack) {
-                if (isWavy) {
-                    LinearWavyProgressIndicator(
-                        modifier = Modifier.fillMaxWidth().height(barHeight),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    )
-                } else {
-                    LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth().height(barHeight),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    )
-                }
-            } else if (isWavy) {
-                LinearWavyProgressIndicator(
-                    progress = { sliderPosition.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().height(barHeight),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    stroke = Stroke(width = barHeight.value),
-                    trackStroke = Stroke(width = barHeight.value),
-                )
-            } else {
-                LinearProgressIndicator(
-                    progress = { sliderPosition.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth().height(barHeight),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                )
-            }
+            FullPlayerSeekProgressIndicator(
+                isLoadingTrack = isLoadingTrack,
+                isWavy = progressBarStyle == "wavy",
+                barHeightDp = progressBarSizeDp,
+                sliderPosition = sliderPosition,
+            )
         }
+        FullPlayerSeekTimeLabels(
+            isLoadingTrack = isLoadingTrack,
+            isSeeking = isSeeking,
+            seekPosition = seekPosition,
+            currentPosition = currentPosition,
+            duration = duration,
+        )
+    }
+}
 
-        // Time labels - reflect seek position during drag
-        val displayPosition = if (isLoadingTrack) {
-            null
-        } else if (isSeeking) {
-            (seekPosition * duration).toLong()
-        } else {
-            currentPosition
+private fun seekGestureModifier(
+    trackId: String,
+    duration: Long,
+    seek: SeekGestureCallbacks,
+): Modifier = Modifier
+    .pointerInput(trackId) {
+        detectTapGestures { offset ->
+            val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+            seek.onSeekFraction(fraction)
+            seek.setSeeking(true)
+            seek.setLastSeekStep(-1)
+            seek.onSeek((fraction * duration).toLong())
+            seek.hapticTick()
         }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                text = if (displayPosition != null) formatSeekTime(displayPosition) else "--:--",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_POSITION),
-            )
-            val remaining = if (displayPosition != null) {
-                (duration - displayPosition).coerceAtLeast(0L)
-            } else {
-                null
+    }
+    .pointerInput(trackId) {
+        detectDragGestures(
+            onDragEnd = {
+                seek.onSeek((seek.seekPosition() * duration).toLong())
+                seek.setLastSeekStep(-1)
+            },
+            onDragCancel = {
+                seek.setSeeking(false)
+                seek.setLastSeekStep(-1)
+            },
+        ) { change, _ ->
+            change.consume()
+            val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+            seek.setSeeking(true)
+            seek.onSeekFraction(fraction)
+            val step = (fraction * SEEK_TICK_SEGMENTS).toInt()
+            if (step != seek.lastSeekStep()) {
+                seek.hapticTick()
+                seek.setLastSeekStep(step)
             }
-            Text(
-                text = if (remaining != null) "-${formatSeekTime(remaining)}" else "--:--",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_DURATION),
-            )
         }
+    }
+
+private class SeekGestureCallbacks(
+    val onSeek: (Long) -> Unit,
+    val seekPosition: () -> Float,
+    val onSeekFraction: (Float) -> Unit,
+    val setSeeking: (Boolean) -> Unit,
+    val lastSeekStep: () -> Int,
+    val setLastSeekStep: (Int) -> Unit,
+    val hapticTick: () -> Unit,
+)
+
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun FullPlayerSeekProgressIndicator(
+    isLoadingTrack: Boolean,
+    isWavy: Boolean,
+    barHeightDp: Int,
+    sliderPosition: Float,
+) {
+    val barHeight = barHeightDp.dp
+    when {
+        isLoadingTrack && isWavy -> LinearWavyProgressIndicator(
+            modifier = Modifier.fillMaxWidth().height(barHeight),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+        isLoadingTrack -> LinearProgressIndicator(
+            modifier = Modifier.fillMaxWidth().height(barHeight),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+        isWavy -> LinearWavyProgressIndicator(
+            progress = { sliderPosition.coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(barHeight),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            stroke = Stroke(width = barHeight.value),
+            trackStroke = Stroke(width = barHeight.value),
+        )
+        else -> LinearProgressIndicator(
+            progress = { sliderPosition.coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(barHeight),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun FullPlayerSeekTimeLabels(
+    isLoadingTrack: Boolean,
+    isSeeking: Boolean,
+    seekPosition: Float,
+    currentPosition: Long,
+    duration: Long,
+) {
+    val displayPosition = when {
+        isLoadingTrack -> null
+        isSeeking -> (seekPosition * duration).toLong()
+        else -> currentPosition
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = if (displayPosition != null) formatSeekTime(displayPosition) else "--:--",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_POSITION),
+        )
+        val remaining = displayPosition?.let { (duration - it).coerceAtLeast(0L) }
+        Text(
+            text = if (remaining != null) "-${formatSeekTime(remaining)}" else "--:--",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testTag(com.dustvalve.next.android.ui.TestTags.PLAYER_DURATION),
+        )
     }
 }
 

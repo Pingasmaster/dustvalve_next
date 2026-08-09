@@ -13,10 +13,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.Transition
+import androidx.compose.runtime.Stable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -46,6 +50,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -60,7 +65,12 @@ import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
+<<<<<<< HEAD
 import com.dustvalve.next.android.ui.adaptive.rememberAdaptiveLayoutInfo
+=======
+import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
+import com.dustvalve.next.android.ui.adaptive.ProvideAdaptiveLayout
+>>>>>>> wip/lint-hard-compose-screens
 import com.dustvalve.next.android.ui.navigation.AppNavigation
 import com.dustvalve.next.android.ui.navigation.BottomNavBar
 import com.dustvalve.next.android.ui.navigation.BottomNavItem
@@ -264,24 +274,7 @@ private data class ThemeConfig(val themeMode: String, val dynamicColor: Boolean,
  */
 private val MINI_BAR_HEIGHT = 66.dp
 
-// LongMethod: MainContent is the composition root branching on adaptive width
-// + expanded/collapsed player + bottom-nav placement; extracting tiny helpers
-// just to chase a line-count threshold would split related layout decisions.
-//
-// ViewModelForwarding is no longer suppressed: MiniPlayer, FullPlayer, and
-// AppNavigation now obtain PlayerViewModel / NavigationViewModel via their
-// own `hiltViewModel()` default param. Because MainActivity is the
-// ViewModelStoreOwner, every hiltViewModel<PlayerViewModel>() /
-// hiltViewModel<NavigationViewModel>() call from this composition returns
-// the SAME activity-scoped instance - no VM is passed as a parameter and
-// the lint rule no longer fires.
-//
-// CyclomaticComplexMethod: the complexity is intrinsic to this orchestration
-// root (adaptive width branch + the mini<->full seekable container transform +
-// the artist/album navigation when-branches); extracting it would only relocate
-// the same branching, so it is suppressed alongside LongMethod.
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun MainContent(activity: MainActivity) {
     val adaptiveInfo = rememberAdaptiveLayoutInfo()
     MainContentBody(
@@ -290,16 +283,33 @@ private fun MainContent(activity: MainActivity) {
     )
 }
 
+<<<<<<< HEAD
 // ViewModels are obtained here via hiltViewModel() (same activity-scoped
 // instances) rather than forwarded from MainContent. Adaptive metrics are
 // computed once above and threaded as an explicit parameter.
+=======
+// Body is separated so ProvideAdaptiveLayout can establish LocalAdaptiveLayoutInfo
+// before chrome reads it. ViewModels are obtained here via hiltViewModel().
+>>>>>>> wip/lint-hard-compose-screens
 @Composable
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun MainContentBody(
     activity: MainActivity,
     adaptiveInfo: AdaptiveLayoutInfo,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     navViewModel: NavigationViewModel = hiltViewModel(),
+) {
+    MainContentKeepScreenOn(activity = activity, playerViewModel = playerViewModel)
+    MainContentDeepLinks(activity = activity, navViewModel = navViewModel, playerViewModel = playerViewModel)
+    MainContentPlayerChrome(
+        playerViewModel = playerViewModel,
+        navViewModel = navViewModel,
+    )
+}
+
+@Composable
+private fun MainContentPlayerChrome(
+    playerViewModel: PlayerViewModel,
+    navViewModel: NavigationViewModel,
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
@@ -307,6 +317,7 @@ private fun MainContentBody(
     val visibleTabs by navViewModel.visibleTabs.collectAsStateWithLifecycle()
     val useNavRail = adaptiveInfo.useNavRail
 
+<<<<<<< HEAD
     // Screen wake lock
     val isPlaying by remember {
         playerViewModel.uiState.map { it.isPlaying }.distinctUntilChanged()
@@ -359,6 +370,8 @@ private fun MainContentBody(
     // Adaptive chrome: NavigationRail on Medium+ (WindowSizeClass), bottom bar on Compact
     // (metrics come from rememberAdaptiveLayoutInfo above).
 
+=======
+>>>>>>> wip/lint-hard-compose-screens
     val miniVisible by remember {
         playerViewModel.uiState.map { it.isMiniPlayerVisible }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
@@ -394,10 +407,6 @@ private fun MainContentBody(
     val seekState = remember { SeekableTransitionState(false) }
     val playerTransition = rememberTransition(seekState, label = "player")
 
-    var containerHeightPx by remember { mutableFloatStateOf(1f) }
-    var bottomBarHeightPx by remember { mutableIntStateOf(0) }
-    val miniBarHeightPx = with(density) { MINI_BAR_HEIGHT.toPx() }
-    val expandDistancePx = containerHeightPx
 
     // Gesture seek state (serialized through a single collector to avoid
     // racing concurrent seekTo calls).
@@ -463,10 +472,61 @@ private fun MainContentBody(
         }
     }
 
+
+    val session = MainPlayerSession(
+        playerViewModel = playerViewModel,
+        navViewModel = navViewModel,
+        adaptiveInfo = adaptiveInfo,
+        backStackSize = backStack.size,
+        showFullPlayer = showFullPlayer,
+        currentTab = currentTab,
+        visibleTabs = visibleTabs,
+        miniVisible = miniVisible,
+        globalSnackbarHostState = globalSnackbarHostState,
+        seekState = seekState,
+        playerTransition = playerTransition,
+        onExpandSeek = onExpandSeek,
+        onExpandSettle = onExpandSettle,
+        onCollapseSeek = onCollapseSeek,
+        onCollapseSettle = onCollapseSettle,
+        density = density,
+    )
+    // Keep mutable height fields in sync: SharedHost writes session.containerHeightPx
+    MainContentSharedHost(session = session)
+}
+
+
+@Stable
+private class MainPlayerSession(
+    val playerViewModel: PlayerViewModel,
+    val navViewModel: NavigationViewModel,
+    val adaptiveInfo: AdaptiveLayoutInfo,
+    val backStackSize: Int,
+    val showFullPlayer: Boolean,
+    val currentTab: BottomNavItem,
+    val visibleTabs: List<BottomNavItem>,
+    val miniVisible: Boolean,
+    val globalSnackbarHostState: SnackbarHostState,
+    val seekState: SeekableTransitionState<Boolean>,
+    val playerTransition: Transition<Boolean>,
+    val onExpandSeek: (Float) -> Unit,
+    val onExpandSettle: (Float) -> Unit,
+    val onCollapseSeek: (Float) -> Unit,
+    val onCollapseSettle: (Float) -> Unit,
+    val density: Density,
+) {
+    var containerHeightPx by mutableFloatStateOf(1f)
+    var bottomBarHeightPx by mutableIntStateOf(0)
+    val expandDistancePx: Float get() = containerHeightPx
+    val miniBarHeightPx: Float get() = with(density) { MINI_BAR_HEIGHT.toPx() }
+}
+
+@Composable
+private fun MainContentSharedHost(session: MainPlayerSession) {
     SharedTransitionLayout(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { containerHeightPx = it.height.toFloat() },
+            .onSizeChanged { session.containerHeightPx = it.height.toFloat() },
     ) {
         val sts = this
         Box(
@@ -476,24 +536,38 @@ private fun MainContentBody(
                 // (macrobenchmark, E2E helpers) can address them via By.res().
                 .semantics { testTagsAsResourceId = true },
         ) {
-            if (useNavRail) {
+            MainContentNavShell(session = session)
+            MainContentPlayerOverlay(session = session, sharedScope = sts)
+            SnackbarHost(
+                hostState = session.globalSnackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = with(session.density) { session.bottomBarHeightPx.toDp() } + 8.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainContentNavShell(session: MainPlayerSession) {
+    if (session.adaptiveInfo.useNavRail) {
                 // Tablet / large screen layout: NavigationRail on the left
                 Row(modifier = Modifier.fillMaxSize()) {
                     SideNavRail(
-                        currentTab = currentTab,
-                        visibleTabs = visibleTabs,
-                        onItemSelected = { dest -> navViewModel.navigateTo(dest) },
+                        currentTab = session.currentTab,
+                        visibleTabs = session.visibleTabs,
+                        onItemSelected = { dest -> session.navViewModel.navigateTo(dest) },
                     )
                     Scaffold(
                         bottomBar = {
                             // Reserve the mini-bar slot; the bar itself renders in
                             // the shared-transition overlay so it can morph.
-                            if (miniVisible) {
+                            if (session.miniVisible) {
                                 Spacer(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(MINI_BAR_HEIGHT)
-                                        .onSizeChanged { bottomBarHeightPx = it.height },
+                                        .onSizeChanged { session.bottomBarHeightPx = it.height },
                                 )
                             }
                         },
@@ -510,14 +584,14 @@ private fun MainContentBody(
                 // Compact layout: NavigationBar at the bottom
                 Scaffold(
                     bottomBar = {
-                        Column(modifier = Modifier.onSizeChanged { bottomBarHeightPx = it.height }) {
-                            if (miniVisible) {
+                        Column(modifier = Modifier.onSizeChanged { session.bottomBarHeightPx = it.height }) {
+                            if (session.miniVisible) {
                                 Spacer(modifier = Modifier.fillMaxWidth().height(MINI_BAR_HEIGHT))
                             }
                             BottomNavBar(
-                                currentTab = currentTab,
-                                visibleTabs = visibleTabs,
-                                onItemSelected = { dest -> navViewModel.navigateTo(dest) },
+                                currentTab = session.currentTab,
+                                visibleTabs = session.visibleTabs,
+                                onItemSelected = { dest -> session.navViewModel.navigateTo(dest) },
                             )
                         }
                     },
@@ -531,34 +605,45 @@ private fun MainContentBody(
                 }
             }
 
+}
+
+@Composable
+private fun BoxScope.MainContentPlayerOverlay(
+    session: MainPlayerSession,
+    sharedScope: SharedTransitionScope,
+) {
             // Player surface: the mini bar and full player are the two states of
             // one container transform. The transparent host Box does not consume
             // touches, so taps outside the docked mini bar reach the app behind it.
-            if (miniVisible) {
-                val dockDp = with(density) {
-                    (bottomBarHeightPx - miniBarHeightPx).coerceAtLeast(0f).toDp()
+            if (session.miniVisible) {
+                val dockDp = with(session.density) {
+                    (session.bottomBarHeightPx - session.miniBarHeightPx).coerceAtLeast(0f).toDp()
                 }
-                playerTransition.AnimatedContent(
+                session.playerTransition.AnimatedContent(
                     modifier = Modifier.align(Alignment.BottomCenter),
                     contentAlignment = Alignment.BottomCenter,
                 ) { isFull ->
                     val avScope = this
                     if (isFull) {
                         FullPlayer(
+<<<<<<< HEAD
                             adaptiveInfo = adaptiveInfo,
                             sharedScope = sts,
+=======
+                            sharedScope = sharedScope,
+>>>>>>> wip/lint-hard-compose-screens
                             visScope = avScope,
-                            expandDistancePx = expandDistancePx,
-                            onCollapse = { navViewModel.collapsePlayer() },
-                            onCollapseSeek = onCollapseSeek,
-                            onCollapseSettle = onCollapseSettle,
+                            expandDistancePx = session.expandDistancePx,
+                            onCollapse = { session.navViewModel.collapsePlayer() },
+                            onCollapseSeek = session.onCollapseSeek,
+                            onCollapseSettle = session.onCollapseSettle,
                             modifier = Modifier.fillMaxSize(),
                             onArtistClick = { track ->
-                                navViewModel.collapsePlayer()
+                                session.navViewModel.collapsePlayer()
                                 when {
-                                    track.isLocal -> navViewModel.requestLocalArtistFilter(track.artist)
+                                    track.isLocal -> session.navViewModel.requestLocalArtistFilter(track.artist)
 
-                                    track.source == TrackSource.YOUTUBE -> navViewModel.navigateTo(
+                                    track.source == TrackSource.YOUTUBE -> session.navViewModel.navigateTo(
                                         NavDestination.ArtistDetail(
                                             url = track.artistUrl,
                                             sourceId = "youtube",
@@ -567,15 +652,15 @@ private fun MainContentBody(
                                         ),
                                     )
 
-                                    else -> navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
+                                    else -> session.navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
                                 }
                             },
                             onAlbumClick = { track ->
                                 when {
                                     track.source == TrackSource.YOUTUBE -> {
                                         if (track.albumUrl.isNotBlank()) {
-                                            navViewModel.collapsePlayer()
-                                            navViewModel.navigateTo(
+                                            session.navViewModel.collapsePlayer()
+                                            session.navViewModel.navigateTo(
                                                 NavDestination.CollectionDetail(
                                                     url = track.albumUrl,
                                                     sourceId = "youtube",
@@ -585,13 +670,13 @@ private fun MainContentBody(
                                         } else {
                                             // Pre-fetch already ran (albumLookupDone=true);
                                             // empty means the video has no YTM album.
-                                            playerViewModel.showNoAlbumSnackbar()
+                                            session.playerViewModel.showNoAlbumSnackbar()
                                         }
                                     }
 
                                     track.albumUrl.isNotBlank() -> {
-                                        navViewModel.collapsePlayer()
-                                        navViewModel.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
+                                        session.navViewModel.collapsePlayer()
+                                        session.navViewModel.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
                                     }
                                 }
                             },
@@ -603,14 +688,14 @@ private fun MainContentBody(
                                 .padding(bottom = dockDp),
                             contentAlignment = Alignment.BottomCenter,
                         ) {
-                            val miniMax = adaptiveInfo.miniPlayerMaxWidth
+                            val miniMax = session.adaptiveInfo.miniPlayerMaxWidth
                             MiniPlayer(
-                                sharedScope = sts,
+                                sharedScope = sharedScope,
                                 visScope = avScope,
-                                expandDistancePx = expandDistancePx,
-                                onExpandClick = { navViewModel.expandPlayer() },
-                                onExpandSeek = onExpandSeek,
-                                onExpandSettle = onExpandSettle,
+                                expandDistancePx = session.expandDistancePx,
+                                onExpandClick = { session.navViewModel.expandPlayer() },
+                                onExpandSeek = session.onExpandSeek,
+                                onExpandSettle = session.onExpandSettle,
                                 modifier = if (miniMax == Dp.Unspecified) {
                                     Modifier.fillMaxWidth()
                                 } else {
@@ -624,12 +709,48 @@ private fun MainContentBody(
                 }
             }
 
-            SnackbarHost(
-                hostState = globalSnackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = with(density) { bottomBarHeightPx.toDp() } + 8.dp),
-            )
+}
+
+@Composable
+private fun MainContentKeepScreenOn(activity: MainActivity, playerViewModel: PlayerViewModel) {
+    val isPlaying by remember {
+        playerViewModel.uiState.map { it.isPlaying }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val keepScreenOnInApp by remember {
+        activity.settingsDataStore.keepScreenOnInApp
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val keepScreenOnWhilePlaying by remember {
+        activity.settingsDataStore.keepScreenOnWhilePlaying
+    }.collectAsStateWithLifecycle(initialValue = false)
+    val shouldKeepScreenOn = keepScreenOnInApp && (!keepScreenOnWhilePlaying || isPlaying)
+    DisposableEffect(shouldKeepScreenOn) {
+        if (shouldKeepScreenOn) {
+            activity.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
+        onDispose {
+            activity.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+}
+
+@Composable
+private fun MainContentDeepLinks(
+    activity: MainActivity,
+    navViewModel: NavigationViewModel,
+    playerViewModel: PlayerViewModel,
+) {
+    val deepLinkUrl by activity.deepLinkUrl.collectAsStateWithLifecycle()
+    val deepLinkTrack by navViewModel.deepLinkTrack.collectAsStateWithLifecycle()
+    LaunchedEffect(deepLinkUrl) {
+        val url = deepLinkUrl ?: return@LaunchedEffect
+        activity.consumeDeepLink()
+        navViewModel.handleDeepLink(url)
+    }
+    LaunchedEffect(deepLinkTrack) {
+        val track = deepLinkTrack ?: return@LaunchedEffect
+        navViewModel.consumeDeepLinkTrack()
+        playerViewModel.playTrack(track)
     }
 }
