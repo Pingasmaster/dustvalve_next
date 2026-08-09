@@ -2,6 +2,7 @@ package com.dustvalve.next.android.domain.repository
 
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
+import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SoundCloudHomeFeed
@@ -19,6 +20,11 @@ interface SoundCloudRepository {
     suspend fun search(query: String, filter: String? = null): List<SearchResult>
     suspend fun getTrack(urlOrId: String): Track
     suspend fun getStreamUrl(track: Track): String
+    /**
+     * Progressive-only CDN URL suitable for file download (rejects HLS and
+     * encrypted/Go+ transcodings). Pair is (url, format inferred from path).
+     */
+    suspend fun getDownloadableStream(track: Track): Pair<String, AudioFormat>
     suspend fun getArtist(url: String): Artist
     suspend fun getArtistTracks(url: String, continuation: Any? = null): MusicCollection
     suspend fun getAlbum(url: String): Album

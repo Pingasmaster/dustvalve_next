@@ -3,6 +3,7 @@ package com.dustvalve.next.android.domain.usecase
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.Track
+import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
 import com.dustvalve.next.android.domain.repository.DownloadRepository
@@ -72,7 +73,9 @@ class DownloadAlbumUseCase @Inject constructor(
             resolved += albumRepository.getAlbumDetail(albumStub.url)
         }
 
-        val totalTracks = resolved.sumOf { it.tracks.count { t -> t.streamUrl != null } }
+        val totalTracks = resolved.sumOf { album ->
+            album.tracks.count { t -> t.streamUrl != null || t.source == TrackSource.SOUNDCLOUD }
+        }
         var lostAlbums = resolveResult.unavailable.size
         var firstError: Throwable? = resolveResult.error
         notificationCenter.withBatch(

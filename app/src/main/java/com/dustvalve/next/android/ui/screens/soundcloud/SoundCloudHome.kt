@@ -96,16 +96,41 @@ internal fun SoundCloudHomeContent(
         }
 
         state.feed != null -> {
-            SoundCloudFeed(
-                carouselItemWidth = carouselItemWidth,
-                feed = state.feed,
-                selectedGenre = state.selectedGenre,
-                isRefreshing = state.isHomeLoading,
-                onGenreSelect = onGenreSelect,
-                onPlayTrack = onPlayTrack,
-                onShelfItemClick = onShelfItemClick,
-                modifier = modifier,
-            )
+            Column(modifier = modifier.fillMaxSize()) {
+                val homeError = state.homeError
+                if (homeError != null) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = homeError.asString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = onRetry,
+                            shapes = ButtonDefaults.shapes(),
+                        ) {
+                            Text(stringResource(R.string.soundcloud_home_retry))
+                        }
+                    }
+                }
+                SoundCloudFeed(
+                    carouselItemWidth = carouselItemWidth,
+                    feed = state.feed,
+                    selectedGenre = state.selectedGenre,
+                    isRefreshing = state.isHomeLoading,
+                    onGenreSelect = onGenreSelect,
+                    onPlayTrack = onPlayTrack,
+                    onShelfItemClick = onShelfItemClick,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
 
         else -> {

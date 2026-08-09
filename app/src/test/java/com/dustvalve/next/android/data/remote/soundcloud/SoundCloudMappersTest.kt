@@ -107,6 +107,31 @@ class SoundCloudMappersTest {
             "https://api-v2.soundcloud.com/media/progressive",
             "https://api-v2.soundcloud.com/media/hls",
         ).inOrder()
+        assertThat(SoundCloudMappers.pickBestTranscodingUrls(track, progressiveOnly = true))
+            .containsExactly("https://api-v2.soundcloud.com/media/progressive")
+        assertThat(SoundCloudMappers.hasOnlyEncryptedTranscodings(track)).isFalse()
+    }
+
+    @Test
+    fun `hasOnlyEncryptedTranscodings detects Go-plus DRM tracks`() {
+        val track = json.parseToJsonElement(
+            """
+            {
+              "media": {
+                "transcodings": [
+                  {
+                    "url": "https://api-v2.soundcloud.com/media/enc",
+                    "snipped": false,
+                    "format": { "protocol": "cbc-encrypted-hls" },
+                    "quality": "hq"
+                  }
+                ]
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThat(SoundCloudMappers.pickBestTranscodingUrls(track)).isEmpty()
+        assertThat(SoundCloudMappers.hasOnlyEncryptedTranscodings(track)).isTrue()
     }
 
     @Test
