@@ -12,18 +12,21 @@ See also Cursor rule `android-ask-before-suppress`.
 
 Four automated tiers (see docs/testing/README.md):
 - `./build.sh` (default) - RELEASE path: regenerates baseline+startup profiles
-  (KVM), bumps version, then full lint/test/assemble. Use `./build.sh --debug`
-  for day-to-day builds (skips baselines + version bump).
+  (KVM), bumps version, full lint/test/assemble, then GMD shippedsmoke +
+  smoke + hermetic e2e. Use `./build.sh --debug` for day-to-day builds
+  (skips baselines, version bump, and device gates).
 - `./build.sh --workflow-tests` - fast JVM regression net (real ExoPlayer +
   real MainActivity under Robolectric). Run this after ANY change touching
   playback, navigation, or the provider screens.
 - `./build.sh --smoke` / `--e2e` / `--e2e-live` - Gradle Managed Device
-  suites (`pixel7aApi37`). Requires KVM; run locally only.
+  suites (`pixel7aApi37`). Requires KVM; run locally only (also gated on
+  the default release path except `--e2e-live`).
 - `:shippedsmoke` - drives the APK as SHIPPED (release + proguard-rules.pro
   alone) through UiAutomator, covering the library minification the
   `-PtestReleaseBuild` lane cannot. NEVER pass `-PtestReleaseBuild` to it:
   that applies proguard-test-support.pro and defeats the whole point.
-  Local: `./build.sh --smoke-shipped`.
+  Local: `./build.sh --smoke-shipped` (also gated on the default release
+  path).
 - Baseline profiles regenerate on every default `./build.sh` release path
   (skipped by `--debug`). Macrobenchmark stays opt-in / advisory:
   `./build.sh --macrobenchmark`.
@@ -68,10 +71,12 @@ No GitHub Actions workflows - all gates run locally via `./build.sh`.
 Documented exceptions (allowlisted in `scripts/check_ascii.sh`; keep the
 two lists in sync):
 
-- `app/src/main/res/values*/` - localization resources, every locale
+- `*/src/main/res/values*/` - localization resources, every locale
   including the default `values/` (user-facing typography is correct there).
 - `*/src/test/resources/fixtures/` - captured real server responses;
   bytes must stay byte-faithful for parser tests.
+- `*/src/release/baseline-prof.txt` and `startup-prof.txt` - generated AOT
+  profiles (may contain non-ASCII from dex descriptors).
 - `TRANSLATIONS.md` - documents typographic punctuation for translators.
 - `gradlew` - Gradle-generated, never hand-edited.
 - Unicode-behavior code and tests, where the non-ASCII IS the tested

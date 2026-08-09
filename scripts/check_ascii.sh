@@ -20,7 +20,7 @@ WARN_ONLY=0
 is_exempt() {
     case "$1" in
         # Localization resources, every locale including the default
-        app/src/main/res/values*/*) return 0 ;;
+        */src/main/res/values*/*) return 0 ;;
         # Captured real server responses; bytes must stay faithful
         */src/test/resources/fixtures/*) return 0 ;;
         # Documents typographic quotes for translators
@@ -36,8 +36,11 @@ is_exempt() {
         app/src/test/java/com/dustvalve/next/android/data/remote/youtubemusic/YouTubeMusicSearchParserTest.kt) return 0 ;;
         data/src/main/java/com/dustvalve/next/android/data/remote/youtubemusic/YouTubeMusicSearchParser.kt) return 0 ;;
         data/src/main/java/com/dustvalve/next/android/data/remote/SubTag.kt) return 0 ;;
+        # Generated AOT profiles (install_baseline_profiles.sh -> app/src/release/).
+        */src/release/baseline-prof.txt|*/src/release/startup-prof.txt) return 0 ;;
+        */baselineProfiles/*) return 0 ;;
         # Binaries
-        *.png|*.webp|*.jpg|*.jks|*.jar|*.apk|*.ico|*.gif|*.mp3|*.wav) return 0 ;;
+        *.png|*.webp|*.jpg|*.jks|*.jar|*.apk|*.ico|*.gif|*.mp3|*.wav|*.so|*.aar) return 0 ;;
     esac
     return 1
 }

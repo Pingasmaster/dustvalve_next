@@ -12,21 +12,31 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-out=$(find baselineprofile/build/outputs -type d -name '*additional*output*' 2>/dev/null | head -1 || true)
+# Prefer the future collector output when several directories linger.
+out=$(
+    find baselineprofile/build/outputs -type d -name '*additional*output*' 2>/dev/null \
+        | sort \
+        | awk '
+            /[Ff]uture/ { best = $0; exit }
+            { if (best == "") best = $0 }
+            END { if (best != "") print best }
+          ' \
+        | head -1 || true
+)
 if [[ -z "$out" ]]; then
     echo "ERROR: no baselineprofile additional-output directory produced." >&2
     exit 1
 fi
 
 # Prefer non-timestamped copies (stable names from the collector).
-baseline=$(find "$out" -name '*baseline-prof.txt' ! -name '*-20*' 2>/dev/null | head -1 || true)
+baseline=$(find "$out" -name '*baseline-prof.txt' ! -name '*-20*' 2>/dev/null | sort | head -1 || true)
 if [[ -z "$baseline" ]]; then
-    baseline=$(find "$out" -name '*baseline-prof*.txt' 2>/dev/null | head -1 || true)
+    baseline=$(find "$out" -name '*baseline-prof*.txt' 2>/dev/null | sort | head -1 || true)
 fi
 
-startup=$(find "$out" -name '*startup-prof.txt' ! -name '*-20*' 2>/dev/null | head -1 || true)
+startup=$(find "$out" -name '*startup-prof.txt' ! -name '*-20*' 2>/dev/null | sort | head -1 || true)
 if [[ -z "$startup" ]]; then
-    startup=$(find "$out" -name '*startup-prof*.txt' 2>/dev/null | head -1 || true)
+    startup=$(find "$out" -name '*startup-prof*.txt' 2>/dev/null | sort | head -1 || true)
 fi
 
 if [[ (-z "$baseline" || ! -s "$baseline") && (-n "$startup" && -s "$startup") ]]; then

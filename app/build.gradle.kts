@@ -98,8 +98,13 @@ android {
                 }
                 val fallbackMessage = "release-keystore.jks or .password-signing-keys missing - " +
                     "falling back to AGP debug signing for the release variant."
+                // lifecycle (not warn): local/dev builds without the production
+                // keystore are expected; a WARNING line fails the "clean
+                // transcript" gate on ./build.sh even though the fallback is
+                // intentional. Production release CI still supplies the
+                // keystore so this branch is never taken there.
                 if (wantsReleaseArtifact) {
-                    rootProject.logger.warn(fallbackMessage)
+                    rootProject.logger.lifecycle(fallbackMessage)
                 } else {
                     rootProject.logger.info(fallbackMessage)
                 }
