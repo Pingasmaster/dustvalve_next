@@ -80,7 +80,7 @@ internal fun FullPlayerAlbumArtRow(
         chrome.onCarouselModeChange(false)
     }
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = if (artCapped) Arrangement.Center else Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -126,7 +126,6 @@ internal fun FullPlayerAlbumArtRow(
                         motion = motion,
                         chrome = chrome,
                         artActions = artActions,
-                        modifier = modifier,
                     )
                 }
             }
@@ -198,7 +197,7 @@ private fun FullPlayerAlbumArtStack(
     artActions: FullPlayerArtActions,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         FullPlayerStackedCovers(
             queue = state.queue,
             currentQueueIndex = state.currentQueueIndex,
@@ -211,7 +210,6 @@ private fun FullPlayerAlbumArtStack(
             motion = motion,
             chrome = chrome,
             artActions = artActions,
-            modifier = modifier,
         )
     }
 }
@@ -279,7 +277,6 @@ private fun FullPlayerMainCover(
     val swipeSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
     val albumArtGestureModifier = Modifier
         .fillMaxSize()
-        .then(modifier)
         .zIndex(1f)
         .graphicsLayer {
             translationX = motion.albumSwipeOffsetX.value
@@ -350,7 +347,7 @@ private fun FullPlayerMainCover(
                 },
             )
         }
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (track.artUrl.isNotBlank()) {
             AsyncImage(
                 model = track.artUrl,

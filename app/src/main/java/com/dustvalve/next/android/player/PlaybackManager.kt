@@ -37,7 +37,7 @@ class PlaybackManager @Inject constructor(
     private val player: ExoPlayer,
     private val queueManager: QueueManager,
     // Constructor param (not a property): only feeds [mediaPreparer] below.
-    @param:ApplicationContext context: Context,
+    @ApplicationContext context: Context,
 ) {
 
     private var scope = CoroutineScope(

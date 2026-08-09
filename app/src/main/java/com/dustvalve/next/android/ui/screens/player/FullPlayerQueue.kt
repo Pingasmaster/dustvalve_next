@@ -146,7 +146,7 @@ internal fun UpNextQueuePane(
                     onPlay = { playerViewModel.playQueueEntry(queueEntry.uid) },
                     onRemove = { playerViewModel.removeQueueEntry(queueEntry.uid) },
                     onLongClick = { onEntryLongClick(queueEntry) },
-                    modifier = dragHandleModifier,
+                    dragHandleModifier = dragHandleModifier,
                 )
             }
             if (displayedEntries.size > 15) {
@@ -167,6 +167,7 @@ private fun UpNextQueueRow(
     onRemove: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    dragHandleModifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val queueTrack = model.queueEntry.track
@@ -186,6 +187,7 @@ private fun UpNextQueueRow(
 
     SwipeToDismissBox(
         state = dismissState,
+        modifier = modifier,
         enableDismissFromStartToEnd = false,
         gesturesEnabled = !model.isDragging,
         backgroundContent = {
@@ -243,7 +245,7 @@ private fun UpNextQueueRow(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .then(modifier),
+                                .then(dragHandleModifier),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
