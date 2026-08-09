@@ -348,7 +348,7 @@ class YouTubeRepositoryImplTest {
             SearchResult(SearchResultType.YOUTUBE_PLAYLIST, "p", "u2", null, null, null, null, null),
             SearchResult(SearchResultType.YOUTUBE_ARTIST, "a", "u3", null, null, null, null, null),
         )
-        coEvery { client.search(query = "q", params = null) } returns empty
+        coEvery { client.search(query = "q", params = "EgIQAQ%3D%3D") } returns empty
         every { searchParser.parse(empty) } returns YouTubeSearchParser.Page(mixed, "TOK")
 
         val (out, page) = repo.search("q", filter = "songs")
@@ -356,6 +356,22 @@ class YouTubeRepositoryImplTest {
         assertThat(out.first().type).isEqualTo(SearchResultType.YOUTUBE_TRACK)
         // Continuation surfacing not yet wired; repository returns null for now.
         assertThat(page).isNull()
+    }
+
+    @Test fun `search sends playlist filter params for playlists chip`() = runTest {
+        coEvery { client.search(query = "q", params = "EgIQAw%3D%3D") } returns empty
+        every { searchParser.parse(empty) } returns YouTubeSearchParser.Page(emptyList(), null)
+
+        repo.search("q", filter = "playlists")
+        coVerify { client.search(query = "q", params = "EgIQAw%3D%3D") }
+    }
+
+    @Test fun `search sends channel filter params for artists chip`() = runTest {
+        coEvery { client.search(query = "q", params = "EgIQAg%3D%3D") } returns empty
+        every { searchParser.parse(empty) } returns YouTubeSearchParser.Page(emptyList(), null)
+
+        repo.search("q", filter = "artists")
+        coVerify { client.search(query = "q", params = "EgIQAg%3D%3D") }
     }
 
     @Test fun `search returns all when no filter`() = runTest {
@@ -368,6 +384,53 @@ class YouTubeRepositoryImplTest {
 
         val (out, _) = repo.search("q", filter = null)
         assertThat(out).hasSize(2)
+    }
+
+    @Test fun `getPlaylistTracks routes RD mixes through getMixPage`() = runTest {
+        every { playlistParser.extractMixSeedVideoId("RDdQw4w9WgXcQ") } returns "dQw4w9WgXcQ"
+        coEvery { client.next(videoId = "dQw4w9WgXcQ", playlistId = "RDdQw4w9WgXcQ") } returns empty
+        every {
+            playlistParser.parseMix(empty, "RDdQw4w9WgXcQ", startIndex = 1, seenVideoIds = emptySet())
+        } returns YouTubePlaylistParser.MixPage(
+            tracks = listOf(track("mixvid00001")),
+            title = "Mix Title",
+            continuation = null,
+        )
+
+        val result = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=RDdQw4w9WgXcQ")
+        assertThat(result.title).isEqualTo("Mix Title")
+        assertThat(result.tracks.map { it.id }).containsExactly("yt_mixvid00001")
+        coVerify(exactly = 0) { client.browse(any(), any()) }
+    }
+
+    @Test fun `getPlaylistTracks fails when mix page is empty`() = runTest {
+        every { playlistParser.extractMixSeedVideoId("RDempty00001") } returns "empty000001"
+        coEvery { client.next(videoId = "empty000001", playlistId = "RDempty00001") } returns empty
+        every {
+            playlistParser.parseMix(empty, "RDempty00001", startIndex = 1, seenVideoIds = emptySet())
+        } returns YouTubePlaylistParser.MixPage(tracks = emptyList(), title = "Empty Mix", continuation = null)
+
+        val ex = runCatching {
+            repo.getPlaylistTracks("https://www.youtube.com/playlist?list=RDempty00001")
+        }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        assertThat(ex!!.message).contains("no tracks")
+    }
+
+    @Test fun `getPlaylistTracks fails on unviewable alertRenderer`() = runTest {
+        val alert = kotlinx.serialization.json.Json.parseToJsonElement(
+            """
+            {"alerts":[{"alertRenderer":{"type":"ERROR",
+              "text":{"runs":[{"text":"This playlist type is unviewable."}]}}}]}
+            """.trimIndent(),
+        )
+        coEvery { client.browse("VLprivatePL01") } returns alert
+        val ex = runCatching {
+            repo.getPlaylistTracks("https://www.youtube.com/playlist?list=privatePL01")
+        }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(IllegalStateException::class.java)
+        assertThat(ex!!.message).contains("unviewable")
+        coVerify(exactly = 0) { playlistParser.parse(any(), any()) }
     }
 
     private fun track(id: String) = Track(

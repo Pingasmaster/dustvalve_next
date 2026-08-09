@@ -22,12 +22,20 @@ class YouTubeMusicArtistParser @Inject constructor() {
 
     data class ArtistAlbum(val browseId: String, val title: String, val artUrl: String, val year: String? = null)
 
+    /**
+     * "Show all" target for the Top songs shelf, when present. Prefer a
+     * browseId (playlist / songs list page); fall back to a playlistId on
+     * watchEndpoint / watchPlaylistEndpoint.
+     */
+    data class SongsMoreEndpoint(val browseId: String? = null, val playlistId: String? = null)
+
     data class ArtistPage(
         val name: String?,
         val avatarUrl: String?,
         val songs: List<Track>,
         val albums: List<ArtistAlbum>,
         val linkedChannelId: String?,
+        val songsMoreEndpoint: SongsMoreEndpoint? = null,
     )
 
     fun parse(root: JsonElement, channelId: String): ArtistPage {
@@ -35,9 +43,13 @@ class YouTubeMusicArtistParser @Inject constructor() {
         val avatarUrl = extractAvatarUrl(root)
         val songs = mutableListOf<Track>()
         val albums = mutableListOf<ArtistAlbum>()
+        var songsMore: SongsMoreEndpoint? = null
         for (section in resolveSections(root)) {
             section.path("musicShelfRenderer")?.let { shelf ->
                 songs += parseSongShelf(shelf, channelId, name)
+                if (songsMore == null) {
+                    songsMore = extractSongsMoreEndpoint(shelf)
+                }
             }
             section.path("musicCarouselShelfRenderer")?.let { carousel ->
                 albums += parseAlbumCarousel(carousel)
@@ -49,7 +61,51 @@ class YouTubeMusicArtistParser @Inject constructor() {
             songs = songs.distinctBy { it.id },
             albums = albums.distinctBy { it.browseId },
             linkedChannelId = findLinkedChannelId(root, channelId),
+            songsMoreEndpoint = songsMore,
         )
+    }
+
+    /**
+     * Parses a Top songs "Show all" browse response (musicShelfRenderer /
+     * playlist-shaped shelves) into tracks.
+     */
+    fun parseSongList(root: JsonElement, channelId: String, artistName: String?): List<Track> {
+        val songs = mutableListOf<Track>()
+        for (section in resolveSections(root)) {
+            section.path("musicShelfRenderer")?.let { shelf ->
+                songs += parseSongShelf(shelf, channelId, artistName)
+            }
+            section.path("musicPlaylistShelfRenderer")?.let { shelf ->
+                songs += parseSongShelf(shelf, channelId, artistName)
+            }
+        }
+        // Some "Show all" pages put the shelf under secondaryContents.
+        val secondary = root.path("contents")
+            ?.path("twoColumnBrowseResultsRenderer")
+            ?.path("secondaryContents")
+            ?.path("sectionListRenderer")
+            ?.path("contents")
+            ?.arr()
+            .orEmpty()
+        for (section in secondary.flatMap { flattenSection(it) }) {
+            section.path("musicShelfRenderer")?.let { shelf ->
+                songs += parseSongShelf(shelf, channelId, artistName)
+            }
+            section.path("musicPlaylistShelfRenderer")?.let { shelf ->
+                songs += parseSongShelf(shelf, channelId, artistName)
+            }
+        }
+        return songs.distinctBy { it.id }
+    }
+
+    private fun extractSongsMoreEndpoint(shelf: JsonElement): SongsMoreEndpoint? {
+        val bottom = shelf.path("bottomEndpoint") ?: return null
+        val browse = bottom.path("browseEndpoint")
+        val browseId = browse?.str("browseId")
+        val watchPlaylist = bottom.path("watchPlaylistEndpoint")?.str("playlistId")
+            ?: bottom.path("watchEndpoint")?.str("playlistId")
+        if (browseId.isNullOrBlank() && watchPlaylist.isNullOrBlank()) return null
+        return SongsMoreEndpoint(browseId = browseId, playlistId = watchPlaylist)
     }
 
     private fun extractName(root: JsonElement): String? = root.path("header")

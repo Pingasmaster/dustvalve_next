@@ -129,9 +129,14 @@ class YouTubeMusicRepositoryImpl(
         return searchParser.parse(response)
     }
 
-    /** YT Music search filter params (opaque tokens YT publishes for each filter chip). */
-    private fun filterParams(filter: String?): String = when (filter) {
-        null, "songs" -> SONGS_PARAMS
+    /**
+     * YT Music search filter params (opaque tokens YT publishes for each
+     * filter chip). Null filter ("All") must send null params for a mixed
+     * search - forcing SONGS_PARAMS made the All chip songs-only.
+     */
+    private fun filterParams(filter: String?): String? = when (filter) {
+        null, "all" -> null
+        "songs" -> SONGS_PARAMS
         "videos" -> VIDEOS_PARAMS
         "albums" -> ALBUMS_PARAMS
         "playlists" -> PLAYLISTS_PARAMS

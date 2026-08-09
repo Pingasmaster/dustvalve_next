@@ -54,6 +54,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
         val browseId = browse?.path("browseId")?.str()
         val pageType = browse?.path("browseEndpointContextSupportedConfigs")
             ?.path("browseEndpointContextMusicConfig")?.str("pageType")
+        val overlayOlak = extractOverlayOlak(card)
 
         return when {
             watch != null -> SearchResult(
@@ -81,7 +82,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
             browseId != null && pageType?.contains("ALBUM") == true -> SearchResult(
                 type = SearchResultType.YOUTUBE_ALBUM,
                 name = title,
-                url = "https://www.youtube.com/playlist?list=${browseId.removePrefix("VL")}",
+                url = albumPlaylistUrl(overlayOlak, browseId),
                 imageUrl = thumbnail,
                 artist = subtitle,
                 album = null,
@@ -144,6 +145,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
         val browseId = browse?.path("browseId")?.str()
         val pageType = browse?.path("browseEndpointContextSupportedConfigs")
             ?.path("browseEndpointContextMusicConfig")?.str("pageType")
+        val overlayOlak = extractOverlayOlak(item)
 
         return when {
             videoId != null -> SearchResult(
@@ -171,7 +173,7 @@ class YouTubeMusicSearchParser @Inject constructor() {
             browseId != null && pageType?.contains("ALBUM") == true -> SearchResult(
                 type = SearchResultType.YOUTUBE_ALBUM,
                 name = title,
-                url = "https://www.youtube.com/playlist?list=${browseId.removePrefix("VL")}",
+                url = albumPlaylistUrl(overlayOlak, browseId),
                 imageUrl = thumbnail,
                 artist = artist,
                 album = null,
@@ -192,5 +194,36 @@ class YouTubeMusicSearchParser @Inject constructor() {
 
             else -> null
         }
+    }
+
+    /**
+     * Album rows carry an MPREb browseId on navigationEndpoint and (usually)
+     * the real OLAK audio playlist on the play-button overlay. Prefer OLAK
+     * so opens skip the MPREb -> OLAK resolve hop.
+     */
+    private fun extractOverlayOlak(item: JsonElement): String? {
+        val candidates = listOfNotNull(
+            item.path("overlay")
+                ?.path("musicItemThumbnailOverlayRenderer")
+                ?.path("content")
+                ?.path("musicPlayButtonRenderer")
+                ?.path("playNavigationEndpoint"),
+            item.path("thumbnailOverlay")
+                ?.path("musicItemThumbnailOverlayRenderer")
+                ?.path("content")
+                ?.path("musicPlayButtonRenderer")
+                ?.path("playNavigationEndpoint"),
+        )
+        for (nav in candidates) {
+            val playlistId = nav.path("watchPlaylistEndpoint")?.str("playlistId")
+                ?: nav.path("watchEndpoint")?.str("playlistId")
+            if (playlistId != null && playlistId.startsWith("OLAK")) return playlistId
+        }
+        return null
+    }
+
+    private fun albumPlaylistUrl(overlayOlak: String?, browseId: String): String {
+        val id = overlayOlak ?: browseId.removePrefix("VL")
+        return "https://www.youtube.com/playlist?list=$id"
     }
 }

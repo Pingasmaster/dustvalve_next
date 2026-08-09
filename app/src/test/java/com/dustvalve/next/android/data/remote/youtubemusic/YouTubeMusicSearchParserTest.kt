@@ -44,15 +44,17 @@ class YouTubeMusicSearchParserTest {
         }
     }
 
-    @Test fun `parses albums filter and strips VL prefix`() {
+    @Test fun `parses albums filter and prefers overlay OLAK over MPREb browseId`() {
         val results = parser.parse(Fixtures.load("search_albums.json"))
         val albums = results.filter { it.type == SearchResultType.YOUTUBE_ALBUM }
         assertThat(albums).isNotEmpty()
         albums.forEach {
             assertThat(it.url).startsWith("https://www.youtube.com/playlist?list=")
-            // No "VL" or "list=VL" in the resulting URL
             assertThat(it.url).doesNotContain("list=VL")
         }
+        // Real fixture rows carry overlay watchPlaylistEndpoint OLAK ids.
+        assertThat(albums.any { it.url.contains("list=OLAK") }).isTrue()
+        assertThat(albums.none { it.url.contains("list=MPREb") }).isTrue()
     }
 
     @Test fun `parses playlists filter and strips VL prefix`() {
@@ -130,5 +132,46 @@ class YouTubeMusicSearchParserTest {
             assertThat(url).isEqualTo("https://www.youtube.com/watch?v=abc12345678")
             assertThat(artist).isEqualTo("Some Artist")
         }
+    }
+
+    @Test fun `album row prefers overlay OLAK playlist id`() {
+        val nested = json.parseToJsonElement(
+            """
+            {"contents":{"tabbedSearchResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
+              "sectionListRenderer":{"contents":[
+                {"musicShelfRenderer":{"contents":[
+                  {"musicResponsiveListItemRenderer":{
+                    "flexColumns":[
+                      {"musicResponsiveListItemFlexColumnRenderer":{
+                        "text":{"runs":[{"text":"Random Access Memories"}]}
+                      }},
+                      {"musicResponsiveListItemFlexColumnRenderer":{
+                        "text":{"runs":[
+                          {"text":"Album"},{"text":" • "},{"text":"Daft Punk"}
+                        ]}
+                      }}
+                    ],
+                    "navigationEndpoint":{"browseEndpoint":{
+                      "browseId":"MPREb_albumBrowse",
+                      "browseEndpointContextSupportedConfigs":{
+                        "browseEndpointContextMusicConfig":{"pageType":"MUSIC_PAGE_TYPE_ALBUM"}
+                      }
+                    }},
+                    "overlay":{"musicItemThumbnailOverlayRenderer":{"content":{
+                      "musicPlayButtonRenderer":{"playNavigationEndpoint":{
+                        "watchPlaylistEndpoint":{"playlistId":"OLAK5uy_fromOverlay01"}
+                      }}
+                    }}}
+                  }}
+                ]}}
+              ]}
+            }}}]}}}
+            """.trimIndent(),
+        )
+        val results = parser.parse(nested)
+        assertThat(results).hasSize(1)
+        assertThat(results.first().type).isEqualTo(SearchResultType.YOUTUBE_ALBUM)
+        assertThat(results.first().url)
+            .isEqualTo("https://www.youtube.com/playlist?list=OLAK5uy_fromOverlay01")
     }
 }

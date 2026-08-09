@@ -119,7 +119,7 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
     data class VisitorConfig(val visitorData: String, val clientVersion: String)
 
     companion object {
-        const val DEFAULT_CLIENT_VERSION = "2.20260421.00.00"
+        const val DEFAULT_CLIENT_VERSION = "2.20260807.00.00"
 
         private const val ERROR_BODY_PREVIEW_CHARS = 120
 

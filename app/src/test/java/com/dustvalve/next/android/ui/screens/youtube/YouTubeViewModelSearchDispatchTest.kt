@@ -186,6 +186,20 @@ class YouTubeViewModelSearchDispatchTest {
         assertThat(vm.uiState.value.error).isNotNull()
     }
 
+    @Test fun `importPlaylist fails when the playlist has no tracks`() = runTest {
+        coEvery { ytRepo.getPlaylistTracks(any()) } returns
+            YouTubePlaylistResult(tracks = emptyList(), title = "Empty Mix")
+
+        val vm = newViewModel()
+        advanceUntilIdle()
+
+        val imported = vm.importPlaylist("https://www.youtube.com/playlist?list=RDempty", "Mix").await()
+
+        assertThat(imported).isFalse()
+        assertThat(vm.uiState.value.error).isNotNull()
+        coVerify(exactly = 0) { playlistRepo.importTracksAsPlaylist(any(), any(), any(), any()) }
+    }
+
     @Test fun `importPlaylist imports via the repository with the favorite inside the transaction`() = runTest {
         val playlistUrl = "https://www.youtube.com/playlist?list=X"
         val tracks = listOf(importedTrack("yt_a"), importedTrack("yt_b"))

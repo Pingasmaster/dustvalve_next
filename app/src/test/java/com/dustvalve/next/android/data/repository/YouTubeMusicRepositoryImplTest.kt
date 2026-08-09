@@ -21,11 +21,9 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import org.junit.Before
 import org.junit.Test
@@ -101,18 +99,24 @@ class YouTubeMusicRepositoryImplTest {
         assertThat(out).isSameInstanceAs(sampleHome)
     }
 
-    @Test fun `search uses songs params for null filter`() = runTest {
-        val params = slot<String>()
-        coEvery { client.search(query = "q", params = capture(params)) } returns emptyJson
+    @Test fun `search uses null params for All filter`() = runTest {
+        var captured: String? = "SENTINEL"
+        coEvery { client.search(query = "q", params = any()) } answers {
+            captured = secondArg()
+            emptyJson
+        }
         every { searchParser.parse(emptyJson) } returns emptyList()
 
         repo.search("q", null)
-        assertThat(params.captured).isEqualTo("EgWKAQIIAWoMEA4QChADEAQQCRAF")
+        assertThat(captured).isNull()
     }
 
     @Test fun `search uses correct params for each filter`() = runTest {
-        val captured = mutableListOf<String>()
-        coEvery { client.search(query = any(), params = capture(captured)) } returns emptyJson
+        val captured = mutableListOf<String?>()
+        coEvery { client.search(query = any(), params = any()) } answers {
+            captured += secondArg<String?>()
+            emptyJson
+        }
         every { searchParser.parse(any()) } returns emptyList()
 
         repo.search("q", "songs")
@@ -121,6 +125,7 @@ class YouTubeMusicRepositoryImplTest {
         repo.search("q", "playlists")
         repo.search("q", "artists")
         repo.search("q", "unknown_filter")
+        repo.search("q", "all")
 
         assertThat(captured).containsExactly(
             "EgWKAQIIAWoMEA4QChADEAQQCRAF",
@@ -129,6 +134,7 @@ class YouTubeMusicRepositoryImplTest {
             "EgWKAQIoAWoMEA4QChADEAQQCRAF",
             "EgWKAQIgAWoMEA4QChADEAQQCRAF",
             "EgWKAQIIAWoMEA4QChADEAQQCRAF", // unknown falls back to songs
+            null, // All chip
         ).inOrder()
     }
 

@@ -139,7 +139,7 @@ class YouTubeSearchParserTest {
         assertThat(out.items).isEmpty()
     }
 
-    @Test fun `officialCardViewModel flattens nested channel and playlist rows`() {
+    @Test fun `officialCardViewModel walks nested channelRenderer`() {
         val v = json.parseToJsonElement(
             """
             {"contents":{"twoColumnSearchResultsRenderer":{"primaryContents":{
@@ -150,13 +150,6 @@ class YouTubeSearchParserTest {
                       "channelId":"UCabcdefghijklmnopqrstuv",
                       "title":{"simpleText":"Official Artist"},
                       "thumbnail":{"thumbnails":[{"url":"https://t.example/c","width":88}]}
-                    }},
-                    {"lockupViewModel":{
-                      "contentType":"LOCKUP_CONTENT_TYPE_PLAYLIST",
-                      "contentId":"PLabcdefghijklmnop",
-                      "metadata":{"lockupMetadataViewModel":{
-                        "title":{"content":"Official Playlist"}
-                      }}
                     }}
                   ]}}
                 ]}}
@@ -165,11 +158,40 @@ class YouTubeSearchParserTest {
             """.trimIndent(),
         )
         val out = parser.parse(v)
-        assertThat(out.items).hasSize(2)
-        assertThat(out.items[0].type).isEqualTo(SearchResultType.YOUTUBE_ARTIST)
-        assertThat(out.items[0].name).isEqualTo("Official Artist")
-        assertThat(out.items[1].type).isEqualTo(SearchResultType.YOUTUBE_PLAYLIST)
-        assertThat(out.items[1].name).isEqualTo("Official Playlist")
-        assertThat(out.items[1].url).isEqualTo("https://www.youtube.com/playlist?list=PLabcdefghijklmnop")
+        assertThat(out.items).hasSize(1)
+        with(out.items.first()) {
+            assertThat(type).isEqualTo(SearchResultType.YOUTUBE_ARTIST)
+            assertThat(name).isEqualTo("Official Artist")
+            assertThat(url).isEqualTo("https://www.youtube.com/channel/UCabcdefghijklmnopqrstuv")
+        }
+    }
+
+    @Test fun `officialCardViewModel walks nested playlist lockup`() {
+        val v = json.parseToJsonElement(
+            """
+            {"contents":{"twoColumnSearchResultsRenderer":{"primaryContents":{
+              "sectionListRenderer":{"contents":[
+                {"itemSectionRenderer":{"contents":[
+                  {"officialCardViewModel":{
+                    "primaryContent":{"lockupViewModel":{
+                      "contentType":"LOCKUP_CONTENT_TYPE_PLAYLIST",
+                      "contentId":"PLofficial0001",
+                      "metadata":{"lockupMetadataViewModel":{
+                        "title":{"content":"Official Playlist"}
+                      }}
+                    }}
+                  }}
+                ]}}
+              ]}
+            }}}}
+            """.trimIndent(),
+        )
+        val out = parser.parse(v)
+        assertThat(out.items).hasSize(1)
+        with(out.items.first()) {
+            assertThat(type).isEqualTo(SearchResultType.YOUTUBE_PLAYLIST)
+            assertThat(name).isEqualTo("Official Playlist")
+            assertThat(url).isEqualTo("https://www.youtube.com/playlist?list=PLofficial0001")
+        }
     }
 }
