@@ -9,8 +9,8 @@ import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class YouTubeMusicModule {
+interface YouTubeMusicModule {
 
     @Binds
-    abstract fun bindYouTubeMusicRepository(impl: YouTubeMusicRepositoryImpl): YouTubeMusicRepository
+    fun bindYouTubeMusicRepository(impl: YouTubeMusicRepositoryImpl): YouTubeMusicRepository
 }

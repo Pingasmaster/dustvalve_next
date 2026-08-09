@@ -14,9 +14,9 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class DownloadReportingModule {
+interface DownloadReportingModule {
 
     @Binds
     @Singleton
-    abstract fun bindDownloadProgressReporter(impl: DownloadNotificationCenter): DownloadProgressReporter
+    fun bindDownloadProgressReporter(impl: DownloadNotificationCenter): DownloadProgressReporter
 }

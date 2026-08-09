@@ -15,9 +15,9 @@ import javax.inject.Singleton
  */
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class MediaCacheModule {
+interface MediaCacheModule {
 
     @Binds
     @Singleton
-    abstract fun bindMediaCacheClearer(impl: MediaCacheClearerImpl): MediaCacheClearer
+    fun bindMediaCacheClearer(impl: MediaCacheClearerImpl): MediaCacheClearer
 }

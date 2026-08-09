@@ -97,12 +97,12 @@ fun <T : Any> ReorderableMusicList(
                     onDragStarted = {
                         // Resolve by key: the composed index can be stale if the
                         // list mutated since the last recomposition.
-                        dragStartIndex = displayList.indexOfFirst { keyFn(it) == keyFn(item) }
+                        dragStartIndex = displayList.indexOfFirst { entry -> keyFn(entry) == keyFn(item) }
                         hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
                     onDragStopped = {
                         val start = dragStartIndex
-                        val end = displayList.indexOfFirst { keyFn(it) == keyFn(item) }
+                        val end = displayList.indexOfFirst { entry -> keyFn(entry) == keyFn(item) }
                         dragStartIndex = -1
                         if (start >= 0 && end >= 0 && start != end) {
                             onMove(start, end)

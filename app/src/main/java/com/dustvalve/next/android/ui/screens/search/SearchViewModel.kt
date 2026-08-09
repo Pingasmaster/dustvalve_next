@@ -48,7 +48,8 @@ class SearchViewModel @Inject constructor(
     private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
     private val recentSearchRepository: RecentSearchRepository,
     private val localMusicRepository: LocalMusicRepository,
-    private val settingsDataStore: SettingsDataStore,
+    // Constructor param (not a property): feeds the StateFlow inits below.
+    settingsDataStore: SettingsDataStore,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 

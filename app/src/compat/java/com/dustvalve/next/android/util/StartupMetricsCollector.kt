@@ -14,7 +14,10 @@ import javax.inject.Singleton
  * with the future implementation; the stub does not use it.
  */
 @Singleton
-class StartupMetricsCollector @Inject constructor(@Suppress("UNUSED_PARAMETER") @param:ApplicationContext private val context: Context) {
+class StartupMetricsCollector @Inject constructor(
+    @Suppress("UnusedPrivateProperty")
+    @param:ApplicationContext context: Context,
+) {
     fun collectOnColdStart() {
         // No-op on compat (minSdk 26).
     }

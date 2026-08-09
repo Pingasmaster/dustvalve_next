@@ -5,6 +5,10 @@ import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.runCatchingUiIgnoreSync
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -20,7 +24,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.cancellation.CancellationException
 
 /** UI-facing shape of the update flow. Shared between the Settings row and the startup dialog. */
 sealed interface UpdateUiState {
@@ -89,10 +92,10 @@ class AppUpdateController @Inject constructor(
         if (silentCheckStarted) return
         silentCheckStarted = true
         scope.launch {
-            try {
+            runCatchingUiIgnore {
                 val autoCheckEnabled = settingsDataStore.autoUpdateCheckEnabled.firstOrNull() ?: true
-                if (!autoCheckEnabled) return@launch
-                val available = service.checkForUpdate() ?: return@launch
+                if (!autoCheckEnabled) return@runCatchingUiIgnore
+                val available = service.checkForUpdate() ?: return@runCatchingUiIgnore
                 _state.update { current ->
                     // Respect an in-flight manual flow - the user is already
                     // looking at a dialog, we don't want to reset their state.
@@ -107,9 +110,6 @@ class AppUpdateController @Inject constructor(
                         )
                     }
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // Swallow - silent check.
             }
         }
     }
@@ -123,7 +123,7 @@ class AppUpdateController @Inject constructor(
         if (_state.value is UpdateUiState.Downloading) return
         scope.launch {
             _state.value = UpdateUiState.Checking
-            try {
+            runCatchingUi(R.string.settings_update_check_failed) {
                 val available = service.checkForUpdate()
                 if (available == null) {
                     _state.value = UpdateUiState.Idle
@@ -136,8 +136,7 @@ class AppUpdateController @Inject constructor(
                         apkSha256 = available.apkSha256,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { _, _ ->
                 _state.value = UpdateUiState.Idle
                 _messages.tryEmit(UiText.StringResource(R.string.settings_update_check_failed))
             }
@@ -151,20 +150,20 @@ class AppUpdateController @Inject constructor(
         downloadJob?.cancel()
         downloadJob = scope.launch {
             _state.value = UpdateUiState.Downloading(current.versionName, 0f)
-            try {
+            runCatchingUi(R.string.settings_update_download_failed) {
                 service.downloadApk(current.apkUrl, current.apkSha256).collect { p ->
                     val frac = if (p.totalBytes > 0L) p.fraction else null
                     _state.value = UpdateUiState.Downloading(current.versionName, frac)
                 }
-                try {
+                runCatchingUiIgnoreSync(
+                    onFailure = {
+                        _messages.tryEmit(UiText.StringResource(R.string.settings_update_install_failed))
+                    },
+                ) {
                     service.launchInstaller()
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
-                    _messages.tryEmit(UiText.StringResource(R.string.settings_update_install_failed))
                 }
                 _state.value = UpdateUiState.Idle
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { _, _ ->
                 _state.value = UpdateUiState.Idle
                 _messages.tryEmit(UiText.StringResource(R.string.settings_update_download_failed))
             }

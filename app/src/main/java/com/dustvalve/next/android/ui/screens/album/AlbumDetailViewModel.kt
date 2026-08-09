@@ -12,7 +12,6 @@ import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
-import com.dustvalve.next.android.domain.usecase.GetAlbumDetailUseCase
 import com.dustvalve.next.android.domain.usecase.ToggleFavoriteUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
@@ -54,7 +53,6 @@ data class AlbumDetailUiState(
 
 @HiltViewModel
 class AlbumDetailViewModel @Inject constructor(
-    private val getAlbumDetailUseCase: GetAlbumDetailUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadController: DownloadController,

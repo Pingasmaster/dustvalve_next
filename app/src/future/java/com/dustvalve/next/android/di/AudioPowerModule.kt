@@ -13,9 +13,9 @@ import javax.inject.Singleton
 @OptIn(UnstableApi::class)
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class AudioPowerModule {
+interface AudioPowerModule {
 
     @Binds
     @Singleton
-    abstract fun bindAudioPowerPolicy(impl: OffloadAudioPowerPolicy): AudioPowerPolicy
+    fun bindAudioPowerPolicy(impl: OffloadAudioPowerPolicy): AudioPowerPolicy
 }

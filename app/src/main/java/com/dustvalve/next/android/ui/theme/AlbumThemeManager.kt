@@ -29,8 +29,9 @@ import javax.inject.Singleton
 
 @Singleton
 class AlbumThemeManager @Inject constructor(
-    private val queueManager: QueueManager,
-    private val settingsDataStore: SettingsDataStore,
+    // Constructor params (not properties): feed albumSeedColor below.
+    queueManager: QueueManager,
+    settingsDataStore: SettingsDataStore,
     @param:ApplicationContext private val context: Context,
     @param:Dispatcher(AppDispatchers.IO) private val ioDispatcher: CoroutineDispatcher,
     @param:ApplicationScope private val scope: CoroutineScope,

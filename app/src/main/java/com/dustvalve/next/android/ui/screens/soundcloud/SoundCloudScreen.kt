@@ -355,7 +355,6 @@ private fun SoundCloudScreenScaffold(
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
 private fun soundCloudSearchInputField(
     searchBarState: SearchBarState,
     textFieldState: TextFieldState,

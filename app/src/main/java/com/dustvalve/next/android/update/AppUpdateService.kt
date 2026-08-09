@@ -26,6 +26,7 @@ import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.coroutineContext
@@ -213,7 +214,7 @@ open class AppUpdateService @Inject constructor(
      */
     private fun verifyDownload(tempFile: File, actualSha256: ByteArray, expectedSha256: String?, downloaded: Long, totalBytes: Long) {
         if (expectedSha256 != null) {
-            val actual = actualSha256.joinToString("") { "%02x".format(it) }
+            val actual = actualSha256.joinToString("") { "%02x".format(Locale.US, it) }
             if (!actual.equals(expectedSha256, ignoreCase = true)) {
                 tempFile.delete()
                 throw IOException("APK SHA-256 mismatch: expected $expectedSha256, got $actual")

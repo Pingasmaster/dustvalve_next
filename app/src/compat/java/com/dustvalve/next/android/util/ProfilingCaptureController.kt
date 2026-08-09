@@ -14,7 +14,10 @@ import javax.inject.Singleton
  * with the future implementation; the stub does not use it.
  */
 @Singleton
-class ProfilingCaptureController @Inject constructor(@Suppress("UNUSED_PARAMETER") @param:ApplicationContext private val context: Context) {
+class ProfilingCaptureController @Inject constructor(
+    @Suppress("UnusedPrivateProperty")
+    @param:ApplicationContext context: Context,
+) {
     fun start() {
         // No-op on compat (minSdk 26).
     }
