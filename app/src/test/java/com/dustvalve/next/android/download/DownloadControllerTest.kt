@@ -4,6 +4,9 @@ package com.dustvalve.next.android.download
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.dustvalve.next.android.data.local.datastore.PendingDownloadItemV1
+import com.dustvalve.next.android.data.local.datastore.PendingDownloadQueueStore
+import com.dustvalve.next.android.data.local.datastore.PendingDownloadQueueV1
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
@@ -32,17 +35,21 @@ class DownloadControllerTest {
 
     private lateinit var context: Context
     private lateinit var downloadRepository: DownloadRepository
+    private lateinit var pendingQueueStore: PendingDownloadQueueStore
     private lateinit var controller: DownloadController
 
     @Before fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         downloadRepository = mockk(relaxed = true)
+        pendingQueueStore = mockk(relaxed = true)
         coEvery { downloadRepository.getAllDownloadFilePaths() } returns emptyList()
+        coEvery { pendingQueueStore.load() } returns PendingDownloadQueueV1()
         controller = DownloadController(
             context = context,
             downloadRepository = downloadRepository,
             downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true),
             notificationCenter = mockk<DownloadNotificationCenter>(relaxed = true),
+            pendingQueueStore = pendingQueueStore,
             ioDispatcher = UnconfinedTestDispatcher(),
         )
     }
@@ -93,6 +100,41 @@ class DownloadControllerTest {
         assertThat(controller.isActive.value).isTrue()
         secondGate.complete(Unit)
         assertThat(controller.isActive.value).isFalse()
+    }
+
+    @Test fun `enqueue persists pending track ids`() {
+        val gate = CompletableDeferred<Unit>()
+        coEvery { downloadRepository.downloadTrack(any(), any()) } coAnswers { gate.await() }
+
+        controller.enqueueTrack(track("t1"))
+
+        coVerify {
+            pendingQueueStore.save(
+                match { queue ->
+                    queue.version == 1 && queue.items.map { it.trackId } == listOf("t1")
+                },
+            )
+        }
+        gate.complete(Unit)
+    }
+
+    @Test fun `cold start restores persisted pending tracks after purge`() = runBlocking {
+        coEvery { pendingQueueStore.load() } returns PendingDownloadQueueV1(
+            items = listOf(PendingDownloadItemV1.fromTrack(track("restored"))),
+        )
+        coEvery { downloadRepository.isTrackDownloaded("restored") } returns false
+        val gate = CompletableDeferred<Unit>()
+        coEvery { downloadRepository.downloadTrack(match { it.id == "restored" }, any()) } coAnswers {
+            gate.await()
+        }
+        coEvery { downloadRepository.purgeOrphanDownloadRows() } returns 0
+
+        controller.awaitColdStartPurge()
+
+        assertThat(controller.isActive.value).isTrue()
+        coVerify { downloadRepository.downloadTrack(match { it.id == "restored" }, any()) }
+        gate.complete(Unit)
+        Unit
     }
 
     // --- L31: cold-start sweep ------------------------------------------

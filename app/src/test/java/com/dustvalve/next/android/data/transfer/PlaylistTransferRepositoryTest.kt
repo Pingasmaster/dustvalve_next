@@ -14,6 +14,7 @@ import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.domain.repository.TrackDownloadGateway
 import com.google.common.truth.Truth.assertThat
 import io.mockk.Runs
 import io.mockk.coEvery
@@ -74,10 +75,20 @@ class PlaylistTransferRepositoryTest {
             coEvery { it.getByIdsChunk(any()) } returns emptyList()
         },
         downloadDao: DownloadDao = mockk(relaxed = true),
+        downloadRepository: DownloadRepository = mockk(relaxed = true),
+        trackDownloadGateway: TrackDownloadGateway? = null,
     ) = PlaylistTransferRepository(
         context = context,
         playlistRepository = playlistRepo,
-        downloadRepository = mockk<DownloadRepository>(relaxed = true),
+        downloadRepository = downloadRepository,
+        trackDownloadGateway = trackDownloadGateway ?: object : TrackDownloadGateway {
+            override suspend fun downloadTrack(
+                track: Track,
+                formatOverride: com.dustvalve.next.android.domain.model.AudioFormat?,
+            ) {
+                downloadRepository.downloadTrack(track, formatOverride)
+            }
+        },
         database = database,
         trackDao = trackDao,
         downloadDao = downloadDao,

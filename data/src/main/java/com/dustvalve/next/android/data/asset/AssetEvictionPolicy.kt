@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.asset
 
 import androidx.room.withTransaction
+import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
@@ -17,6 +18,9 @@ import javax.inject.Singleton
  *
  * Coil's image disk cache and ExoPlayer's SimpleCache manage their own
  * eviction; this policy only governs `downloads` table rows.
+ *
+ * Freed-byte accounting uses on-disk file length (0 for phantoms), not the
+ * cached [DownloadEntity.sizeBytes] column.
  */
 @Singleton
 class AssetEvictionPolicy(private val database: DustvalveNextDatabase, private val downloadDao: DownloadDao) {
@@ -35,7 +39,9 @@ class AssetEvictionPolicy(private val database: DustvalveNextDatabase, private v
         for (entry in candidates) {
             if (freed >= targetBytes) break
             toEvict += entry
-            freed += entry.sizeBytes
+            // Prefer real file length; missing files contribute 0 so phantom
+            // sizeBytes cannot satisfy the target without deleting real audio.
+            freed += StorageTracker.onDiskBytes(entry.filePath)
         }
         if (toEvict.isEmpty()) return
 

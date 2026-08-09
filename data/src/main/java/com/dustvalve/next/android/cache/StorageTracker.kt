@@ -7,6 +7,7 @@ import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
+import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.CacheInfo
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,6 +28,10 @@ import javax.inject.Singleton
  * Coil's image directory + ExoPlayer's media_cache) and whether it has
  * exceeded the user-configured storage limit. There is no separate cache
  * vs. downloads bucket; everything is one pool.
+ *
+ * Download usage sums **existing files on disk**, not the cached
+ * [DownloadEntity.sizeBytes] column, so phantom rows (missing files) cannot
+ * inflate the meter or drive eviction.
  */
 @Singleton
 class StorageTracker(
@@ -49,8 +55,7 @@ class StorageTracker(
     }
 
     fun getCacheInfo(): Flow<CacheInfo> = combine(_sizeUpdateTrigger, settingsDataStore.storageLimit) { _, limitBytes ->
-        val pinnedSize = downloadDao.getPinnedSize()
-        val totalDownloads = downloadDao.getTotalSize()
+        val (totalDownloads, pinnedSize) = measureOnDiskDownloads(downloadDao.getAllSync())
         val unpinnedAudioSize = (totalDownloads - pinnedSize).coerceAtLeast(0L)
         val imagesSize = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
         val mediaCacheSize = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
@@ -81,9 +86,36 @@ class StorageTracker(
     }
 
     private suspend fun getEffectiveTotalSize(): Long {
-        val downloads = downloadDao.getTotalSize()
+        val downloads = measureOnDiskDownloads(downloadDao.getAllSync()).first
         val images = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
         val media = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
         return downloads + images + media
+    }
+
+    companion object {
+        /**
+         * Sums lengths of files that still exist. Missing / blank paths
+         * contribute 0 so phantom [DownloadEntity.sizeBytes] cannot skew
+         * usage or overage math.
+         *
+         * @return Pair(totalBytes, pinnedBytes)
+         */
+        fun measureOnDiskDownloads(rows: List<DownloadEntity>): Pair<Long, Long> {
+            var total = 0L
+            var pinned = 0L
+            for (row in rows) {
+                val len = onDiskBytes(row.filePath)
+                if (len <= 0L) continue
+                total += len
+                if (row.pinned) pinned += len
+            }
+            return total to pinned
+        }
+
+        fun onDiskBytes(path: String): Long {
+            if (path.isBlank()) return 0L
+            val file = File(path)
+            return if (file.isFile) file.length() else 0L
+        }
     }
 }

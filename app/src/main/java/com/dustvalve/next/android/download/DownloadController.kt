@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.dustvalve.next.android.data.local.datastore.PendingDownloadItemV1
+import com.dustvalve.next.android.data.local.datastore.PendingDownloadQueueStore
+import com.dustvalve.next.android.data.local.datastore.PendingDownloadQueueV1
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
@@ -53,8 +56,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * [DownloadRepository] / [DownloadAlbumUseCase] methods, preserving their
  * `withBatch` nesting and `CancellationException` rethrow contracts.
  *
- * Queue is in-memory only (pre-alpha; DB schema stays v1). A process death
- * loses pending work - partial `.tmp` files are GC'd on cold start.
+ * Pending track work is persisted via [PendingDownloadQueueStore] (schema:
+ * docs/download-queue-schema.md). Album / artist / playlist work is flattened
+ * to track items on write; cold start re-enqueues those tracks after the
+ * downloads-tree purge.
  */
 @Singleton
 class DownloadController @Inject constructor(
@@ -62,6 +67,7 @@ class DownloadController @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val notificationCenter: DownloadNotificationCenter,
+    private val pendingQueueStore: PendingDownloadQueueStore,
     // Constructor param (not a property): only feeds [scope] below.
     @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) {
@@ -132,6 +138,7 @@ class DownloadController @Inject constructor(
 
     private val coldStartPurgeStarted = AtomicBoolean(false)
     private val coldStartPurgeDone = CompletableDeferred<Unit>()
+    private val pendingRestoreStarted = AtomicBoolean(false)
 
     /**
      * Best-effort cold-start sweep of the internal downloads tree, launched
@@ -144,10 +151,12 @@ class DownloadController @Inject constructor(
      *    between the temp-file rename and the DB insert leaves an invisible
      *    file that would otherwise never be reclaimed.
      *
-     * Safe because callers that enqueue work at startup (the auto-download
-     * coordinator) await [awaitColdStartPurge] before enqueueing. Only covers
-     * app-internal downloads; SAF/folder mode restarts from 0 anyway. Call
-     * from Application.onCreate.
+     * After the sweep, restores any [PendingDownloadQueueStore] snapshot so
+     * unfinished track downloads continue. Safe because callers that enqueue
+     * work at startup (the auto-download coordinator) await
+     * [awaitColdStartPurge] before enqueueing. Only covers app-internal
+     * downloads; SAF/folder mode restarts from 0 anyway. Call from
+     * Application.onCreate.
      */
     fun purgeStalePartialsOnColdStart() {
         if (!coldStartPurgeStarted.compareAndSet(false, true)) return
@@ -167,6 +176,7 @@ class DownloadController @Inject constructor(
                 } catch (e: IllegalStateException) {
                     Log.w(TAG, "Cold-start orphan-row purge failed", e)
                 }
+                restorePendingQueue()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: java.io.IOException) {
@@ -242,6 +252,37 @@ class DownloadController @Inject constructor(
             }
     }
 
+    private suspend fun restorePendingQueue() {
+        if (!pendingRestoreStarted.compareAndSet(false, true)) return
+        val snapshot = try {
+            pendingQueueStore.load()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
+            Log.w(TAG, "Failed to load pending download queue", e)
+            return
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Failed to load pending download queue", e)
+            return
+        }
+        if (snapshot.items.isEmpty()) return
+        Log.i(TAG, "Restoring ${snapshot.items.size} pending download(s) from durable queue")
+        for (item in snapshot.items) {
+            if (item.trackId.isBlank()) continue
+            val alreadyDone = try {
+                downloadRepository.isTrackDownloaded(item.trackId)
+            } catch (_: android.database.SQLException) {
+                false
+            } catch (_: IllegalStateException) {
+                false
+            }
+            if (alreadyDone) continue
+            enqueueTrack(item.toTrack(), item.formatOverride())
+        }
+        // Rewrite so completed-before-restore items drop out of the snapshot.
+        persistQueueAsync()
+    }
+
     /**
      * Fire-and-forget single-track enqueue with de-dup. Used by the
      * auto-download coordinator, which re-fires the same tracks on every
@@ -251,6 +292,7 @@ class DownloadController @Inject constructor(
         synchronized(lock) {
             if (isTrackQueuedOrActive(track.id)) return
             queue.addLast(DownloadWork.TrackWork(nextId(), track, formatOverride))
+            persistQueueLocked()
         }
         onWorkAdded()
     }
@@ -295,7 +337,10 @@ class DownloadController @Inject constructor(
             if (alreadyQueued) {
                 onWorkAdded()
             } else {
-                synchronized(lock) { queue.addLast(work) }
+                synchronized(lock) {
+                    queue.addLast(work)
+                    persistQueueLocked()
+                }
                 onWorkAdded()
             }
             when (val event = awaiter.await()) {
@@ -341,6 +386,7 @@ class DownloadController @Inject constructor(
             // the critical section that emptied the queue, so it can't land
             // after a concurrent enqueue's true-write.
             _isActive.value = false
+            persistQueueLocked()
             c
         }
         _isPaused.value = false
@@ -422,6 +468,7 @@ class DownloadController @Inject constructor(
         }
         activeJob = job
         activeWork = work
+        persistQueueAsync()
         job.join()
         activeJob = null
         activeWork = null
@@ -436,12 +483,18 @@ class DownloadController @Inject constructor(
             // Real failure OR a plain cancel (cancelAll): drop it and emit a
             // terminal event so any blocking awaiter unblocks.
             err != null -> {
-                synchronized(lock) { queue.remove(work) }
+                synchronized(lock) {
+                    queue.remove(work)
+                    persistQueueLocked()
+                }
                 _events.tryEmit(DownloadEvent.Failed(work.id, work.label, err))
             }
 
             else -> {
-                synchronized(lock) { queue.remove(work) }
+                synchronized(lock) {
+                    queue.remove(work)
+                    persistQueueLocked()
+                }
                 _events.tryEmit(DownloadEvent.Completed(work.id, work.label))
             }
         }
@@ -454,6 +507,67 @@ class DownloadController @Inject constructor(
             is DownloadWork.PlaylistWork -> downloadAlbumUseCase.downloadPlaylist(work.playlistLabel, work.tracks)
             is DownloadWork.TrackWork -> downloadRepository.downloadTrack(work.track, work.formatOverride)
         }
+    }
+
+    /** Schedules a durable snapshot write of the current queue (off the lock). */
+    private fun persistQueueAsync() {
+        val snapshot = synchronized(lock) { snapshotPendingItemsLocked() }
+        scope.launch {
+            try {
+                pendingQueueStore.save(PendingDownloadQueueV1(items = snapshot))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: java.io.IOException) {
+                Log.w(TAG, "Failed to persist pending download queue", e)
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "Failed to persist pending download queue", e)
+            }
+        }
+    }
+
+    /**
+     * Captures the snapshot under [lock] and schedules the DataStore write.
+     * Call only while holding [lock].
+     */
+    private fun persistQueueLocked() {
+        val snapshot = snapshotPendingItemsLocked()
+        scope.launch {
+            try {
+                pendingQueueStore.save(PendingDownloadQueueV1(items = snapshot))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: java.io.IOException) {
+                Log.w(TAG, "Failed to persist pending download queue", e)
+            } catch (e: IllegalStateException) {
+                Log.w(TAG, "Failed to persist pending download queue", e)
+            }
+        }
+    }
+
+    private fun snapshotPendingItemsLocked(): List<PendingDownloadItemV1> {
+        val works = buildList {
+            activeWork?.let { add(it) }
+            addAll(queue)
+        }
+        val seen = HashSet<String>()
+        val items = ArrayList<PendingDownloadItemV1>()
+        for (work in works) {
+            for (item in work.toPendingItems()) {
+                if (item.trackId.isBlank()) continue
+                if (!seen.add(item.trackId)) continue
+                items += item
+            }
+        }
+        return items
+    }
+
+    private fun DownloadWork.toPendingItems(): List<PendingDownloadItemV1> = when (this) {
+        is DownloadWork.TrackWork -> listOf(PendingDownloadItemV1.fromTrack(track, formatOverride))
+        is DownloadWork.AlbumWork -> album.tracks.map { PendingDownloadItemV1.fromTrack(it) }
+        is DownloadWork.ArtistWork -> artist.albums.flatMap { album ->
+            album.tracks.map { PendingDownloadItemV1.fromTrack(it) }
+        }
+        is DownloadWork.PlaylistWork -> tracks.map { PendingDownloadItemV1.fromTrack(it) }
     }
 
     companion object {

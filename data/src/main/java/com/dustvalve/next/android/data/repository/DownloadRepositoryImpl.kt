@@ -572,7 +572,11 @@ class DownloadRepositoryImpl(
         rows.filter { downloadPathExists(it.filePath) }.map { it.trackId }
     }
 
-    override fun getDownloadedAlbumIds(): Flow<List<String>> = downloadDao.getDownloadedAlbumIds()
+    override fun getDownloadedAlbumIds(): Flow<List<String>> = downloadDao.getAll().map { rows ->
+        // Same file-backed filter as getDownloadedTrackIds: a DB row alone is
+        // not enough (process death between insert and rename, wiped files).
+        rows.filter { downloadPathExists(it.filePath) }.map { it.albumId }.distinct()
+    }
 
     // Raw and unfiltered on purpose: DownloadController's orphan-file
     // reconciliation owns the isNotBlank filtering and its own exception
