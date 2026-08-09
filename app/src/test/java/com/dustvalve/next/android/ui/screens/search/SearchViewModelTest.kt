@@ -228,4 +228,88 @@ class SearchViewModelTest {
         coVerify { recentSearchRepository.remove("beatles", "bandcamp") }
         coVerify { recentSearchRepository.clear("bandcamp") }
     }
+
+    @Test fun `resolveBandcampTrack matches title_link URL not first album track`() = runTest(dispatcher) {
+        val wantedUrl = "https://artist.bandcamp.com/track/second"
+        val album = com.dustvalve.next.android.domain.model.Album(
+            id = "alb",
+            url = "https://artist.bandcamp.com/album/x",
+            title = "Album",
+            artist = "Artist",
+            artistUrl = "https://artist.bandcamp.com",
+            artUrl = "",
+            releaseDate = null,
+            about = null,
+            tracks = listOf(
+                Track(
+                    id = "1", albumId = "alb", title = "First", artist = "Artist",
+                    trackNumber = 1, duration = 1f, streamUrl = "https://s/1", artUrl = "",
+                    albumTitle = "Album",
+                    bandcampTrackUrl = "https://artist.bandcamp.com/track/first",
+                ),
+                Track(
+                    id = "2", albumId = "alb", title = "Second", artist = "Artist",
+                    trackNumber = 2, duration = 1f, streamUrl = "https://s/2", artUrl = "",
+                    albumTitle = "Album",
+                    bandcampTrackUrl = wantedUrl,
+                ),
+            ),
+            tags = emptyList(),
+        )
+        coEvery { albumDetail.invoke(wantedUrl) } returns album
+        val vm = vm()
+        val resolved = vm.resolveBandcampTrack(wantedUrl)
+        assertThat(resolved?.id).isEqualTo("2")
+        assertThat(resolved?.title).isEqualTo("Second")
+    }
+
+    @Test fun `resolveBandcampTrack returns null when no URL match`() = runTest(dispatcher) {
+        val searchUrl = "https://artist.bandcamp.com/track/missing"
+        val album = com.dustvalve.next.android.domain.model.Album(
+            id = "alb",
+            url = "https://artist.bandcamp.com/album/x",
+            title = "Album",
+            artist = "Artist",
+            artistUrl = "https://artist.bandcamp.com",
+            artUrl = "",
+            releaseDate = null,
+            about = null,
+            tracks = listOf(
+                Track(
+                    id = "1", albumId = "alb", title = "Only", artist = "Artist",
+                    trackNumber = 1, duration = 1f, streamUrl = "https://s/1", artUrl = "",
+                    albumTitle = "Album",
+                    bandcampTrackUrl = "https://artist.bandcamp.com/track/only",
+                ),
+            ),
+            tags = emptyList(),
+        )
+        coEvery { albumDetail.invoke(searchUrl) } returns album
+        val vm = vm()
+        assertThat(vm.resolveBandcampTrack(searchUrl)).isNull()
+    }
+
+    @Test fun `stale loadMore is discarded after generation bump`() = runTest(dispatcher) {
+        coEvery { search.invoke(any(), 1, any()) } returns listOf(result("a"), result("b"))
+        coEvery { search.invoke(any(), 2, any()) } coAnswers {
+            // Simulate a slow page-2 that finishes after a filter reset.
+            kotlinx.coroutines.yield()
+            listOf(result("stale"))
+        }
+        val vm = vm()
+        vm.onQueryChange("beat")
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.results.map { it.url }).containsExactly("a", "b").inOrder()
+
+        // Start loadMore, then bump generation via type filter before page-2 lands.
+        vm.loadMore()
+        coEvery { search.invoke(any(), 1, SearchResultType.ARTIST) } returns listOf(
+            result("artist", SearchResultType.ARTIST),
+        )
+        vm.onTypeSelected(SearchResultType.ARTIST)
+        advanceUntilIdle()
+
+        assertThat(vm.uiState.value.results.map { it.url }).containsExactly("artist")
+        assertThat(vm.uiState.value.results.none { it.url == "stale" }).isTrue()
+    }
 }

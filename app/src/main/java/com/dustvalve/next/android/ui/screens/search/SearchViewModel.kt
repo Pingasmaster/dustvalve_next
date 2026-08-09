@@ -142,10 +142,29 @@ class SearchViewModel @Inject constructor(
         localMusicRepository.getLocalTrack(trackId)
     }
 
-    suspend fun resolveBandcampTrack(trackUrl: String, trackName: String): Track? {
+    /**
+     * Resolve a Bandcamp search hit to a [Track] by matching the search URL
+     * (`item_url_path`) against each album track's `title_link`
+     * ([Track.bandcampTrackUrl]). Never falls back to "first track on album"
+     * (that played the wrong song when titles mismatched). Returns null when
+     * no URL match is found so the UI can surface an error.
+     */
+    suspend fun resolveBandcampTrack(trackUrl: String): Track? {
         val album = getAlbumDetailUseCase(trackUrl)
-        return album.tracks.find { it.title.equals(trackName, ignoreCase = true) }
-            ?: album.tracks.firstOrNull()
+        val want = normalizeBandcampUrl(trackUrl)
+        album.tracks.firstOrNull { track ->
+            track.bandcampTrackUrl?.let { normalizeBandcampUrl(it) == want } == true
+        }?.let { return it }
+        // Standalone / single-track release: the album page URL is the track URL.
+        if (normalizeBandcampUrl(album.url) == want) {
+            return album.tracks.singleOrNull()
+        }
+        // Path match covers host/scheme drift after redirect resolution.
+        val wantPath = pathAfterHost(want)
+        return album.tracks.firstOrNull { track ->
+            val candidate = track.bandcampTrackUrl ?: return@firstOrNull false
+            pathAfterHost(normalizeBandcampUrl(candidate)) == wantPath
+        }
     }
 
     suspend fun resolveBandcampAlbumTracks(albumUrl: String): List<Track> = getAlbumDetailUseCase(albumUrl).tracks
@@ -180,13 +199,27 @@ class SearchViewModel @Inject constructor(
         val page = if (resetResults) 1 else state.page
         val isLocalFilter = state.selectedType == SearchResultType.LOCAL_TRACK
 
-        _uiState.update {
-            it.copy(
-                isLoading = true,
-                error = null,
-                page = page,
-            )
+        // Generation snapshot: a stale page-2 must not append into results that
+        // a newer query/filter already owns. (Job cancel covers most races.)
+        if (resetResults) {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    page = page,
+                    searchGeneration = it.searchGeneration + 1,
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    page = page,
+                )
+            }
         }
+        val generationAtStart = _uiState.value.searchGeneration
 
         runCatchingUi(R.string.common_search_failed) {
             // Fetch local results on first page if local search is enabled
@@ -209,6 +242,10 @@ class SearchViewModel @Inject constructor(
                 emptyList()
             }
 
+            if (!resetResults && _uiState.value.searchGeneration != generationAtStart) {
+                return@runCatchingUi
+            }
+
             _uiState.update {
                 val mergedResults = if (resetResults) {
                     localResults + remoteResults
@@ -222,10 +259,12 @@ class SearchViewModel @Inject constructor(
                     page = page + 1,
                     hasMore = if (isLocalFilter) false else remoteResults.isNotEmpty(),
                     error = null,
-                    searchGeneration = if (resetResults) it.searchGeneration + 1 else it.searchGeneration,
                 )
             }
-        }.onFailure { error, cause ->
+        }.onFailure { error, _ ->
+            if (!resetResults && _uiState.value.searchGeneration != generationAtStart) {
+                return@onFailure
+            }
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -255,5 +294,11 @@ class SearchViewModel @Inject constructor(
 
     private companion object {
         private const val SEARCH_DEBOUNCE_MS = 400L
+
+        private fun normalizeBandcampUrl(url: String): String =
+            url.trim().trimEnd('/').substringBefore('?').substringBefore('#').lowercase()
+
+        private fun pathAfterHost(normalizedUrl: String): String =
+            normalizedUrl.substringAfter("://").substringAfter('/', missingDelimiterValue = normalizedUrl)
     }
 }

@@ -78,7 +78,18 @@ class SoundCloudViewModel @Inject constructor(
     }
 
     fun onQueryChange(query: String) {
-        _uiState.update { it.copy(query = query) }
+        // Drop stale results/errors as soon as the user edits; a previous
+        // submit must not linger under a different query string.
+        if (query == _uiState.value.query) return
+        searchJob?.cancel()
+        _uiState.update {
+            it.copy(
+                query = query,
+                results = emptyList(),
+                searchError = null,
+                isSearching = false,
+            )
+        }
     }
 
     fun onSearch() {
