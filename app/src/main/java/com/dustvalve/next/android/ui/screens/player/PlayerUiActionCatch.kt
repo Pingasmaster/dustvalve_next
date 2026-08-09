@@ -19,18 +19,12 @@ internal object PlayerUiActionCatch {
 
     suspend fun <T> runOrNull(block: suspend () -> T): T? = runCatchingUiOrNull(block)
 
-    suspend fun <T> runResult(
-        @StringRes fallback: Int,
-        block: suspend () -> T,
-    ): UiResult<T> = runCatchingUi(fallback, block)
+    suspend fun <T> runResult(@StringRes fallback: Int, block: suspend () -> T): UiResult<T> = runCatchingUi(fallback, block)
 }
 
 internal suspend fun runPlayerUiAction(block: suspend () -> Unit) = PlayerUiActionCatch.run(block)
 
-internal suspend fun <T> runPlayerUiActionOrNull(block: suspend () -> T): T? =
-    PlayerUiActionCatch.runOrNull(block)
+internal suspend fun <T> runPlayerUiActionOrNull(block: suspend () -> T): T? = PlayerUiActionCatch.runOrNull(block)
 
-internal suspend fun <T> runPlayerUiActionResult(
-    @StringRes fallback: Int,
-    block: suspend () -> T,
-): UiResult<T> = PlayerUiActionCatch.runResult(fallback, block)
+internal suspend fun <T> runPlayerUiActionResult(@StringRes fallback: Int, block: suspend () -> T): UiResult<T> =
+    PlayerUiActionCatch.runResult(fallback, block)

@@ -6,9 +6,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-internal class LocalMusicPrefsStoreImpl(
-    private val prefs: SettingsPreferences,
-) : LocalMusicPrefsStore {
+internal class LocalMusicPrefsStoreImpl(private val prefs: SettingsPreferences) : LocalMusicPrefsStore {
     private val keys = SettingsPreferences.Keys
 
     override val localMusicEnabled: Flow<Boolean> = prefs.guardedPreferences.map {
@@ -90,10 +88,9 @@ internal class LocalMusicPrefsStoreImpl(
     override suspend fun getLocalMusicEnabledSync(): Boolean =
         prefs.guardedPreferences.firstOrNull()?.get(keys.LOCAL_MUSIC_ENABLED) ?: false
 
-    override suspend fun getLocalMusicFolderUrisSync(): List<String> =
-        StringListPreference.decode(
-            prefs.guardedPreferences.firstOrNull()?.get(keys.LOCAL_MUSIC_FOLDER_URIS),
-        )
+    override suspend fun getLocalMusicFolderUrisSync(): List<String> = StringListPreference.decode(
+        prefs.guardedPreferences.firstOrNull()?.get(keys.LOCAL_MUSIC_FOLDER_URIS),
+    )
 
     override suspend fun getLocalMusicUseMediaStoreSync(): Boolean =
         prefs.guardedPreferences.firstOrNull()?.get(keys.LOCAL_MUSIC_USE_MEDIASTORE) ?: true

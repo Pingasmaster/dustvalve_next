@@ -244,7 +244,6 @@ private fun ProgressBarAppearanceControls(state: SettingsUiState, onAction: (Set
     }
 }
 
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun SettingsAudioQualitySection(

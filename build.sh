@@ -255,10 +255,25 @@ regenerate_baseline_profiles() {
     # Regen still uses the GMD androidTest + install script so both api flavors
     # share one SOURCE-name profile under app/src/release/. Plugin generate*
     # tasks exist for a future cutover (automaticGenerationDuringBuild=false).
+    #
+    # Retry: GMD LMK can kill the app mid-flush ("never flushed profiles").
+    local attempt=1
+    local max_attempts=3
     ./gradlew :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
-        -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
-    ./scripts/assert_tests_ran.sh 1 baselineprofile
+    while true; do
+        if ./gradlew :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
+            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile \
+            && ./scripts/assert_tests_ran.sh 1 baselineprofile; then
+            break
+        fi
+        if [[ "$attempt" -ge "$max_attempts" ]]; then
+            echo "ERROR: baseline profile generation failed after ${max_attempts} attempts." >&2
+            return 1
+        fi
+        echo "WARN: baseline profile attempt ${attempt}/${max_attempts} failed; retrying..." >&2
+        attempt=$((attempt + 1))
+        sleep 5
+    done
     chmod +x ./scripts/install_baseline_profiles.sh
     ./scripts/install_baseline_profiles.sh
 }

@@ -13,6 +13,7 @@ interface DownloadStorageSettingsStore {
     val progressiveDownload: Flow<Boolean>
     val seamlessQualityUpgrade: Flow<Boolean>
     val downloadNotificationsEnabled: Flow<Boolean>
+
     /**
      * Sub-toggle of [autoDownloadFutureContent]: when on, every favorited
      * track is downloaded in the background and the Favorites playlist

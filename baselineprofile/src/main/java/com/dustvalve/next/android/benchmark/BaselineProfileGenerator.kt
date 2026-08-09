@@ -46,54 +46,38 @@ class BaselineProfileGenerator {
      * CUJs covered:
      * - cold_start_mainactivity
      * - scroll_library_tab
-     * - navigate_to_settings
      *
-     * Kept lean so the GMD (arm64-via-translation) can flush profiles before
-     * LMK; heavier playback CUJs belong on a real device / macrobenchmark.
+     * Kept to one iteration so the GMD can flush profiles before LMK; heavier
+     * playback / Settings CUJs belong on a real device / macrobenchmark.
      */
     @Test
     fun generateBaselineProfile() {
+        // Single iteration: GMD (x86_64 + LMK) often kills the app mid-flush
+        // when maxIterations>1 piles RSS across cold starts.
         rule.collect(
             packageName = PACKAGE_NAME,
-            maxIterations = 3,
-            stableIterations = 2,
+            maxIterations = 1,
+            stableIterations = 1,
             includeInStartupProfile = true,
         ) {
             // 1. Cold start the main activity.
             pressHome()
             startActivityAndWait()
             device.waitForIdle()
-            // Give first composition + ProfileInstaller hooks time to settle
-            // before the rule kills the process to flush profiles.
-            Thread.sleep(2_000)
+            // Brief settle for first composition + ProfileInstaller hooks.
+            Thread.sleep(1_000)
             device.wait(Until.hasObject(By.pkg(PACKAGE_NAME)), 5_000)
 
-            // 2. Scroll any LazyColumn that is already on screen.
+            // 2. One short scroll on any LazyColumn already on screen.
             val scrollable = device.findObject(By.scrollable(true))
             if (scrollable != null) {
                 runCatching {
-                    scrollable.scroll(Direction.DOWN, 0.5f)
-                    device.waitForIdle()
-                    scrollable.scroll(Direction.UP, 0.5f)
+                    scrollable.scroll(Direction.DOWN, 0.4f)
                     device.waitForIdle()
                 }
             }
 
-            // 3. Navigate to Settings if the tab is visible.
-            runCatching {
-                val settingsEntry = By.text("Settings")
-                if (device.hasObject(settingsEntry)) {
-                    device.findObject(settingsEntry).click()
-                    device.waitForIdle()
-                    val settingsScroll = device.findObject(By.scrollable(true))
-                    if (settingsScroll != null) {
-                        settingsScroll.scroll(Direction.DOWN, 0.5f)
-                        device.waitForIdle()
-                    }
-                }
-            }
-
-            // Return to home for a clean iteration end state.
+            // Return to home for a clean end state before profile flush.
             pressHome()
         }
     }

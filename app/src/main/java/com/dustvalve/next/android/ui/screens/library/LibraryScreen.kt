@@ -371,9 +371,7 @@ private data class LibraryListActions(
 )
 
 @androidx.compose.runtime.Immutable
-private data class LibraryListExport(
-    val onExportClick: (Playlist) -> Unit,
-)
+private data class LibraryListExport(val onExportClick: (Playlist) -> Unit)
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable

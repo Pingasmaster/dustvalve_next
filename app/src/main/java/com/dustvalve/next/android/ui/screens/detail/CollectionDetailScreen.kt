@@ -76,8 +76,8 @@ import com.dustvalve.next.android.ui.components.lists.MusicRowFlags
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.player.playAlbum
 import com.dustvalve.next.android.ui.screens.player.clearSnackbar
+import com.dustvalve.next.android.ui.screens.player.playAlbum
 import com.dustvalve.next.android.ui.util.toggle
 import kotlinx.coroutines.launch
 
@@ -429,11 +429,7 @@ fun CollectionDetailScreen(
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CollectionActionBar(
-    state: CollectionActionBarState,
-    actions: DetailPlaybackActions,
-    modifier: Modifier = Modifier,
-) {
+private fun CollectionActionBar(state: CollectionActionBarState, actions: DetailPlaybackActions, modifier: Modifier = Modifier) {
     val isFavorite = state.isFavorite
     val isDownloading = state.isDownloading
     val allTracksDownloaded = state.allTracksDownloaded

@@ -20,6 +20,7 @@ interface SourcesSearchPlayerPrefsStore {
     val showVolumeButton: Flow<Boolean>
     val lastYoutubeVideoId: Flow<String?>
     val keepScreenOnInApp: Flow<Boolean>
+
     /**
      * Sub-mode of [keepScreenOnInApp]: when the parent is on AND this is on,
      * the screen only stays awake while music is actively playing. Defaults
@@ -32,6 +33,7 @@ interface SourcesSearchPlayerPrefsStore {
     val searchHistoryYoutube: Flow<Boolean>
     val searchHistorySoundcloud: Flow<Boolean>
     val searchHistoryLocal: Flow<Boolean>
+
     /**
      * Repurposed from "long-press cover for carousel": when on, the player
      * shows a debug overlay instead of the cover carousel. Off by default.
@@ -45,11 +47,13 @@ interface SourcesSearchPlayerPrefsStore {
      */
     val playerDebugOverlay: Flow<Boolean>
     val youtubeDefaultSource: Flow<String>
+
     // Gates the silent cold-start update check fired from
     // DustvalveNextApplication.onCreate. Defaults on: pre-alpha ships several
     // builds a day and we want users on the latest by default. The manual
     // "Search for updates" button in Settings -> About is never gated by this.
     val autoUpdateCheckEnabled: Flow<Boolean>
+
     /** Custom Bandcamp genres added by the user, stored as JSON. */
     val bandcampCustomGenres: Flow<List<String>>
 

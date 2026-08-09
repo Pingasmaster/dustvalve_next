@@ -130,7 +130,6 @@ class AlbumDetailViewModel @Inject constructor(
                 )
             }
             runCatchingUi(R.string.detail_error_load_album) {
-
                 albumRepository.getAlbumDetailFlow(url)
                     .collect { album ->
                         loadedUrl = url
@@ -150,7 +149,6 @@ class AlbumDetailViewModel @Inject constructor(
                         error = error,
                     )
                 }
-            
             }
         }
     }
@@ -208,13 +206,11 @@ class AlbumDetailViewModel @Inject constructor(
         favoriteJob = viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { _ ->
-                _uiState.update {
-                    it.copy(album = it.album?.copy(isFavorite = previousFavorite))
-                }
-            
+                    _uiState.update {
+                        it.copy(album = it.album?.copy(isFavorite = previousFavorite))
+                    }
                 },
             ) {
-
                 toggleFavoriteUseCase.toggleAlbumFavorite(album.id)
             }
         }
@@ -235,18 +231,16 @@ class AlbumDetailViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { _ ->
-                // Rollback
-                val currentAlbum = _uiState.value.album ?: return@launch
-                val rollbackTracks = currentAlbum.tracks.toMutableList()
-                val idx = rollbackTracks.indexOfFirst { it.id == trackId }
-                if (idx >= 0) {
-                    rollbackTracks[idx] = rollbackTracks[idx].copy(isFavorite = previousFavorite)
-                    _uiState.update { it.copy(album = it.album?.copy(tracks = rollbackTracks)) }
-                }
-            
+                    // Rollback
+                    val currentAlbum = _uiState.value.album ?: return@launch
+                    val rollbackTracks = currentAlbum.tracks.toMutableList()
+                    val idx = rollbackTracks.indexOfFirst { it.id == trackId }
+                    if (idx >= 0) {
+                        rollbackTracks[idx] = rollbackTracks[idx].copy(isFavorite = previousFavorite)
+                        _uiState.update { it.copy(album = it.album?.copy(tracks = rollbackTracks)) }
+                    }
                 },
             ) {
-
                 toggleFavoriteUseCase.toggleTrackFavorite(trackId)
             }
         }
@@ -287,7 +281,6 @@ class AlbumDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             runCatchingUi(R.string.snackbar_download_failed) {
-
                 downloadController.downloadAlbumBlocking(album)
                 if (settingsDataStore.getAutoDownloadFutureContentSync()) {
                     albumRepository.setAutoDownload(album.id, true)
@@ -309,7 +302,6 @@ class AlbumDetailViewModel @Inject constructor(
                         isSnackbarError = true,
                     )
                 }
-            
             }
         }
     }
@@ -318,7 +310,6 @@ class AlbumDetailViewModel @Inject constructor(
         val album = _uiState.value.album ?: return
         viewModelScope.launch {
             runCatchingUi(R.string.snackbar_delete_failed) {
-
                 downloadAlbumUseCase.deleteAlbumDownloads(album.id)
                 _uiState.update {
                     it.copy(
@@ -334,7 +325,6 @@ class AlbumDetailViewModel @Inject constructor(
                         isSnackbarError = true,
                     )
                 }
-            
             }
         }
     }
@@ -342,7 +332,6 @@ class AlbumDetailViewModel @Inject constructor(
     fun deleteTrackDownload(track: Track) {
         viewModelScope.launch {
             runCatchingUi(R.string.snackbar_delete_failed) {
-
                 downloadAlbumUseCase.deleteTrackDownload(track.id)
                 _uiState.update {
                     it.copy(
@@ -358,7 +347,6 @@ class AlbumDetailViewModel @Inject constructor(
                         isSnackbarError = true,
                     )
                 }
-            
             }
         }
     }

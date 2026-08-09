@@ -189,7 +189,6 @@ class SearchViewModel @Inject constructor(
         }
 
         runCatchingUi(R.string.common_search_failed) {
-
             // Fetch local results on first page if local search is enabled
             val localResults = if (resetResults && localSearchEnabled.value &&
                 (state.selectedType == null || isLocalFilter)
@@ -233,7 +232,6 @@ class SearchViewModel @Inject constructor(
                     error = error,
                 )
             }
-        
         }
     }
 

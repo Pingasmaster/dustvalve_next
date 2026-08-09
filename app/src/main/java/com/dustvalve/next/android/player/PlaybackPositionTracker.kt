@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.player
 
+import androidx.media3.exoplayer.ExoPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -8,7 +9,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import androidx.media3.exoplayer.ExoPlayer
 
 /**
  * Demand-gated 5 Hz position poll for [PlaybackManager].

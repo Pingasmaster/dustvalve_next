@@ -58,11 +58,7 @@ import com.dustvalve.next.android.ui.util.toggle
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun FullPlayerScaffold(
-    adaptiveInfo: AdaptiveLayoutInfo,
-    model: FullPlayerScaffoldModel,
-    modifier: Modifier = Modifier,
-) {
+internal fun FullPlayerScaffold(adaptiveInfo: AdaptiveLayoutInfo, model: FullPlayerScaffoldModel, modifier: Modifier = Modifier) {
     val adaptive = adaptiveInfo
     val state = model.playback.state
     val track = state.currentTrack
@@ -142,13 +138,7 @@ internal fun FullPlayerScaffold(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerQueueFab(
-    useDualPane: Boolean,
-    hasTrack: Boolean,
-    queueSize: Int,
-    currentQueueIndex: Int,
-    onClick: () -> Unit,
-) {
+private fun FullPlayerQueueFab(useDualPane: Boolean, hasTrack: Boolean, queueSize: Int, currentQueueIndex: Int, onClick: () -> Unit) {
     val upNextCount = if (currentQueueIndex >= 0) {
         (queueSize - currentQueueIndex - 1).coerceAtLeast(0)
     } else {
@@ -170,11 +160,7 @@ private fun FullPlayerQueueFab(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerMainColumn(
-    adaptiveInfo: AdaptiveLayoutInfo,
-    track: Track,
-    model: FullPlayerScaffoldModel,
-) {
+private fun FullPlayerMainColumn(adaptiveInfo: AdaptiveLayoutInfo, track: Track, model: FullPlayerScaffoldModel) {
     val state = model.playback.state
     val positionState = model.playback.positionState
     val transport = model.actions.transport
@@ -236,11 +222,7 @@ private fun FullPlayerMainColumn(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerTrackTitleSection(
-    track: Track,
-    state: PlayerUiState,
-    actions: FullPlayerTrackActions,
-) {
+private fun FullPlayerTrackTitleSection(track: Track, state: PlayerUiState, actions: FullPlayerTrackActions) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth(),
@@ -344,11 +326,7 @@ internal fun FullPlayerTransportControls(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerCollapseBar(
-    expandDistancePx: Float,
-    showVolumeButton: Boolean,
-    chrome: FullPlayerChrome,
-) {
+private fun FullPlayerCollapseBar(expandDistancePx: Float, showVolumeButton: Boolean, chrome: FullPlayerChrome) {
     var collapseDy by remember { mutableFloatStateOf(0f) }
     val collapseVelocityTracker = remember { VelocityTracker() }
     Row(

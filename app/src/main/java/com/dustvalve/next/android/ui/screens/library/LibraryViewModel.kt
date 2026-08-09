@@ -83,7 +83,6 @@ class LibraryViewModel @Inject constructor(
         _uiState.update { it.copy(renameTarget = playlist) }
         viewModelScope.launch {
             runCatchingUiIgnore {
-
                 val tracks = playlistRepository.getTracksInPlaylistSync(playlist.id)
                 _uiState.update { it.copy(renameTargetTracks = tracks) }
             }
@@ -129,7 +128,6 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(transfer = TransferProgress(importing = false, done = 0, total = playlist.trackCount)) }
             runCatchingUi(R.string.library_error_export) {
-
                 val out = context.contentResolver.openOutputStream(uri)
                 if (out == null) {
                     _uiState.update {
@@ -147,7 +145,6 @@ class LibraryViewModel @Inject constructor(
                 }
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(transfer = null, error = error) }
-            
             }
         }
     }
@@ -157,7 +154,6 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(transfer = TransferProgress(importing = true, done = 0, total = 0)) }
             runCatchingUi(R.string.library_error_import) {
-
                 val inp = context.contentResolver.openInputStream(uri)
                 if (inp == null) {
                     _uiState.update { it.copy(transfer = null, error = UiText.StringResource(R.string.library_error_open_import_file)) }
@@ -173,7 +169,6 @@ class LibraryViewModel @Inject constructor(
                 }
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(transfer = null, error = error) }
-            
             }
         }
     }
@@ -181,12 +176,10 @@ class LibraryViewModel @Inject constructor(
     fun createPlaylist(name: String, shapeKey: String? = null, iconUrl: String? = null) {
         viewModelScope.launch {
             runCatchingUi(R.string.snackbar_create_playlist_failed) {
-
                 playlistRepository.createPlaylist(name, shapeKey, iconUrl)
                 _uiState.update { it.copy(showCreateDialog = false) }
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(error = error) }
-            
             }
         }
     }
@@ -194,12 +187,10 @@ class LibraryViewModel @Inject constructor(
     fun updatePlaylistAppearance(playlistId: String, name: String, shapeKey: String?, iconUrl: String?) {
         viewModelScope.launch {
             runCatchingUi(R.string.library_error_update_playlist) {
-
                 playlistRepository.updatePlaylistAppearance(playlistId, name, shapeKey, iconUrl)
                 _uiState.update { it.copy(renameTarget = null, renameTargetTracks = emptyList()) }
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(error = error) }
-            
             }
         }
     }
@@ -207,12 +198,10 @@ class LibraryViewModel @Inject constructor(
     fun deletePlaylist(playlistId: String) {
         viewModelScope.launch {
             runCatchingUi(R.string.library_error_delete_playlist) {
-
                 playlistRepository.deletePlaylist(playlistId)
                 _uiState.update { it.copy(deleteTarget = null) }
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(error = error) }
-            
             }
         }
     }
@@ -220,11 +209,9 @@ class LibraryViewModel @Inject constructor(
     fun pinPlaylist(playlistId: String, isPinned: Boolean) {
         viewModelScope.launch {
             runCatchingUi(R.string.library_error_update_playlist) {
-
                 playlistRepository.pinPlaylist(playlistId, isPinned)
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(error = error) }
-            
             }
         }
     }
@@ -349,7 +336,6 @@ class LibraryViewModel @Inject constructor(
     private fun syncSystemPlaylists() {
         viewModelScope.launch {
             runCatchingUiIgnore {
-
                 playlistRepository.syncRecentPlaylist()
             }
         }

@@ -25,11 +25,7 @@ import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun RemoteResultActionSheet(
-    result: SearchResult,
-    actions: RemoteResultActions,
-    modifier: Modifier = Modifier,
-) {
+fun RemoteResultActionSheet(result: SearchResult, actions: RemoteResultActions, modifier: Modifier = Modifier) {
     val onDismiss = actions.onDismiss
     val onPlayNext = actions.onPlayNext
     val onAddToQueue = actions.onAddToQueue

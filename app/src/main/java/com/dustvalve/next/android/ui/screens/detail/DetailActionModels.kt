@@ -19,13 +19,7 @@ data class ArtistTracksActions(
 )
 
 @Immutable
-data class DetailActionBarPrimary(
-    val label: String,
-    val iconRes: Int,
-    val enabled: Boolean,
-    val loading: Boolean,
-    val onClick: () -> Unit,
-)
+data class DetailActionBarPrimary(val label: String, val iconRes: Int, val enabled: Boolean, val loading: Boolean, val onClick: () -> Unit)
 
 @Immutable
 data class DetailActionBarState(
@@ -50,7 +44,6 @@ data class CollectionActionBarState(
     val allTracksDownloaded: Boolean,
     val hasTracks: Boolean,
 )
-
 
 data class ArtistDetailArgs(
     val sourceId: String,

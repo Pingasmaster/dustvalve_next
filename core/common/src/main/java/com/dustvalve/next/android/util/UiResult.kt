@@ -28,10 +28,7 @@ fun Throwable.toUiText(@StringRes fallback: Int): UiText = UiText.orResource(mes
  * [block] is not crossinline so callers may use labeled returns such as
  * `return@launch` from inside the lambda.
  */
-suspend inline fun <T> runCatchingUi(
-    @StringRes fallback: Int,
-    block: suspend () -> T,
-): UiResult<T> = try {
+suspend inline fun <T> runCatchingUi(@StringRes fallback: Int, block: suspend () -> T): UiResult<T> = try {
     UiResult.Success(block())
 } catch (e: CancellationException) {
     throw e
@@ -40,10 +37,7 @@ suspend inline fun <T> runCatchingUi(
 }
 
 /** Non-suspend form of [runCatchingUi] for sync helpers (parsers, encoders). */
-inline fun <T> runCatchingUiSync(
-    @StringRes fallback: Int,
-    block: () -> T,
-): UiResult<T> = try {
+inline fun <T> runCatchingUiSync(@StringRes fallback: Int, block: () -> T): UiResult<T> = try {
     UiResult.Success(block())
 } catch (e: CancellationException) {
     throw e
@@ -58,10 +52,7 @@ inline fun <T> runCatchingUiSync(
  *
  * Lambdas are not crossinline so `return@launch` from call sites remains valid.
  */
-suspend inline fun runCatchingUiIgnore(
-    onFailure: (Throwable) -> Unit = {},
-    block: suspend () -> Unit,
-) {
+suspend inline fun runCatchingUiIgnore(onFailure: (Throwable) -> Unit = {}, block: suspend () -> Unit) {
     try {
         block()
     } catch (e: CancellationException) {
@@ -72,10 +63,7 @@ suspend inline fun runCatchingUiIgnore(
 }
 
 /** Non-suspend form of [runCatchingUiIgnore]. */
-inline fun runCatchingUiIgnoreSync(
-    onFailure: (Throwable) -> Unit = {},
-    block: () -> Unit,
-) {
+inline fun runCatchingUiIgnoreSync(onFailure: (Throwable) -> Unit = {}, block: () -> Unit) {
     try {
         block()
     } catch (e: CancellationException) {

@@ -59,12 +59,7 @@ class YouTubeChannelParser @Inject constructor() {
         data class Token(val token: String) : ContEntry()
     }
 
-    private fun parseContinuationEntry(
-        entry: JsonElement,
-        channelId: String,
-        channelName: String?,
-        trackNumber: Int,
-    ): ContEntry? {
+    private fun parseContinuationEntry(entry: JsonElement, channelId: String, channelName: String?, trackNumber: Int): ContEntry? {
         entry.path("richItemRenderer")?.let { ric ->
             return parseRichItem(ric, channelId, channelName, trackNumber)?.let { ContEntry.TrackItem(it) }
         }

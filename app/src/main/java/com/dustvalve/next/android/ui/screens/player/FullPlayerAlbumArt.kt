@@ -89,10 +89,13 @@ internal fun FullPlayerAlbumArtRow(
                 when {
                     isCarouselMode && artCapped ->
                         Modifier.fillMaxWidth().height(artMax)
+
                     isCarouselMode ->
                         Modifier.weight(1f).aspectRatio(1f)
+
                     artCapped ->
                         Modifier.widthIn(max = artMax).fillMaxWidth().aspectRatio(1f)
+
                     else ->
                         Modifier.weight(1f).aspectRatio(1f)
                 },
@@ -382,10 +385,7 @@ private fun FullPlayerMainCover(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerInlineVolumeSlider(
-    volumeLevel: Float,
-    onVolumeChange: (Float) -> Unit,
-) {
+private fun FullPlayerInlineVolumeSlider(volumeLevel: Float, onVolumeChange: (Float) -> Unit) {
     val hapticFeedback = LocalHapticFeedback.current
     val onVolumeChangeState = rememberUpdatedState(onVolumeChange)
     val inlineVolumeState = androidx.compose.material3.rememberSliderState(value = volumeLevel)

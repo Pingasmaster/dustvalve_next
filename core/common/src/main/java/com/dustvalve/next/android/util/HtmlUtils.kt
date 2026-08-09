@@ -68,6 +68,7 @@ object HtmlUtils {
             )
             when (step) {
                 is JsonScanStep.Found -> return step.endInclusive
+
                 is JsonScanStep.Continue -> {
                     depth = step.depth
                     inString = step.inString
@@ -82,13 +83,8 @@ object HtmlUtils {
 
     private sealed class JsonScanStep {
         data class Found(val endInclusive: Int) : JsonScanStep()
-        data class Continue(
-            val nextIndex: Int,
-            val depth: Int,
-            val inString: Boolean,
-            val stringChar: Char,
-            val escaped: Boolean,
-        ) : JsonScanStep()
+        data class Continue(val nextIndex: Int, val depth: Int, val inString: Boolean, val stringChar: Char, val escaped: Boolean) :
+            JsonScanStep()
     }
 
     private fun advanceJsonScan(

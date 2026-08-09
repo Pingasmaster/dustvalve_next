@@ -92,11 +92,7 @@ internal val TOGGLE_LABEL_END_GAP = 16.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun SettingsScreen(
-    adaptiveInfo: AdaptiveLayoutInfo,
-    modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel = hiltViewModel(),
-) {
+fun SettingsScreen(adaptiveInfo: AdaptiveLayoutInfo, modifier: Modifier = Modifier, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showRemoveDownloadsDialog by rememberSaveable { mutableStateOf(false) }
     var showFormatSheet by rememberSaveable { mutableStateOf(false) }
@@ -283,10 +279,7 @@ private fun SettingsDownloadFormatSheet(downloadFormat: String, onSelect: (Strin
 }
 
 @Composable
-private fun SettingsScreenList(
-    host: SettingsListHost,
-    actions: SettingsListActions,
-) {
+private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActions) {
     val contentMaxWidth = host.contentMaxWidth
     val state = host.state
     val snackbarHostState = host.snackbarHostState

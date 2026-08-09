@@ -214,7 +214,6 @@ class AlbumRepositoryImpl(
         albumDao.setAutoDownload(albumId, autoDownload)
     }
 
-
     override suspend fun fetchBandcampTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? =
         albumScraper.fetchTrackPrice(trackUrl, fallbackCurrency)
 

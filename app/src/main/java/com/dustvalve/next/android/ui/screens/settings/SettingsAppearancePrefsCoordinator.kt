@@ -12,10 +12,7 @@ internal fun CoroutineScope.launchSettingsPref(block: suspend () -> Unit) {
 /**
  * Appearance + player-chrome preference writes extracted from SettingsViewModel.
  */
-internal class SettingsAppearancePrefsCoordinator(
-    private val scope: CoroutineScope,
-    private val settingsDataStore: SettingsDataStore,
-) {
+internal class SettingsAppearancePrefsCoordinator(private val scope: CoroutineScope, private val settingsDataStore: SettingsDataStore) {
     fun setThemeMode(mode: String) = scope.launchSettingsPref { settingsDataStore.setThemeMode(mode) }
 
     fun setDynamicColor(enabled: Boolean) = scope.launchSettingsPref {

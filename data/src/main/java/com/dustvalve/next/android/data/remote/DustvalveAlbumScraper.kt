@@ -86,11 +86,7 @@ class DustvalveAlbumScraper @Inject constructor(
     data class TrackFile(@SerialName("mp3-128") val mp3128: String? = null)
 
     /** Intermediate scrape payload after HTML fetch + TralbumData decode. */
-    private data class AlbumPagePayload(
-        val requestedUrl: String,
-        val html: String,
-        val tralbum: TralbumData,
-    )
+    private data class AlbumPagePayload(val requestedUrl: String, val html: String, val tralbum: TralbumData)
 
     suspend fun scrapeAlbum(albumUrl: String, maxRedirects: Int = 3): Album = withContext(ioDispatcher) {
         require(NetworkUtils.isValidHttpsUrl(albumUrl)) { "Invalid Dustvalve URL: $albumUrl" }
@@ -299,10 +295,9 @@ class DustvalveAlbumScraper @Inject constructor(
      * means the album viewer can show a "Buy full discography (N)" menu
      * option without re-scraping.
      */
-    fun extractDiscographyOffer(html: String): DiscographyOffer? =
-        iterAlbumReleases(html).firstNotNullOfOrNull { releases ->
-            releases.firstNotNullOfOrNull { release -> discographyOfferFromRelease(release) }
-        }
+    fun extractDiscographyOffer(html: String): DiscographyOffer? = iterAlbumReleases(html).firstNotNullOfOrNull { releases ->
+        releases.firstNotNullOfOrNull { release -> discographyOfferFromRelease(release) }
+    }
 
     private fun albumPriceFromRelease(release: JsonElement): AlbumPrice? {
         val obj = release as? JsonObject ?: return null

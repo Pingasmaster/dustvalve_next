@@ -49,10 +49,7 @@ data class PlayerUiState(
 data class PlaybackPositionState(val positionMs: Long = 0L, val durationMs: Long = 0L)
 
 @HiltViewModel
-class PlayerViewModel @Inject constructor(
-    core: PlayerCoreDeps,
-    libraryDeps: PlayerLibraryDeps,
-) : ViewModel() {
+class PlayerViewModel @Inject constructor(core: PlayerCoreDeps, libraryDeps: PlayerLibraryDeps) : ViewModel() {
 
     private val playbackManager = core.playbackManager
     private val queueManager = core.queueManager

@@ -139,11 +139,7 @@ fun Modifier.adaptiveHeroSize(maxSize: Dp): Modifier {
  * Convenience wrapper that centers content capped by [contentMaxWidth].
  */
 @Composable
-fun AdaptiveContentColumn(
-    contentMaxWidth: Dp,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
+fun AdaptiveContentColumn(contentMaxWidth: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Box(
         modifier = modifier
             .fillMaxWidth()

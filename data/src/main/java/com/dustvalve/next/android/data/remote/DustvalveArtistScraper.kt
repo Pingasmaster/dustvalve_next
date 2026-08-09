@@ -159,11 +159,7 @@ class DustvalveArtistScraper @Inject constructor(
         return rawImageUrl?.let { NetworkUtils.upgradeBandcampArtUrl(it) }
     }
 
-    private fun collectAlbums(
-        document: Document,
-        artistUrl: String,
-        bandName: String,
-    ): List<Album> {
+    private fun collectAlbums(document: Document, artistUrl: String, bandName: String): List<Album> {
         val rows = document.select("#music-grid .music-grid-item a, .music-grid-item a")
             .mapNotNull { parseGridAlbumRow(it) }
             .toMutableList()

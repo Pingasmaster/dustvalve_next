@@ -28,17 +28,10 @@ internal class FullPlayerMotion(
 )
 
 @Stable
-class FullPlayerCollapseActions(
-    val onCollapse: () -> Unit,
-    val onCollapseSeek: (Float) -> Unit,
-    val onCollapseSettle: (Float) -> Unit,
-)
+class FullPlayerCollapseActions(val onCollapse: () -> Unit, val onCollapseSeek: (Float) -> Unit, val onCollapseSettle: (Float) -> Unit)
 
 @Stable
-class FullPlayerNavActions(
-    val onArtistClick: (Track) -> Unit,
-    val onAlbumClick: (Track) -> Unit,
-)
+class FullPlayerNavActions(val onArtistClick: (Track) -> Unit, val onAlbumClick: (Track) -> Unit)
 
 @Stable
 class FullPlayerSheetActions(
@@ -73,22 +66,13 @@ class FullPlayerChrome(
 }
 
 @Stable
-internal class FullPlayerSharedModifiers(
-    val surfaceShared: Modifier,
-    val artShared: Modifier,
-)
+internal class FullPlayerSharedModifiers(val surfaceShared: Modifier, val artShared: Modifier)
 
 @Stable
-internal class FullPlayerLayout(
-    val expandDistancePx: Float,
-    val isCarouselMode: Boolean,
-)
+internal class FullPlayerLayout(val expandDistancePx: Float, val isCarouselMode: Boolean)
 
 @Stable
-internal class FullPlayerPlaybackSnapshot(
-    val state: PlayerUiState,
-    val positionState: PlaybackPositionState,
-)
+internal class FullPlayerPlaybackSnapshot(val state: PlayerUiState, val positionState: PlaybackPositionState)
 
 @Stable
 internal class FullPlayerTrackActions(

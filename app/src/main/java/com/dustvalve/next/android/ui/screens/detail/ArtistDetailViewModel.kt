@@ -177,7 +177,6 @@ class ArtistDetailViewModel @Inject constructor(
             }
 
             runCatchingUi(R.string.detail_error_load_artist) {
-
                 val artist = source.getArtist(url)
                 val isFav = favoriteRepository.isFavorite(url)
                 _uiState.update {
@@ -214,14 +213,12 @@ class ArtistDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(isLoading = false, error = error)
                 }
-            
             }
         }
     }
 
     private suspend fun loadBandcampArtist(url: String, imageUrl: String?, key: String) {
         runCatchingUi(R.string.detail_error_load_artist) {
-
             artistRepository.getArtistDetailFlow(url)
                 .catch { e ->
                     if (e is CancellationException) throw e
@@ -256,7 +253,6 @@ class ArtistDetailViewModel @Inject constructor(
             _uiState.update {
                 it.copy(isLoading = false, error = error)
             }
-        
         }
     }
 
@@ -270,11 +266,9 @@ class ArtistDetailViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                _uiState.update { it.copy(isLoadingMore = false) }
-            
+                    _uiState.update { it.copy(isLoadingMore = false) }
                 },
             ) {
-
                 val page = source.getArtistTracks(state.artistUrl, continuation = nextPage)
                 nextPage = page.continuation
                 if (page.tracks.isNotEmpty()) {
@@ -301,11 +295,9 @@ class ArtistDetailViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                _uiState.update { it.copy(isFavorite = prev) }
-            
+                    _uiState.update { it.copy(isFavorite = prev) }
                 },
             ) {
-
                 if (state.sourceId == "bandcamp") {
                     val artistId = state.artist?.id ?: return@launch
                     artistRepository.toggleFavorite(artistId)
@@ -350,7 +342,6 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             runCatchingUi(R.string.snackbar_download_failed) {
-
                 if (state.sourceId == "bandcamp") {
                     val artist = state.artist
                     if (artist == null || artist.albums.isEmpty()) {
@@ -413,7 +404,6 @@ class ArtistDetailViewModel @Inject constructor(
                         isSnackbarError = true,
                     )
                 }
-            
             }
         }
     }
@@ -474,14 +464,12 @@ class ArtistDetailViewModel @Inject constructor(
                 val artist = state.artist ?: return@launch
                 // Album stubs have empty tracks; delete by album id instead.
                 runCatchingUiIgnore {
-
                     downloadAlbumUseCase.deleteArtistDownloads(artist)
                 }
             } else {
                 val ids = state.tracks.map { it.id }
                 for (id in ids) {
                     runCatchingUiIgnore {
-
                         downloadAlbumUseCase.deleteTrackDownload(id)
                     }
                 }
@@ -571,7 +559,6 @@ class ArtistDetailViewModel @Inject constructor(
         if (state.artist?.albums.isNullOrEmpty()) return
         viewModelScope.launch {
             runCatchingUiIgnore {
-
                 stockMixPool()
             }
         }
@@ -587,7 +574,6 @@ class ArtistDetailViewModel @Inject constructor(
         if (missing.isEmpty()) return
         for (album in albums.filter { it.id in missing }) {
             runCatchingUiIgnore {
-
                 // Persists the album with its tracks; the mix reads them back
                 // out of the database on the next getArtistMixTracks call.
                 source.getAlbum(album.url)

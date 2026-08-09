@@ -1,9 +1,5 @@
 package com.dustvalve.next.android.ui.navigation
 
-import com.dustvalve.next.android.util.runCatchingUiIgnore
-import com.dustvalve.next.android.util.runCatchingUiIgnoreSync
-import com.dustvalve.next.android.util.runCatchingUiOrNull
-import com.dustvalve.next.android.util.runCatchingUiOrNullSync
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -18,6 +14,10 @@ import com.dustvalve.next.android.util.DeepLinkAction
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.LinkResourceType
 import com.dustvalve.next.android.util.NetworkUtils
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.runCatchingUiIgnoreSync
+import com.dustvalve.next.android.util.runCatchingUiOrNull
+import com.dustvalve.next.android.util.runCatchingUiOrNullSync
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,12 +145,10 @@ class NavigationViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                Log.e(TAG, "openLink failed for input", cause)
-                _unsupportedLinkEvents.tryEmit(Unit)
-            
+                    Log.e(TAG, "openLink failed for input", cause)
+                    _unsupportedLinkEvents.tryEmit(Unit)
                 },
             ) {
-
                 val detected = DeepLinkRouter.detect(raw)
                     ?: if (hasExplicitWebScheme(raw) && DeepLinkRouter.looksLikeUrl(raw)) {
                         bandcampDomainSniffer.sniff(raw)
@@ -203,7 +201,6 @@ class NavigationViewModel @Inject constructor(
                 navigateTo(NavDestination.YouTubeHome)
                 viewModelScope.launch {
                     runCatchingUiIgnore {
-
                         val track = youtubeRepository.getTrackInfo(action.videoUrl)
                         _deepLinkTrack.value = track
                     }
@@ -214,7 +211,6 @@ class NavigationViewModel @Inject constructor(
                 navigateTo(NavDestination.SoundCloudHome)
                 viewModelScope.launch {
                     runCatchingUiIgnore {
-
                         val track = soundCloudRepository.getTrack(action.url)
                         _deepLinkTrack.value = track
                     }

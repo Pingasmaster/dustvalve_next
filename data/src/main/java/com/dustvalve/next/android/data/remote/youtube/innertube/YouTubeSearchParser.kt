@@ -37,10 +37,9 @@ class YouTubeSearchParser @Inject constructor() {
         return Page(items, continuation)
     }
 
-    private fun sectionContinuationToken(section: JsonElement): String? =
-        section.path("continuationItemRenderer")
-            ?.path("continuationEndpoint")?.path("continuationCommand")
-            ?.str("token")
+    private fun sectionContinuationToken(section: JsonElement): String? = section.path("continuationItemRenderer")
+        ?.path("continuationEndpoint")?.path("continuationCommand")
+        ?.str("token")
 
     private fun itemSectionRows(section: JsonElement): List<JsonElement> =
         section.path("itemSectionRenderer")?.path("contents")?.arr().orEmpty()

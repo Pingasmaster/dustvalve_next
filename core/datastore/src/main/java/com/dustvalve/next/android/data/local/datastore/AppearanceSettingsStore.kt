@@ -9,8 +9,10 @@ interface AppearanceSettingsStore {
     val dynamicColor: Flow<Boolean>
     val oledBlack: Flow<Boolean>
     val albumArtTheme: Flow<Boolean>
+
     /** "wavy" or "linear". Replaces the legacy boolean wavyProgressBar. */
     val progressBarStyle: Flow<String>
+
     /** Stroke height of the player progress bar in dp; default 24. */
     val progressBarSizeDp: Flow<Int>
 

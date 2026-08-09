@@ -104,13 +104,13 @@ import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActions
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.player.playTrack
-import com.dustvalve.next.android.ui.screens.player.playAlbum
-import com.dustvalve.next.android.ui.screens.player.playNext
-import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addAllToQueue
+import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addTrackToPlaylist
 import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitraryTrack
+import com.dustvalve.next.android.ui.screens.player.playAlbum
+import com.dustvalve.next.android.ui.screens.player.playNext
+import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.search.SearchViewModel
 import com.dustvalve.next.android.ui.theme.AppMotion
 import com.dustvalve.next.android.ui.theme.AppShapes
@@ -778,79 +778,79 @@ fun BandcampScreen(
             actions = RemoteResultActions(
                 onDismiss = { contextResult = null },
                 onPlayNext = {
-                contextResult = null
-                scope.launch {
-                    snackbarHostState.showSnackbar(loadingTrackMsg)
-                }
-                scope.launch {
-                    try {
-                        val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
-                        if (track != null) playerViewModel.playNext(track)
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    contextResult = null
+                    scope.launch {
+                        snackbarHostState.showSnackbar(loadingTrackMsg)
                     }
-                }
-            },
-                onAddToQueue = {
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    try {
-                        val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
-                        if (track != null) playerViewModel.addToQueue(track)
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
-                    }
-                }
-            },
-                onAddToPlaylist = {
-                val ctx = result
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    try {
-                        val track = searchViewModel.resolveBandcampTrack(ctx.url, ctx.name)
-                        if (track != null) addToPlaylistTrackId = track.id
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
-                    }
-                }
-            },
-                onPlayAll = {
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
-                scope.launch {
-                    try {
-                        val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
-                        if (tracks.isNotEmpty()) {
-                            playerViewModel.playAlbum(tracks, 0)
-                            onExpandPlayer()
+                    scope.launch {
+                        try {
+                            val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
+                            if (track != null) playerViewModel.playNext(track)
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
                     }
-                }
-            },
+                },
+                onAddToQueue = {
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        try {
+                            val track = searchViewModel.resolveBandcampTrack(result.url, result.name)
+                            if (track != null) playerViewModel.addToQueue(track)
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
+                    }
+                },
+                onAddToPlaylist = {
+                    val ctx = result
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        try {
+                            val track = searchViewModel.resolveBandcampTrack(ctx.url, ctx.name)
+                            if (track != null) addToPlaylistTrackId = track.id
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
+                    }
+                },
+                onPlayAll = {
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
+                    scope.launch {
+                        try {
+                            val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
+                            if (tracks.isNotEmpty()) {
+                                playerViewModel.playAlbum(tracks, 0)
+                                onExpandPlayer()
+                            }
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
+                    }
+                },
                 onEnqueueAll = {
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
-                scope.launch {
-                    try {
-                        val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
-                        playerViewModel.addAllToQueue(tracks)
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingAlbumMsg) }
+                    scope.launch {
+                        try {
+                            val tracks = searchViewModel.resolveBandcampAlbumTracks(result.url)
+                            playerViewModel.addAllToQueue(tracks)
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
                     }
-                }
-            },
+                },
                 onShare = {
-                contextResult = null
-                context.shareUrl(result.url, result.name)
-            },
+                    contextResult = null
+                    context.shareUrl(result.url, result.name)
+                },
                 onOpenInBrowser = {
-                contextResult = null
-                context.openInBrowser(result.url)
-            },
+                    contextResult = null
+                    context.openInBrowser(result.url)
+                },
             ),
         )
     }
@@ -1071,11 +1071,7 @@ private fun SearchResultItem(result: SearchResult) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CategorySheetContent(
-    carouselItemWidth: Dp,
-    albums: List<Album>,
-    onAlbumClick: (String) -> Unit,
-) {
+private fun CategorySheetContent(carouselItemWidth: Dp, albums: List<Album>, onAlbumClick: (String) -> Unit) {
     val carouselAlbums = albums.take(10)
     val listAlbums = albums.drop(10)
 

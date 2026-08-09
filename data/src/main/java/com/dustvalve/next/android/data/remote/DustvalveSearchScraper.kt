@@ -59,22 +59,24 @@ class DustvalveSearchScraper @Inject constructor(
         @SerialName("tag_names") val tagNames: List<String> = emptyList(),
     )
 
-    suspend fun search(query: String, page: Int = 1, type: SearchResultType? = null): List<SearchResult> =
-        withContext(ioDispatcher) {
-            val searchFilter = bandcampSearchFilter(type) ?: return@withContext emptyList()
-            // The autocomplete_elastic endpoint returns a single batch (~50
-            // results) and has no pagination; subsequent pages are empty.
-            if (page > 1) return@withContext emptyList()
-            val envelope = fetchSearchEnvelope(query, searchFilter)
-            ensureActive()
-            envelope.auto.results.mapNotNull { item -> toSearchResult(item) }
-        }
+    suspend fun search(query: String, page: Int = 1, type: SearchResultType? = null): List<SearchResult> = withContext(ioDispatcher) {
+        val searchFilter = bandcampSearchFilter(type) ?: return@withContext emptyList()
+        // The autocomplete_elastic endpoint returns a single batch (~50
+        // results) and has no pagination; subsequent pages are empty.
+        if (page > 1) return@withContext emptyList()
+        val envelope = fetchSearchEnvelope(query, searchFilter)
+        ensureActive()
+        envelope.auto.results.mapNotNull { item -> toSearchResult(item) }
+    }
 
     /** Bandcamp filter letter, or null when the requested type is not a Bandcamp result. */
     private fun bandcampSearchFilter(type: SearchResultType?): String? = when (type) {
         SearchResultType.ARTIST -> "b"
+
         SearchResultType.ALBUM -> "a"
+
         SearchResultType.TRACK -> "t"
+
         SearchResultType.LOCAL_TRACK,
         SearchResultType.YOUTUBE_TRACK,
         SearchResultType.YOUTUBE_ALBUM,
@@ -85,6 +87,7 @@ class DustvalveSearchScraper @Inject constructor(
         SearchResultType.SOUNDCLOUD_PLAYLIST,
         SearchResultType.SOUNDCLOUD_ALBUM,
         -> null
+
         null -> ""
     }
 
@@ -140,16 +143,15 @@ class DustvalveSearchScraper @Inject constructor(
         )
     }
 
-    private fun artistAndAlbumFor(
-        type: SearchResultType,
-        item: SearchItem,
-    ): Pair<String?, String?> = when (type) {
+    private fun artistAndAlbumFor(type: SearchResultType, item: SearchItem): Pair<String?, String?> = when (type) {
         SearchResultType.ALBUM -> item.bandName?.trim()?.takeIf { it.isNotEmpty() } to null
+
         SearchResultType.TRACK -> {
             val artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
             val album = item.albumName?.trim()?.takeIf { it.isNotEmpty() }
             artist to album
         }
+
         else -> null to null
     }
 

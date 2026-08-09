@@ -10,9 +10,9 @@ import com.dustvalve.next.android.data.remote.genreSubTags
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.usecase.DiscoverDustvalveUseCase
 import com.dustvalve.next.android.util.UiText
-import com.dustvalve.next.android.util.runCatchingUiIgnore
 import com.dustvalve.next.android.util.onFailure
 import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -97,11 +97,9 @@ class BandcampViewModel @Inject constructor(
             _uiState.update { it.copy(genreValidating = true, genreError = null) }
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NETWORK) }
-            
+                    _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NETWORK) }
                 },
             ) {
-
                 val result = discoverDustvalveUseCase(genre = slug)
                 if (result.albums.isEmpty()) {
                     _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NOT_FOUND) }
@@ -192,7 +190,6 @@ class BandcampViewModel @Inject constructor(
         _uiState.update { it.copy(isCategoryLoading = true, categoryError = null) }
         loadCategoryJob = viewModelScope.launch {
             runCatchingUi(R.string.snackbar_failed_load) {
-
                 val genreParam = tag.takeIf { it.isNotEmpty() }
                 val result = discoverDustvalveUseCase(genre = genreParam)
                 Log.d(TAG, "loadCategoryAlbums($tag): ${result.albums.size} albums returned")
@@ -211,7 +208,6 @@ class BandcampViewModel @Inject constructor(
                         categoryError = error,
                     )
                 }
-            
             }
         }
     }

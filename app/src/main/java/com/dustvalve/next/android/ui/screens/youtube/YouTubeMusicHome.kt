@@ -403,11 +403,7 @@ private fun ShelfHeader(title: String) {
 // -- Quick picks: horizontally paged 4-row grid --------------------------
 
 @Composable
-private fun QuickPicksPager(
-    adaptiveInfo: AdaptiveLayoutInfo,
-    items: List<SongItem>,
-    onPlay: (SongItem) -> Unit,
-) {
+private fun QuickPicksPager(adaptiveInfo: AdaptiveLayoutInfo, items: List<SongItem>, onPlay: (SongItem) -> Unit) {
     val pageWidth = when (adaptiveInfo.widthSizeClass) {
         WidthSizeClass.Compact -> 316.dp
         WidthSizeClass.Medium -> maxOf(316.dp, adaptiveInfo.carouselItemWidth)
@@ -493,11 +489,7 @@ private fun QuickPickRow(song: SongItem, onPlay: () -> Unit) {
 // -- Tile shelves --------------------------------------------------------
 
 @Composable
-private fun ImmersiveTileCarousel(
-    carouselItemWidth: Dp,
-    items: List<TileItem>,
-    onOpen: (TileItem) -> Unit,
-) {
+private fun ImmersiveTileCarousel(carouselItemWidth: Dp, items: List<TileItem>, onOpen: (TileItem) -> Unit) {
     val carouselState = rememberCarouselState { items.size }
     HorizontalMultiBrowseCarousel(
         state = carouselState,
@@ -567,11 +559,7 @@ private fun ImmersiveTileCarousel(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun TileCardRow(
-    adaptiveInfo: AdaptiveLayoutInfo,
-    items: List<TileItem>,
-    onOpen: (TileItem) -> Unit,
-) {
+private fun TileCardRow(adaptiveInfo: AdaptiveLayoutInfo, items: List<TileItem>, onOpen: (TileItem) -> Unit) {
     val cardWidth = when (adaptiveInfo.widthSizeClass) {
         WidthSizeClass.Compact -> 150.dp
         WidthSizeClass.Medium -> adaptiveInfo.carouselItemWidth
@@ -620,11 +608,7 @@ private fun TileCardRow(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HeroTileRow(
-    adaptiveInfo: AdaptiveLayoutInfo,
-    items: List<HeroItem>,
-    onOpen: (HeroItem) -> Unit,
-) {
+private fun HeroTileRow(adaptiveInfo: AdaptiveLayoutInfo, items: List<HeroItem>, onOpen: (HeroItem) -> Unit) {
     val cardWidth = when (adaptiveInfo.widthSizeClass) {
         WidthSizeClass.Compact -> 150.dp
         WidthSizeClass.Medium -> adaptiveInfo.carouselItemWidth

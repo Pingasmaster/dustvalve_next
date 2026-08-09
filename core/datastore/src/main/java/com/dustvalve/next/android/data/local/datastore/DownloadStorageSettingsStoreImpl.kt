@@ -4,9 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 
-internal class DownloadStorageSettingsStoreImpl(
-    private val prefs: SettingsPreferences,
-) : DownloadStorageSettingsStore {
+internal class DownloadStorageSettingsStoreImpl(private val prefs: SettingsPreferences) : DownloadStorageSettingsStore {
     private val keys = SettingsPreferences.Keys
 
     override val storageLimit: Flow<Long> = prefs.guardedPreferences.map {
@@ -38,9 +36,8 @@ internal class DownloadStorageSettingsStoreImpl(
         prefs.edit { it[keys.STORAGE_LIMIT] = bytes.coerceAtLeast(0L) }
     }
 
-    override suspend fun getStorageLimitSync(): Long =
-        prefs.guardedPreferences.firstOrNull()?.get(keys.STORAGE_LIMIT)
-            ?: SettingsDataStore.DEFAULT_STORAGE_LIMIT
+    override suspend fun getStorageLimitSync(): Long = prefs.guardedPreferences.firstOrNull()?.get(keys.STORAGE_LIMIT)
+        ?: SettingsDataStore.DEFAULT_STORAGE_LIMIT
 
     override suspend fun setAutoDownloadFutureContent(enabled: Boolean) {
         prefs.edit { it[keys.AUTO_DOWNLOAD_FUTURE_CONTENT] = enabled }
@@ -73,8 +70,7 @@ internal class DownloadStorageSettingsStoreImpl(
         prefs.edit { it[keys.AUTO_DOWNLOAD_FAVORITES] = enabled }
     }
 
-    override suspend fun getDownloadFormatSync(): String =
-        prefs.guardedPreferences.firstOrNull()?.get(keys.DOWNLOAD_FORMAT) ?: "flac"
+    override suspend fun getDownloadFormatSync(): String = prefs.guardedPreferences.firstOrNull()?.get(keys.DOWNLOAD_FORMAT) ?: "flac"
 
     override suspend fun getProgressiveDownloadSync(): Boolean =
         prefs.guardedPreferences.firstOrNull()?.get(keys.PROGRESSIVE_DOWNLOAD) ?: true

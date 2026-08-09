@@ -42,6 +42,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
@@ -50,7 +51,6 @@ import com.dustvalve.next.android.domain.model.SoundCloudShelf
 import com.dustvalve.next.android.domain.model.SoundCloudShelfItem
 import com.dustvalve.next.android.domain.model.SoundCloudShelfKind
 import com.dustvalve.next.android.domain.model.Track
-import androidx.compose.ui.unit.Dp
 import com.dustvalve.next.android.ui.theme.AppShapes
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -231,11 +231,7 @@ private fun SoundCloudFeed(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TrendingCarousel(
-    carouselItemWidth: Dp,
-    tracks: List<Track>,
-    onPlayTrack: (Track) -> Unit,
-) {
+private fun TrendingCarousel(carouselItemWidth: Dp, tracks: List<Track>, onPlayTrack: (Track) -> Unit) {
     val carouselState = rememberCarouselState { tracks.size }
     HorizontalMultiBrowseCarousel(
         state = carouselState,

@@ -13,10 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.roundToInt
 
 /** Audio-output device list + volume writes for the player UI. */
-internal class PlayerAudioController(
-    appContext: Context,
-    private val playbackManager: PlaybackManager,
-) {
+internal class PlayerAudioController(appContext: Context, private val playbackManager: PlaybackManager) {
     private val audioManager = appContext.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val _audioDevices = MutableStateFlow(getOutputDevices())
     val audioDevices: StateFlow<List<AudioDeviceInfo>> = _audioDevices.asStateFlow()

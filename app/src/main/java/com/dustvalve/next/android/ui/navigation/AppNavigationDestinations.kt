@@ -33,6 +33,7 @@ internal fun AppNavigationDestination(
         is NavDestination.Library,
         is NavDestination.Settings,
         -> AppNavigationHomeDestination(destination, adaptiveInfo)
+
         else -> AppNavigationDetailDestination(destination, adaptiveInfo, detailVmStores)
     }
 }

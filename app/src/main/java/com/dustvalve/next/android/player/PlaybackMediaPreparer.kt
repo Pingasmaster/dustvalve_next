@@ -57,8 +57,7 @@ internal class PlaybackMediaPreparer(
     }
 
     /** YouTube watch-page / short-link URLs are HTML pages, not media streams. */
-    fun isWatchPageUrl(url: String): Boolean =
-        // Also matches music.youtube.com/watch and m.youtube.com/watch.
+    fun isWatchPageUrl(url: String): Boolean = // Also matches music.youtube.com/watch and m.youtube.com/watch.
         url.contains("youtube.com/watch") || url.contains("youtu.be/")
 
     /**

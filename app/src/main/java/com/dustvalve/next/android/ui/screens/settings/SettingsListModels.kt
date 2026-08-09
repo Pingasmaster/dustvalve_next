@@ -14,11 +14,7 @@ internal data class SettingsToggleExtras(
 )
 
 @Immutable
-internal data class SettingsListHost(
-    val contentMaxWidth: Dp,
-    val state: SettingsUiState,
-    val snackbarHostState: SnackbarHostState,
-)
+internal data class SettingsListHost(val contentMaxWidth: Dp, val state: SettingsUiState, val snackbarHostState: SnackbarHostState)
 
 @Immutable
 internal data class SettingsListDialogActions(

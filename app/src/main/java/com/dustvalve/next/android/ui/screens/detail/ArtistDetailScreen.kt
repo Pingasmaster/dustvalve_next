@@ -91,8 +91,8 @@ import com.dustvalve.next.android.ui.components.lists.MusicRow
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.player.playAlbum
 import com.dustvalve.next.android.ui.screens.player.clearSnackbar
+import com.dustvalve.next.android.ui.screens.player.playAlbum
 import com.dustvalve.next.android.ui.util.toggle
 import kotlinx.coroutines.launch
 
@@ -585,13 +585,7 @@ private fun LazyListScope.artistTracksSection(state: ArtistDetailUiState, onTrac
 }
 
 @Composable
-private fun ArtistHero(
-    heroMaxSize: Dp,
-    imageUrl: String?,
-    name: String,
-    isFavorite: Boolean,
-    onDoubleTap: (() -> Unit)? = null,
-) {
+private fun ArtistHero(heroMaxSize: Dp, imageUrl: String?, name: String, isFavorite: Boolean, onDoubleTap: (() -> Unit)? = null) {
     val hapticFeedback = LocalHapticFeedback.current
     val heartMorph = rememberHeartMorphState()
     val heartScope = rememberCoroutineScope()

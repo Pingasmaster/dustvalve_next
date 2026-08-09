@@ -115,23 +115,23 @@ internal fun UpNextQueuePane(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 slots = ReorderableListSlots(
                     footer = {
-                    if (hasMore) {
-                        item(key = "queue_loading_more") {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .animateItem(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                ContainedLoadingIndicator()
+                        if (hasMore) {
+                            item(key = "queue_loading_more") {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
+                                        .animateItem(),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    ContainedLoadingIndicator()
+                                }
                             }
                         }
-                    }
-                    item(key = "queue_bottom_spacer") {
-                        Spacer(modifier = Modifier.height(28.dp))
-                    }
-                },
+                        item(key = "queue_bottom_spacer") {
+                            Spacer(modifier = Modifier.height(28.dp))
+                        }
+                    },
                 ),
             ) { upNextIndex, queueEntry, isDragging, dragHandleModifier ->
                 UpNextQueueRow(
@@ -233,30 +233,30 @@ private fun UpNextQueueRow(
                 actions = MusicRowActions(
                     onLongClick = onLongClick,
                     dragHandle = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isDownloaded) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_download_done),
-                                contentDescription = stringResource(R.string.common_cd_downloaded),
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isDownloaded) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_download_done),
+                                    contentDescription = stringResource(R.string.common_cd_downloaded),
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .then(dragHandleModifier),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_drag_handle),
+                                    contentDescription = stringResource(R.string.common_cd_reorder),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .then(dragHandleModifier),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_drag_handle),
-                                contentDescription = stringResource(R.string.common_cd_reorder),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        }
-                    }
-                },
+                    },
                 ),
             )
         }

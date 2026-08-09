@@ -79,13 +79,13 @@ import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActions
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.player.playTrack
-import com.dustvalve.next.android.ui.screens.player.playAlbum
-import com.dustvalve.next.android.ui.screens.player.playNext
-import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addAllToQueue
+import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addTrackToPlaylist
 import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitraryTrack
+import com.dustvalve.next.android.ui.screens.player.playAlbum
+import com.dustvalve.next.android.ui.screens.player.playNext
+import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.DetectedLink
@@ -606,63 +606,63 @@ private fun SoundCloudResultSheets(
             actions = RemoteResultActions(
                 onDismiss = onDismissContext,
                 onPlayNext = {
-                onDismissContext()
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                        actions.playNext(actions.getTrack(result.url))
-                    }
-                }
-            },
-                onAddToQueue = {
-                onDismissContext()
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                        actions.addToQueue(actions.getTrack(result.url))
-                    }
-                }
-            },
-                onAddToPlaylist = {
-                val ctx = result
-                onDismissContext()
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                        onAddToPlaylistTrackId(actions.getTrack(ctx.url).id)
-                    }
-                }
-            },
-                onPlayAll = {
-                onDismissContext()
-                scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
-                scope.launch {
-                    runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                        val tracks = actions.resolveCollectionTracks(result.url)
-                        if (tracks.isNotEmpty()) {
-                            actions.playAlbum(tracks, 0)
-                            onExpandPlayer()
+                    onDismissContext()
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
+                            actions.playNext(actions.getTrack(result.url))
                         }
                     }
-                }
-            },
-                onEnqueueAll = {
-                onDismissContext()
-                scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
-                scope.launch {
-                    runCatchingPlayback(snackbarHostState, failedLoadMsg) {
-                        actions.addAllToQueue(actions.resolveCollectionTracks(result.url))
+                },
+                onAddToQueue = {
+                    onDismissContext()
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
+                            actions.addToQueue(actions.getTrack(result.url))
+                        }
                     }
-                }
-            },
+                },
+                onAddToPlaylist = {
+                    val ctx = result
+                    onDismissContext()
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
+                            onAddToPlaylistTrackId(actions.getTrack(ctx.url).id)
+                        }
+                    }
+                },
+                onPlayAll = {
+                    onDismissContext()
+                    scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
+                    scope.launch {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
+                            val tracks = actions.resolveCollectionTracks(result.url)
+                            if (tracks.isNotEmpty()) {
+                                actions.playAlbum(tracks, 0)
+                                onExpandPlayer()
+                            }
+                        }
+                    }
+                },
+                onEnqueueAll = {
+                    onDismissContext()
+                    scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
+                    scope.launch {
+                        runCatchingPlayback(snackbarHostState, failedLoadMsg) {
+                            actions.addAllToQueue(actions.resolveCollectionTracks(result.url))
+                        }
+                    }
+                },
                 onShare = {
-                onDismissContext()
-                context.shareUrl(result.url, result.name)
-            },
+                    onDismissContext()
+                    context.shareUrl(result.url, result.name)
+                },
                 onOpenInBrowser = {
-                onDismissContext()
-                context.openInBrowser(result.url)
-            },
+                    onDismissContext()
+                    context.openInBrowser(result.url)
+                },
             ),
         )
     }

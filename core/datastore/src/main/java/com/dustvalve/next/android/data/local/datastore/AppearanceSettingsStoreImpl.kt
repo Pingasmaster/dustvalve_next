@@ -3,9 +3,7 @@ package com.dustvalve.next.android.data.local.datastore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-internal class AppearanceSettingsStoreImpl(
-    private val prefs: SettingsPreferences,
-) : AppearanceSettingsStore {
+internal class AppearanceSettingsStoreImpl(private val prefs: SettingsPreferences) : AppearanceSettingsStore {
     private val keys = SettingsPreferences.Keys
 
     override val themeMode: Flow<String> = prefs.guardedPreferences.map { it[keys.THEME_MODE] ?: "system" }

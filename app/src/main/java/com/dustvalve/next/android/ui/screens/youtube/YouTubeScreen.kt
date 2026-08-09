@@ -103,13 +103,13 @@ import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActions
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.player.playTrack
-import com.dustvalve.next.android.ui.screens.player.playAlbum
-import com.dustvalve.next.android.ui.screens.player.playNext
-import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addAllToQueue
+import com.dustvalve.next.android.ui.screens.player.addToQueue
 import com.dustvalve.next.android.ui.screens.player.addTrackToPlaylist
 import com.dustvalve.next.android.ui.screens.player.createPlaylistAndAddArbitraryTrack
+import com.dustvalve.next.android.ui.screens.player.playAlbum
+import com.dustvalve.next.android.ui.screens.player.playNext
+import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.util.DeepLinkRouter
@@ -664,77 +664,77 @@ fun YouTubeScreen(
             actions = RemoteResultActions(
                 onDismiss = { contextResult = null },
                 onPlayNext = {
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    try {
-                        val track = viewModel.getTrackInfo(result.url)
-                        playerViewModel.playNext(track)
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
-                    }
-                }
-            },
-                onAddToQueue = {
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    try {
-                        val track = viewModel.getTrackInfo(result.url)
-                        playerViewModel.addToQueue(track)
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
-                    }
-                }
-            },
-                onAddToPlaylist = {
-                val ctx = result
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
-                scope.launch {
-                    try {
-                        val track = viewModel.getTrackInfo(ctx.url)
-                        addToPlaylistTrackId = track.id
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
-                    }
-                }
-            },
-                onPlayAll = {
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
-                scope.launch {
-                    try {
-                        val tracks = viewModel.resolvePlaylistTracks(result.url)
-                        if (tracks.isNotEmpty()) {
-                            playerViewModel.playAlbum(tracks, 0)
-                            onExpandPlayer()
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        try {
+                            val track = viewModel.getTrackInfo(result.url)
+                            playerViewModel.playNext(track)
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
                         }
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
                     }
-                }
-            },
+                },
+                onAddToQueue = {
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        try {
+                            val track = viewModel.getTrackInfo(result.url)
+                            playerViewModel.addToQueue(track)
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
+                    }
+                },
+                onAddToPlaylist = {
+                    val ctx = result
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
+                    scope.launch {
+                        try {
+                            val track = viewModel.getTrackInfo(ctx.url)
+                            addToPlaylistTrackId = track.id
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
+                    }
+                },
+                onPlayAll = {
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
+                    scope.launch {
+                        try {
+                            val tracks = viewModel.resolvePlaylistTracks(result.url)
+                            if (tracks.isNotEmpty()) {
+                                playerViewModel.playAlbum(tracks, 0)
+                                onExpandPlayer()
+                            }
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
+                    }
+                },
                 onEnqueueAll = {
-                contextResult = null
-                scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
-                scope.launch {
-                    try {
-                        val tracks = viewModel.resolvePlaylistTracks(result.url)
-                        playerViewModel.addAllToQueue(tracks)
-                    } catch (_: Exception) {
-                        snackbarHostState.showSnackbar(failedLoadMsg)
+                    contextResult = null
+                    scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
+                    scope.launch {
+                        try {
+                            val tracks = viewModel.resolvePlaylistTracks(result.url)
+                            playerViewModel.addAllToQueue(tracks)
+                        } catch (_: Exception) {
+                            snackbarHostState.showSnackbar(failedLoadMsg)
+                        }
                     }
-                }
-            },
+                },
                 onShare = {
-                contextResult = null
-                context.shareUrl(result.url, result.name)
-            },
+                    contextResult = null
+                    context.shareUrl(result.url, result.name)
+                },
                 onOpenInBrowser = {
-                contextResult = null
-                context.openInBrowser(result.url)
-            },
+                    contextResult = null
+                    context.openInBrowser(result.url)
+                },
             ),
         )
     }
@@ -1037,11 +1037,7 @@ private fun VideoHeroCard(item: SearchResult, onClick: () -> Unit, modifier: Mod
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun VideoCarousel(
-    carouselItemWidth: Dp,
-    items: List<SearchResult>,
-    onItemClick: (SearchResult) -> Unit,
-) {
+private fun VideoCarousel(carouselItemWidth: Dp, items: List<SearchResult>, onItemClick: (SearchResult) -> Unit) {
     val carouselState = rememberCarouselState { items.size }
     HorizontalMultiBrowseCarousel(
         state = carouselState,

@@ -117,8 +117,4 @@ fun <T : Any> ReorderableMusicList(
     }
 }
 
-
-data class ReorderableListSlots(
-    val header: (LazyListScope.() -> Unit)? = null,
-    val footer: (LazyListScope.() -> Unit)? = null,
-)
+data class ReorderableListSlots(val header: (LazyListScope.() -> Unit)? = null, val footer: (LazyListScope.() -> Unit)? = null)

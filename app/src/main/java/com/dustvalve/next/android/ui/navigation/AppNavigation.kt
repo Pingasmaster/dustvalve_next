@@ -140,11 +140,7 @@ fun AppNavigation(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun ProviderEnableDialog(
-    pending: PendingLink,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+private fun ProviderEnableDialog(pending: PendingLink, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val typeNoun = stringResource(linkKindRes(pending.type))
     AlertDialog(
         modifier = Modifier.testTag(TestTags.PROVIDER_ENABLE_DIALOG),

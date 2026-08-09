@@ -86,8 +86,8 @@ import com.dustvalve.next.android.ui.components.lists.MusicRowFlags
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
-import com.dustvalve.next.android.ui.screens.player.playAlbum
 import com.dustvalve.next.android.ui.screens.player.clearSnackbar
+import com.dustvalve.next.android.ui.screens.player.playAlbum
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.util.toggle
 import kotlinx.coroutines.launch
@@ -436,15 +436,15 @@ fun AlbumDetailScreen(
                                         ),
                                         actions = MusicRowActions(
                                             onFavoriteClick = {
-                                            viewModel.toggleTrackFavorite(track.id)
-                                        },
+                                                viewModel.toggleTrackFavorite(track.id)
+                                            },
                                             onDownloadClick = {
-                                            if (isTrackDownloaded) {
-                                                trackToDelete = track
-                                            } else {
-                                                viewModel.downloadTrack(track)
-                                            }
-                                        },
+                                                if (isTrackDownloaded) {
+                                                    trackToDelete = track
+                                                } else {
+                                                    viewModel.downloadTrack(track)
+                                                }
+                                            },
                                         ),
                                     )
                                 }
@@ -535,11 +535,7 @@ private fun ExpandableAbout(about: String) {
  */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun AlbumActionBar(
-    state: AlbumActionBarState,
-    actions: AlbumActionBarActions,
-    modifier: Modifier = Modifier,
-) {
+private fun AlbumActionBar(state: AlbumActionBarState, actions: AlbumActionBarActions, modifier: Modifier = Modifier) {
     val isFavorite = state.isFavorite
     val isDownloading = state.isDownloading
     val allTracksDownloaded = state.allTracksDownloaded

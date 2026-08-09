@@ -22,15 +22,10 @@ fun PlayerViewModel.addToQueue(track: Track) = library.addToQueue(track)
 
 fun PlayerViewModel.addAllToQueue(tracks: List<Track>) = library.addAllToQueue(tracks)
 
-fun PlayerViewModel.addTrackToPlaylist(playlistId: String, trackId: String) =
-    library.addTrackToPlaylist(playlistId, trackId)
+fun PlayerViewModel.addTrackToPlaylist(playlistId: String, trackId: String) = library.addTrackToPlaylist(playlistId, trackId)
 
-fun PlayerViewModel.createPlaylistAndAddArbitraryTrack(
-    name: String,
-    shapeKey: String?,
-    iconUrl: String?,
-    trackId: String,
-) = library.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, trackId)
+fun PlayerViewModel.createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, trackId: String) =
+    library.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, trackId)
 
 fun PlayerViewModel.clearSnackbar() = library.clearSnackbar()
 

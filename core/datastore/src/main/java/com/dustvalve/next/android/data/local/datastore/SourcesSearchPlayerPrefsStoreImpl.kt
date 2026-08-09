@@ -6,9 +6,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
-internal class SourcesSearchPlayerPrefsStoreImpl(
-    private val prefs: SettingsPreferences,
-) : SourcesSearchPlayerPrefsStore {
+internal class SourcesSearchPlayerPrefsStoreImpl(private val prefs: SettingsPreferences) : SourcesSearchPlayerPrefsStore {
     private val keys = SettingsPreferences.Keys
 
     override val authCookies: Flow<String?> = prefs.guardedPreferences.map { p ->

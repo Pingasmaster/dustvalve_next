@@ -324,6 +324,10 @@ class PlaylistTransferRepository(
             throw ce
         } catch (_: IOException) {
             usable
+        } catch (_: RuntimeException) {
+            // Best-effort probe: Robolectric/mocks can ClassCast getSystemService
+            // results or NPE inside getUuidForPath when volumes are unset.
+            usable
         }
     }
 

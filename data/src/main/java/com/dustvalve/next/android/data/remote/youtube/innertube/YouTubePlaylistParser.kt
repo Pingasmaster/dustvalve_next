@@ -63,11 +63,10 @@ class YouTubePlaylistParser @Inject constructor() {
         data class Token(val token: String) : PlaylistEntry()
     }
 
-    private fun playlistSectionEntries(sectionContents: List<JsonElement>): List<JsonElement> =
-        sectionContents.flatMap { section ->
-            val isrContents = section.path("itemSectionRenderer")?.path("contents")?.arr().orEmpty()
-            isrContents.flatMap { item -> expandPlaylistItem(item) }
-        }
+    private fun playlistSectionEntries(sectionContents: List<JsonElement>): List<JsonElement> = sectionContents.flatMap { section ->
+        val isrContents = section.path("itemSectionRenderer")?.path("contents")?.arr().orEmpty()
+        isrContents.flatMap { item -> expandPlaylistItem(item) }
+    }
 
     /**
      * Modern MWEB/WEB: lockupViewModel rows live directly under
@@ -262,19 +261,9 @@ class YouTubePlaylistParser @Inject constructor() {
         return MixPage(tracks = tracks, title = panelTitle, continuation = cont)
     }
 
-    private data class MixEntry(
-        val track: Track,
-        val videoId: String,
-        val index: Int?,
-        val params: String?,
-    )
+    private data class MixEntry(val track: Track, val videoId: String, val index: Int?, val params: String?)
 
-    private fun consumeMixEntry(
-        entry: JsonElement,
-        playlistId: String,
-        trackNumber: Int,
-        seenVideoIds: Set<String>,
-    ): MixEntry? {
+    private fun consumeMixEntry(entry: JsonElement, playlistId: String, trackNumber: Int, seenVideoIds: Set<String>): MixEntry? {
         val pvr = entry.path("playlistPanelVideoRenderer") ?: return null
         val videoId = pvr.str("videoId") ?: return null
         if (videoId in seenVideoIds) return null

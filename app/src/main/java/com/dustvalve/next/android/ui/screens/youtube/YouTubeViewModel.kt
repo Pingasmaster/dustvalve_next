@@ -14,8 +14,8 @@ import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.domain.repository.TrackCacheRepository
 import com.dustvalve.next.android.domain.repository.YouTubeMusicRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
-import com.dustvalve.next.android.util.UiText
 import com.dustvalve.next.android.util.UiResult
+import com.dustvalve.next.android.util.UiText
 import com.dustvalve.next.android.util.onFailure
 import com.dustvalve.next.android.util.runCatchingUi
 import com.dustvalve.next.android.util.runCatchingUiIgnore
@@ -240,7 +240,6 @@ class YouTubeViewModel @Inject constructor(
         _uiState.update { it.copy(ytmHomeLoading = true, ytmHomeError = null) }
         ytmHomeJob = viewModelScope.launch {
             runCatchingUi(R.string.snackbar_failed_load) {
-
                 val feed = if (params == null) {
                     youtubeMusicRepository.getHome()
                 } else {
@@ -257,7 +256,6 @@ class YouTubeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(ytmHomeLoading = false, ytmHomeError = error)
                 }
-            
             }
         }
     }
@@ -311,18 +309,16 @@ class YouTubeViewModel @Inject constructor(
     private suspend fun loadRecommendationsSection() {
         runCatchingUiIgnore(
             onFailure = { cause ->
-            _uiState.update {
-                it.copy(
-                    recommendationsSection = it.recommendationsSection.copy(
-                        isLoading = false,
-                        error = cause.message,
-                    ),
-                )
-            }
-        
+                _uiState.update {
+                    it.copy(
+                        recommendationsSection = it.recommendationsSection.copy(
+                            isLoading = false,
+                            error = cause.message,
+                        ),
+                    )
+                }
             },
         ) {
-
             val videoId = settingsDataStore.lastYoutubeVideoId.firstOrNull()
             if (videoId == null) {
                 _uiState.update {
@@ -363,13 +359,11 @@ class YouTubeViewModel @Inject constructor(
     private suspend fun loadTrendingSection() {
         runCatchingUiIgnore(
             onFailure = { cause ->
-            _uiState.update {
-                it.copy(trendingSection = it.trendingSection.copy(isLoading = false, error = cause.message))
-            }
-        
+                _uiState.update {
+                    it.copy(trendingSection = it.trendingSection.copy(isLoading = false, error = cause.message))
+                }
             },
         ) {
-
             val (results, _) = youtubeRepository.search(
                 query = "trending music",
                 filter = "songs",
@@ -384,17 +378,15 @@ class YouTubeViewModel @Inject constructor(
     private suspend fun loadGenreSection(index: Int, genre: GenreQuery) {
         runCatchingUiIgnore(
             onFailure = { cause ->
-            _uiState.update {
-                val updated = it.genreSections.toMutableList()
-                if (index < updated.size) {
-                    updated[index] = updated[index].copy(isLoading = false, error = cause.message)
+                _uiState.update {
+                    val updated = it.genreSections.toMutableList()
+                    if (index < updated.size) {
+                        updated[index] = updated[index].copy(isLoading = false, error = cause.message)
+                    }
+                    it.copy(genreSections = updated)
                 }
-                it.copy(genreSections = updated)
-            }
-        
             },
         ) {
-
             val (results, _) = youtubeRepository.search(
                 query = genre.searchQuery,
                 filter = "songs",
@@ -462,7 +454,6 @@ class YouTubeViewModel @Inject constructor(
         moodJob?.cancel()
         moodJob = viewModelScope.launch {
             runCatchingUi(R.string.snackbar_failed_load) {
-
                 val (results, _) = youtubeRepository.search(
                     query = mood.query,
                     filter = "songs",
@@ -473,7 +464,6 @@ class YouTubeViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(isMoodLoading = false, moodError = error)
                 }
-            
             }
         }
     }
@@ -590,7 +580,6 @@ class YouTubeViewModel @Inject constructor(
         val generationAtStart = _uiState.value.searchGeneration
         _uiState.update { it.copy(isLoading = true, error = null) }
         runCatchingUi(R.string.common_search_failed) {
-
             val source = _uiState.value.activeSource
             val uiFilter = _uiState.value.selectedFilter
             val page = if (resetResults) null else nextPage
@@ -634,7 +623,6 @@ class YouTubeViewModel @Inject constructor(
             _uiState.update {
                 it.copy(isLoading = false, error = error)
             }
-        
         }
     }
 
@@ -662,6 +650,7 @@ class YouTubeViewModel @Inject constructor(
         }.let { outcome ->
             when (outcome) {
                 is UiResult.Success -> true
+
                 is UiResult.Failure -> {
                     _uiState.update {
                         it.copy(

@@ -118,12 +118,10 @@ class PlaylistDetailViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { _ ->
-                // Roll back the optimistic flip on failure.
-                _uiState.update { it.copy(playlist = playlist) }
-            
+                    // Roll back the optimistic flip on failure.
+                    _uiState.update { it.copy(playlist = playlist) }
                 },
             ) {
-
                 playlistRepository.pinPlaylist(playlist.id, newPinned)
             }
         }
@@ -138,7 +136,6 @@ class PlaylistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         downloadJob = viewModelScope.launch {
             runCatchingUi(R.string.snackbar_download_failed) {
-
                 downloadController.downloadPlaylistBlocking(
                     label = playlist?.name.orEmpty(),
                     tracks = tracks,
@@ -169,7 +166,6 @@ class PlaylistDetailViewModel @Inject constructor(
                         isSnackbarError = true,
                     )
                 }
-            
             }
         }
     }
@@ -177,13 +173,11 @@ class PlaylistDetailViewModel @Inject constructor(
     fun removeTrack(trackId: String) {
         viewModelScope.launch {
             runCatchingUi(R.string.playlist_error_remove_track) {
-
                 currentPlaylistId?.let { playlistId ->
                     playlistRepository.removeTrackFromPlaylist(playlistId, trackId)
                 }
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(error = error) }
-            
             }
         }
     }
@@ -191,13 +185,11 @@ class PlaylistDetailViewModel @Inject constructor(
     fun moveTrack(fromIndex: Int, toIndex: Int) {
         viewModelScope.launch {
             runCatchingUi(R.string.playlist_error_move_track) {
-
                 currentPlaylistId?.let { playlistId ->
                     playlistRepository.moveTrackInPlaylist(playlistId, fromIndex, toIndex)
                 }
             }.onFailure { error, cause ->
                 _uiState.update { it.copy(error = error) }
-            
             }
         }
     }

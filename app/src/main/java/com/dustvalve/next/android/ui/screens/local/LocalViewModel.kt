@@ -17,9 +17,9 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.util.LocaleCollation
-import com.dustvalve.next.android.util.runCatchingUiOrNull
-import com.dustvalve.next.android.util.runCatchingUiIgnore
 import com.dustvalve.next.android.util.isAtLeastR
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.runCatchingUiOrNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -319,7 +319,6 @@ class LocalViewModel @Inject constructor(
     fun enableLocalMusic() {
         viewModelScope.launch {
             runCatchingUiIgnore {
-
                 settingsDataStore.setLocalMusicEnabled(true)
             }
         }
@@ -335,7 +334,6 @@ class LocalViewModel @Inject constructor(
     fun onAudioPermissionDenied() {
         viewModelScope.launch {
             runCatchingUiIgnore {
-
                 settingsDataStore.setLocalMusicEnabled(false)
             }
         }
@@ -345,11 +343,9 @@ class LocalViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                _isScanning.value = false
-            
+                    _isScanning.value = false
                 },
             ) {
-
                 localMusicRepository.clearAll()
                 settingsDataStore.setLocalMusicUseMediaStore(true)
                 _isScanning.value = true
@@ -458,11 +454,9 @@ class LocalViewModel @Inject constructor(
         _uiState.update { it.copy(isSearching = true) }
         runCatchingUiIgnore(
             onFailure = { cause ->
-            _uiState.update { it.copy(isSearching = false) }
-        
+                _uiState.update { it.copy(isSearching = false) }
             },
         ) {
-
             val filter = _uiState.value.searchFilter
             val results = withContext(ioDispatcher) {
                 // The IO wrap stays here (not in the repository) so the
@@ -497,11 +491,9 @@ class LocalViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                reportDeleteFailure()
-            
+                    reportDeleteFailure()
                 },
             ) {
-
                 val rawUrl = track.streamUrl
                 if (rawUrl.isNullOrBlank()) {
                     deleteDbRow(track.id)
@@ -553,7 +545,6 @@ class LocalViewModel @Inject constructor(
             null
         } else {
             runCatchingUiOrNull {
-
                 MediaStore.createDeleteRequest(appContext.contentResolver, listOf(uri)).intentSender
             }
         }
@@ -587,11 +578,9 @@ class LocalViewModel @Inject constructor(
     private suspend fun deleteDbRow(trackId: String) {
         runCatchingUiIgnore(
             onFailure = { cause ->
-            reportDeleteFailure()
-        
+                reportDeleteFailure()
             },
         ) {
-
             localMusicRepository.deleteTrackRows(listOf(trackId))
             // SAF-mode covers live at local_art/<trackId>.jpg; drop the orphan.
             // The cover file deletion deliberately stays in the ViewModel: the

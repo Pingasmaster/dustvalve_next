@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.ui.screens.player
 
+import android.media.AudioDeviceInfo
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -54,11 +55,9 @@ import com.dustvalve.next.android.ui.theme.segmentedItemShape
 import com.dustvalve.next.android.ui.util.displayNameRes
 import com.dustvalve.next.android.ui.util.tick
 import kotlinx.coroutines.flow.distinctUntilChanged
-import android.media.AudioDeviceInfo
 
 /** Number of haptic segments across a volume slider. */
 internal const val VOLUME_TICK_SEGMENTS = 15
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -267,11 +266,7 @@ private fun FullPlayerAudioOutputList(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal fun FullPlayerDeleteDownloadDialog(
-    trackTitle: String?,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
+internal fun FullPlayerDeleteDownloadDialog(trackTitle: String?, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     if (trackTitle == null) return
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -289,7 +284,6 @@ internal fun FullPlayerDeleteDownloadDialog(
         },
     )
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -379,12 +373,7 @@ private fun FullPlayerDebugRows(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerDebugRow(
-    index: Int,
-    labelRes: Int,
-    iconRes: Int,
-    value: String,
-) {
+private fun FullPlayerDebugRow(index: Int, labelRes: Int, iconRes: Int, value: String) {
     SegmentedListItem(
         index = index,
         count = 6,

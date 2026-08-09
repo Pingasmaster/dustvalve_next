@@ -116,7 +116,6 @@ class CollectionDetailViewModel @Inject constructor(
                 return@launch
             }
             runCatchingUi(R.string.detail_error_load_collection) {
-
                 val collection: MusicCollection = source.getCollection(url)
                 paginationCursor = collection.continuation
                 val isFav = favoriteRepository.isFavorite(url)
@@ -142,7 +141,6 @@ class CollectionDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(isLoading = false, error = error)
                 }
-            
             }
         }
     }
@@ -161,13 +159,11 @@ class CollectionDetailViewModel @Inject constructor(
         loadMoreJob = viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                // Surface failure as "no more" to stop further scroll-triggered
-                // loads, but don't blow the screen away.
-                _uiState.update { it.copy(isLoadingMore = false, hasMore = false) }
-            
+                    // Surface failure as "no more" to stop further scroll-triggered
+                    // loads, but don't blow the screen away.
+                    _uiState.update { it.copy(isLoadingMore = false, hasMore = false) }
                 },
             ) {
-
                 val page = source.getCollection(state.collectionUrl, cursor)
                 val existingIds = state.tracks.mapTo(HashSet()) { it.id }
                 val deduped = page.tracks.filter { it.id !in existingIds }
@@ -193,7 +189,6 @@ class CollectionDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isImporting = false, error = failedImport(cause)) }
                 },
             ) {
-
                 val tracks = expandLoadedTracks()
                 if (tracks.isEmpty()) {
                     _uiState.update { it.copy(isImporting = false) }
@@ -218,11 +213,9 @@ class CollectionDetailViewModel @Inject constructor(
         viewModelScope.launch {
             runCatchingUiIgnore(
                 onFailure = { cause ->
-                _uiState.update { it.copy(isFavorite = prev) }
-            
+                    _uiState.update { it.copy(isFavorite = prev) }
                 },
             ) {
-
                 if (prev) {
                     favoriteRepository.remove(url)
                     // Delete ONLY the playlist this session imported (id captured in
@@ -276,7 +269,6 @@ class CollectionDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             runCatchingUi(R.string.snackbar_download_failed) {
-
                 val tracks = expandLoadedTracks()
                 val pending = tracks.filter { it.id !in _uiState.value.downloadedTrackIds }
                 if (pending.isEmpty()) {
@@ -304,7 +296,6 @@ class CollectionDetailViewModel @Inject constructor(
                         isSnackbarError = true,
                     )
                 }
-            
             }
         }
     }
@@ -347,7 +338,6 @@ class CollectionDetailViewModel @Inject constructor(
         viewModelScope.launch {
             for (track in _uiState.value.tracks) {
                 runCatchingUiIgnore {
-
                     downloadAlbumUseCase.deleteTrackDownload(track.id)
                 }
             }
