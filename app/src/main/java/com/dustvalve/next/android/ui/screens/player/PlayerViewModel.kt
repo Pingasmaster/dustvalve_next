@@ -1,27 +1,15 @@
 package com.dustvalve.next.android.ui.screens.player
 
-import android.content.Context
 import android.media.AudioDeviceInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.domain.repository.DownloadRepository
-import com.dustvalve.next.android.domain.repository.FavoriteRepository
-import com.dustvalve.next.android.domain.repository.LibraryRepository
-import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
-import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
-import com.dustvalve.next.android.download.DownloadController
-import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueEntry
-import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -62,46 +50,29 @@ data class PlaybackPositionState(val positionMs: Long = 0L, val durationMs: Long
 
 @HiltViewModel
 class PlayerViewModel @Inject constructor(
-    private val playbackManager: PlaybackManager,
-    private val queueManager: QueueManager,
-    libraryRepository: LibraryRepository,
-    downloadAlbumUseCase: DownloadAlbumUseCase,
-    downloadController: DownloadController,
-    downloadRepository: DownloadRepository,
-    playlistRepository: PlaylistRepository,
-    favoriteRepository: FavoriteRepository,
-    settingsDataStore: SettingsDataStore,
-    resolveTrackForPlaybackUseCase: ResolveTrackForPlaybackUseCase,
-    playbackStreamResolver: PlaybackStreamResolver,
-    @param:ApplicationContext appContext: Context,
+    core: PlayerCoreDeps,
+    libraryDeps: PlayerLibraryDeps,
 ) : ViewModel() {
+
+    private val playbackManager = core.playbackManager
+    private val queueManager = core.queueManager
+    private val settingsDataStore = core.settingsDataStore
 
     private val _extraState = MutableStateFlow(PlayerExtraState())
 
-    internal val audio = PlayerAudioController(appContext, playbackManager)
+    internal val audio = PlayerAudioController(core.appContext, playbackManager)
 
     internal val play = PlayerPlayCoordinator(
         scope = viewModelScope,
         extraState = _extraState,
-        playbackManager = playbackManager,
-        queueManager = queueManager,
-        libraryRepository = libraryRepository,
-        downloadRepository = downloadRepository,
-        settingsDataStore = settingsDataStore,
-        resolveTrackForPlaybackUseCase = resolveTrackForPlaybackUseCase,
-        playbackStreamResolver = playbackStreamResolver,
-        appContext = appContext,
+        core = core,
     )
 
     internal val library = PlayerLibraryCoordinator(
         scope = viewModelScope,
         extraState = _extraState,
-        playbackManager = playbackManager,
-        queueManager = queueManager,
-        libraryRepository = libraryRepository,
-        downloadAlbumUseCase = downloadAlbumUseCase,
-        downloadController = downloadController,
-        playlistRepository = playlistRepository,
+        core = core,
+        libraryDeps = libraryDeps,
         currentTrack = { queueManager.currentTrack.value },
     )
 
@@ -111,12 +82,12 @@ class PlayerViewModel @Inject constructor(
             extraState = _extraState,
             playbackManager = playbackManager,
             queueManager = queueManager,
-            downloadRepository = downloadRepository,
-            playlistRepository = playlistRepository,
-            favoriteRepository = favoriteRepository,
-            playbackStreamResolver = playbackStreamResolver,
+            downloadRepository = core.downloadRepository,
+            playlistRepository = libraryDeps.playlistRepository,
+            favoriteRepository = libraryDeps.favoriteRepository,
+            playbackStreamResolver = core.playbackStreamResolver,
         ).start()
-        val resolver = playbackStreamResolver
+        val resolver = core.playbackStreamResolver
         playbackManager.streamIsStale = resolver::isResolutionStale
         playbackManager.streamResolver = { track -> resolver.resolveOnDemand(track) }
         audio.register()

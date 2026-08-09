@@ -81,6 +81,8 @@ import com.dustvalve.next.android.ui.components.AppFlowRow
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.MusicRowActions
+import com.dustvalve.next.android.ui.components.lists.MusicRowFlags
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -136,7 +138,7 @@ fun AlbumDetailScreen(
         AlertDialog(
             onDismissRequest = { showDeleteAlbumDialog = false },
             title = { Text(stringResource(R.string.detail_delete_downloads_title)) },
-            text = { Text(stringResource(R.string.detail_delete_album_downloads_text, state.album?.title ?: "")) },
+            text = { Text(stringResource(R.string.detail_delete_album_downloads_text, state.album?.title.orEmpty())) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -187,7 +189,7 @@ fun AlbumDetailScreen(
             LargeFlexibleTopAppBar(
                 title = {
                     Text(
-                        text = state.album?.title ?: "",
+                        text = state.album?.title.orEmpty(),
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -335,30 +337,34 @@ fun AlbumDetailScreen(
                             val allTracksDownloaded = album.tracks.isNotEmpty() &&
                                 album.tracks.all { it.id in state.downloadedTrackIds }
                             AlbumActionBar(
-                                isFavorite = album.isFavorite,
-                                isDownloading = state.isDownloading,
-                                allTracksDownloaded = allTracksDownloaded,
-                                artistEnabled = album.artistUrl.isNotBlank(),
-                                hasTracks = album.tracks.isNotEmpty(),
-                                onPlayAll = {
-                                    if (album.tracks.isNotEmpty()) {
-                                        playerViewModel.playAlbum(album.tracks, 0)
-                                    }
-                                },
-                                onShuffle = {
-                                    if (album.tracks.isNotEmpty()) {
-                                        playerViewModel.playAlbum(album.tracks.shuffled(), 0)
-                                    }
-                                },
-                                onToggleFavorite = { viewModel.toggleFavorite() },
-                                onDownload = {
-                                    if (allTracksDownloaded) {
-                                        showDeleteAlbumDialog = true
-                                    } else {
-                                        viewModel.downloadAlbum()
-                                    }
-                                },
-                                onOpenArtist = { onArtistClick(album.artistUrl) },
+                                state = AlbumActionBarState(
+                                    isFavorite = album.isFavorite,
+                                    isDownloading = state.isDownloading,
+                                    allTracksDownloaded = allTracksDownloaded,
+                                    artistEnabled = album.artistUrl.isNotBlank(),
+                                    hasTracks = album.tracks.isNotEmpty(),
+                                ),
+                                actions = AlbumActionBarActions(
+                                    onPlayAll = {
+                                        if (album.tracks.isNotEmpty()) {
+                                            playerViewModel.playAlbum(album.tracks, 0)
+                                        }
+                                    },
+                                    onShuffle = {
+                                        if (album.tracks.isNotEmpty()) {
+                                            playerViewModel.playAlbum(album.tracks.shuffled(), 0)
+                                        }
+                                    },
+                                    onToggleFavorite = { viewModel.toggleFavorite() },
+                                    onDownload = {
+                                        if (allTracksDownloaded) {
+                                            showDeleteAlbumDialog = true
+                                        } else {
+                                            viewModel.downloadAlbum()
+                                        }
+                                    },
+                                    onOpenArtist = { onArtistClick(album.artistUrl) },
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -419,23 +425,27 @@ fun AlbumDetailScreen(
                                         onClick = {
                                             playerViewModel.playAlbum(album.tracks, index)
                                         },
-                                        isPlaying = isCurrentTrack && playerState.isPlaying,
-                                        isCurrentTrack = isCurrentTrack,
-                                        showFavorite = true,
-                                        onFavoriteClick = {
+                                        flags = MusicRowFlags(
+                                            isPlaying = isCurrentTrack && playerState.isPlaying,
+                                            isCurrentTrack = isCurrentTrack,
+                                            showFavorite = true,
+                                            showDownload = true,
+                                            isDownloading = track.id in state.downloadingTrackIds,
+                                            isDownloaded = isTrackDownloaded,
+                                            priceSuffix = state.trackPrices[track.id]?.let { formatPrice(it) },
+                                        ),
+                                        actions = MusicRowActions(
+                                            onFavoriteClick = {
                                             viewModel.toggleTrackFavorite(track.id)
                                         },
-                                        showDownload = true,
-                                        onDownloadClick = {
+                                            onDownloadClick = {
                                             if (isTrackDownloaded) {
                                                 trackToDelete = track
                                             } else {
                                                 viewModel.downloadTrack(track)
                                             }
                                         },
-                                        isDownloading = track.id in state.downloadingTrackIds,
-                                        isDownloaded = isTrackDownloaded,
-                                        priceSuffix = state.trackPrices[track.id]?.let { formatPrice(it) },
+                                        ),
                                     )
                                 }
                             }
@@ -526,18 +536,21 @@ private fun ExpandableAbout(about: String) {
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun AlbumActionBar(
-    isFavorite: Boolean,
-    isDownloading: Boolean,
-    allTracksDownloaded: Boolean,
-    artistEnabled: Boolean,
-    hasTracks: Boolean,
-    onPlayAll: () -> Unit,
-    onShuffle: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onDownload: () -> Unit,
-    onOpenArtist: () -> Unit,
+    state: AlbumActionBarState,
+    actions: AlbumActionBarActions,
     modifier: Modifier = Modifier,
 ) {
+    val isFavorite = state.isFavorite
+    val isDownloading = state.isDownloading
+    val allTracksDownloaded = state.allTracksDownloaded
+    val artistEnabled = state.artistEnabled
+    val hasTracks = state.hasTracks
+    val onPlayAll = actions.onPlayAll
+    val onShuffle = actions.onShuffle
+    val onToggleFavorite = actions.onToggleFavorite
+    val onDownload = actions.onDownload
+    val onOpenArtist = actions.onOpenArtist
+
     // Order: Play all | Shuffle | Artist | Favorite (toggle) | Download (toggle).
     Row(
         modifier = modifier.heightIn(min = 56.dp),

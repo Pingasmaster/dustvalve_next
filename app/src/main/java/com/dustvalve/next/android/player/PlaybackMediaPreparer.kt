@@ -20,19 +20,36 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * Resolves queue tracks and prepares ExoPlayer media items for [PlaybackManager].
  */
+internal class PlaybackMediaFlows(
+    val isPlaying: MutableStateFlow<Boolean>,
+    val playbackState: MutableStateFlow<Int>,
+    val playbackError: MutableStateFlow<PlaybackException?>,
+    val currentPosition: MutableStateFlow<Long>,
+)
+
+internal class PlaybackMediaHooks(
+    val onSeekFlag: (Boolean) -> Unit,
+    val consumeResume: (Track) -> Long,
+    val streamResolver: () -> (suspend (Track) -> Track?)?,
+    val streamIsStale: () -> ((Track) -> Boolean)?,
+)
+
 internal class PlaybackMediaPreparer(
     private val player: ExoPlayer,
     private val queueManager: QueueManager,
     private val context: Context,
-    private val isPlaying: MutableStateFlow<Boolean>,
-    private val playbackState: MutableStateFlow<Int>,
-    private val playbackError: MutableStateFlow<PlaybackException?>,
-    private val currentPosition: MutableStateFlow<Long>,
-    private val onSeekFlag: (Boolean) -> Unit,
-    private val consumeResume: (Track) -> Long,
-    private val streamResolver: () -> (suspend (Track) -> Track?)?,
-    private val streamIsStale: () -> ((Track) -> Boolean)?,
+    private val flows: PlaybackMediaFlows,
+    private val hooks: PlaybackMediaHooks,
 ) {
+    private val isPlaying get() = flows.isPlaying
+    private val playbackState get() = flows.playbackState
+    private val playbackError get() = flows.playbackError
+    private val currentPosition get() = flows.currentPosition
+    private val onSeekFlag get() = hooks.onSeekFlag
+    private val consumeResume get() = hooks.consumeResume
+    private val streamResolver get() = hooks.streamResolver
+    private val streamIsStale get() = hooks.streamIsStale
+
     private var serviceStarted = false
 
     fun markServiceStopped() {

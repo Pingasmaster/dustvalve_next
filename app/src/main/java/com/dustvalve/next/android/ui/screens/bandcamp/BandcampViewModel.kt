@@ -156,7 +156,7 @@ class BandcampViewModel @Inject constructor(
     }
 
     fun selectCategory(tag: String, name: String) {
-        val subTags = genreSubTags[tag] ?: emptyList()
+        val subTags = genreSubTags[tag].orEmpty()
         _uiState.update {
             it.copy(
                 showCategorySheet = true,

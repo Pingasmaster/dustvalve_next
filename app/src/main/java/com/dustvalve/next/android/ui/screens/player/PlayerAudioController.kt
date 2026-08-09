@@ -73,6 +73,6 @@ internal class PlayerAudioController(
                 AudioDeviceInfo.TYPE_BUILTIN_EARPIECE,
             )
         }
-        .distinctBy { it.type to (it.productName?.toString() ?: "") }
+        .distinctBy { it.type to it.productName?.toString().orEmpty() }
         .toList()
 }

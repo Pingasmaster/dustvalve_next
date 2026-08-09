@@ -119,20 +119,24 @@ class PlaybackManager @Inject constructor(
         player = player,
         queueManager = queueManager,
         context = context,
-        isPlaying = _isPlaying,
-        playbackState = _playbackState,
-        playbackError = _playbackError,
-        currentPosition = _currentPosition,
-        onSeekFlag = { positionTracker.seekInProgress = it },
-        consumeResume = { track ->
-            val resumeAt = resumePositionMs
-            val match = resumeAt > 0L && track.id == resumeTrackId
-            resumePositionMs = 0L
-            resumeTrackId = null
-            if (match) resumeAt else 0L
-        },
-        streamResolver = { streamResolver },
-        streamIsStale = { streamIsStale },
+        flows = PlaybackMediaFlows(
+            isPlaying = _isPlaying,
+            playbackState = _playbackState,
+            playbackError = _playbackError,
+            currentPosition = _currentPosition,
+        ),
+        hooks = PlaybackMediaHooks(
+            onSeekFlag = { positionTracker.seekInProgress = it },
+            consumeResume = { track ->
+                val resumeAt = resumePositionMs
+                val match = resumeAt > 0L && track.id == resumeTrackId
+                resumePositionMs = 0L
+                resumeTrackId = null
+                if (match) resumeAt else 0L
+            },
+            streamResolver = { streamResolver },
+            streamIsStale = { streamIsStale },
+        ),
     )
 
     private val playerListener = object : Player.Listener {

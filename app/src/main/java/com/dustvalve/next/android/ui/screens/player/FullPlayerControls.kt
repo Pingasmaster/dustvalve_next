@@ -61,12 +61,7 @@ internal fun FullPlayerTrackActionButtons(
     isTrackDownloaded: Boolean,
     isDownloading: Boolean,
     isInUserPlaylist: Boolean,
-    onArtistClick: (Track) -> Unit,
-    onAlbumClick: (Track) -> Unit,
-    onToggleFavorite: () -> Unit,
-    onRequestDeleteDownload: () -> Unit,
-    onDownloadTrack: () -> Unit,
-    onAddToPlaylist: () -> Unit,
+    actions: FullPlayerTrackActions,
     modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
@@ -81,7 +76,7 @@ internal fun FullPlayerTrackActionButtons(
         // Stateless action: FilledTonalButton, not FilledTonalToggleButton,
         // so TalkBack announces "button" rather than "not selected".
         FilledTonalButton(
-            onClick = { onArtistClick(track) },
+            onClick = { actions.onArtistClick(track) },
             shape = ButtonGroupDefaults.connectedLeadingButtonShape,
             enabled = track.artistUrl.isNotEmpty() || track.isLocal,
             modifier = Modifier.weight(1f),
@@ -96,7 +91,7 @@ internal fun FullPlayerTrackActionButtons(
         // no album page (streaming sources where it's not
         // canonical). Also stateless - same FilledTonalButton.
         FilledTonalButton(
-            onClick = { onAlbumClick(track) },
+            onClick = { actions.onAlbumClick(track) },
             shape = ButtonGroupDefaults.connectedMiddleButtonShapes().shape,
             enabled = albumNavEnabled,
             modifier = Modifier.weight(1f),
@@ -112,7 +107,7 @@ internal fun FullPlayerTrackActionButtons(
             checked = track.isFavorite,
             onCheckedChange = {
                 hapticFeedback.toggle(!track.isFavorite)
-                onToggleFavorite()
+                actions.onToggleFavorite()
             },
             shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
             modifier = Modifier.weight(1f),
@@ -136,9 +131,9 @@ internal fun FullPlayerTrackActionButtons(
             onCheckedChange = {
                 if (isLocalTrack) return@FilledTonalToggleButton
                 if (isTrackDownloaded) {
-                    onRequestDeleteDownload()
+                    actions.onRequestDeleteDownload()
                 } else if (!isDownloading) {
-                    onDownloadTrack()
+                    actions.onDownloadTrack()
                 }
             },
             enabled = !isDownloading && !isLocalTrack,
@@ -169,7 +164,7 @@ internal fun FullPlayerTrackActionButtons(
         // Add to playlist (new - opens the existing AddToPlaylistSheet).
         FilledTonalToggleButton(
             checked = isInUserPlaylist,
-            onCheckedChange = { onAddToPlaylist() },
+            onCheckedChange = { actions.onAddToPlaylist() },
             shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
             modifier = Modifier.weight(1f),
         ) {

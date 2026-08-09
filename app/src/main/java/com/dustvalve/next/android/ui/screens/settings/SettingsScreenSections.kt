@@ -71,22 +71,26 @@ internal fun SettingsAppearanceSection(state: SettingsUiState, onAction: (Settin
 
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_dynamic_color),
-                    description = stringResource(R.string.settings_dynamic_color_desc),
                     checked = state.dynamicColor,
                     onCheckedChange = {
                         onAction(SettingsAppearanceAction.SetDynamicColor(it))
                     },
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_dynamic_color_desc),
+                    ),
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_album_art_colors),
-                    description = stringResource(R.string.settings_album_art_colors_desc),
                     checked = state.albumArtTheme,
                     onCheckedChange = {
                         onAction(SettingsAppearanceAction.SetAlbumArtTheme(it))
                     },
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_album_art_colors_desc),
+                    ),
                 )
 
                 val isDarkEffective = when (state.themeMode) {
@@ -284,18 +288,22 @@ internal fun SettingsAudioQualitySection(
 
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_mp3_on_metered),
-                    description = stringResource(R.string.settings_mp3_on_metered_desc),
                     checked = state.saveDataOnMetered,
                     onCheckedChange = onSetSaveDataOnMetered,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_mp3_on_metered_desc),
+                    ),
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_progressive_download),
-                    description = stringResource(R.string.settings_progressive_download_desc),
                     checked = state.progressiveDownload,
                     onCheckedChange = onSetProgressiveDownload,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_progressive_download_desc),
+                    ),
                 )
 
                 // Dependent on progressive download - indented sub-toggle
@@ -334,27 +342,33 @@ internal fun SettingsPlayerSection(
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_volume_slider),
-                    description = stringResource(R.string.settings_volume_slider_desc),
                     checked = state.showInlineVolumeSlider,
                     onCheckedChange = onSetShowInlineVolumeSlider,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_volume_slider_desc),
+                    ),
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_volume_button),
-                    description = stringResource(R.string.settings_volume_button_desc),
                     checked = state.showVolumeButton,
                     onCheckedChange = onSetShowVolumeButton,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_volume_button_desc),
+                    ),
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_keep_screen_open),
-                    description = stringResource(R.string.settings_keep_screen_open_desc),
                     checked = state.keepScreenOnInApp,
                     onCheckedChange = onSetKeepScreenOnInApp,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_keep_screen_open_desc),
+                    ),
                 )
 
                 // Sub-toggle: only shown when the parent is on. When
@@ -394,9 +408,11 @@ internal fun SettingsSearchSection(
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_search_history),
-                    description = stringResource(R.string.settings_search_history_desc),
                     checked = state.searchHistoryEnabled,
                     onCheckedChange = onSetSearchHistoryEnabled,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_search_history_desc),
+                    ),
                 )
 
                 // Per-source sub-toggles, only when the global toggle is on
@@ -557,9 +573,11 @@ internal fun SettingsAboutSection(
                 Spacer(modifier = Modifier.height(16.dp))
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_auto_update_title),
-                    description = stringResource(R.string.settings_auto_update_desc),
                     checked = state.autoUpdateCheckEnabled,
                     onCheckedChange = onSetAutoUpdateCheckEnabled,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_auto_update_desc),
+                    ),
                 )
             }
         }
@@ -582,9 +600,11 @@ internal fun SettingsDebugSection(playerDebugOverlay: Boolean, onSetPlayerDebugO
             Column(modifier = Modifier.padding(16.dp)) {
                 SettingsToggleRow(
                     title = stringResource(R.string.settings_show_debug_info),
-                    description = stringResource(R.string.settings_show_debug_info_desc),
                     checked = playerDebugOverlay,
                     onCheckedChange = onSetPlayerDebugOverlay,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_show_debug_info_desc),
+                    ),
                 )
             }
         }

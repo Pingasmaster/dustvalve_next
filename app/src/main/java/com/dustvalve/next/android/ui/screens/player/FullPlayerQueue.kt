@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,9 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.player.QueueEntry
 import com.dustvalve.next.android.ui.components.FastScrollbar
 import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.MusicRowActions
+import com.dustvalve.next.android.ui.components.lists.MusicRowFlags
+import com.dustvalve.next.android.ui.components.lists.ReorderableListSlots
 import com.dustvalve.next.android.ui.components.lists.ReorderableMusicList
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
@@ -109,7 +113,8 @@ internal fun UpNextQueuePane(
                 lazyListState = queueListState,
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                footer = {
+                slots = ReorderableListSlots(
+                    footer = {
                     if (hasMore) {
                         item(key = "queue_loading_more") {
                             Box(
@@ -127,18 +132,21 @@ internal fun UpNextQueuePane(
                         Spacer(modifier = Modifier.height(28.dp))
                     }
                 },
+                ),
             ) { upNextIndex, queueEntry, isDragging, dragHandleModifier ->
                 UpNextQueueRow(
-                    upNextIndex = upNextIndex,
-                    queueEntry = queueEntry,
-                    isDragging = isDragging,
-                    dragHandleModifier = dragHandleModifier,
-                    displayedCount = displayedEntries.size,
-                    currentTrackId = currentTrackId,
-                    downloadedTrackIds = downloadedTrackIds,
+                    model = UpNextQueueRowModel(
+                        upNextIndex = upNextIndex,
+                        queueEntry = queueEntry,
+                        isDragging = isDragging,
+                        displayedCount = displayedEntries.size,
+                        currentTrackId = currentTrackId,
+                        downloadedTrackIds = downloadedTrackIds,
+                    ),
                     onPlay = { playerViewModel.playQueueEntry(queueEntry.uid) },
                     onRemove = { playerViewModel.removeQueueEntry(queueEntry.uid) },
                     onLongClick = { onEntryLongClick(queueEntry) },
+                    modifier = dragHandleModifier,
                 )
             }
             if (displayedEntries.size > 15) {
@@ -154,36 +162,32 @@ internal fun UpNextQueuePane(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun UpNextQueueRow(
-    upNextIndex: Int,
-    queueEntry: QueueEntry,
-    isDragging: Boolean,
-    dragHandleModifier: Modifier,
-    displayedCount: Int,
-    currentTrackId: String?,
-    downloadedTrackIds: Set<String>,
+    model: UpNextQueueRowModel,
     onPlay: () -> Unit,
     onRemove: () -> Unit,
     onLongClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
-    val queueTrack = queueEntry.track
-    val isDownloaded = queueTrack.id in downloadedTrackIds || queueTrack.isLocal
-    val isCurrentTrack = currentTrackId == queueTrack.id
-    val isFirst = upNextIndex == 0
-    val isLast = upNextIndex == displayedCount - 1
+    val queueTrack = model.queueEntry.track
+    val isDownloaded = queueTrack.id in model.downloadedTrackIds || queueTrack.isLocal
+    val isCurrentTrack = model.currentTrackId == queueTrack.id
+    val isFirst = model.upNextIndex == 0
+    val isLast = model.upNextIndex == model.displayedCount - 1
+    val currentOnRemove by rememberUpdatedState(onRemove)
 
     val dismissState = rememberSwipeToDismissBoxState()
     LaunchedEffect(dismissState.currentValue) {
         if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
             hapticFeedback.performHapticFeedback(HapticFeedbackType.Confirm)
-            onRemove()
+            currentOnRemove()
         }
     }
 
     SwipeToDismissBox(
         state = dismissState,
         enableDismissFromStartToEnd = false,
-        gesturesEnabled = !isDragging,
+        gesturesEnabled = !model.isDragging,
         backgroundContent = {
             if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
                 Box(
@@ -193,7 +197,7 @@ private fun UpNextQueueRow(
                             top = if (isFirst) 0.dp else 1.dp,
                             bottom = if (isLast) 0.dp else 1.dp,
                         )
-                        .clip(segmentedItemShape(upNextIndex, displayedCount))
+                        .clip(segmentedItemShape(model.upNextIndex, model.displayedCount))
                         .background(MaterialTheme.colorScheme.errorContainer)
                         .padding(horizontal = 20.dp),
                     contentAlignment = Alignment.CenterEnd,
@@ -208,9 +212,9 @@ private fun UpNextQueueRow(
         },
     ) {
         SegmentedListItem(
-            index = upNextIndex,
-            count = displayedCount,
-            isDragging = isDragging,
+            index = model.upNextIndex,
+            count = model.displayedCount,
+            isDragging = model.isDragging,
             contentPadding = PaddingValues(
                 top = if (isFirst) 0.dp else 1.dp,
                 bottom = if (isLast) 0.dp else 1.dp,
@@ -219,11 +223,14 @@ private fun UpNextQueueRow(
             MusicRow(
                 track = queueTrack,
                 onClick = onPlay,
-                onLongClick = onLongClick,
-                isCurrentTrack = isCurrentTrack,
-                showDownload = false,
-                isDownloaded = isDownloaded,
-                dragHandle = {
+                flags = MusicRowFlags(
+                    isCurrentTrack = isCurrentTrack,
+                    showDownload = false,
+                    isDownloaded = isDownloaded,
+                ),
+                actions = MusicRowActions(
+                    onLongClick = onLongClick,
+                    dragHandle = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if (isDownloaded) {
                             Icon(
@@ -236,7 +243,7 @@ private fun UpNextQueueRow(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .then(dragHandleModifier),
+                                .then(modifier),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -248,7 +255,18 @@ private fun UpNextQueueRow(
                         }
                     }
                 },
+                ),
             )
         }
     }
 }
+
+@Stable
+private class UpNextQueueRowModel(
+    val upNextIndex: Int,
+    val queueEntry: QueueEntry,
+    val isDragging: Boolean,
+    val displayedCount: Int,
+    val currentTrackId: String?,
+    val downloadedTrackIds: Set<String>,
+)

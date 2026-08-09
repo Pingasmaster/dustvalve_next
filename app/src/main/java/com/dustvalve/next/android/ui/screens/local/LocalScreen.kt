@@ -95,6 +95,7 @@ import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.PlaylistListItem
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.MusicRowActions
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -485,7 +486,9 @@ fun LocalScreen(
                                         onClick = {
                                             playerViewModel.playTrackInList(filteredTracks, index)
                                         },
-                                        onLongClick = { contextMenuTrack = track },
+                                        actions = MusicRowActions(
+                                            onLongClick = { contextMenuTrack = track },
+                                        ),
                                     )
                                 }
                             }
@@ -613,7 +616,9 @@ fun LocalScreen(
                                                 playerViewModel.playTrackInList(state.searchResults, index)
                                                 onExpandPlayer()
                                             },
-                                            onLongClick = { contextMenuTrack = track },
+                                            actions = MusicRowActions(
+                                                onLongClick = { contextMenuTrack = track },
+                                            ),
                                         )
                                     }
                                 }

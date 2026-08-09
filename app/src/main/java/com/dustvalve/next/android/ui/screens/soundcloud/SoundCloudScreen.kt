@@ -77,6 +77,7 @@ import com.dustvalve.next.android.ui.components.PastedLinkChip
 import com.dustvalve.next.android.ui.components.RecentSearchesList
 import com.dustvalve.next.android.ui.components.sheet.AddToPlaylistSheet
 import com.dustvalve.next.android.ui.components.sheet.RemoteResultActionSheet
+import com.dustvalve.next.android.ui.components.sheet.RemoteResultActions
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.player.playAlbum
@@ -603,8 +604,9 @@ private fun SoundCloudResultSheets(
     contextResult?.let { result ->
         RemoteResultActionSheet(
             result = result,
-            onDismiss = onDismissContext,
-            onPlayNext = {
+            actions = RemoteResultActions(
+                onDismiss = onDismissContext,
+                onPlayNext = {
                 onDismissContext()
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                 scope.launch {
@@ -613,7 +615,7 @@ private fun SoundCloudResultSheets(
                     }
                 }
             },
-            onAddToQueue = {
+                onAddToQueue = {
                 onDismissContext()
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
                 scope.launch {
@@ -622,7 +624,7 @@ private fun SoundCloudResultSheets(
                     }
                 }
             },
-            onAddToPlaylist = {
+                onAddToPlaylist = {
                 val ctx = result
                 onDismissContext()
                 scope.launch { snackbarHostState.showSnackbar(loadingTrackMsg) }
@@ -632,7 +634,7 @@ private fun SoundCloudResultSheets(
                     }
                 }
             },
-            onPlayAll = {
+                onPlayAll = {
                 onDismissContext()
                 scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
                 scope.launch {
@@ -645,7 +647,7 @@ private fun SoundCloudResultSheets(
                     }
                 }
             },
-            onEnqueueAll = {
+                onEnqueueAll = {
                 onDismissContext()
                 scope.launch { snackbarHostState.showSnackbar(loadingPlaylistMsg) }
                 scope.launch {
@@ -654,14 +656,15 @@ private fun SoundCloudResultSheets(
                     }
                 }
             },
-            onShare = {
+                onShare = {
                 onDismissContext()
                 context.shareUrl(result.url, result.name)
             },
-            onOpenInBrowser = {
+                onOpenInBrowser = {
                 onDismissContext()
                 context.openInBrowser(result.url)
             },
+            ),
         )
     }
 

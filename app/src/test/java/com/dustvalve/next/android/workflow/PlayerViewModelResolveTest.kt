@@ -21,6 +21,8 @@ import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
+import com.dustvalve.next.android.ui.screens.player.PlayerCoreDeps
+import com.dustvalve.next.android.ui.screens.player.PlayerLibraryDeps
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
 import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.player.playTrackInList
@@ -106,18 +108,22 @@ class PlayerViewModelResolveTest {
             resolveUseCase,
         )
         viewModel = PlayerViewModel(
-            playbackManager,
-            queueManager,
-            libraryRepository,
-            mockk<DownloadAlbumUseCase>(relaxed = true),
-            mockk<DownloadController>(relaxed = true),
-            downloadRepository,
-            playlistRepository,
-            favoriteRepository,
-            settingsDataStore,
-            resolveUseCase,
-            streamResolver,
-            ApplicationProvider.getApplicationContext(),
+            core = PlayerCoreDeps(
+                playbackManager = playbackManager,
+                queueManager = queueManager,
+                libraryRepository = libraryRepository,
+                downloadRepository = downloadRepository,
+                settingsDataStore = settingsDataStore,
+                resolveTrackForPlaybackUseCase = resolveUseCase,
+                playbackStreamResolver = streamResolver,
+                appContext = ApplicationProvider.getApplicationContext(),
+            ),
+            libraryDeps = PlayerLibraryDeps(
+                downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true),
+                downloadController = mockk<DownloadController>(relaxed = true),
+                playlistRepository = playlistRepository,
+                favoriteRepository = favoriteRepository,
+            ),
         )
     }
 

@@ -32,12 +32,9 @@ fun FullPlayer(
     sharedScope: SharedTransitionScope,
     visScope: AnimatedVisibilityScope,
     expandDistancePx: Float,
-    onCollapse: () -> Unit,
-    onCollapseSeek: (Float) -> Unit,
-    onCollapseSettle: (Float) -> Unit,
+    collapse: FullPlayerCollapseActions,
     modifier: Modifier = Modifier,
-    onArtistClick: (Track) -> Unit = {},
-    onAlbumClick: (Track) -> Unit = {},
+    nav: FullPlayerNavActions = FullPlayerNavActions(onArtistClick = {}, onAlbumClick = {}),
     playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val state by playerViewModel.uiState.collectAsStateWithLifecycle()
@@ -77,20 +74,48 @@ fun FullPlayer(
         scope = scope,
     )
     val chrome = FullPlayerChrome(
-        onCollapse = onCollapse,
-        onCollapseSeek = onCollapseSeek,
-        onCollapseSettle = onCollapseSettle,
-        onArtistClick = onArtistClick,
-        onAlbumClick = onAlbumClick,
-        onShowVolumeSheet = { sheets.showVolumeSheet = true },
-        onShowQueueSheet = { sheets.showQueueSheet = true },
-        onShowDebugSheet = { sheets.showDebugSheet = true },
-        onShowDeleteDownloadDialog = { sheets.showDeleteDownloadDialog = true },
-        onShowPlaylistSheet = { sheets.showPlaylistSheet = true },
-        onEntryLongClick = { sheets.upNextContextEntry = it },
-        onCarouselModeChange = { sheets.isCarouselMode = it },
+        collapse = collapse,
+        nav = nav,
+        sheets = FullPlayerSheetActions(
+            onShowVolumeSheet = { sheets.showVolumeSheet = true },
+            onShowQueueSheet = { sheets.showQueueSheet = true },
+            onShowDebugSheet = { sheets.showDebugSheet = true },
+            onShowDeleteDownloadDialog = { sheets.showDeleteDownloadDialog = true },
+            onShowPlaylistSheet = { sheets.showPlaylistSheet = true },
+            onEntryLongClick = { sheets.upNextContextEntry = it },
+            onCarouselModeChange = { sheets.isCarouselMode = it },
+        ),
     )
-
+    val transport = remember(playerViewModel) {
+        FullPlayerTransportActions(
+            onPrevious = playerViewModel::onPrevious,
+            onPlayPause = playerViewModel::onPlayPause,
+            onNext = playerViewModel::onNext,
+            onSeek = playerViewModel::onSeek,
+            onToggleShuffle = playerViewModel::onToggleShuffle,
+            onToggleRepeat = playerViewModel::onToggleRepeat,
+        )
+    }
+    val trackActions = remember(playerViewModel, chrome) {
+        FullPlayerTrackActions(
+            onArtistClick = chrome.onArtistClick,
+            onAlbumClick = chrome.onAlbumClick,
+            onToggleFavorite = playerViewModel::onToggleFavorite,
+            onRequestDeleteDownload = chrome.onShowDeleteDownloadDialog,
+            onDownloadTrack = playerViewModel::onDownloadTrack,
+            onAddToPlaylist = chrome.onShowPlaylistSheet,
+        )
+    }
+    val artActions = remember(playerViewModel) {
+        FullPlayerArtActions(
+            onPrevious = playerViewModel::onPrevious,
+            onPlayPause = playerViewModel::onPlayPause,
+            onNext = playerViewModel::onNext,
+            onSkipToQueueIndex = playerViewModel::skipToQueueIndex,
+            onSetVolume = playerViewModel::setVolume,
+            onToggleFavorite = playerViewModel::onToggleFavorite,
+        )
+    }
     val boundsSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Rect>()
     val shared = with(sharedScope) {
         FullPlayerSharedModifiers(
@@ -108,19 +133,17 @@ fun FullPlayer(
             ),
         )
     }
-
     FullPlayerSheetHost(adaptiveInfo = adaptiveInfo, state = state, sheets = sheets)
     FullPlayerScaffold(
         adaptiveInfo = adaptiveInfo,
-        state = state,
-        positionState = positionState,
-        snackbarHostState = snackbarHostState,
-        shared = shared,
-        motion = motion,
-        chrome = chrome,
-        layout = FullPlayerLayout(
-            expandDistancePx = expandDistancePx,
-            isCarouselMode = sheets.isCarouselMode,
+        model = FullPlayerScaffoldModel(
+            playback = FullPlayerPlaybackSnapshot(state = state, positionState = positionState),
+            snackbarHostState = snackbarHostState,
+            shared = shared,
+            motion = motion,
+            chrome = chrome,
+            layout = FullPlayerLayout(expandDistancePx = expandDistancePx, isCarouselMode = sheets.isCarouselMode),
+            actions = FullPlayerActions(transport = transport, track = trackActions, art = artActions),
         ),
         modifier = modifier,
     )

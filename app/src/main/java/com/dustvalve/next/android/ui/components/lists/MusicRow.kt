@@ -23,6 +23,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -44,6 +45,26 @@ import com.dustvalve.next.android.ui.components.TrackArtPlaceholder
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.util.TimeUtils
 
+@Immutable
+data class MusicRowFlags(
+    val isPlaying: Boolean = false,
+    val isCurrentTrack: Boolean = false,
+    val isDownloaded: Boolean = false,
+    val isDownloading: Boolean = false,
+    val showFavorite: Boolean = false,
+    val showDownload: Boolean = false,
+    val priceSuffix: String? = null,
+    val supportingOverride: String? = null,
+)
+
+@Immutable
+data class MusicRowActions(
+    val onLongClick: (() -> Unit)? = null,
+    val onFavoriteClick: (() -> Unit)? = null,
+    val onDownloadClick: (() -> Unit)? = null,
+    val dragHandle: (@Composable () -> Unit)? = null,
+)
+
 /**
  * Unified music row for the whole app.
  *
@@ -59,18 +80,8 @@ fun MusicRow(
     track: Track,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onLongClick: (() -> Unit)? = null,
-    isPlaying: Boolean = false,
-    isCurrentTrack: Boolean = false,
-    showFavorite: Boolean = false,
-    onFavoriteClick: (() -> Unit)? = null,
-    showDownload: Boolean = false,
-    onDownloadClick: (() -> Unit)? = null,
-    isDownloaded: Boolean = false,
-    isDownloading: Boolean = false,
-    priceSuffix: String? = null,
-    supportingOverride: String? = null,
-    dragHandle: (@Composable () -> Unit)? = null,
+    flags: MusicRowFlags = MusicRowFlags(),
+    actions: MusicRowActions = MusicRowActions(),
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val interactionSource = remember { MutableInteractionSource() }
@@ -82,7 +93,7 @@ fun MusicRow(
     )
 
     val headlineColor by animateColorAsState(
-        targetValue = if (isCurrentTrack) {
+        targetValue = if (flags.isCurrentTrack) {
             MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.onSurface
@@ -91,6 +102,7 @@ fun MusicRow(
         label = "musicRowHeadlineColor",
     )
 
+    val onLongClick = actions.onLongClick
     val clickModifier = if (onLongClick != null) {
         Modifier.combinedClickable(
             interactionSource = interactionSource,
@@ -133,7 +145,7 @@ fun MusicRow(
                 } else {
                     TrackArtPlaceholder(modifier = Modifier.fillMaxSize())
                 }
-                if (isPlaying) {
+                if (flags.isPlaying) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -151,8 +163,8 @@ fun MusicRow(
             }
         },
         supportingContent = {
-            val supporting = supportingOverride
-                ?: defaultSupportingText(track, priceSuffix, stringResource(R.string.metadata_separator))
+            val supporting = flags.supportingOverride
+                ?: defaultSupportingText(track, flags.priceSuffix, stringResource(R.string.metadata_separator))
             if (supporting.isNotEmpty()) {
                 Text(
                     text = supporting,
@@ -164,19 +176,19 @@ fun MusicRow(
             }
         },
         trailingContent = trailingContentOrNull(
-            showFavorite = showFavorite,
+            showFavorite = flags.showFavorite,
             isFavorite = track.isFavorite,
-            onFavoriteClick = onFavoriteClick,
-            showDownload = showDownload,
-            onDownloadClick = onDownloadClick,
-            isDownloaded = isDownloaded,
-            isDownloading = isDownloading,
-            dragHandle = dragHandle,
+            onFavoriteClick = actions.onFavoriteClick,
+            showDownload = flags.showDownload,
+            onDownloadClick = actions.onDownloadClick,
+            isDownloaded = flags.isDownloaded,
+            isDownloading = flags.isDownloading,
+            dragHandle = actions.dragHandle,
         ),
     ) {
         Text(
             text = track.title,
-            style = if (isCurrentTrack) {
+            style = if (flags.isCurrentTrack) {
                 MaterialTheme.typography.titleMediumEmphasized
             } else {
                 MaterialTheme.typography.titleMedium

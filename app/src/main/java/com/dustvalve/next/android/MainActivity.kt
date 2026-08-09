@@ -278,30 +278,21 @@ private fun MainContent(activity: MainActivity) {
     )
 }
 
-// ViewModels are obtained here via hiltViewModel() (same activity-scoped
-// instances) rather than forwarded from MainContent. Adaptive metrics are
-// computed once above and threaded as an explicit parameter.
 @Composable
 private fun MainContentBody(
     activity: MainActivity,
     adaptiveInfo: AdaptiveLayoutInfo,
-    playerViewModel: PlayerViewModel = hiltViewModel(),
-    navViewModel: NavigationViewModel = hiltViewModel(),
 ) {
-    MainContentKeepScreenOn(activity = activity, playerViewModel = playerViewModel)
-    MainContentDeepLinks(activity = activity, navViewModel = navViewModel, playerViewModel = playerViewModel)
-    MainContentPlayerChrome(
-        adaptiveInfo = adaptiveInfo,
-        playerViewModel = playerViewModel,
-        navViewModel = navViewModel,
-    )
+    MainContentKeepScreenOn(activity = activity)
+    MainContentDeepLinks(activity = activity)
+    MainContentPlayerChrome(adaptiveInfo = adaptiveInfo)
 }
 
 @Composable
 private fun MainContentPlayerChrome(
     adaptiveInfo: AdaptiveLayoutInfo,
-    playerViewModel: PlayerViewModel,
-    navViewModel: NavigationViewModel,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+    navViewModel: NavigationViewModel = hiltViewModel(),
 ) {
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val showFullPlayer by navViewModel.showFullPlayer.collectAsStateWithLifecycle()
@@ -407,23 +398,39 @@ private fun MainContentPlayerChrome(
         }
     }
 
+    val navActions = remember(navViewModel) {
+        MainNavActions(
+            navigateTo = navViewModel::navigateTo,
+            navigateBack = navViewModel::navigateBack,
+            expandPlayer = navViewModel::expandPlayer,
+            collapsePlayer = navViewModel::collapsePlayer,
+            requestLocalArtistFilter = navViewModel::requestLocalArtistFilter,
+        )
+    }
+    val playerActions = remember(playerViewModel) {
+        MainPlayerActions(showNoAlbumSnackbar = playerViewModel::showNoAlbumSnackbar)
+    }
 
     val session = MainPlayerSession(
-        playerViewModel = playerViewModel,
-        navViewModel = navViewModel,
         adaptiveInfo = adaptiveInfo,
-        backStackSize = backStack.size,
-        showFullPlayer = showFullPlayer,
-        currentTab = currentTab,
-        visibleTabs = visibleTabs,
-        miniVisible = miniVisible,
+        chrome = MainPlayerChromeState(
+            backStackSize = backStack.size,
+            showFullPlayer = showFullPlayer,
+            currentTab = currentTab,
+            visibleTabs = visibleTabs,
+            miniVisible = miniVisible,
+        ),
+        gesture = MainPlayerGestureState(
+            seekState = seekState,
+            playerTransition = playerTransition,
+            onExpandSeek = onExpandSeek,
+            onExpandSettle = onExpandSettle,
+            onCollapseSeek = onCollapseSeek,
+            onCollapseSettle = onCollapseSettle,
+        ),
+        nav = navActions,
+        player = playerActions,
         globalSnackbarHostState = globalSnackbarHostState,
-        seekState = seekState,
-        playerTransition = playerTransition,
-        onExpandSeek = onExpandSeek,
-        onExpandSettle = onExpandSettle,
-        onCollapseSeek = onCollapseSeek,
-        onCollapseSettle = onCollapseSettle,
         density = density,
     )
     // Keep mutable height fields in sync: SharedHost writes session.containerHeightPx
@@ -432,22 +439,46 @@ private fun MainContentPlayerChrome(
 
 
 @Stable
-private class MainPlayerSession(
-    val playerViewModel: PlayerViewModel,
-    val navViewModel: NavigationViewModel,
-    val adaptiveInfo: AdaptiveLayoutInfo,
+private class MainNavActions(
+    val navigateTo: (NavDestination) -> Unit,
+    val navigateBack: () -> Unit,
+    val expandPlayer: () -> Unit,
+    val collapsePlayer: () -> Unit,
+    val requestLocalArtistFilter: (String) -> Unit,
+)
+
+@Stable
+private class MainPlayerActions(
+    val showNoAlbumSnackbar: () -> Unit,
+)
+
+@Stable
+private class MainPlayerChromeState(
     val backStackSize: Int,
     val showFullPlayer: Boolean,
     val currentTab: BottomNavItem,
     val visibleTabs: List<BottomNavItem>,
     val miniVisible: Boolean,
-    val globalSnackbarHostState: SnackbarHostState,
+)
+
+@Stable
+private class MainPlayerGestureState(
     val seekState: SeekableTransitionState<Boolean>,
     val playerTransition: Transition<Boolean>,
     val onExpandSeek: (Float) -> Unit,
     val onExpandSettle: (Float) -> Unit,
     val onCollapseSeek: (Float) -> Unit,
     val onCollapseSettle: (Float) -> Unit,
+)
+
+@Stable
+private class MainPlayerSession(
+    val adaptiveInfo: AdaptiveLayoutInfo,
+    val chrome: MainPlayerChromeState,
+    val gesture: MainPlayerGestureState,
+    val nav: MainNavActions,
+    val player: MainPlayerActions,
+    val globalSnackbarHostState: SnackbarHostState,
     val density: Density,
 ) {
     var containerHeightPx by mutableFloatStateOf(1f)
@@ -489,15 +520,15 @@ private fun MainContentNavShell(session: MainPlayerSession) {
                 // Tablet / large screen layout: NavigationRail on the left
                 Row(modifier = Modifier.fillMaxSize()) {
                     SideNavRail(
-                        currentTab = session.currentTab,
-                        visibleTabs = session.visibleTabs,
-                        onItemSelected = { dest -> session.navViewModel.navigateTo(dest) },
+                        currentTab = session.chrome.currentTab,
+                        visibleTabs = session.chrome.visibleTabs,
+                        onItemSelected = { dest -> session.nav.navigateTo(dest) },
                     )
                     Scaffold(
                         bottomBar = {
                             // Reserve the mini-bar slot; the bar itself renders in
                             // the shared-transition overlay so it can morph.
-                            if (session.miniVisible) {
+                            if (session.chrome.miniVisible) {
                                 Spacer(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -520,13 +551,13 @@ private fun MainContentNavShell(session: MainPlayerSession) {
                 Scaffold(
                     bottomBar = {
                         Column(modifier = Modifier.onSizeChanged { session.bottomBarHeightPx = it.height }) {
-                            if (session.miniVisible) {
+                            if (session.chrome.miniVisible) {
                                 Spacer(modifier = Modifier.fillMaxWidth().height(MINI_BAR_HEIGHT))
                             }
                             BottomNavBar(
-                                currentTab = session.currentTab,
-                                visibleTabs = session.visibleTabs,
-                                onItemSelected = { dest -> session.navViewModel.navigateTo(dest) },
+                                currentTab = session.chrome.currentTab,
+                                visibleTabs = session.chrome.visibleTabs,
+                                onItemSelected = { dest -> session.nav.navigateTo(dest) },
                             )
                         }
                     },
@@ -550,11 +581,11 @@ private fun BoxScope.MainContentPlayerOverlay(
             // Player surface: the mini bar and full player are the two states of
             // one container transform. The transparent host Box does not consume
             // touches, so taps outside the docked mini bar reach the app behind it.
-            if (session.miniVisible) {
+            if (session.chrome.miniVisible) {
                 val dockDp = with(session.density) {
                     (session.bottomBarHeightPx - session.miniBarHeightPx).coerceAtLeast(0f).toDp()
                 }
-                session.playerTransition.AnimatedContent(
+                session.gesture.playerTransition.AnimatedContent(
                     modifier = Modifier.align(Alignment.BottomCenter),
                     contentAlignment = Alignment.BottomCenter,
                 ) { isFull ->
@@ -565,16 +596,18 @@ private fun BoxScope.MainContentPlayerOverlay(
                             sharedScope = sharedScope,
                             visScope = avScope,
                             expandDistancePx = session.expandDistancePx,
-                            onCollapse = { session.navViewModel.collapsePlayer() },
-                            onCollapseSeek = session.onCollapseSeek,
-                            onCollapseSettle = session.onCollapseSettle,
-                            modifier = Modifier.fillMaxSize(),
-                            onArtistClick = { track ->
-                                session.navViewModel.collapsePlayer()
+                            collapse = com.dustvalve.next.android.ui.screens.player.FullPlayerCollapseActions(
+                                onCollapse = { session.nav.collapsePlayer() },
+                                onCollapseSeek = session.gesture.onCollapseSeek,
+                                onCollapseSettle = session.gesture.onCollapseSettle,
+                            ),
+                            nav = com.dustvalve.next.android.ui.screens.player.FullPlayerNavActions(
+                                onArtistClick = { track ->
+                                session.nav.collapsePlayer()
                                 when {
-                                    track.isLocal -> session.navViewModel.requestLocalArtistFilter(track.artist)
+                                    track.isLocal -> session.nav.requestLocalArtistFilter(track.artist)
 
-                                    track.source == TrackSource.YOUTUBE -> session.navViewModel.navigateTo(
+                                    track.source == TrackSource.YOUTUBE -> session.nav.navigateTo(
                                         NavDestination.ArtistDetail(
                                             url = track.artistUrl,
                                             sourceId = "youtube",
@@ -583,15 +616,15 @@ private fun BoxScope.MainContentPlayerOverlay(
                                         ),
                                     )
 
-                                    else -> session.navViewModel.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
+                                    else -> session.nav.navigateTo(NavDestination.ArtistDetail(track.artistUrl))
                                 }
                             },
-                            onAlbumClick = { track ->
+                                onAlbumClick = { track ->
                                 when {
                                     track.source == TrackSource.YOUTUBE -> {
                                         if (track.albumUrl.isNotBlank()) {
-                                            session.navViewModel.collapsePlayer()
-                                            session.navViewModel.navigateTo(
+                                            session.nav.collapsePlayer()
+                                            session.nav.navigateTo(
                                                 NavDestination.CollectionDetail(
                                                     url = track.albumUrl,
                                                     sourceId = "youtube",
@@ -601,16 +634,18 @@ private fun BoxScope.MainContentPlayerOverlay(
                                         } else {
                                             // Pre-fetch already ran (albumLookupDone=true);
                                             // empty means the video has no YTM album.
-                                            session.playerViewModel.showNoAlbumSnackbar()
+                                            session.player.showNoAlbumSnackbar()
                                         }
                                     }
 
                                     track.albumUrl.isNotBlank() -> {
-                                        session.navViewModel.collapsePlayer()
-                                        session.navViewModel.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
+                                        session.nav.collapsePlayer()
+                                        session.nav.navigateTo(NavDestination.AlbumDetail(track.albumUrl))
                                     }
                                 }
                             },
+                            ),
+                            modifier = Modifier.fillMaxSize(),
                         )
                     } else {
                         Box(
@@ -624,9 +659,9 @@ private fun BoxScope.MainContentPlayerOverlay(
                                 sharedScope = sharedScope,
                                 visScope = avScope,
                                 expandDistancePx = session.expandDistancePx,
-                                onExpandClick = { session.navViewModel.expandPlayer() },
-                                onExpandSeek = session.onExpandSeek,
-                                onExpandSettle = session.onExpandSettle,
+                                onExpandClick = { session.nav.expandPlayer() },
+                                onExpandSeek = session.gesture.onExpandSeek,
+                                onExpandSettle = session.gesture.onExpandSettle,
                                 modifier = if (miniMax == Dp.Unspecified) {
                                     Modifier.fillMaxWidth()
                                 } else {
@@ -643,7 +678,10 @@ private fun BoxScope.MainContentPlayerOverlay(
 }
 
 @Composable
-private fun MainContentKeepScreenOn(activity: MainActivity, playerViewModel: PlayerViewModel) {
+private fun MainContentKeepScreenOn(
+    activity: MainActivity,
+    playerViewModel: PlayerViewModel = hiltViewModel(),
+) {
     val isPlaying by remember {
         playerViewModel.uiState.map { it.isPlaying }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
@@ -669,8 +707,8 @@ private fun MainContentKeepScreenOn(activity: MainActivity, playerViewModel: Pla
 @Composable
 private fun MainContentDeepLinks(
     activity: MainActivity,
-    navViewModel: NavigationViewModel,
-    playerViewModel: PlayerViewModel,
+    navViewModel: NavigationViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = hiltViewModel(),
 ) {
     val deepLinkUrl by activity.deepLinkUrl.collectAsStateWithLifecycle()
     val deepLinkTrack by navViewModel.deepLinkTrack.collectAsStateWithLifecycle()

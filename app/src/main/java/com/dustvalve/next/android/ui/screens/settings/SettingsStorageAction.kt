@@ -147,11 +147,13 @@ private fun StorageAutoDownloadControls(state: SettingsUiState, onAction: (Setti
         Spacer(modifier = Modifier.height(16.dp))
         SettingsToggleRow(
             title = stringResource(R.string.settings_auto_download_future),
-            description = stringResource(R.string.settings_auto_download_future_desc),
             checked = state.autoDownloadFutureContent,
             onCheckedChange = {
                 onAction(SettingsStorageAction.SetAutoDownloadFutureContent(it))
             },
+            extras = SettingsToggleExtras(
+                description = stringResource(R.string.settings_auto_download_future_desc),
+            ),
         )
 
         SettingsSubToggle(
@@ -167,11 +169,13 @@ private fun StorageAutoDownloadControls(state: SettingsUiState, onAction: (Setti
         Spacer(modifier = Modifier.height(16.dp))
         SettingsToggleRow(
             title = stringResource(R.string.settings_download_notifications),
-            description = stringResource(R.string.settings_download_notifications_desc),
             checked = state.downloadNotificationsEnabled,
             onCheckedChange = {
                 onAction(SettingsStorageAction.SetDownloadNotificationsEnabled(it))
             },
+            extras = SettingsToggleExtras(
+                description = stringResource(R.string.settings_download_notifications_desc),
+            ),
         )
     }
 }

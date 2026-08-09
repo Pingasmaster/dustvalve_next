@@ -71,6 +71,8 @@ import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
+import com.dustvalve.next.android.ui.components.lists.MusicRowActions
+import com.dustvalve.next.android.ui.components.lists.MusicRowFlags
 import com.dustvalve.next.android.ui.components.lists.SegmentedListItem
 import com.dustvalve.next.android.ui.components.rememberHeartMorphState
 import com.dustvalve.next.android.ui.screens.player.PlayerViewModel
@@ -90,19 +92,21 @@ import kotlinx.coroutines.launch
  * Artist-nav button (a playlist has no single artist), plus a mix-style
  * infinite-scroll footer that album detail doesn't need.
  */
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CollectionDetailScreen(
     adaptiveInfo: AdaptiveLayoutInfo,
-    sourceId: String,
-    collectionUrl: String,
-    collectionName: String,
+    args: CollectionDetailArgs,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
-    collectionCoverHint: String? = null,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
+    val sourceId = args.sourceId
+    val collectionUrl = args.collectionUrl
+    val collectionName = args.collectionName
+    val collectionCoverHint = args.collectionCoverHint
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playerState by playerViewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -314,28 +318,32 @@ fun CollectionDetailScreen(
                                 !state.hasMore &&
                                 state.tracks.all { it.id in state.downloadedTrackIds }
                             CollectionActionBar(
-                                isFavorite = state.isFavorite,
-                                isDownloading = state.isDownloading,
-                                allTracksDownloaded = allDownloaded,
-                                hasTracks = state.tracks.isNotEmpty(),
-                                onPlayAll = {
-                                    viewModel.playExpanded(0) { tracks, index ->
-                                        playerViewModel.playAlbum(tracks, index)
-                                    }
-                                },
-                                onShuffle = {
-                                    viewModel.playExpandedShuffled { tracks, index ->
-                                        playerViewModel.playAlbum(tracks, index)
-                                    }
-                                },
-                                onToggleFavorite = { viewModel.toggleFavorite() },
-                                onDownload = {
-                                    if (allDownloaded) {
-                                        showDeleteDialog = true
-                                    } else {
-                                        viewModel.downloadAll()
-                                    }
-                                },
+                                state = CollectionActionBarState(
+                                    isFavorite = state.isFavorite,
+                                    isDownloading = state.isDownloading,
+                                    allTracksDownloaded = allDownloaded,
+                                    hasTracks = state.tracks.isNotEmpty(),
+                                ),
+                                actions = DetailPlaybackActions(
+                                    onPlayAll = {
+                                        viewModel.playExpanded(0) { tracks, index ->
+                                            playerViewModel.playAlbum(tracks, index)
+                                        }
+                                    },
+                                    onShuffle = {
+                                        viewModel.playExpandedShuffled { tracks, index ->
+                                            playerViewModel.playAlbum(tracks, index)
+                                        }
+                                    },
+                                    onToggleFavorite = { viewModel.toggleFavorite() },
+                                    onDownload = {
+                                        if (allDownloaded) {
+                                            showDeleteDialog = true
+                                        } else {
+                                            viewModel.downloadAll()
+                                        }
+                                    },
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp)
@@ -385,8 +393,10 @@ fun CollectionDetailScreen(
                                                 playerViewModel.playAlbum(tracks, start)
                                             }
                                         },
-                                        isPlaying = isCurrent && playerState.isPlaying,
-                                        isCurrentTrack = isCurrent,
+                                        flags = MusicRowFlags(
+                                            isPlaying = isCurrent && playerState.isPlaying,
+                                            isCurrentTrack = isCurrent,
+                                        ),
                                     )
                                 }
                             }
@@ -420,16 +430,18 @@ fun CollectionDetailScreen(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun CollectionActionBar(
-    isFavorite: Boolean,
-    isDownloading: Boolean,
-    allTracksDownloaded: Boolean,
-    hasTracks: Boolean,
-    onPlayAll: () -> Unit,
-    onShuffle: () -> Unit,
-    onToggleFavorite: () -> Unit,
-    onDownload: () -> Unit,
+    state: CollectionActionBarState,
+    actions: DetailPlaybackActions,
     modifier: Modifier = Modifier,
 ) {
+    val isFavorite = state.isFavorite
+    val isDownloading = state.isDownloading
+    val allTracksDownloaded = state.allTracksDownloaded
+    val hasTracks = state.hasTracks
+    val onPlayAll = actions.onPlayAll
+    val onShuffle = actions.onShuffle
+    val onToggleFavorite = actions.onToggleFavorite
+    val onDownload = actions.onDownload
     Row(
         modifier = modifier.heightIn(min = 56.dp),
         horizontalArrangement = Arrangement.spacedBy(ActionBarSpacing),

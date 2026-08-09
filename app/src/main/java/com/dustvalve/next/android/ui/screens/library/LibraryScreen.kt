@@ -206,24 +206,28 @@ fun LibraryScreen(
                 LibraryList(
                     items = state.libraryItems,
                     fullyDownloadedPlaylistIds = state.fullyDownloadedPlaylistIds,
-                    onPlaylistClick = onPlaylistClick,
-                    onAlbumClick = onAlbumClick,
-                    onArtistClick = onArtistClick,
-                    onPinPlaylist = { playlist ->
-                        viewModel.pinPlaylist(playlist.id, !playlist.isPinned)
-                    },
-                    onPinFavorite = { item ->
-                        val favoriteId = when (item) {
-                            is LibraryItem.AlbumItem -> item.favoriteId
-                            is LibraryItem.ArtistItem -> item.favoriteId
-                            else -> return@LibraryList
-                        }
-                        viewModel.pinFavorite(favoriteId, !item.isPinned)
-                    },
-                    onRenameClick = { playlist -> viewModel.showRenameDialog(playlist) },
-                    onDeleteClick = { item -> viewModel.showDeleteDialog(item) },
-                    onChangeShapeClick = { item -> viewModel.showShapeDialog(item) },
-                    onExportClick = { playlist -> viewModel.requestExport(playlist) },
+                    actions = LibraryListActions(
+                        onPlaylistClick = onPlaylistClick,
+                        onAlbumClick = onAlbumClick,
+                        onArtistClick = onArtistClick,
+                        onPinPlaylist = { playlist ->
+                            viewModel.pinPlaylist(playlist.id, !playlist.isPinned)
+                        },
+                        onPinFavorite = pinFavorite@{ item ->
+                            val favoriteId = when (item) {
+                                is LibraryItem.AlbumItem -> item.favoriteId
+                                is LibraryItem.ArtistItem -> item.favoriteId
+                                else -> return@pinFavorite
+                            }
+                            viewModel.pinFavorite(favoriteId, !item.isPinned)
+                        },
+                        onRenameClick = { playlist -> viewModel.showRenameDialog(playlist) },
+                        onDeleteClick = { item -> viewModel.showDeleteDialog(item) },
+                        onChangeShapeClick = { item -> viewModel.showShapeDialog(item) },
+                    ),
+                    export = LibraryListExport(
+                        onExportClick = { playlist -> viewModel.requestExport(playlist) },
+                    ),
                     modifier = Modifier
                         .fillMaxSize()
                         .adaptiveContentWidth(adaptiveInfo.contentMaxWidth),
@@ -354,22 +358,42 @@ fun LibraryScreen(
     }
 }
 
+@androidx.compose.runtime.Immutable
+private data class LibraryListActions(
+    val onPlaylistClick: (String) -> Unit,
+    val onAlbumClick: (String) -> Unit,
+    val onArtistClick: (String) -> Unit,
+    val onPinPlaylist: (Playlist) -> Unit,
+    val onPinFavorite: (LibraryItem) -> Unit,
+    val onRenameClick: (Playlist) -> Unit,
+    val onDeleteClick: (LibraryItem) -> Unit,
+    val onChangeShapeClick: (LibraryItem) -> Unit,
+)
+
+@androidx.compose.runtime.Immutable
+private data class LibraryListExport(
+    val onExportClick: (Playlist) -> Unit,
+)
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun LibraryList(
     items: List<LibraryItem>,
     fullyDownloadedPlaylistIds: Set<String>,
-    onPlaylistClick: (String) -> Unit,
-    onAlbumClick: (String) -> Unit,
-    onArtistClick: (String) -> Unit,
-    onPinPlaylist: (Playlist) -> Unit,
-    onPinFavorite: (LibraryItem) -> Unit,
-    onRenameClick: (Playlist) -> Unit,
-    onDeleteClick: (LibraryItem) -> Unit,
-    onChangeShapeClick: (LibraryItem) -> Unit,
-    onExportClick: (Playlist) -> Unit,
+    actions: LibraryListActions,
+    export: LibraryListExport,
     modifier: Modifier = Modifier,
 ) {
+    val onPlaylistClick = actions.onPlaylistClick
+    val onAlbumClick = actions.onAlbumClick
+    val onArtistClick = actions.onArtistClick
+    val onPinPlaylist = actions.onPinPlaylist
+    val onPinFavorite = actions.onPinFavorite
+    val onRenameClick = actions.onRenameClick
+    val onDeleteClick = actions.onDeleteClick
+    val onChangeShapeClick = actions.onChangeShapeClick
+    val onExportClick = export.onExportClick
+
     var menuItem by remember { mutableStateOf<LibraryItem?>(null) }
 
     LazyColumn(
