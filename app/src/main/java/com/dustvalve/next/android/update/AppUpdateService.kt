@@ -1,6 +1,5 @@
 package com.dustvalve.next.android.update
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -255,13 +254,17 @@ open class AppUpdateService @Inject constructor(
 
     /**
      * Package name of a system-app activity handling [intent], or null when
-     * none resolves. Best-effort by design: package visibility filtering
-     * (no `<queries>` declared) may hide the installer from the query, in
-     * which case the caller falls back to the pre-existing unpinned intent.
+     * none resolves. Best-effort by design: if package visibility still hides
+     * the installer (misconfigured `<queries>`, OEM quirks), the caller falls
+     * back to the pre-existing unpinned intent. The package-archive VIEW
+     * `<queries>` entry in AndroidManifest.xml is required so API 30+ can see
+     * system installers at all.
      */
     // Int-flags overload is deprecated on API 33+ but is the only one that
-    // exists down to compat minSdk 26; ResolveInfoFlags is API 33-only.
-    @SuppressLint("QueryPermissionsNeeded")
+    // exists down to compat minSdk 26; ResolveInfoFlags is API 33-only. An
+    // SDK_INT-gated dual path would still need DEPRECATION on the <33 branch,
+    // so keep the single shared call. QueryPermissionsNeeded is already
+    // satisfied by that manifest `<queries>` entry (verified via lint).
     @Suppress("DEPRECATION")
     private fun resolveSystemInstallerPackage(intent: Intent): String? = context.packageManager
         .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)

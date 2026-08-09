@@ -119,10 +119,10 @@ object PlayerModule {
             .setLoadControl(loadControl)
             .setMediaSourceFactory(
                 // Pass the DataSource.Factory directly: Media3 1.10 deprecated
-                // the (Context) ctor + setDataSourceFactory() flow. The
-                // remaining DeprecatedCall warning is a slack-lints false
-                // positive (class has some @Deprecated methods so any
-                // constructor call is flagged); kotlinc emits no warning.
+                // the (Context) ctor + setDataSourceFactory() flow. KEEP the
+                // DeprecatedCall suppress: slack-lints 0.11.1 still false-
+                // positives any ctor when the class has other @Deprecated
+                // members (verified: lint fails without this); kotlinc is clean.
                 @Suppress("DeprecatedCall")
                 androidx.media3.exoplayer.source.DefaultMediaSourceFactory(cacheDataSourceFactory),
             )
