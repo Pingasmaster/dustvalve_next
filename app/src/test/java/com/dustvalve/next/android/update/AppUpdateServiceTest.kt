@@ -361,7 +361,7 @@ class AppUpdateServiceTest {
         assertThat(svc.checkForUpdate()?.apkSha256).isNull() // no digest field at all
     }
 
-    @Test fun `downloadApk verifies integrity - digest match, Content-Length fallback, mismatch aborts`() = runTest {
+    @Test fun `downloadApk verifies integrity - digest match, missing digest fails closed, mismatch aborts`() = runTest {
         val svc = testService(installed = "0.1.0", trustAllDownloadUrls = true)
         val url = server.url("/update.apk").toString()
         val updates = File(cacheDir, "updates")
@@ -375,9 +375,16 @@ class AppUpdateServiceTest {
         svc.downloadApk(url, bodySha256).collect { }
         assertThat(File(updates, "update.apk").readText()).isEqualTo(body)
 
-        // No digest from GitHub: byte-count-vs-Content-Length is the fallback gate.
+        // Production fail-closed: no digest from GitHub refuses the installable file.
         server.enqueue(MockResponse().setBody(body))
-        svc.downloadApk(url, null).collect { }
+        val missing = runCatching { svc.downloadApk(url, null).collect { } }.exceptionOrNull()
+        assertThat(missing).isInstanceOf(IOException::class.java)
+        assertThat(missing?.message).contains("digest required")
+
+        // Tests may still exercise Content-Length fallback with requireApkDigest=false.
+        val lenSvc = testService(installed = "0.1.0", trustAllDownloadUrls = true, requireDigest = false)
+        server.enqueue(MockResponse().setBody(body))
+        lenSvc.downloadApk(url, null).collect { }
         assertThat(File(updates, "update.apk").readText()).isEqualTo(body)
 
         // Digest mismatch (tampered bytes): abort, delete, nothing installable left.
@@ -422,6 +429,7 @@ class AppUpdateServiceTest {
     private fun testService(
         installed: String,
         trustAllDownloadUrls: Boolean = false,
+        requireDigest: Boolean = true,
     ): AppUpdateService = object : AppUpdateService(client, context, testDispatcher) {
         override val releasesUrl: String = server.url("/releases").toString()
         override val installedVersion: String = installed
@@ -429,6 +437,11 @@ class AppUpdateServiceTest {
         // MockWebServer serves from http://localhost, which the production
         // allowlist rightly refuses; download tests opt in to trust it.
         override fun isTrustedDownloadUrl(url: String): Boolean = trustAllDownloadUrls || super.isTrustedDownloadUrl(url)
+
+        override fun requireApkDigest(): Boolean = requireDigest
+
+        // Unit tests have no real PackageManager signing info for the APK.
+        override fun requireSigningMatch(): Boolean = false
     }
 
     private fun release(

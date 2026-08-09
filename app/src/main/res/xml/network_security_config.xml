@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Baseline network security: cleartext is never permitted. All provider and
+  update traffic is https; this config makes that policy explicit for the
+  platform (and for tools that look for network_security_config).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

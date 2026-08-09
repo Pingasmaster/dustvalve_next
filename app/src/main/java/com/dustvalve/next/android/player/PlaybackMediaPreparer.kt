@@ -77,8 +77,18 @@ internal class PlaybackMediaPreparer(
     fun ensureServiceStarted() {
         if (serviceStarted) return
         val intent = Intent(context, PlaybackService::class.java)
-        ContextCompat.startForegroundService(context, intent)
-        serviceStarted = true
+        // Mirror DownloadController.startServiceIfPossible: Android 12+ can
+        // refuse a background FGS start. Playback still proceeds on the
+        // in-process ExoPlayer; the notification/service just may not stick.
+        try {
+            ContextCompat.startForegroundService(context, intent)
+            serviceStarted = true
+        } catch (e: IllegalStateException) {
+            // Includes ForegroundServiceStartNotAllowedException (API 31+).
+            android.util.Log.w("PlaybackManager", "Could not start PlaybackService", e)
+        } catch (e: SecurityException) {
+            android.util.Log.w("PlaybackManager", "Could not start PlaybackService", e)
+        }
     }
 
     /**

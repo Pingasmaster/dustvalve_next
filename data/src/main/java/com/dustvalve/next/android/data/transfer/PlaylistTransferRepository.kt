@@ -430,8 +430,19 @@ class PlaylistTransferRepository(
         // and embed an app-private file into a shared archive. Local-scheme
         // values from the exporting device are dangling here anyway; offline
         // bundles get artUrl repointed at the locally-written cover below.
-        var snap = bundleEntry.track.let {
-            if (isRemoteOrBlankUrl(it.artUrl)) it else it.copy(artUrl = "")
+        // Also blank streamUrl/artUrl hosts that are not https + known for the
+        // track's TrackSource (SSRF / unexpected CDN pivot on later play/export).
+        var snap = bundleEntry.track.let { raw ->
+            val sourceKey = raw.source
+            val art = when {
+                raw.artUrl.isBlank() -> ""
+                isRemoteOrBlankUrl(raw.artUrl) ->
+                    NetworkUtils.sanitizeImportedMediaUrl(raw.artUrl, sourceKey)
+                else -> ""
+            }
+            val stream = NetworkUtils.sanitizeImportedMediaUrl(raw.streamUrl, sourceKey)
+                .ifBlank { null }
+            raw.copy(artUrl = art, streamUrl = stream)
         }
         if (!offline) return MaterializedEntry(snap, download = null)
 
@@ -503,6 +514,12 @@ class PlaylistTransferRepository(
     private fun fetchBytes(url: String): ByteArray {
         if (url.startsWith("content://") || url.startsWith("file://")) {
             return readLocalBytes(url)
+        }
+        // SSRF guard before connect: loopback / RFC1918 / link-local / CGNAT / ULA.
+        try {
+            NetworkUtils.requirePublicRemoteUrl(url)
+        } catch (e: IllegalArgumentException) {
+            throw IOException(e.message, e)
         }
         val request = Request.Builder().url(url).build()
         return client.newCall(request).execute().use { response ->
