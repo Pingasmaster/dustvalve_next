@@ -61,6 +61,7 @@
     <issue id="UnrememberedMutableState"      severity="error" />
     <issue id="ModifierParameter"             severity="error" />
     <!--
+<<<<<<< HEAD
         slack-compose-lints' ComposeUnstableCollections flags every composable
         parameter typed as List<T>/Set<T>/Map<T>. The runtime concern (Compose
         treats kotlin.collections.* as unstable so composables can't skip on
@@ -68,8 +69,32 @@
         compose_stability_config.conf, which the Compose Compiler reads and
         which marks these as @Stable. The lint check doesn't read that config
         file, so the warnings are noise here. Suppressed globally.
+=======
+        Adaptive width metrics are provided once at the activity root and read
+        by many screens (content max-width, hero caps, dual-pane, sheets).
+        Threading AdaptiveLayoutInfo through every call site would dwarf the
+        CompositionLocal cost; allow this one intentional local.
     -->
-    <issue id="ComposeUnstableCollections"    severity="ignore" />
+    <issue id="ComposeCompositionLocalUsage">
+        <option name="allowed-composition-locals" value="LocalAdaptiveLayoutInfo" />
+    </issue>
+    <!--
+        ComposeUnstableCollections (slack-compose-lints) is enabledByDefault=false
+        in 1.5.4+ and must stay that way here. Do not add
+        enable += "ComposeUnstableCollections".
+
+        Why: the Compose Compiler already treats kotlin.collections.{List,Set,
+        Map,Collection} as stable via compose_stability_config.conf (see
+        app/build.gradle.kts composeCompiler.stabilityConfigurationFiles), and
+        Strong Skipping Mode (default on this Compose Compiler) makes the
+        skippability concern largely obsolete. UnstableCollectionsDetector has
+        no lint option to load that stability config; it hardcodes List/Set/Map
+        and would only advise kotlinx Immutable* / @Immutable wrappers. Enforcing
+        the check would force an ImmutableList/Set migration across UI boundaries
+        without changing compiler behavior already granted by the stability file.
+        Detekt Compose.UnstableCollections stays inactive for the same reason.
+>>>>>>> wip/lint-hard-unstable-collections
+    -->
 
     <!--
         slack-lints' AvoidUsingNotNullOperator flags every `!!` usage. In test
