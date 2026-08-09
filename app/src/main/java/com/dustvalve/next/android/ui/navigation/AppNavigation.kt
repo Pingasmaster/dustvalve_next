@@ -57,6 +57,7 @@ fun AppNavigation(
     val pendingLink by navViewModel.pendingLinkConfirmation.collectAsStateWithLifecycle()
     val linkSnackbarHostState = remember { SnackbarHostState() }
     val unsupportedMsg = stringResource(R.string.snackbar_unsupported_source)
+    val deepLinkPlayFailedMsg = stringResource(R.string.common_failed_to_play)
     val useLibraryDualPane =
         adaptiveInfo.useDualPane && currentTab == BottomNavItem.LIBRARY
 
@@ -64,6 +65,12 @@ fun AppNavigation(
     androidx.compose.runtime.LaunchedEffect(Unit) {
         navViewModel.unsupportedLinkEvents.collect {
             linkSnackbarHostState.showSnackbar(unsupportedMsg)
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        navViewModel.deepLinkPlayFailedEvents.collect {
+            linkSnackbarHostState.showSnackbar(deepLinkPlayFailedMsg)
         }
     }
 

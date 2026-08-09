@@ -159,10 +159,19 @@ internal class PlayerPlayCoordinator(
     }
 
     fun playTrackInList(tracks: List<Track>, index: Int) {
+        val targetTrack = tracks.getOrNull(index)
+        if (targetTrack == null) {
+            extraState.update {
+                it.copy(
+                    snackbarMessage = UiText.StringResource(R.string.common_failed_to_play),
+                    isSnackbarError = true,
+                )
+            }
+            return
+        }
         val generation = ++loadingGeneration
         playJob?.cancel()
         playJob = scope.launch {
-            val targetTrack = tracks[index]
             val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
                 downloadRepository.getDownloadInfo(targetTrack.id) == null
 
@@ -191,10 +200,19 @@ internal class PlayerPlayCoordinator(
     }
 
     fun playAlbum(tracks: List<Track>, startIndex: Int) {
+        val targetTrack = tracks.getOrNull(startIndex)
+        if (targetTrack == null) {
+            extraState.update {
+                it.copy(
+                    snackbarMessage = UiText.StringResource(R.string.common_failed_to_play),
+                    isSnackbarError = true,
+                )
+            }
+            return
+        }
         val generation = ++loadingGeneration
         playJob?.cancel()
         playJob = scope.launch {
-            val targetTrack = tracks[startIndex]
             val isYouTubeStream = targetTrack.source == TrackSource.YOUTUBE &&
                 downloadRepository.getDownloadInfo(targetTrack.id) == null
 

@@ -47,8 +47,9 @@ class CookieStoreTest {
         kotlinx.coroutines.runBlocking { settings.setAuthCookies(null) }
 
         store = CookieStore(settings, UnconfinedTestDispatcher())
-        // Allow the async init load to complete before any test runs so loadForRequest
-        // (with its 500ms latch) doesn't see an uninitialized store.
+        // Allow the async init load to complete before any test runs so
+        // loadCookiesForDomain (which still awaits the init latch) sees a
+        // fully initialized store. loadForRequest itself is non-blocking.
         awaitInit()
     }
 

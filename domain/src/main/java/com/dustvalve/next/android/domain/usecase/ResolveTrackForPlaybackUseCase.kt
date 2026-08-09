@@ -105,11 +105,7 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
             )
         }
 
-        val watchUrl = youtubeWatchUrl(track) ?: return PlaybackResolveResult(
-            track = track.copy(streamUrl = null),
-            playbackFormat = null,
-            sourcePath = null,
-        )
+        val watchUrl = youtubeWatchUrl(track) ?: return streamFailed(track, reportFailure)
 
         return try {
             val streamUrl = youtubeRepository.getStreamUrl(watchUrl)

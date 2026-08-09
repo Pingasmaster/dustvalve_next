@@ -86,6 +86,20 @@ class ResolveTrackForPlaybackUseCaseTest {
         assertThat(silent.track.streamUrl).isNull()
     }
 
+    @Test fun `youtube unusable id reports streamFailed when watch URL missing`() = runTest {
+        val track = sampleTrack(id = "not_a_yt_id", source = TrackSource.YOUTUBE, streamUrl = null)
+        coEvery { downloadRepository.getDownloadInfo(track.id) } returns null
+
+        val reported = useCase(track, reportFailure = true)
+        assertThat(reported.streamFailed).isTrue()
+        assertThat(reported.track.streamUrl).isNull()
+        coVerify(exactly = 0) { youtubeRepository.getStreamUrl(any()) }
+
+        val silent = useCase(track, reportFailure = false)
+        assertThat(silent.streamFailed).isFalse()
+        assertThat(silent.track.streamUrl).isNull()
+    }
+
     @Test fun `youtubeWatchUrl rebuilds from yt_ id when streamUrl is stale googlevideo`() {
         val track = sampleTrack(
             id = "yt_vid99",

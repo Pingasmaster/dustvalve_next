@@ -15,6 +15,7 @@ import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -92,7 +93,12 @@ class DownloadController @Inject constructor(
         data class Failed(override val workId: Long, val label: String, val error: Throwable) : DownloadEvent
     }
 
-    private val scope = CoroutineScope(SupervisorJob() + ioDispatcher)
+    private val scope = CoroutineScope(
+        SupervisorJob() + ioDispatcher +
+            CoroutineExceptionHandler { _, throwable ->
+                Log.e(TAG, "Unhandled download coroutine error", throwable)
+            },
+    )
     private val seq = AtomicLong(0L)
 
     /** Guards [queue] and [loopRunning]. Plain monitor - all ops are non-suspending. */
@@ -399,11 +405,9 @@ class DownloadController @Inject constructor(
             } catch (e: CancellationException) {
                 failure = e
                 throw e
-            } catch (e: java.io.IOException) {
-                failure = e
-            } catch (e: IllegalArgumentException) {
-                failure = e
-            } catch (e: IllegalStateException) {
+            } catch (e: Exception) {
+                // Broaden beyond IO/IAE/ISE so SecurityException and other
+                // work failures still emit Failed and unblock awaiters.
                 failure = e
             }
         }

@@ -260,6 +260,14 @@ class CrashReportManager @Inject constructor(
                         info.description?.let { append(" description=").append(it) }
                     }
                 }
+        } catch (se: SecurityException) {
+            // Same posture as DiagnosticsCollector: missing GET_TASKS / OEM
+            // restrictions must not crash cold-start crash reporting.
+            Log.w(TAG, "exit-info unavailable: missing permission", se)
+            emptyList()
+        } catch (iae: IllegalArgumentException) {
+            Log.w(TAG, "exit-info unavailable: invalid package/pid", iae)
+            emptyList()
         } catch (npe: NullPointerException) {
             // Robolectric / exotic OEM builds: exit-info is best-effort, the
             // marker-file path above still works everywhere.
