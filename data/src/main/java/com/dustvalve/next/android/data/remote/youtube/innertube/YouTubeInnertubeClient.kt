@@ -22,18 +22,18 @@ import javax.inject.Singleton
  * First-party Innertube client for the standard YouTube (non-Music) API.
  *
  * Endpoint -> client mapping (rationale in [YouTubeClient]):
- *   /player              -> ANDROID_VR_NO_AUTH (primary), IOS (fallback)
- *   /search              -> WEB_NO_AUTH
- *   /browse (channel)    -> WEB_NO_AUTH (richGridRenderer w/ videoRenderer)
- *   /browse (playlist)   -> MWEB_NO_AUTH on m.youtube.com
+ *   /player              -> AndroidVrNoAuth (primary), Ios (fallback)
+ *   /search              -> WebNoAuth
+ *   /browse (channel)    -> WebNoAuth (richGridRenderer w/ videoRenderer)
+ *   /browse (playlist)   -> MwebNoAuth on m.youtube.com
  *                           (lockupViewModel playlist rows; legacy
  *                           playlistVideoListRenderer still accepted by
  *                           the playlist parser)
- *   /next                -> MWEB_NO_AUTH on m.youtube.com
+ *   /next                -> MwebNoAuth on m.youtube.com
  *                           (videoWithContextRenderer; WEB now returns lockupViewModel)
  *   /browse (continuation) -> same client as the originating browse:
- *                           MWEB_NO_AUTH for playlists (default),
- *                           WEB_NO_AUTH for channel Videos-tab pagination
+ *                           MwebNoAuth for playlists (default),
+ *                           WebNoAuth for channel Videos-tab pagination
  *
  * Innertube must NOT carry the shared CookieJar's cookies; stray half-set
  * login cookies confuse the API. We reuse the shared OkHttp connection
@@ -68,7 +68,7 @@ open class YouTubeInnertubeClient @Inject constructor(
      * every client fails.
      */
     suspend fun player(videoId: String): JsonElement {
-        val clients = listOf(YouTubeClient.ANDROID_VR_NO_AUTH, YouTubeClient.IOS)
+        val clients = listOf(YouTubeClient.AndroidVrNoAuth, YouTubeClient.Ios)
         var lastError: String? = null
         for (client in clients) {
             val response = try {
@@ -113,7 +113,7 @@ open class YouTubeInnertubeClient @Inject constructor(
     }
 
     suspend fun search(query: String, params: String? = null): JsonElement {
-        val client = YouTubeClient.WEB_NO_AUTH
+        val client = YouTubeClient.WebNoAuth
         return postWithRetry(
             client = client,
             endpointPath = "search",
@@ -140,9 +140,9 @@ open class YouTubeInnertubeClient @Inject constructor(
      */
     suspend fun browse(browseId: String, params: String? = null): JsonElement {
         val client = if (browseId.startsWith("VL")) {
-            YouTubeClient.MWEB_NO_AUTH
+            YouTubeClient.MwebNoAuth
         } else {
-            YouTubeClient.WEB_NO_AUTH
+            YouTubeClient.WebNoAuth
         }
         return postWithRetry(
             client = client,
@@ -165,11 +165,11 @@ open class YouTubeInnertubeClient @Inject constructor(
     /**
      * Browse continuation. Defaults to MWEB to match the playlist browse
      * routing; callers paginating a WEB browse (channel Videos tab) MUST
-     * pass [YouTubeClient.WEB_NO_AUTH] so the continuation comes back in
+     * pass [YouTubeClient.WebNoAuth] so the continuation comes back in
      * the same richGrid shape as page 1 - an MWEB continuation for a WEB
      * browse parses to zero tracks.
      */
-    suspend fun browseContinuation(continuation: String, client: YouTubeClient = YouTubeClient.MWEB_NO_AUTH): JsonElement = postWithRetry(
+    suspend fun browseContinuation(continuation: String, client: YouTubeClient = YouTubeClient.MwebNoAuth): JsonElement = postWithRetry(
         client = client,
         endpointPath = "browse",
         queryParams = "&continuation=$continuation&type=next",
@@ -198,7 +198,7 @@ open class YouTubeInnertubeClient @Inject constructor(
         playlistIndex: Int? = null,
         params: String? = null,
     ): JsonElement {
-        val client = YouTubeClient.MWEB_NO_AUTH
+        val client = YouTubeClient.MwebNoAuth
         return postWithRetry(
             client = client,
             endpointPath = "next",
@@ -253,7 +253,7 @@ open class YouTubeInnertubeClient @Inject constructor(
         queryParams: String,
         body: JsonObject,
     ): JsonElement = withContext(ioDispatcher) {
-        val base = if (client == YouTubeClient.MWEB_NO_AUTH) baseUrlM else baseUrlWww
+        val base = if (client == YouTubeClient.MwebNoAuth) baseUrlM else baseUrlWww
         val url = "$base/$endpointPath?prettyPrint=false$queryParams"
         val clientVersion = client.resolveClientVersion(visitor.clientVersion)
         val request = Request.Builder()

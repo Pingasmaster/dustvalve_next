@@ -78,10 +78,10 @@ class ArtistDetailViewModelTest {
             bio = "bio",
             location = "Paris",
             albums = listOf(sampleAlbum("a1"), sampleAlbum("a2")),
+            isFavorite = true,
         )
-        coEvery { bandcampSource.getArtist(artist.url) } returns artist
         every { sources["bandcamp"] } returns bandcampSource
-        coEvery { favoriteRepository.isFavorite(artist.url) } returns false
+        every { artistRepository.getArtistDetailFlow(artist.url) } returns flowOf(artist)
 
         val vm = newVm()
         vm.load(sourceId = "bandcamp", url = artist.url)
@@ -91,9 +91,13 @@ class ArtistDetailViewModelTest {
         assertThat(state.isLoading).isFalse()
         assertThat(state.artist?.name).isEqualTo("Bandcamp Artist")
         assertThat(state.artist?.albums).hasSize(2)
+        assertThat(state.isFavorite).isTrue()
         assertThat(state.tracks).isEmpty()
         assertThat(state.hasMore).isFalse()
+        coVerify(exactly = 0) { bandcampSource.getArtist(any()) }
         coVerify(exactly = 0) { bandcampSource.getArtistTracks(any(), any()) }
+        // Favorite is the stable hash id from the Artist row, not the URL.
+        coVerify(exactly = 0) { favoriteRepository.isFavorite(any()) }
     }
 
     @Test fun `youtube artist load fetches first page of tracks and propagates hasMore`() = runTest(dispatcher) {
@@ -320,9 +324,8 @@ class ArtistDetailViewModelTest {
             location = null,
             albums = emptyList(),
         )
-        coEvery { bc.getArtist(artist.url) } returns artist
         every { sources["bandcamp"] } returns bc
-        coEvery { favoriteRepository.isFavorite(artist.url) } returns false
+        every { artistRepository.getArtistDetailFlow(artist.url) } returns flowOf(artist)
 
         val vm = newVm()
         vm.load(sourceId = "bandcamp", url = artist.url)
@@ -332,6 +335,59 @@ class ArtistDetailViewModelTest {
 
         coVerify { artistRepository.toggleFavorite("bc_id") }
         coVerify(exactly = 0) { artistRepository.favoriteRemoteArtist(any(), any()) }
+    }
+
+    @Test fun `bandcamp downloadAll resolves albums via DownloadAlbumUseCase`() = runTest(dispatcher) {
+        val bc = sourceWith("bandcamp", setOf(SourceConcept.ARTIST, SourceConcept.ALBUM))
+        val artist = Artist(
+            id = "bc_id",
+            name = "moe shop",
+            url = "https://moeshop.bandcamp.com",
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = listOf(sampleAlbum("a1"), sampleAlbum("a2")),
+        )
+        every { sources["bandcamp"] } returns bc
+        every { artistRepository.getArtistDetailFlow(artist.url) } returns flowOf(artist)
+        coEvery { downloadAlbumUseCase.downloadArtist(artist) } returns Unit
+
+        val vm = newVm()
+        vm.load(sourceId = "bandcamp", url = artist.url)
+        advanceUntilIdle()
+        vm.downloadAll()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { downloadAlbumUseCase.downloadArtist(artist) }
+        coVerify(exactly = 0) { downloadController.downloadTrackBlocking(any(), any()) }
+        val state = vm.uiState.value
+        assertThat(state.isDownloading).isFalse()
+        assertThat((state.snackbarMessage as UiText.StringResource).resId)
+            .isEqualTo(R.string.snackbar_downloaded)
+    }
+
+    @Test fun `bandcamp deleteAllDownloads deletes by album id not stub tracks`() = runTest(dispatcher) {
+        val bc = sourceWith("bandcamp", setOf(SourceConcept.ARTIST, SourceConcept.ALBUM))
+        val artist = Artist(
+            id = "bc_id",
+            name = "moe shop",
+            url = "https://moeshop.bandcamp.com",
+            imageUrl = null,
+            bio = null,
+            location = null,
+            albums = listOf(sampleAlbum("a1")),
+        )
+        every { sources["bandcamp"] } returns bc
+        every { artistRepository.getArtistDetailFlow(artist.url) } returns flowOf(artist)
+
+        val vm = newVm()
+        vm.load(sourceId = "bandcamp", url = artist.url)
+        advanceUntilIdle()
+        vm.deleteAllDownloads()
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { downloadAlbumUseCase.deleteArtistDownloads(artist) }
+        coVerify(exactly = 0) { downloadAlbumUseCase.deleteTrackDownload(any()) }
     }
 
     @Test fun `youtube toggleFavorite uses favoriteRemoteArtist and unfavoriteArtist`() = runTest(dispatcher) {

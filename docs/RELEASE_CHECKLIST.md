@@ -29,12 +29,6 @@ green first; this list covers what CI cannot exercise.
 - [ ] Lockscreen + notification controls (play/pause/next/prev/favorite).
 - [ ] Wired/BT headset button toggles play/pause.
 
-## Auth flows (not CI-automatable)
-
-- [ ] Bandcamp login via WebView; collection playlist syncs; purchased album
-      offers HQ download formats; sign out clears state.
-- [ ] YouTube Music login connects and disconnects cleanly.
-
 ## System integration
 
 - [ ] Deep links from a real browser: youtube.com/watch, youtu.be,

@@ -137,7 +137,6 @@ class PlaylistRepositoryImpl(
                 id = when (type) {
                     Playlist.SystemPlaylistType.DOWNLOADS -> Playlist.ID_DOWNLOADS
                     Playlist.SystemPlaylistType.RECENT -> Playlist.ID_RECENT
-                    Playlist.SystemPlaylistType.COLLECTION -> Playlist.ID_COLLECTION
                     Playlist.SystemPlaylistType.FAVORITES -> Playlist.ID_FAVORITES
                 },
                 name = type.defaultName,
@@ -146,9 +145,8 @@ class PlaylistRepositoryImpl(
                 isPinned = false,
                 sortOrder = when (type) {
                     Playlist.SystemPlaylistType.FAVORITES -> 0
-                    Playlist.SystemPlaylistType.COLLECTION -> 1
-                    Playlist.SystemPlaylistType.DOWNLOADS -> 2
-                    Playlist.SystemPlaylistType.RECENT -> 3
+                    Playlist.SystemPlaylistType.DOWNLOADS -> 1
+                    Playlist.SystemPlaylistType.RECENT -> 2
                 },
             )
             playlistDao.insertPlaylistIfAbsent(entity)
@@ -336,26 +334,6 @@ class PlaylistRepositoryImpl(
                 playlistDao.insertPlaylistTracks(playlistTracks)
             }
             playlistDao.updateTrackCount(playlist.id, recentTracks.size)
-        }
-    }
-
-    override suspend fun syncCollectionPlaylist(collectionAlbumIds: List<String>) {
-        val playlist = getSystemPlaylistSync(Playlist.SystemPlaylistType.COLLECTION) ?: return
-        val collectionTracks = trackDao.getByAlbumIds(collectionAlbumIds)
-
-        database.withTransaction {
-            playlistDao.clearPlaylistTracks(playlist.id)
-            val playlistTracks = collectionTracks.mapIndexed { index, trackEntity ->
-                PlaylistTrackEntity(
-                    playlistId = playlist.id,
-                    trackId = trackEntity.id,
-                    position = index,
-                )
-            }
-            if (playlistTracks.isNotEmpty()) {
-                playlistDao.insertPlaylistTracks(playlistTracks)
-            }
-            playlistDao.updateTrackCount(playlist.id, collectionTracks.size)
         }
     }
 

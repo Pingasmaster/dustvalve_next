@@ -9,6 +9,9 @@ import javax.inject.Singleton
  * Compat flavor stub: ApplicationStartInfo is an API 35+ type that must not
  * be referenced at class-load on minSdk 26. Future flavor ships the real
  * implementation that writes startup.csv under filesDir/metrics/.
+ *
+ * Context is accepted so [DiagnosticsInitializer] and Hilt stay API-compatible
+ * with the future implementation; the stub does not use it.
  */
 @Singleton
 class StartupMetricsCollector @Inject constructor(@Suppress("UNUSED_PARAMETER") @param:ApplicationContext private val context: Context) {

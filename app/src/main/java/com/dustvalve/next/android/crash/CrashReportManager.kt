@@ -216,8 +216,12 @@ class CrashReportManager @Inject constructor(
      * Exit records that indicate an app problem, newer than the watermark.
      * Everything user-initiated or routine is filtered out so force-closing
      * the app never nags on the next launch.
+     *
+     * Detekt lists NullPointerException under TooGenericExceptionCaught; the
+     * catch is intentional for Robolectric / exotic OEM builds where exit-info
+     * is best-effort.
      */
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
+    @Suppress("TooGenericExceptionCaught")
     private fun collectReportableExits(): List<String> {
         // ApplicationExitInfo is API 30+. Compat flavor supports API 26-29;
         // below R there is nothing to query. Gate via flavor-safe helper so
@@ -256,10 +260,10 @@ class CrashReportManager @Inject constructor(
                         info.description?.let { append(" description=").append(it) }
                     }
                 }
-        } catch (t: Throwable) {
+        } catch (npe: NullPointerException) {
             // Robolectric / exotic OEM builds: exit-info is best-effort, the
             // marker-file path above still works everywhere.
-            Log.w(TAG, "exit-info unavailable", t)
+            Log.w(TAG, "exit-info unavailable", npe)
             emptyList()
         }
     }

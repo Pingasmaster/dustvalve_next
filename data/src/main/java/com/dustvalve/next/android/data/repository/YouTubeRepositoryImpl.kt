@@ -100,10 +100,9 @@ class YouTubeRepositoryImpl(
     @Volatile private var lastChannelPage: Pair<String, YouTubeChannelResult>? = null
 
     private companion object {
-        // Playlists may grow over time (uploader appends videos), so we
-        // refresh in the background after a day. Video metadata (title,
-        // duration, uploader) is immutable post-publish and cached forever.
-        const val PLAYLIST_REVALIDATE_MS = 24L * 60L * 60L * 1000L
+        // Video metadata (title, duration, uploader) is immutable
+        // post-publish and cached forever. Playlists revalidate on every
+        // open (see getPlaylistTracks).
 
         // Opaque YouTube `params` token selecting the channel "Videos" tab.
         // This is the same value Metrolist / NewPipe / yt-dlp use; YT has
@@ -275,16 +274,17 @@ class YouTubeRepositoryImpl(
                 val cachedVideos = videoCache.getByIds(ids).associateBy { it.videoId }
                 val tracks = ids.mapNotNull { id -> cachedVideos[id]?.let { cachedToTrack(it) } }
                 if (tracks.size == ids.size) {
-                    val age = System.currentTimeMillis() - cached.cachedAt
-                    if (age >= PLAYLIST_REVALIDATE_MS) {
-                        backgroundScope.launch {
-                            try {
-                                fetchAndCachePlaylist(
-                                    playlistId = resolveBrowsablePlaylistId(extractedId),
-                                    aliasId = extractedId,
-                                )
-                            } catch (_: Throwable) {}
-                        }
+                    // Playlists grow (and shrink) like artist discographies:
+                    // always return cache immediately, then silently revalidate
+                    // so newly-added videos land on the next open without a
+                    // hard TTL freeze.
+                    backgroundScope.launch {
+                        try {
+                            fetchAndCachePlaylist(
+                                playlistId = resolveBrowsablePlaylistId(extractedId),
+                                aliasId = extractedId,
+                            )
+                        } catch (_: Throwable) {}
                     }
                     // Cache entity has no cover column yet; first-track art is
                     // the best offline cover we can offer without a migration.
@@ -420,7 +420,7 @@ class YouTubeRepositoryImpl(
             // Channel browse runs on WEB; the continuation must too, or the
             // response comes back MWEB-shaped and parses to zero tracks
             // (silently truncating every channel to page 1).
-            val response = client.browseContinuation(token.continuation, YouTubeClient.WEB_NO_AUTH)
+            val response = client.browseContinuation(token.continuation, YouTubeClient.WebNoAuth)
             val parsed = channelParser.parseContinuation(response, token.channelId, token.channelName, token.totalSoFar + 1)
             val newTotal = token.totalSoFar + parsed.tracks.size
             YouTubeChannelResult(

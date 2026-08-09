@@ -28,7 +28,11 @@ import javax.inject.Singleton
 @Singleton
 class StartupMetricsCollector @Inject constructor(@param:ApplicationContext private val context: Context) {
 
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
+    /**
+     * Detekt lists NullPointerException under TooGenericExceptionCaught; the
+     * catch is intentional for Robolectric (no ActivityManagerService).
+     */
+    @Suppress("TooGenericExceptionCaught")
     fun collectOnColdStart() {
         try {
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
@@ -40,12 +44,12 @@ class StartupMetricsCollector @Inject constructor(@param:ApplicationContext priv
             Log.w(TAG, "collectOnColdStart: missing GET_TASKS", se)
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "collectOnColdStart: invalid package/pid", iae)
-        } catch (t: Throwable) {
+        } catch (npe: NullPointerException) {
             // Robolectric shadows throw NPE on getHistoricalProcessStartReasons
             // because there's no real ActivityManagerService. Real devices
             // surface only the documented SecurityException / IAE; anything
             // else is best-effort diagnostics we never want to crash over.
-            Log.w(TAG, "collectOnColdStart: platform unavailable", t)
+            Log.w(TAG, "collectOnColdStart: platform unavailable", npe)
         }
     }
 

@@ -36,6 +36,10 @@ object RangeResumeDownloader {
     /** Max number of resume attempts after the initial request. */
     const val DEFAULT_MAX_RETRIES = 3
 
+    private const val INITIAL_BACKOFF_MS = 500L
+    private const val BACKOFF_SHIFT_CAP = 4
+    private const val MIN_BYTES_WITHOUT_CONTENT_LENGTH = 1024L
+
     /**
      * The server's 206 response no longer lines up with the partial content
      * already written: the Content-Range start offset differs from the bytes
@@ -83,7 +87,7 @@ object RangeResumeDownloader {
         maxRetries: Int = DEFAULT_MAX_RETRIES,
         expectedTotalBytes: Long? = null,
         backoffMillis: (attempt: Int) -> Long = { attempt ->
-            500L * (1L shl (attempt - 1).coerceAtMost(4))
+            INITIAL_BACKOFF_MS * (1L shl (attempt - 1).coerceAtMost(BACKOFF_SHIFT_CAP))
         },
         onProgress: ((bytesWritten: Long, expectedTotal: Long?) -> Unit)? = null,
     ): Long {
@@ -259,7 +263,7 @@ object RangeResumeDownloader {
         if (expectedTotal != null && expectedTotal > 0L && bytesWritten != expectedTotal) {
             throw IOException("Size mismatch: expected $expectedTotal but wrote $bytesWritten for track: $trackId")
         }
-        if (expectedTotal == null && bytesWritten < 1024) {
+        if (expectedTotal == null && bytesWritten < MIN_BYTES_WITHOUT_CONTENT_LENGTH) {
             throw IOException(
                 "Download suspiciously small ($bytesWritten bytes) without " +
                     "Content-Length header for track: $trackId",

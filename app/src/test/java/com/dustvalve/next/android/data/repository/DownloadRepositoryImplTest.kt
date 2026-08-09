@@ -3,13 +3,10 @@ package com.dustvalve.next.android.data.repository
 import android.content.Context
 import androidx.room.withTransaction
 import com.dustvalve.next.android.cache.StorageTracker
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
-import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
@@ -58,8 +55,6 @@ class DownloadRepositoryImplTest {
     private lateinit var database: DustvalveNextDatabase
     private lateinit var downloadDao: DownloadDao
     private lateinit var trackDao: TrackDao
-    private lateinit var albumDao: AlbumDao
-    private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var youtubeRepository: YouTubeRepository
     private lateinit var mediaCacheClearer: MediaCacheClearer
     private lateinit var repo: DownloadRepositoryImpl
@@ -81,10 +76,6 @@ class DownloadRepositoryImplTest {
         coEvery { downloadDao.getByTrackId(any()) } returns null
         trackDao = mockk(relaxed = true)
         coEvery { trackDao.getById(any()) } returns null
-        albumDao = mockk()
-        coEvery { albumDao.getById(any()) } returns null
-        settingsDataStore = mockk()
-        coEvery { settingsDataStore.getDownloadFormatSync() } returns "mp3-128"
         youtubeRepository = mockk()
         mediaCacheClearer = mockk()
 
@@ -96,11 +87,8 @@ class DownloadRepositoryImplTest {
             database = database,
             downloadDao = downloadDao,
             trackDao = trackDao,
-            albumDao = albumDao,
             client = OkHttpClient(),
             storageTracker = mockk<StorageTracker>(relaxed = true),
-            downloadScraper = mockk<DustvalveDownloadScraper>(relaxed = true),
-            settingsDataStore = settingsDataStore,
             youtubeRepository = youtubeRepository,
             notificationCenter = mockk<DownloadProgressReporter>(relaxed = true),
             mediaCacheClearer = mediaCacheClearer,

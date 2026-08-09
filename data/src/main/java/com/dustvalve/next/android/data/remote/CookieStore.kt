@@ -27,6 +27,11 @@ class CookieStore @Inject constructor(
     @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
 ) : CookieJar {
 
+    private companion object {
+        private const val INIT_AWAIT_TIMEOUT_MS = 500L
+        private const val INIT_AWAIT_TIMEOUT_SEC = 3L
+    }
+
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
@@ -91,7 +96,7 @@ class CookieStore @Inject constructor(
     )
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        if (!initLatch.await(500, TimeUnit.MILLISECONDS)) {
+        if (!initLatch.await(INIT_AWAIT_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
             android.util.Log.w("CookieStore", "Cookie initialization timed out, proceeding without cookies")
             return emptyList()
         }
@@ -123,10 +128,6 @@ class CookieStore @Inject constructor(
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         if (!isDustvalveHost(url.host)) return
-        if (!initLatch.await(3, TimeUnit.SECONDS)) {
-            android.util.Log.w("CookieStore", "Cookie initialization timed out in saveFromResponse, skipping save")
-            return
-        }
 
         val newCookies = cookies.map { cookie ->
             SerializableCookie(
@@ -140,12 +141,16 @@ class CookieStore @Inject constructor(
             )
         }
 
-        // Update in-memory cache atomically under lock
+        // Update the in-memory cache without waiting on init: a slow DataStore
+        // load must not drop cookies from the first responses, and must not
+        // clobber them when it finally finishes (see mutatedBeforeInit).
         synchronized(lock) {
             mutatedBeforeInit = true
             val existingCookies = cachedCookies.toMutableList()
             for (newCookie in newCookies) {
-                existingCookies.removeAll { it.name == newCookie.name && it.domain == newCookie.domain && it.path == newCookie.path }
+                existingCookies.removeAll {
+                    it.name == newCookie.name && it.domain == newCookie.domain && it.path == newCookie.path
+                }
                 existingCookies.add(newCookie)
             }
             cachedCookies = existingCookies.toList()
@@ -162,7 +167,7 @@ class CookieStore @Inject constructor(
     }
 
     fun loadCookiesForDomain(domain: String, path: String = "/"): List<Cookie> {
-        if (!initLatch.await(3, TimeUnit.SECONDS)) {
+        if (!initLatch.await(INIT_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS)) {
             android.util.Log.w("CookieStore", "Cookie initialization timed out in loadCookiesForDomain")
             return emptyList()
         }
@@ -188,41 +193,6 @@ class CookieStore @Inject constructor(
                     null // Skip invalid cookies
                 }
             }
-    }
-
-    /**
-     * Imports cookies from a name/value map (e.g. from WebView login).
-     * Converts to SerializableCookie format and persists through the existing mechanism.
-     */
-    suspend fun importCookies(cookies: Map<String, String>, domain: String = "bandcamp.com") {
-        val newCookies = cookies.map { (name, value) ->
-            SerializableCookie(
-                name = name,
-                value = value,
-                domain = domain,
-                path = "/",
-                secure = true,
-            )
-        }
-
-        synchronized(lock) {
-            // May run before the async init load finishes (e.g. WebView login on a cold
-            // start); flag the mutation so init never clobbers what we import here.
-            mutatedBeforeInit = true
-            val existing = cachedCookies.toMutableList()
-            for (newCookie in newCookies) {
-                existing.removeAll { it.name == newCookie.name && it.domain == newCookie.domain && it.path == newCookie.path }
-                existing.add(newCookie)
-            }
-            cachedCookies = existing.toList()
-        }
-
-        // Persist synchronously so the caller can rely on cookies being saved
-        persistMutex.withLock {
-            val currentSnapshot = synchronized(lock) { cachedCookies }
-            val updatedJson = json.encodeToString(currentSnapshot)
-            settingsDataStore.setAuthCookies(updatedJson)
-        }
     }
 
     suspend fun clearCookiesForDomain(domain: String) {

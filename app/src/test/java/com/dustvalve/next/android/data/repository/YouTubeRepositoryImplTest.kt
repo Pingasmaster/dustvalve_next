@@ -257,7 +257,7 @@ class YouTubeRepositoryImplTest {
         // Second page via continuation - MUST go out with the WEB client so
         // the response matches the WEB richGrid shape of page 1 (an MWEB
         // continuation parses to zero tracks, truncating channels to page 1).
-        coEvery { client.browseContinuation("CHAN_C1", YouTubeClient.WEB_NO_AUTH) } returns empty
+        coEvery { client.browseContinuation("CHAN_C1", YouTubeClient.WebNoAuth) } returns empty
         every { channelParser.parseContinuation(empty, "UCbbbbbbbbbbbbbbbbbbbbbb", "C", 3) } returns
             YouTubeChannelParser.ChannelPage(
                 tracks = listOf(track("c")),

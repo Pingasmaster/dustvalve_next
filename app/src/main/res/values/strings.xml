@@ -27,7 +27,6 @@
     <string name="common_action_save">Save</string>
     <string name="common_action_create">Create</string>
     <string name="common_action_remove">Remove</string>
-    <string name="common_action_disconnect">Disconnect</string>
     <string name="common_play_all">Play All</string>
 
     <!-- Open-pasted-link feature: inline chip labels -->
@@ -90,7 +89,6 @@
     <string name="common_action_add">Add</string>
     <string name="common_play_mix">Play Mix</string>
     <string name="common_loading">Loading…</string>
-    <string name="common_connected">Connected</string>
     <string name="common_selected_folder">Selected folder</string>
     <string name="common_failed_to_play">Failed to play</string>
     <string name="common_playlist_imported">Playlist imported: <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
@@ -191,7 +189,6 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_section_sources">Sources</string>
-    <string name="settings_section_connections">Connections</string>
     <string name="settings_section_storage">Storage</string>
     <string name="settings_section_audio_quality">Audio quality</string>
     <string name="settings_section_appearance">Appearance</string>
@@ -209,16 +206,9 @@
     <string name="settings_remove_downloads_text">This wipes the entire downloads pool: explicit downloads, auto-cached audio, album covers, and artist images.</string>
     <string name="settings_download_format">Download Format</string>
     <string name="settings_download_format_desc">Format for downloaded <xliff:g id="brand">Bandcamp</xliff:g> purchases</string>
-    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g> disconnected</string>
-    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g> disconnected</string>
     <string name="settings_add_folder">Add folder</string>
     <string name="settings_rescan">Rescan</string>
     <string name="settings_cd_remove_folder">Remove folder</string>
-    <string name="settings_cd_avatar">Avatar</string>
-    <string name="settings_connect_bandcamp">Connect <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Connect to access your <xliff:g id="brand">Bandcamp</xliff:g> purchases</string>
-    <string name="settings_connect_youtube">Connect <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Connect to access your <xliff:g id="brand">YouTube Music</xliff:g> library</string>
     <string name="settings_youtube_music" translatable="false">YouTube Music</string>
     <string name="settings_youtube_default_source_title">Default view</string>
     <string name="settings_youtube_default_source_desc">Which view opens when you tap the <xliff:g id="brand">YouTube</xliff:g> tab</string>
@@ -227,8 +217,6 @@
     <string name="youtube_tab_source_yt" translatable="false">YouTube</string>
     <string name="youtube_tab_source_ytm" translatable="false">YouTube Music</string>
     <string name="settings_remove_all_downloads">Remove all downloads</string>
-    <string name="settings_auto_download_purchases">Auto-download purchases</string>
-    <string name="settings_auto_download_purchases_desc">Automatically download your <xliff:g id="brand">Dustvalve</xliff:g> purchases</string>
     <string name="settings_auto_download_future">Auto-download future content</string>
     <string name="settings_auto_download_future_desc">Automatically download new content for downloaded playlists, albums, and artists</string>
     <string name="settings_mp3_on_metered"><xliff:g id="format">MP3</xliff:g> only on metered</string>
@@ -579,7 +567,6 @@
     <string name="error_unknown_source">Unknown source: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">This source can’t show collections</string>
     <string name="error_load_page">Failed to load page</string>
-    <string name="login_navigation_blocked">Blocked for security: only the sign-in site can open here</string>
     <string name="playlist_gone_title">This playlist no longer exists</string>
     <string name="playlist_gone_subtitle">It may have been deleted from your library</string>
     <string name="common_action_back">Back</string>

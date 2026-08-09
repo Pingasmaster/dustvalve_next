@@ -17,7 +17,7 @@ interface PlaylistRepository {
     suspend fun pinPlaylist(playlistId: String, isPinned: Boolean): Boolean
     suspend fun setAutoDownload(playlistId: String, autoDownload: Boolean)
 
-    // System playlists (Downloads, Recent, Collection, Favorites)
+    // System playlists (Downloads, Recent, Favorites)
     suspend fun ensureSystemPlaylistsExist()
     suspend fun getSystemPlaylistSync(type: Playlist.SystemPlaylistType): Playlist?
 
@@ -33,7 +33,6 @@ interface PlaylistRepository {
 
     // Auto-sync for system playlists
     suspend fun syncRecentPlaylist()
-    suspend fun syncCollectionPlaylist(collectionAlbumIds: List<String>)
 
     // Playlist import (YouTube playlist import / collection import)
 

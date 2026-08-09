@@ -1,5 +1,3 @@
-@file:Suppress("ktlint:standard:class-naming", "ClassName")
-
 package com.dustvalve.next.android.data.remote.youtube.innertube
 
 import kotlinx.serialization.json.JsonObject
@@ -11,16 +9,16 @@ import kotlinx.serialization.json.put
  * variant here is chosen so the /player response carries adaptiveFormats
  * with direct, signature-free URLs (no nsig/sig deciphering, no PoToken).
  *
- * - [ANDROID_VR_NO_AUTH]: primary /player client. Returns AAC + Opus URLs
+ * - [AndroidVrNoAuth]: primary /player client. Returns AAC + Opus URLs
  *   that play back without ciphering. Trade-off: no Premium 256 kbps Opus,
  *   no age-gated video.
- * - [IOS]: /player fallback when ANDROID_VR returns no audio formats (rare,
+ * - [Ios]: /player fallback when ANDROID_VR returns no audio formats (rare,
  *   typically transient). Returns the same kind of direct URLs.
- * - [WEB_NO_AUTH]: used for /search, /browse (channel), and unauthenticated
+ * - [WebNoAuth]: used for /search, /browse (channel), and unauthenticated
  *   list endpoints whose JSON response uses the standard videoRenderer /
  *   playlistRenderer / channelRenderer shape. The clientVersion is sourced
  *   from [YouTubeVisitorDataFetcher] so it auto-tracks Google's rotations.
- * - [MWEB_NO_AUTH]: used for /browse (playlist) and /next, where MWEB is
+ * - [MwebNoAuth]: used for /browse (playlist) and /next, where MWEB is
  *   the only public client that still emits the legacy
  *   playlistVideoListRenderer / videoWithContextRenderer shapes. Targets
  *   m.youtube.com (not www) because Innertube enforces Origin == Host for
@@ -39,7 +37,7 @@ sealed class YouTubeClient(
     /** The version this client should report. Some clients use a fixed version. */
     open fun resolveClientVersion(dynamic: String): String = dynamic
 
-    object ANDROID_VR_NO_AUTH : YouTubeClient(
+    object AndroidVrNoAuth : YouTubeClient(
         clientName = "ANDROID_VR",
         clientNameCode = "28",
         userAgent = "com.google.android.apps.youtube.vr.oculus/1.61.48 " +
@@ -61,7 +59,7 @@ sealed class YouTubeClient(
         }
     }
 
-    object IOS : YouTubeClient(
+    object Ios : YouTubeClient(
         clientName = "IOS",
         clientNameCode = "5",
         userAgent = "com.google.ios.youtube/21.03.1 " +
@@ -84,7 +82,7 @@ sealed class YouTubeClient(
         }
     }
 
-    object WEB_NO_AUTH : YouTubeClient(
+    object WebNoAuth : YouTubeClient(
         clientName = "WEB",
         clientNameCode = "1",
         userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +
@@ -101,7 +99,7 @@ sealed class YouTubeClient(
         }
     }
 
-    object MWEB_NO_AUTH : YouTubeClient(
+    object MwebNoAuth : YouTubeClient(
         clientName = "MWEB",
         clientNameCode = "2",
         userAgent = "Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 " +

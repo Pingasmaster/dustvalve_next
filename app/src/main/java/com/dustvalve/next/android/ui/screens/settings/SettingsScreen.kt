@@ -91,8 +91,6 @@ internal val TOGGLE_LABEL_END_GAP = 16.dp
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
-    onBandcampLoginClick: () -> Unit,
-    onYouTubeMusicLoginClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -104,8 +102,6 @@ fun SettingsScreen(
     SettingsScreenSnackbars(
         state = state,
         snackbarHostState = snackbarHostState,
-        onClearSignOutSuccess = viewModel::clearSignOutSuccess,
-        onClearYtmSignOutSuccess = viewModel::clearYtmSignOutSuccess,
         onClearSearchHistoryClearedMessage = viewModel::clearSearchHistoryClearedMessage,
         onClearUpdateMessage = viewModel::clearUpdateMessage,
     )
@@ -145,15 +141,11 @@ fun SettingsScreen(
             SettingsScreenList(
                 state = state,
                 snackbarHostState = snackbarHostState,
-                onBandcampLoginClick = onBandcampLoginClick,
-                onYouTubeMusicLoginClick = onYouTubeMusicLoginClick,
                 onShowRemoveDownloads = { showRemoveDownloadsDialog = true },
                 onShowFormatSheet = { showFormatSheet = true },
                 onSourcesAction = { handleSettingsSourcesAction(viewModel, it) },
                 onStorageAction = { handleSettingsStorageAction(viewModel, it) },
                 onAppearanceAction = { handleSettingsAppearanceAction(viewModel, it) },
-                onSignOutBandcamp = viewModel::signOutBandcamp,
-                onSignOutYouTubeMusic = viewModel::signOutYouTubeMusic,
                 onSetSaveDataOnMetered = viewModel::setSaveDataOnMetered,
                 onSetProgressiveDownload = viewModel::setProgressiveDownload,
                 onSetSeamlessQualityUpgrade = viewModel::setSeamlessQualityUpgrade,
@@ -183,37 +175,11 @@ fun SettingsScreen(
 private fun SettingsScreenSnackbars(
     state: SettingsUiState,
     snackbarHostState: SnackbarHostState,
-    onClearSignOutSuccess: () -> Unit,
-    onClearYtmSignOutSuccess: () -> Unit,
     onClearSearchHistoryClearedMessage: () -> Unit,
     onClearUpdateMessage: () -> Unit,
 ) {
-    val clearSignOutSuccess by rememberUpdatedState(onClearSignOutSuccess)
-    val clearYtmSignOutSuccess by rememberUpdatedState(onClearYtmSignOutSuccess)
     val clearSearchHistoryClearedMessage by rememberUpdatedState(onClearSearchHistoryClearedMessage)
     val clearUpdateMessage by rememberUpdatedState(onClearUpdateMessage)
-
-    val bandcampDisconnectedMsg = stringResource(R.string.settings_bandcamp_disconnected)
-    LaunchedEffect(state.bandcampSignOutSuccess) {
-        if (state.bandcampSignOutSuccess) {
-            try {
-                snackbarHostState.showSnackbar(bandcampDisconnectedMsg)
-            } finally {
-                clearSignOutSuccess()
-            }
-        }
-    }
-
-    val ytmDisconnectedMsg = stringResource(R.string.settings_youtube_disconnected)
-    LaunchedEffect(state.ytmSignOutSuccess) {
-        if (state.ytmSignOutSuccess) {
-            try {
-                snackbarHostState.showSnackbar(ytmDisconnectedMsg)
-            } finally {
-                clearYtmSignOutSuccess()
-            }
-        }
-    }
 
     val historyClearedText = state.searchHistoryClearedMessage?.asString()
     LaunchedEffect(historyClearedText) {
@@ -306,15 +272,11 @@ private fun SettingsDownloadFormatSheet(downloadFormat: String, onSelect: (Strin
 private fun SettingsScreenList(
     state: SettingsUiState,
     snackbarHostState: SnackbarHostState,
-    onBandcampLoginClick: () -> Unit,
-    onYouTubeMusicLoginClick: () -> Unit,
     onShowRemoveDownloads: () -> Unit,
     onShowFormatSheet: () -> Unit,
     onSourcesAction: (SettingsSourcesAction) -> Unit,
     onStorageAction: (SettingsStorageAction) -> Unit,
     onAppearanceAction: (SettingsAppearanceAction) -> Unit,
-    onSignOutBandcamp: () -> Unit,
-    onSignOutYouTubeMusic: () -> Unit,
     onSetSaveDataOnMetered: (Boolean) -> Unit,
     onSetProgressiveDownload: (Boolean) -> Unit,
     onSetSeamlessQualityUpgrade: (Boolean) -> Unit,
@@ -351,15 +313,6 @@ private fun SettingsScreenList(
                 state = state,
                 snackbarHostState = snackbarHostState,
                 onAction = onSourcesAction,
-            )
-        }
-        item {
-            SettingsConnectionsSection(
-                state = state,
-                onBandcampLoginClick = onBandcampLoginClick,
-                onYouTubeMusicLoginClick = onYouTubeMusicLoginClick,
-                onSignOutBandcamp = onSignOutBandcamp,
-                onSignOutYouTubeMusic = onSignOutYouTubeMusic,
             )
         }
         item {

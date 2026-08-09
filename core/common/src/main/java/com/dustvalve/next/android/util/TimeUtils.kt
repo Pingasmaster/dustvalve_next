@@ -4,6 +4,8 @@ import java.text.NumberFormat
 
 object TimeUtils {
 
+    private const val SECONDS_PER_MINUTE = 60
+
     /**
      * Formats a duration given in seconds as "m:ss".
      * For example, 225.0f becomes "3:45".
@@ -16,6 +18,7 @@ object TimeUtils {
         val totalSeconds = seconds.toLong().coerceAtLeast(0L)
         val minutes = NumberFormat.getIntegerInstance().apply { isGroupingUsed = false }
         val paddedSeconds = NumberFormat.getIntegerInstance().apply { minimumIntegerDigits = 2 }
-        return "${minutes.format(totalSeconds / 60)}:${paddedSeconds.format(totalSeconds % 60)}"
+        return "${minutes.format(totalSeconds / SECONDS_PER_MINUTE)}:" +
+            paddedSeconds.format(totalSeconds % SECONDS_PER_MINUTE)
     }
 }

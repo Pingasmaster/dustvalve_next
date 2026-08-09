@@ -114,7 +114,7 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
             "YT Music landing missing ytcfg.set block " +
                 "(primary=HTTP ${primary.status}, ${primary.body.length} B; " +
                 "fallback=HTTP ${fallback.status}, ${fallback.body.length} B; " +
-                "head='${primary.body.take(120).replace('\n', ' ')}')",
+                "head='${primary.body.take(ERROR_BODY_PREVIEW_CHARS).replace('\n', ' ')}')",
         )
     }
 
@@ -158,6 +158,8 @@ open class YouTubeMusicVisitorDataFetcher @Inject constructor(
 
     companion object {
         const val DEFAULT_CLIENT_VERSION = "1.20260417.03.00"
+
+        private const val ERROR_BODY_PREVIEW_CHARS = 120
 
         // Desktop Chrome UA. YT Music's bot heuristic is friendlier to
         // desktop signatures than to mobile ones.

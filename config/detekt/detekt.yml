@@ -1,6 +1,9 @@
 config:
   validation: true
-  warningsAsErrors: false
+  # Fail the build on any new warning-severity finding. Existing debt is
+  # parked in detekt-baseline.xml; new warnings must be fixed or explicitly
+  # re-baselined with a root-cause justification (see CLAUDE.md).
+  warningsAsErrors: true
   checkExhaustiveness: false
 
 processors:
@@ -54,6 +57,11 @@ style:
     ignoreNumbers: ['-1', '0', '1', '2', '8', '16', '24', '32', '48', '64', '100', '255', '1000']
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
+    # Compose UI is dense with layout/alpha/duration literals that belong next
+    # to the call site (or in MaterialTheme tokens when shared). Naming every
+    # dp/ms inside @Composable would add hundreds of one-use constants without
+    # clarifying behavior. Non-Compose production code is still flagged;
+    # Preview defaults stay quiet too.
     ignoreAnnotated: ['Composable', 'Preview']
   MaxLineLength:
     active: true
@@ -88,7 +96,10 @@ Compose:
   ComposableParamOrder:
     active: true
   CompositionLocalAllowlist:
-    active: false
+    active: true
+    # Matches config/lint/lint.xml: one intentional activity-root local.
+    allowedCompositionLocals:
+      - 'LocalAdaptiveLayoutInfo'
   ContentEmitterReturningValues:
     active: true
   ContentTrailingLambda:
@@ -118,7 +129,7 @@ Compose:
   PreviewAnnotationNaming:
     active: true
   PreviewNaming:
-    active: false
+    active: true
   PreviewPublic:
     active: true
   RememberContentMissing:

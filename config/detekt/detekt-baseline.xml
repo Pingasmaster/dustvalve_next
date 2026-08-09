@@ -1,4 +1,25 @@
 <?xml version="1.0" ?>
+<!--
+  Detekt baseline for smells that are real but not worth a risky rewrite right
+  now. Prefer fixing the root cause over growing this file (see CLAUDE.md).
+
+  Remaining categories (kept on purpose):
+  - LongMethod / CyclomaticComplexMethod / LargeClass / TooManyFunctions on
+    Compose screens, scrapers, and ViewModels: vertical UI/scrape flows where
+    extracting more helpers hurts readability more than it helps.
+  - MagicNumber for HTTP status codes, AudioFormat quality ranks, and YouTube
+    Mix playlistId wire offsets (protocol literals clearer as numbers).
+  - MaxLineLength on test fixtures / SQL / ytcfg HTML samples.
+  - ParameterNaming on Compose onXyz callbacks (past-tense event names).
+  - TooGenericExceptionCaught on ViewModel catch (Exception) UI error surfaces.
+  - LoopWithTooManyJumpStatements / NestedBlockDepth / ReturnCount / ThrowsCount
+    on HTML/JSON parsers where early-continue is the natural shape.
+  - SwallowedException on intentional best-effort scrape/download paths.
+  - MultipleEmitters on PlaylistContent (Compose list + empty state).
+  - ComplexCondition on pagination / deeplink host matching.
+
+  Do NOT re-add MagicNumbers that already have named constants in source.
+-->
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
@@ -44,7 +65,6 @@
     <ID>LoopWithTooManyJumpStatements:YouTubePlaylistParser.kt:YouTubePlaylistParser$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubeSearchParser.kt:YouTubeSearchParser$for</ID>
     <ID>LoopWithTooManyJumpStatements:YouTubeYtcfgExtractor.kt:YouTubeYtcfgExtractor$for</ID>
-    <ID>MagicNumber:AlbumMapper.kt:50</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.AAC$60</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.MP3_128$10</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.MP3_320$80</ID>
@@ -52,48 +72,19 @@
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.OGG_VORBIS$50</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.OGG_VORBIS_320$85</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.OPUS$65</ID>
-    <ID>MagicNumber:CookieEncryption.kt:CookieEncryption$256</ID>
-    <ID>MagicNumber:CookieStore.kt:CookieStore$3</ID>
-    <ID>MagicNumber:CookieStore.kt:CookieStore$500</ID>
-    <ID>MagicNumber:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$50</ID>
-    <ID>MagicNumber:DustvalveNextApplication.kt:DustvalveNextApplication$0.25</ID>
-    <ID>MagicNumber:DustvalveNextApplication.kt:DustvalveNextApplication$1024</ID>
-    <ID>MagicNumber:DustvalveNextApplication.kt:DustvalveNextApplication$256L</ID>
-    <ID>MagicNumber:LocalMusicScanner.kt:LocalMusicScanner$500</ID>
-    <ID>MagicNumber:LocalViewModel.kt:LocalViewModel$300L</ID>
-    <ID>MagicNumber:MediaStoreScanner.kt:MediaStoreScanner$500</ID>
     <ID>MagicNumber:NetworkModule.kt:NetworkModule$429</ID>
-    <ID>MagicNumber:NetworkModule.kt:NetworkModule$5</ID>
-    <ID>MagicNumber:PlaybackManager.kt:PlaybackManager$200L</ID>
-    <ID>MagicNumber:PlaybackManager.kt:PlaybackManager$3000L</ID>
-    <ID>MagicNumber:PlaybackManager.kt:PlaybackManager$500L</ID>
-    <ID>MagicNumber:RangeResumeDownloader.kt:RangeResumeDownloader$1024</ID>
     <ID>MagicNumber:RangeResumeDownloader.kt:RangeResumeDownloader$206</ID>
-    <ID>MagicNumber:RangeResumeDownloader.kt:RangeResumeDownloader$4</ID>
-    <ID>MagicNumber:RangeResumeDownloader.kt:RangeResumeDownloader$500L</ID>
-    <ID>MagicNumber:SearchViewModel.kt:SearchViewModel$400L</ID>
-    <ID>MagicNumber:TimeUtils.kt:TimeUtils$60</ID>
-    <ID>MagicNumber:YouTubeChannelParser.kt:YouTubeChannelParser$60</ID>
-    <ID>MagicNumber:YouTubeMusicVisitorDataFetcher.kt:YouTubeMusicVisitorDataFetcher$120</ID>
     <ID>MagicNumber:YouTubeMusicVisitorDataFetcher.kt:YouTubeMusicVisitorDataFetcher.LandingResponse$200</ID>
     <ID>MagicNumber:YouTubeMusicVisitorDataFetcher.kt:YouTubeMusicVisitorDataFetcher.LandingResponse$299</ID>
-    <ID>MagicNumber:YouTubePlayerParser.kt:YouTubePlayerParser$200</ID>
     <ID>MagicNumber:YouTubePlaylistParser.kt:YouTubePlaylistParser$13</ID>
     <ID>MagicNumber:YouTubePlaylistParser.kt:YouTubePlaylistParser$15</ID>
     <ID>MagicNumber:YouTubePlaylistParser.kt:YouTubePlaylistParser$17</ID>
     <ID>MagicNumber:YouTubePlaylistParser.kt:YouTubePlaylistParser$4</ID>
     <ID>MagicNumber:YouTubePlaylistParser.kt:YouTubePlaylistParser$6</ID>
-    <ID>MagicNumber:YouTubePlaylistParser.kt:YouTubePlaylistParser$60</ID>
-    <ID>MagicNumber:YouTubeRepositoryImpl.kt:YouTubeRepositoryImpl$20</ID>
-    <ID>MagicNumber:YouTubeViewModel.kt:YouTubeViewModel$150L</ID>
-    <ID>MagicNumber:YouTubeViewModel.kt:YouTubeViewModel$400L</ID>
-    <ID>MagicNumber:YouTubeVisitorDataFetcher.kt:YouTubeVisitorDataFetcher$120</ID>
     <ID>MagicNumber:YouTubeVisitorDataFetcher.kt:YouTubeVisitorDataFetcher.LandingResponse$200</ID>
     <ID>MagicNumber:YouTubeVisitorDataFetcher.kt:YouTubeVisitorDataFetcher.LandingResponse$299</ID>
     <ID>MaxLineLength:DustvalveAlbumScraperTest.kt:DustvalveAlbumScraperTest$val json = &quot;&quot;&quot;{&amp;quot;url&amp;quot;:&amp;quot;$albumUrl&amp;quot;,&amp;quot;current&amp;quot;:{&amp;quot;title&amp;quot;:&amp;quot;Via Attr&amp;quot;,&amp;quot;artist&amp;quot;:&amp;quot;Band&amp;quot;,&amp;quot;band_id&amp;quot;:1},&amp;quot;trackinfo&amp;quot;:[],&amp;quot;art_id&amp;quot;:1,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;}&quot;&quot;&quot;</ID>
     <ID>MaxLineLength:DustvalveArtistScraperTest.kt:DustvalveArtistScraperTest$&quot;https://taylormooremusic.bandcamp.com/album/worlds-beyond-number-the-wizard-the-witch-and-the-wild-one-book-one-original-soundtrack&quot;</ID>
-    <ID>MaxLineLength:DustvalveDownloadScraperTest.kt:DustvalveDownloadScraperTest$val json = &quot;&quot;&quot;{&amp;quot;digital_items&amp;quot;:[{&amp;quot;title&amp;quot;:&amp;quot;A&amp;quot;,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;,&amp;quot;downloads&amp;quot;:{&amp;quot;flac&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/flac&amp;quot;,&amp;quot;size_mb&amp;quot;:200.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;mp3-320&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/mp3&amp;quot;,&amp;quot;size_mb&amp;quot;:60.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;unknown-format&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;https://d/other&amp;quot;,&amp;quot;size_mb&amp;quot;:10.0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;}}}]}&quot;&quot;&quot;</ID>
-    <ID>MaxLineLength:DustvalveDownloadScraperTest.kt:DustvalveDownloadScraperTest$val json = &quot;&quot;&quot;{&amp;quot;digital_items&amp;quot;:[{&amp;quot;title&amp;quot;:&amp;quot;A&amp;quot;,&amp;quot;item_type&amp;quot;:&amp;quot;album&amp;quot;,&amp;quot;downloads&amp;quot;:{&amp;quot;flac&amp;quot;:{&amp;quot;url&amp;quot;:null,&amp;quot;size_mb&amp;quot;:0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;},&amp;quot;mp3-320&amp;quot;:{&amp;quot;url&amp;quot;:&amp;quot;&amp;quot;,&amp;quot;size_mb&amp;quot;:0,&amp;quot;description&amp;quot;:&amp;quot;&amp;quot;}}}]}&quot;&quot;&quot;</ID>
     <ID>MaxLineLength:PlaylistDao.kt:PlaylistDao$&quot;UPDATE playlists SET name = :name, shapeKey = :shapeKey, iconUrl = :iconUrl, updatedAt = :updatedAt WHERE id = :playlistId AND isSystem = 0&quot;</ID>
     <ID>MaxLineLength:PlaylistDaoTest.kt:PlaylistDaoTest$private fun userPlaylist</ID>
     <ID>MaxLineLength:YouTubeMusicVisitorDataFetcherTest.kt:YouTubeMusicVisitorDataFetcherTest$&quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;VD_VALUE_42&quot;,&quot;clientName&quot;:&quot;WEB_REMIX&quot;}},&quot;INNERTUBE_CLIENT_VERSION&quot;:&quot;1.20260999.99.99&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>

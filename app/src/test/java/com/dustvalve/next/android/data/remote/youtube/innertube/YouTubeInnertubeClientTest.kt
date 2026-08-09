@@ -207,7 +207,7 @@ class YouTubeInnertubeClientTest {
             )
             wwwServer.enqueue(MockResponse().setBody("""{"x":1}"""))
 
-            dualClient.browseContinuation("CHAN_TOKEN_7", YouTubeClient.WEB_NO_AUTH)
+            dualClient.browseContinuation("CHAN_TOKEN_7", YouTubeClient.WebNoAuth)
 
             assertThat(wwwServer.requestCount).isEqualTo(1)
             assertThat(mServer.requestCount).isEqualTo(0)

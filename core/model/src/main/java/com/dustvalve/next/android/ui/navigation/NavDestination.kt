@@ -24,8 +24,6 @@ sealed interface NavDestination {
      */
     data class ArtistDetail(val url: String, val sourceId: String = "bandcamp", val name: String? = null, val imageUrl: String? = null) :
         NavDestination
-    data object AccountLogin : NavDestination
-    data object YouTubeMusicLogin : NavDestination
     data class PlaylistDetail(val playlistId: String) : NavDestination
 
     /** Source-agnostic remote collection (YouTube playlist, etc.). */

@@ -30,6 +30,7 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
 
     companion object {
         private const val FOLDER_URI_SENTINEL = "mediastore"
+        private const val DB_INSERT_CHUNK_SIZE = 500
     }
 
     suspend fun scan(): ScanResult = withContext(ioDispatcher) {
@@ -130,7 +131,7 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
 
         // Insert/update scanned tracks
         if (trackEntities.isNotEmpty()) {
-            trackEntities.chunked(500).forEach { chunk ->
+            trackEntities.chunked(DB_INSERT_CHUNK_SIZE).forEach { chunk ->
                 trackDao.insertAll(chunk)
             }
         }

@@ -59,18 +59,9 @@ Group 3: Sources (17) [JVM unless noted]
 - set-source-youtube-default-source-ytm / -yt: youtube_default_source;
   unknown value coerces to index 0.
 
-Group 4: Connections (6)
-- [ ] set-conn-bandcamp-login-nav [smoke, live]: Connect -> AccountLogin WebView;
-  back returns.
-- [ ] set-conn-bandcamp-login-success [E2E, live]: cookies saved encrypted
-  (CookieEncryption), username + avatar shown, auto-download-purchases
-  toggle appears.
-- [ ] set-conn-bandcamp-signout [JVM]: clears USERNAME/AVATAR/AUTH_COOKIES/
-  FAN_ID, expires WebView cookies, snackbar, UI reverts.
-- [ ] set-conn-cookie-corrupt [JVM]: undecryptable bytes -> null (logged out),
-  no crash.
-- [ ] set-conn-ytm-login [E2E, live]: ytm_connected=true, "Connected" shown.
-- [ ] set-conn-ytm-signout [JVM]: keys cleared, cookies expired, snackbar.
+Group 4: Connections (REMOVED)
+Bandcamp / YouTube Music account login, sign-out, and connected-account
+UI were removed.
 
 Group 5: Storage (5) [JVM unless noted]
 - set-storage-limit-each-step: 7 steps 100MB..Unlimited (Long.MAX_VALUE).
@@ -79,8 +70,7 @@ Group 5: Storage (5) [JVM unless noted]
 - set-storage-limit-restore-index: arbitrary bytes snap to closest step.
 - set-storage-remove-all-downloads: confirm dialog -> clearAll; cancel
   intact.
-- set-storage-auto-download-purchases-visibility (login-gated) /
-  -purchases (default on) / -future (reveals favorites sub-toggle) /
+- set-storage-auto-download-future (reveals favorites sub-toggle) /
   -favorites (queues download on favorite; hides manual button).
 
 Group 6: Downloads / audio quality / notifications (13) [JVM unless noted]
@@ -166,7 +156,7 @@ Group 12: Navigation / app chrome (19) [JVM unless noted]
 - set-nav-visit-each-destination: AnimatedContent swaps 5 screens, per-tab
   back stacks (tabStacks) preserved.
 - set-nav-detail-destinations: AlbumDetail/ArtistDetail/PlaylistDetail/
-  CollectionDetail/AccountLogin/YouTubeMusicLogin render + back pops; slide
+  CollectionDetail render + back pops; slide
   direction = lastNavigationForward.
 - set-nav-back-to-local-root: back on non-Local root -> LocalHome, not exit.
 - set-nav-back-pops-stack.
@@ -196,7 +186,6 @@ Group 13: Persistence across restart (4) [all JVM]
   + relaunch, every flow re-emits (golden screenshot or per-key asserts).
 - set-persist-defaults-fresh-install: full default matrix (see
   SettingsDataStore.kt / SettingsDataStoreTest.kt).
-- set-persist-account-survives: login state restored (decrypted cookies).
 - set-persist-viewmodel-vs-store-divergence: SettingsUiState defaults
   seamlessQualityUpgrade=true and albumCoverLongPressCarousel=true while
   DataStore defaults are false - assert UI never renders pre-collection
@@ -206,5 +195,4 @@ Key files: SettingsScreen.kt, SettingsViewModel.kt, SettingsDataStore.kt
 (core/datastore), CrashReportManager.kt, CrashReportSheet.kt,
 AppUpdateController.kt, AppUpdateService.kt, AppUpdateDialog.kt,
 MainActivity.kt, ui/navigation/ (AppNavigation, BottomNavItem,
-NavigationViewModel), DownloadNotificationCenter.kt, AccountLoginScreen.kt,
-YouTubeMusicLoginScreen.kt.
+NavigationViewModel), DownloadNotificationCenter.kt.

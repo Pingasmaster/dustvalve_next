@@ -48,8 +48,12 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
      * so NewApi lint sees the [ChecksSdkIntAtLeast] gate without needing
      * [@androidx.annotation.RequiresApi] helpers that would trip
      * ObsoleteSdkInt on the future flavor.
+     *
+     * Detekt lists NullPointerException under TooGenericExceptionCaught; the
+     * catch is intentional for Robolectric (no ActivityManagerService) and
+     * must not crash cold-start diagnostics on a real device.
      */
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
+    @Suppress("TooGenericExceptionCaught")
     fun collectOnColdStart() {
         pruneStaleFiles()
         if (!isAtLeastR()) return
@@ -80,10 +84,10 @@ class DiagnosticsCollector @Inject constructor(@param:ApplicationContext private
             Log.w(TAG, "collectOnColdStart: missing GET_TASKS permission", se)
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "collectOnColdStart: invalid package/pid", iae)
-        } catch (t: Throwable) {
-            // Robolectric throws NPE here too - never crash the app for
+        } catch (npe: NullPointerException) {
+            // Robolectric throws NPE here - never crash the app for
             // best-effort diagnostics that the host JVM can't deliver.
-            Log.w(TAG, "collectOnColdStart: platform unavailable", t)
+            Log.w(TAG, "collectOnColdStart: platform unavailable", npe)
         }
     }
 

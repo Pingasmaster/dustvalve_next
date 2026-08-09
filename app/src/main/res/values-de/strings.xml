@@ -23,7 +23,6 @@
     <string name="common_action_save">Speichern</string>
     <string name="common_action_create">Erstellen</string>
     <string name="common_action_remove">Entfernen</string>
-    <string name="common_action_disconnect">Trennen</string>
     <string name="common_play_all">Alle abspielen</string>
     <string name="link_open_video"><xliff:g id="brand">YouTube</xliff:g>-Video öffnen</string>
     <string name="link_open_song"><xliff:g id="brand">YouTube Music</xliff:g>-Song öffnen</string>
@@ -74,7 +73,6 @@
     <string name="common_action_add">Hinzufügen</string>
     <string name="common_play_mix">Mix abspielen</string>
     <string name="common_loading">Wird geladen…</string>
-    <string name="common_connected">Verbunden</string>
     <string name="common_selected_folder">Ausgewählter Ordner</string>
     <string name="common_failed_to_play">Wiedergabe fehlgeschlagen</string>
     <string name="common_playlist_imported">Playlist importiert: <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
@@ -161,7 +159,6 @@
     <string name="player_audio_device_unknown">Audiogerät</string>
     <string name="settings_title">Einstellungen</string>
     <string name="settings_section_sources">Quellen</string>
-    <string name="settings_section_connections">Verbindungen</string>
     <string name="settings_section_storage">Speicher</string>
     <string name="settings_section_audio_quality">Audioqualität</string>
     <string name="settings_section_appearance">Darstellung</string>
@@ -176,23 +173,14 @@
     <string name="settings_remove_downloads_text">Dies leert den gesamten Download-Speicher: manuelle Downloads, automatisch gecachtes Audio, Albumcover und Künstlerbilder.</string>
     <string name="settings_download_format">Download-Format</string>
     <string name="settings_download_format_desc">Format für heruntergeladene <xliff:g id="brand">Bandcamp</xliff:g>-Käufe</string>
-    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g> getrennt</string>
-    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g> getrennt</string>
     <string name="settings_add_folder">Ordner hinzufügen</string>
     <string name="settings_rescan">Neu scannen</string>
     <string name="settings_cd_remove_folder">Ordner entfernen</string>
-    <string name="settings_cd_avatar">Avatar</string>
-    <string name="settings_connect_bandcamp"><xliff:g id="brand">Bandcamp</xliff:g> verbinden</string>
-    <string name="settings_connect_bandcamp_desc">Verbinde dich, um auf deine <xliff:g id="brand">Bandcamp</xliff:g>-Käufe zuzugreifen</string>
-    <string name="settings_connect_youtube"><xliff:g id="brand">YouTube Music</xliff:g> verbinden</string>
-    <string name="settings_connect_youtube_desc">Verbinde dich, um auf deine <xliff:g id="brand">YouTube Music</xliff:g>-Bibliothek zuzugreifen</string>
     <string name="settings_youtube_default_source_title">Standardansicht</string>
     <string name="settings_youtube_default_source_desc">Welche Ansicht sich öffnet, wenn du auf den <xliff:g id="brand">YouTube</xliff:g>-Tab tippst</string>
     <string name="common_play">Abspielen</string>
     <string name="ytm_artist_spotlight">Künstler im Fokus</string>
     <string name="settings_remove_all_downloads">Alle Downloads entfernen</string>
-    <string name="settings_auto_download_purchases">Käufe automatisch herunterladen</string>
-    <string name="settings_auto_download_purchases_desc">Deine <xliff:g id="brand">Dustvalve</xliff:g>-Käufe automatisch herunterladen</string>
     <string name="settings_auto_download_future">Neue Inhalte automatisch herunterladen</string>
     <string name="settings_auto_download_future_desc">Neue Inhalte heruntergeladener Playlists, Alben und Künstler automatisch herunterladen</string>
     <string name="settings_mp3_on_metered">Bei mobilen Daten nur <xliff:g id="format">MP3</xliff:g></string>
@@ -515,7 +503,6 @@
     <string name="crash_report_github_action">GitHub-Issue erstellen</string>
     <string name="crash_report_dismiss_action">Jetzt nicht</string>
     <!-- Security-block + missing-playlist UI (added with default strings) -->
-    <string name="login_navigation_blocked">Aus Sicherheitsgründen blockiert: Nur die Anmeldeseite kann hier geöffnet werden</string>
     <string name="playlist_gone_title">Diese Playlist existiert nicht mehr</string>
     <string name="playlist_gone_subtitle">Möglicherweise wurde sie aus deiner Bibliothek gelöscht</string>
     <string name="common_action_back">Zurück</string>

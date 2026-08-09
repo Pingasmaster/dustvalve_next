@@ -405,7 +405,7 @@ class LocalViewModel @Inject constructor(
         searchJob?.cancel()
         if (query.isNotBlank()) {
             searchJob = viewModelScope.launch {
-                delay(300L)
+                delay(SEARCH_DEBOUNCE_MS)
                 performSearch(query)
             }
         } else {
@@ -596,5 +596,9 @@ class LocalViewModel @Inject constructor(
             if (e is CancellationException) throw e
             reportDeleteFailure()
         }
+    }
+
+    private companion object {
+        private const val SEARCH_DEBOUNCE_MS = 300L
     }
 }

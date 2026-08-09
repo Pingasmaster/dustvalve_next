@@ -194,8 +194,6 @@ class NavigationViewModelTest {
             NavDestination.YouTubeHome,
             NavDestination.Library,
             NavDestination.Settings,
-            NavDestination.AccountLogin,
-            NavDestination.YouTubeMusicLogin,
             NavDestination.AlbumDetail("https://a.bandcamp.com/album/x%7Cy|z"),
             NavDestination.ArtistDetail("https://a.bandcamp.com", "bandcamp", "Na|me", "https://img/pic.jpg"),
             NavDestination.ArtistDetail("https://youtube.com/channel/UC1", "youtube", null, null),

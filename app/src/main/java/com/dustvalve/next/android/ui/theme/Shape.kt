@@ -122,11 +122,6 @@ object AppShapes {
         @Composable
         get() = MaterialShapes.SoftBurst.toShape()
 
-    /** Pentagon shape for collection playlist thumbnail */
-    val PlaylistCollection: Shape
-        @Composable
-        get() = MaterialShapes.Pentagon.toShape()
-
     /** Clover shape for user-created playlist thumbnails */
     val PlaylistUser: Shape
         @Composable

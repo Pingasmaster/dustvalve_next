@@ -64,10 +64,8 @@ class YouTubeMusicRepositoryImpl(
     private companion object {
         const val HOME_BROWSE_ID = "FEmusic_home"
 
-        // YT Music's home is editorial; refresh in the background once an
-        // hour. The cached snapshot is always returned first so the UI
-        // never blocks on the network.
-        const val HOME_REVALIDATE_MS = 60L * 60L * 1000L
+        // YT Music home is editorial; every open returns cache first and
+        // revalidates in the background (see getHomeCached).
         const val SONGS_PARAMS = "EgWKAQIIAWoMEA4QChADEAQQCRAF"
         const val VIDEOS_PARAMS = "EgWKAQIQAWoMEA4QChADEAQQCRAF"
         const val ALBUMS_PARAMS = "EgWKAQIYAWoMEA4QChADEAQQCRAF"
@@ -86,9 +84,9 @@ class YouTubeMusicRepositoryImpl(
 
     /**
      * Cache-first home/mood loader. The YT Music browse response (raw
-     * Innertube JSON) is persisted under [key] and re-parsed on hit, so we
-     * avoid hitting the network until [HOME_REVALIDATE_MS] elapses.
-     * Background refresh errors are swallowed.
+     * Innertube JSON) is persisted under [key] and re-parsed on hit so the
+     * UI never blocks. Every open silently revalidates in the background
+     * (editorial shelves change frequently); refresh errors are swallowed.
      */
     private suspend fun getHomeCached(key: String, params: String?): YouTubeMusicHomeFeed {
         val cached = homeCache.getByKey(key)
@@ -99,13 +97,10 @@ class YouTubeMusicRepositoryImpl(
                 null
             }
             if (parsed != null) {
-                val age = System.currentTimeMillis() - cached.cachedAt
-                if (age >= HOME_REVALIDATE_MS) {
-                    backgroundScope.launch {
-                        try {
-                            fetchAndCacheHome(key, params)
-                        } catch (_: Throwable) {}
-                    }
+                backgroundScope.launch {
+                    try {
+                        fetchAndCacheHome(key, params)
+                    } catch (_: Throwable) {}
                 }
                 return parsed
             }

@@ -232,7 +232,7 @@ class PlaybackManager @Inject constructor(
                 if (!seekInProgress) {
                     _currentPosition.value = player.currentPosition.coerceAtLeast(0L)
                 }
-                delay(200L)
+                delay(POSITION_POLL_INTERVAL_MS)
             }
         }
     }
@@ -582,7 +582,7 @@ class PlaybackManager @Inject constructor(
         // onIsPlayingChanged(true) nor onPlaybackStateChanged(STATE_READY) may fire.
         // Post a delayed check to clear the flag so position updates aren't stuck.
         scope.launch {
-            delay(500L)
+            delay(SEEK_SETTLE_TIMEOUT_MS)
             if (seekInProgress && !player.isPlaying) {
                 seekInProgress = false
                 _currentPosition.value = player.currentPosition.coerceAtLeast(0L)
@@ -605,7 +605,7 @@ class PlaybackManager @Inject constructor(
     fun skipPrevious() {
         if (released) reinitialize()
         // If more than 3 seconds in, restart current track instead
-        if (player.currentPosition > 3000L) {
+        if (player.currentPosition > SKIP_PREVIOUS_RESTART_THRESHOLD_MS) {
             seekTo(0L)
             return
         }
@@ -721,5 +721,11 @@ class PlaybackManager @Inject constructor(
         }
         // else: keep the flows preserved by release() (last track position and
         // duration) so the UI doesn't flash back to 0:00 after an idle-stop.
+    }
+
+    private companion object {
+        private const val POSITION_POLL_INTERVAL_MS = 200L
+        private const val SEEK_SETTLE_TIMEOUT_MS = 500L
+        private const val SKIP_PREVIOUS_RESTART_THRESHOLD_MS = 3000L
     }
 }

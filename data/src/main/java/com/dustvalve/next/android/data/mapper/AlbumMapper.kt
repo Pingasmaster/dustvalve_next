@@ -15,6 +15,9 @@ import kotlinx.serialization.json.Json
 
 private val tagJson = Json { ignoreUnknownKeys = true }
 
+/** Cap on tags retained when mapping an album entity to domain. */
+private const val MAX_ALBUM_TAGS = 50
+
 fun AlbumEntity.toDomain(tracks: List<Track>, isFavorite: Boolean): Album = Album(
     id = id,
     url = url,
@@ -29,10 +32,10 @@ fun AlbumEntity.toDomain(tracks: List<Track>, isFavorite: Boolean): Album = Albu
         emptyList()
     } else {
         try {
-            tagJson.decodeFromString<List<String>>(tags).take(50)
+            tagJson.decodeFromString<List<String>>(tags).take(MAX_ALBUM_TAGS)
         } catch (_: Exception) {
             // Fallback for legacy comma-separated format
-            tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(50)
+            tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }.take(MAX_ALBUM_TAGS)
         }
     },
     isFavorite = isFavorite,

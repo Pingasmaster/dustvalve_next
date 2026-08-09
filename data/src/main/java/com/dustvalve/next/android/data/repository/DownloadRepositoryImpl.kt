@@ -4,22 +4,18 @@ import android.content.Context
 import androidx.room.withTransaction
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.local.DatabaseGateway
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
-import com.dustvalve.next.android.data.local.db.dao.AlbumDao
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
-import com.dustvalve.next.android.data.remote.DustvalveDownloadScraper
 import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
-import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
@@ -56,13 +52,10 @@ class DownloadRepositoryImpl(
     private val database: DustvalveNextDatabase,
     private val downloadDao: DownloadDao,
     private val trackDao: TrackDao,
-    private val albumDao: AlbumDao,
     // MediaHttp: no callTimeout - a track download on a slow connection
     // legitimately outlives the base client's 30s whole-call cap.
     private val client: OkHttpClient,
     private val storageTracker: StorageTracker,
-    private val downloadScraper: DustvalveDownloadScraper,
-    private val settingsDataStore: SettingsDataStore,
     private val youtubeRepository: YouTubeRepository,
     private val notificationCenter: DownloadProgressReporter,
     private val mediaCacheClearer: MediaCacheClearer,
@@ -74,8 +67,6 @@ class DownloadRepositoryImpl(
         gateway: DatabaseGateway,
         @MediaHttp client: OkHttpClient,
         storageTracker: StorageTracker,
-        downloadScraper: DustvalveDownloadScraper,
-        settingsDataStore: SettingsDataStore,
         youtubeRepository: YouTubeRepository,
         notificationCenter: DownloadProgressReporter,
         mediaCacheClearer: MediaCacheClearer,
@@ -85,11 +76,8 @@ class DownloadRepositoryImpl(
         gateway.database,
         gateway.downloadDao,
         gateway.trackDao,
-        gateway.albumDao,
         client,
         storageTracker,
-        downloadScraper,
-        settingsDataStore,
         youtubeRepository,
         notificationCenter,
         mediaCacheClearer,
@@ -184,7 +172,10 @@ class DownloadRepositoryImpl(
         }
     }
 
+    @Suppress("UnusedParameter")
     override suspend fun downloadTrack(track: Track, formatOverride: AudioFormat?) = withContext(ioDispatcher) {
+        // formatOverride kept for API compatibility; free/stream downloads are
+        // always mp3-128. HQ purchase format selection was login-only.
         // Serialize concurrent calls for the same track. The loser of the race
         // waits, then short-circuits via the existing same-or-higher-quality
         // check in downloadTrackInner once the winner has committed its file.
@@ -192,7 +183,7 @@ class DownloadRepositoryImpl(
             notificationCenter.trackStarted(track.id, track.title)
             var success = false
             try {
-                downloadTrackInner(track, formatOverride)
+                downloadTrackInner(track)
                 success = true
             } finally {
                 notificationCenter.trackFinished(track.id, success)
@@ -201,20 +192,12 @@ class DownloadRepositoryImpl(
     }
 
     @Suppress("ThrowsCount")
-    private suspend fun downloadTrackInner(track: Track, formatOverride: AudioFormat?) {
-        // Resolve purchase info for HQ download
-        val purchaseInfo = resolvePurchaseInfo(track)
-
-        val preferredFormatKey = settingsDataStore.getDownloadFormatSync()
-        val preferredFormat = formatOverride ?: AudioFormat.fromKey(preferredFormatKey) ?: AudioFormat.FLAC
-
-        // Three sources, in order: HQ for purchased content (with mp3-128
-        // fallback), YouTube watch-page -> resolved audio stream, otherwise
-        // the raw streamUrl as mp3-128.
-        val (downloadUrl, format) = if (purchaseInfo != null) {
-            resolveHqDownloadUrl(purchaseInfo, preferredFormat)
-                ?: (track.streamUrl to AudioFormat.MP3_128)
-        } else if (track.source == TrackSource.YOUTUBE) {
+    private suspend fun downloadTrackInner(track: Track) {
+        // YouTube watch-page -> resolved audio stream, otherwise the raw
+        // streamUrl as mp3-128 (free / preview formats only). Format
+        // preference / metered overrides only applied to HQ purchase
+        // downloads, which were removed with account login.
+        val (downloadUrl, format) = if (track.source == TrackSource.YOUTUBE) {
             // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream.
             // Queue tracks may have resolved googlevideo.com URLs - reconstruct the watch URL.
             val streamUrl = track.streamUrl
@@ -255,7 +238,7 @@ class DownloadRepositoryImpl(
         val fileName = "$safeTrackId.${format.extension}"
 
         if (!downloadUrl.startsWith("https://")) {
-            throw IOException("Download URL must use HTTPS: ${downloadUrl.take(50)}")
+            throw IOException("Download URL must use HTTPS: ${downloadUrl.take(ERROR_URL_PREVIEW_CHARS)}")
         }
 
         // Downloads always land in app-private storage: the write goes via a
@@ -400,39 +383,6 @@ class DownloadRepositoryImpl(
         }
     }
 
-    private suspend fun resolvePurchaseInfo(track: Track): PurchaseInfo? {
-        val albumEntity = albumDao.getById(track.albumId) ?: return null
-        val itemId = albumEntity.saleItemId ?: return null
-        val itemType = albumEntity.saleItemType ?: return null
-        return PurchaseInfo(itemId, itemType)
-    }
-
-    private suspend fun resolveHqDownloadUrl(purchaseInfo: PurchaseInfo, preferredFormat: AudioFormat): Pair<String, AudioFormat>? {
-        return try {
-            val urls = downloadScraper.getDownloadUrls(purchaseInfo)
-            // Try preferred format first, then fall back through quality tiers
-            val format = when {
-                urls.containsKey(preferredFormat) -> preferredFormat
-                urls.containsKey(AudioFormat.FLAC) -> AudioFormat.FLAC
-                urls.containsKey(AudioFormat.MP3_320) -> AudioFormat.MP3_320
-                urls.containsKey(AudioFormat.MP3_V0) -> AudioFormat.MP3_V0
-                urls.containsKey(AudioFormat.AAC) -> AudioFormat.AAC
-                urls.containsKey(AudioFormat.OGG_VORBIS) -> AudioFormat.OGG_VORBIS
-                else -> return null
-            }
-            val url = urls[format] ?: return null
-            Pair(url, format)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: IOException) {
-            null
-        } catch (_: IllegalArgumentException) {
-            null
-        } catch (_: IllegalStateException) {
-            null
-        }
-    }
-
     /**
      * OkHttp client scoped to download transfers. Differences vs. the shared
      * [client]:
@@ -444,7 +394,7 @@ class DownloadRepositoryImpl(
      *   streams mid-body when the request isn't a browser/Media3 shape; HTTP/1.1
      *   is stable on the same endpoints (observed across yt-dlp, NewPipe,
      *   Metrolist issues).
-     * - No cookie jar. A stale login / consent cookie can 403 the CDN.
+     * - No cookie jar. A stale consent cookie can 403 the CDN.
      */
     private val downloadClient: OkHttpClient by lazy {
         client.newBuilder()
@@ -576,5 +526,10 @@ class DownloadRepositoryImpl(
             android.util.Log.w("DownloadRepo", "Media cache clear failed; skipping", e)
         }
         storageTracker.notifyChanged()
+    }
+
+    private companion object {
+        /** Truncation length for unsafe download URLs in error messages. */
+        private const val ERROR_URL_PREVIEW_CHARS = 50
     }
 }

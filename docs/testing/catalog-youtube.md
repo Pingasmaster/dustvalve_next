@@ -180,9 +180,9 @@ Group 5: Playlists, mixes, channels (9)
   Library.
 - [ ] yt-playlist-import-failure [JVM, hermetic]: error_import_playlist snackbar,
   no partial rows.
-- [ ] yt-playlist-cache-hit-and-revalidate [JVM, hermetic]: <24h cache hit zero
-  network; stale -> instant cache + silent background refresh; partial video
-  cache -> synchronous refetch.
+- [x] yt-playlist-cache-hit-and-revalidate [JVM, hermetic]: cache hit returns
+  snapshot immediately + silent background refresh on every open; partial
+  video cache -> synchronous refetch.
 - [ ] yt-mix-radio-playlist [E2E + JVM, live/hermetic]: RD mix via /next,
   MixContinuation paging, seenVideoIds dedupe, empty page ends mix.
 - [x] yt-channel-artist-page [E2E + JVM, live/hermetic]: getChannelVideos WEB

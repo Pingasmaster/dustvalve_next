@@ -23,7 +23,6 @@
     <string name="common_action_save">保存</string>
     <string name="common_action_create">创建</string>
     <string name="common_action_remove">移除</string>
-    <string name="common_action_disconnect">断开连接</string>
     <string name="common_play_all">播放全部</string>
     <string name="link_open_video">打开<xliff:g id="brand">YouTube</xliff:g>视频</string>
     <string name="link_open_song">打开<xliff:g id="brand">YouTube Music</xliff:g>歌曲</string>
@@ -74,7 +73,6 @@
     <string name="common_action_add">添加</string>
     <string name="common_play_mix">播放混音</string>
     <string name="common_loading">加载中…</string>
-    <string name="common_connected">已连接</string>
     <string name="common_selected_folder">已选择的文件夹</string>
     <string name="common_failed_to_play">播放失败</string>
     <string name="common_playlist_imported">已导入播放列表：<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
@@ -161,7 +159,6 @@
     <string name="player_audio_device_unknown">音频设备</string>
     <string name="settings_title">设置</string>
     <string name="settings_section_sources">来源</string>
-    <string name="settings_section_connections">连接</string>
     <string name="settings_section_storage">存储</string>
     <string name="settings_section_audio_quality">音质</string>
     <string name="settings_section_appearance">外观</string>
@@ -176,23 +173,14 @@
     <string name="settings_remove_downloads_text">这会清空整个下载池：手动下载、自动缓存的音频、专辑封面和艺人图片。</string>
     <string name="settings_download_format">下载格式</string>
     <string name="settings_download_format_desc">已购<xliff:g id="brand">Bandcamp</xliff:g>内容的下载格式</string>
-    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g>已断开连接</string>
-    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g>已断开连接</string>
     <string name="settings_add_folder">添加文件夹</string>
     <string name="settings_rescan">重新扫描</string>
     <string name="settings_cd_remove_folder">移除文件夹</string>
-    <string name="settings_cd_avatar">头像</string>
-    <string name="settings_connect_bandcamp">连接<xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">连接后可访问你在<xliff:g id="brand">Bandcamp</xliff:g>购买的内容</string>
-    <string name="settings_connect_youtube">连接<xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">连接后可访问你的<xliff:g id="brand">YouTube Music</xliff:g>媒体库</string>
     <string name="settings_youtube_default_source_title">默认视图</string>
     <string name="settings_youtube_default_source_desc">点按<xliff:g id="brand">YouTube</xliff:g>标签页时打开哪个视图</string>
     <string name="common_play">播放</string>
     <string name="ytm_artist_spotlight">艺人聚焦</string>
     <string name="settings_remove_all_downloads">删除所有下载</string>
-    <string name="settings_auto_download_purchases">自动下载已购内容</string>
-    <string name="settings_auto_download_purchases_desc">自动下载你在<xliff:g id="brand">Dustvalve</xliff:g>购买的内容</string>
     <string name="settings_auto_download_future">自动下载新内容</string>
     <string name="settings_auto_download_future_desc">为已下载的播放列表、专辑和艺人自动下载新内容</string>
     <string name="settings_mp3_on_metered">按流量计费时仅用<xliff:g id="format">MP3</xliff:g></string>
@@ -515,7 +503,6 @@
     <string name="crash_report_github_action">在 GitHub 上提交 issue</string>
     <string name="crash_report_dismiss_action">暂不</string>
     <!-- Security-block + missing-playlist UI (added with default strings) -->
-    <string name="login_navigation_blocked">出于安全考虑已阻止：此处仅可打开登录网站</string>
     <string name="playlist_gone_title">此播放列表已不存在</string>
     <string name="playlist_gone_subtitle">它可能已从您的音乐库中删除</string>
     <string name="common_action_back">返回</string>

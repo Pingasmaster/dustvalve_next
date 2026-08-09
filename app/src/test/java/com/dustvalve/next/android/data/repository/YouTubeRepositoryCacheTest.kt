@@ -33,12 +33,13 @@ import org.junit.Test
  *   network access.
  * - getTrackInfo persists fresh fetches into the video cache.
  * - getPlaylistTracks rebuilds from the cached snapshot when present and
- *   doesn't re-issue the browse request.
+ *   returns it immediately, then silently revalidates in the background.
  * - Cache write failures never break the user-facing call (errors are
  *   silently swallowed).
  *
  * These guarantee the "we never get a resource a second time" + "background
- * caching is best-effort and never propagates errors" invariants for YT.
+ * caching is best-effort and never propagates errors" invariants for YT
+ * video metadata, and opportunistic playlist revalidation on every open.
  */
 class YouTubeRepositoryCacheTest {
 
@@ -137,13 +138,13 @@ class YouTubeRepositoryCacheTest {
         assertThat(track.title).isEqualTo("Sample Title")
     }
 
-    @Test fun `getPlaylistTracks cache hit returns cached snapshot without re-browsing`() = runTest {
+    @Test fun `getPlaylistTracks cache hit returns cached snapshot and revalidates in background`() = runTest {
         val playlistId = "PLcacheTest"
         coEvery { playlistCache.getById(playlistId) } returns YouTubePlaylistCacheEntity(
             playlistId = playlistId,
             title = "My Playlist",
             videoIdsJson = "[\"vid00000001\",\"vid00000002\"]",
-            cachedAt = System.currentTimeMillis(), // Fresh - no background revalidate.
+            cachedAt = System.currentTimeMillis(),
         )
         coEvery { videoCache.getByIds(listOf("vid00000001", "vid00000002")) } returns listOf(
             YouTubeVideoCacheEntity(
@@ -163,12 +164,20 @@ class YouTubeRepositoryCacheTest {
                 artUrl = "",
             ),
         )
+        // Background revalidate on every open (even with a fresh cache).
+        coEvery { client.browse("VL$playlistId") } returns JsonObject(emptyMap())
+        every { playlistParser.parse(any(), playlistId) } returns
+            YouTubePlaylistParser.PlaylistPage(
+                tracks = listOf(sampleTrack("yt_vid00000001"), sampleTrack("yt_vid00000002")),
+                continuation = null,
+                title = "My Playlist",
+            )
 
         val (tracks, title) = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=$playlistId")
 
         assertThat(title).isEqualTo("My Playlist")
         assertThat(tracks.map { it.title }).containsExactly("First", "Second").inOrder()
-        coVerify(exactly = 0) { client.browse(any(), any()) }
+        coVerify(exactly = 1) { client.browse("VL$playlistId") }
     }
 
     @Test fun `getPlaylistTracks falls through to network when cache is incomplete`() = runTest {

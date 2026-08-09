@@ -20,7 +20,6 @@ data class Playlist(
     enum class SystemPlaylistType(val defaultName: String, val iconRes: String? = null) {
         DOWNLOADS("Downloads"),
         RECENT("Recent"),
-        COLLECTION("Bandcamp purchases"),
         FAVORITES("Favorites"),
     }
 
@@ -40,7 +39,6 @@ data class Playlist(
     companion object {
         const val ID_DOWNLOADS = "system_downloads"
         const val ID_RECENT = "system_recent"
-        const val ID_COLLECTION = "system_collection"
         const val ID_FAVORITES = "system_favorites"
     }
 }

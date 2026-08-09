@@ -17,7 +17,6 @@ import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
-import com.dustvalve.next.android.domain.model.PurchaseInfo
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.download.downloadEachDeferringFailures
@@ -215,9 +214,6 @@ class AlbumRepositoryImpl(
         albumDao.setAutoDownload(albumId, autoDownload)
     }
 
-    override suspend fun updatePurchaseInfo(albumId: String, purchaseInfo: PurchaseInfo) {
-        albumDao.updatePurchaseInfo(albumId, purchaseInfo.saleItemId, purchaseInfo.saleItemType)
-    }
 
     override suspend fun fetchBandcampTrackPrice(trackUrl: String, fallbackCurrency: String): AlbumPrice? =
         albumScraper.fetchTrackPrice(trackUrl, fallbackCurrency)

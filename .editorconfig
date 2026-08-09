@@ -10,13 +10,17 @@ max_line_length = 140
 ij_kotlin_allow_trailing_comma = true
 ij_kotlin_allow_trailing_comma_on_call_site = true
 ktlint_code_style = intellij_idea
-ktlint_standard_function-naming = disabled
-ktlint_standard_filename = disabled
-ktlint_standard_no-wildcard-imports = disabled
+# @Composable PascalCase is standard; keep naming for non-composables.
+ktlint_function_naming_ignore_when_annotated_with = Composable
+# Compose theme / CompositionLocal conventions (LocalFoo, AppTypography) clash
+# with lowerCamelCase property naming; keep disabled for those conventions.
 ktlint_standard_property-naming = disabled
 # StateFlow `_state` / `state.asStateFlow()` pattern is standard; ktlint's
 # backing-property-naming check rejects it.
 ktlint_standard_backing-property-naming = disabled
+# Multi-declaration files (e.g. Shape.kt hosting AppShapes) are intentional;
+# filename matching would force artificial one-type-per-file churn.
+ktlint_standard_filename = disabled
 
 # Tests often embed long JSON fixtures; lift the line-length cap there.
 [**/src/test/**.{kt,kts}]

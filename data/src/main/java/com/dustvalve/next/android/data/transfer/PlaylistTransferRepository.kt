@@ -26,6 +26,7 @@ import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.zip.ZipEntry
@@ -83,18 +84,16 @@ class PlaylistTransferRepository(
                 if (offline) {
                     var info = downloadRepository.getDownloadInfo(track.id)
                     if (info == null) {
-                        // Safety net: download paths can throw IOException,
-                        // SQLiteException, HttpException, or wrapped variants -
-                        // any failure is logged and the track is exported
-                        // without local audio. CancellationException is
-                        // rethrown so coroutine cancellation propagates.
-                        @Suppress("TooGenericExceptionCaught")
+                        // Safety net: download paths throw IOException (and
+                        // subtypes). Log and export the track without local
+                        // audio. CancellationException is rethrown so coroutine
+                        // cancellation propagates.
                         try {
                             downloadRepository.downloadTrack(track)
                         } catch (ce: CancellationException) {
                             throw ce
-                        } catch (t: Throwable) {
-                            android.util.Log.w("PlaylistTransfer", "downloadTrack failed", t)
+                        } catch (e: IOException) {
+                            android.util.Log.w("PlaylistTransfer", "downloadTrack failed", e)
                         }
                         info = downloadRepository.getDownloadInfo(track.id)
                     }
@@ -112,15 +111,14 @@ class PlaylistTransferRepository(
                         coverPaths.getOrPut(track.albumId) {
                             val name = "covers/${NetworkUtils.sanitizeFileName(track.albumId)}.jpg"
 
-                            // Safety net: network fetches throw IOException,
-                            // SocketTimeout, HttpException, etc. - any failure
-                            // means we export the row without artwork.
-                            @Suppress("TooGenericExceptionCaught")
+                            // Safety net: network fetches throw IOException
+                            // (and subtypes). Failure means we export the row
+                            // without artwork.
                             val bytes = try {
                                 fetchBytes(track.artUrl)
                             } catch (ce: CancellationException) {
                                 throw ce
-                            } catch (_: Throwable) {
+                            } catch (_: IOException) {
                                 null
                             }
                             if (bytes != null) {
@@ -319,10 +317,14 @@ class PlaylistTransferRepository(
      */
     private fun spillCeilingBytes(): Long {
         val usable = context.cacheDir.usableSpace
-        return runCatching {
+        return try {
             val storageManager = context.getSystemService(StorageManager::class.java) ?: return usable
             minOf(usable, storageManager.getAllocatableBytes(storageManager.getUuidForPath(context.cacheDir)))
-        }.getOrDefault(usable)
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (_: IOException) {
+            usable
+        }
     }
 
     /** Mutable running totals for one import; see the caps in the companion. */
@@ -418,7 +420,7 @@ class PlaylistTransferRepository(
         }
         val request = Request.Builder().url(url).build()
         return client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IllegalStateException("HTTP ${response.code}")
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.bytes()
         }
     }
