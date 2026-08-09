@@ -12,12 +12,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# Prefer the future collector output when several directories linger.
+# Prefer the future non-minified collector output when several directories linger.
 out=$(
     find baselineprofile/build/outputs -type d -name '*additional*output*' 2>/dev/null \
         | sort \
         | awk '
-            /[Ff]uture/ { best = $0; exit }
+            /[Ff]uture/ && /[Nn]on[Mm]inified/ { best = $0; exit }
+            /[Nn]on[Mm]inified/ { if (best == "") best = $0; next }
+            /[Ff]uture/ { if (best == "") best = $0; next }
             { if (best == "") best = $0 }
             END { if (best != "") print best }
           ' \

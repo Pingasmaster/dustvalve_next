@@ -1,5 +1,6 @@
 plugins {
     id("com.android.test")
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
@@ -36,30 +37,34 @@ android {
         }
     }
 
-    // Profiles must be collected from the NON-DEBUGGABLE release variant
-    // (what ships); variants are matched to the target project BY NAME, so
-    // declare a release build type. Debug-signed for the same reason as
-    // :shippedsmoke: :app's release signingConfig resolves to the
-    // materialized debug keystore, and instrumenting another package
-    // requires matching certificates.
+    // Profiles must be collected from a NON-DEBUGGABLE release-shaped
+    // variant (what ships). nonMinifiedRelease is created by
+    // androidx.baselineprofile on :app; we only declare a release build
+    // type here so variant matching works, and sign with debug so the
+    // instrumentation APK (always debug-signed) can install alongside it.
     buildTypes {
         create("release") {
             signingConfig = signingConfigs.getByName("debug")
         }
+        // nonMinifiedRelease is created by androidx.baselineprofile; do not
+        // create{} it here (stacks into NonMinifiedNonMinified* with the plugin).
     }
 
-    testOptions.managedDevices.localDevices {
-        // apiLevel must be >= :app's minSdk (37); API 33 cannot install the
-        // APK (INSTALL_FAILED_OLDER_SDK). Only 16 KB page-size Google APIs
-        // images are published for API 37.
-        register("pixel7aApi37") {
-            device = "Pixel 7a"
-            apiLevel = 37
-            systemImageSource = "google"
-            pageAlignment = com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
-            // Test the arm64 APK - the ABI every real device runs - via the
-            // image's built-in translation layer. Matches the AGP 10 default.
-            testedAbi = "arm64-v8a"
+    testOptions {
+        animationsDisabled = true
+        managedDevices.localDevices {
+            // apiLevel must be >= :app's minSdk (37); API 33 cannot install the
+            // APK (INSTALL_FAILED_OLDER_SDK). Only 16 KB page-size Google APIs
+            // images are published for API 37.
+            register("pixel7aApi37") {
+                device = "Pixel 7a"
+                apiLevel = 37
+                systemImageSource = "google"
+                pageAlignment = com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
+                // Test the arm64 APK - the ABI every real device runs - via the
+                // image's built-in translation layer. Matches the AGP 10 default.
+                testedAbi = "arm64-v8a"
+            }
         }
     }
 
@@ -75,7 +80,13 @@ android {
     }
 }
 
+baselineProfile {
+    managedDevices += "pixel7aApi37"
+    useConnectedDevices = false
+}
+
 dependencies {
     implementation(libs.androidx.benchmark.macro.junit4)
     implementation(libs.androidx.test.ext.junit)
+    implementation(libs.androidx.test.uiautomator)
 }

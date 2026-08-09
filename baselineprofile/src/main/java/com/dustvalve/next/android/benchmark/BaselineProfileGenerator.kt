@@ -5,16 +5,19 @@
  * compiler can pre-compile them and we get a faster cold start and smoother
  * first-time use of the app.
  *
- * The androidx.baselineprofile Gradle plugin cannot be applied on this
- * project's AGP (it hard-rejects AGP > 9.0.1), so generation is manual:
- * the `.github/workflows/baseline-profile.yml` job runs
+ * Default ./build.sh regenerates via:
  *
- *   ./gradlew :baselineprofile:pixel7aApi37ReleaseAndroidTest \
+ *   ./gradlew :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest \
  *     -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
  *
- * then copies the pulled baseline-prof.txt / startup-prof.txt into
- * app/src/release/ (AGP packages src/<sourceSet>/baseline-prof.txt into the
- * APK as assets/dexopt/baseline.prof) and opens a PR with the diff.
+ * then scripts/install_baseline_profiles.sh copies baseline-prof.txt /
+ * startup-prof.txt into app/src/release/ (AGP packages
+ * src/<sourceSet>/baseline-prof.txt into the APK as assets/dexopt/baseline.prof).
+ *
+ * Target application id must be hardcoded: with
+ * android.experimental.self-instrumenting=true, targetContext.packageName is
+ * the *test* APK (com.dustvalve.next.android.baselineprofile), and passing
+ * that to BaselineProfileRule.collect force-stops the instrumentation process.
  */
 package com.dustvalve.next.android.benchmark
 
@@ -42,78 +45,51 @@ class BaselineProfileGenerator {
      *
      * CUJs covered:
      * - cold_start_mainactivity
-     * - warm_resume_playback
      * - scroll_library_tab
-     * - navigate_to_settings_about
-     * - trigger_search_for_updates
+     * - navigate_to_settings
+     *
+     * Kept lean so the GMD (arm64-via-translation) can flush profiles before
+     * LMK; heavier playback CUJs belong on a real device / macrobenchmark.
      */
     @Test
     fun generateBaselineProfile() {
         rule.collect(
             packageName = PACKAGE_NAME,
-            maxIterations = 5,
-            stableIterations = 3,
+            maxIterations = 3,
+            stableIterations = 2,
+            includeInStartupProfile = true,
         ) {
-            // 1. Cold start the main activity (the realistic first-launch flow
-            //    triggers AppUpdateController.checkSilently() from
-            //    DustvalveNextApplication.onCreate - do not stub it).
+            // 1. Cold start the main activity.
             pressHome()
             startActivityAndWait()
-
-            // Wait for the main UI to settle.
             device.waitForIdle()
-            device.wait(
-                Until.gone(By.res("$PACKAGE_NAME:id/progress_bar_loader")),
-                5_000,
-            )
+            // Give first composition + ProfileInstaller hooks time to settle
+            // before the rule kills the process to flush profiles.
+            Thread.sleep(2_000)
+            device.wait(Until.hasObject(By.pkg(PACKAGE_NAME)), 5_000)
 
-            // 2. Scroll the library tab - the heaviest LazyColumn in the app.
-            val scrollable = By.scrollable(true)
-            if (device.hasObject(scrollable)) {
-                val surface = device.findObject(scrollable)
-                repeat(times = 3) { surface.scroll(Direction.DOWN, 1.0f) }
-                repeat(times = 3) { surface.scroll(Direction.UP, 1.0f) }
-            }
-
-            // 3. Warm-resume playback - start the PlaybackService via the
-            //    "play" affordance on the first library row.
-            runCatching {
-                val firstRow = By.res("$PACKAGE_NAME:id/playlist_more_options")
-                if (device.hasObject(firstRow)) {
-                    device.findObject(firstRow).click()
-                    device.wait(Until.hasObject(By.text("Play")), 1_000)
-                    runCatching { device.findObject(By.text("Play")).click() }
-                    device.pressBack()
-                }
-            }
-
-            // 4. Navigate to Settings -> About.
-            val settingsEntry = By.text("Settings")
-            if (device.hasObject(settingsEntry)) {
-                device.findObject(settingsEntry).click()
-                device.waitForIdle()
-                val settingsScroll = By.scrollable(true)
-                if (device.hasObject(settingsScroll)) {
-                    val surface = device.findObject(settingsScroll)
-                    repeat(times = 3) { surface.scroll(Direction.DOWN, 1.0f) }
-                }
-            }
-
-            // 5. Trigger "Search for updates" in Settings -> About to exercise
-            //    the AppUpdateController.checkManually() flow and the
-            //    GitHub Releases IO/parsing path.
-            runCatching {
-                val about = By.text("About")
-                if (device.hasObject(about)) {
-                    device.findObject(about).click()
+            // 2. Scroll any LazyColumn that is already on screen.
+            val scrollable = device.findObject(By.scrollable(true))
+            if (scrollable != null) {
+                runCatching {
+                    scrollable.scroll(Direction.DOWN, 0.5f)
+                    device.waitForIdle()
+                    scrollable.scroll(Direction.UP, 0.5f)
                     device.waitForIdle()
                 }
-                val check = By.text("Search for updates")
-                if (device.hasObject(check)) {
-                    device.findObject(check).click()
+            }
+
+            // 3. Navigate to Settings if the tab is visible.
+            runCatching {
+                val settingsEntry = By.text("Settings")
+                if (device.hasObject(settingsEntry)) {
+                    device.findObject(settingsEntry).click()
                     device.waitForIdle()
-                    // Let the GitHub Releases request complete.
-                    Thread.sleep(2_000)
+                    val settingsScroll = device.findObject(By.scrollable(true))
+                    if (settingsScroll != null) {
+                        settingsScroll.scroll(Direction.DOWN, 0.5f)
+                        device.waitForIdle()
+                    }
                 }
             }
 

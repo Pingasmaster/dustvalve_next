@@ -12,6 +12,8 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.detekt)
     alias(libs.plugins.roborazzi)
+    // Consumer: merges profiles from :baselineprofile; creates nonMinifiedRelease.
+    alias(libs.plugins.androidx.baselineprofile)
 }
 
 android {
@@ -25,8 +27,8 @@ android {
     // Shared by defaultConfig + future flavor offset. build.sh bumps this
     // via sed on the defaultConfig assignment below; future re-reads it
     // on the next Gradle configure.
-    val baseVersionCode = 301
-    val baseVersionName = "0.5.23"
+    val baseVersionCode = 302
+    val baseVersionName = "0.5.24"
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
@@ -174,6 +176,8 @@ android {
             testProguardFiles("proguard-androidtest.pro")
             signingConfig = signingConfigs.getByName("release")
         }
+        // nonMinifiedRelease is created by androidx.baselineprofile; do not
+        // create{} it here (stacks into NonMinifiedNonMinified* with the plugin).
     }
 
     compileOptions {
@@ -235,24 +239,31 @@ android {
     }
 
     testOptions {
+        // GMD / emulator instrumented runs: disable system animations so
+        // Compose + UiAutomator timing stays deterministic.
+        animationsDisabled = true
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
         // Gradle Managed Device for the smoke + E2E instrumentation suites.
         // Targets the future flavor (minSdk 37); API 33 devices cannot install
-        // that APK (INSTALL_FAILED_OLDER_SDK).
+        // that APK (INSTALL_FAILED_OLDER_SDK). Prefer localDevices (AGP 9
+        // removed the deprecated managedDevices.devices API).
         managedDevices {
-            localDevices.register("pixel7aApi37") {
-                device = "Pixel 7a"
-                apiLevel = 37
-                // The only published phone images for API 37 are the 16 KB
-                // page-size Google APIs variants; plain "aosp"/"google"
-                // sources stop at API 36.
-                systemImageSource = "google"
-                pageAlignment = com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
-                // Test the arm64 APK - the ABI every real device runs - via
-                // the image's built-in translation layer. Matches the AGP 10
-                // default.
-                testedAbi = "arm64-v8a"
+            localDevices {
+                register("pixel7aApi37") {
+                    device = "Pixel 7a"
+                    apiLevel = 37
+                    // The only published phone images for API 37 are the 16 KB
+                    // page-size Google APIs variants; plain "aosp"/"google"
+                    // sources stop at API 36.
+                    systemImageSource = "google"
+                    pageAlignment =
+                        com.android.build.api.dsl.ManagedVirtualDevice.PageAlignment.FORCE_16KB_PAGES
+                    // AGP 9.4-alpha sometimes logs "testedAbi unset" even when
+                    // assigned; set both the ABI and require64Bit explicitly.
+                    testedAbi = "arm64-v8a"
+                    require64Bit = true
+                }
             }
         }
         // Robolectric 4.17 pokes JDK internals (FileDescriptor, reflection)
@@ -424,6 +435,7 @@ dependencies {
     // `pixel7aApi37` managed-device run and copied to
     // app/src/release/baseline-prof.txt + startup-prof.txt.)
     implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     // --- Unit test dependencies ---
     testImplementation(libs.junit)
@@ -489,3 +501,19 @@ dependencies {
 // true every lint finding is a build failure outright - there is nothing
 // to baseline away. If a truly unfixable upstream finding ever appears,
 // prefer a scoped lint.xml severity override over reintroducing a baseline.
+
+// Baseline Profile consumer. Producer is :baselineprofile (GMD Pixel 7a /
+// API 37 / 16 KB). Default ./build.sh still drives the GMD androidTest +
+// scripts/install_baseline_profiles.sh into app/src/release/ so both api
+// flavors share one SOURCE-name profile; generate* tasks are available for
+// a future cutover. Skip regen with ./build.sh --debug.
+baselineProfile {
+    automaticGenerationDuringBuild = false
+    saveInSrc = true
+    // One shared profile (captured on future GMD) for compat + future APKs.
+    mergeIntoMain = true
+    warnings {
+        // We track AGP alphas ahead of the plugin's "max tested" pin.
+        maxAgpVersion = false
+    }
+}

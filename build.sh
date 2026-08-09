@@ -251,8 +251,12 @@ regenerate_baseline_profiles() {
         echo "Use ./build.sh --debug to skip baselines for a non-release build." >&2
         exit 1
     fi
+    # :app + :baselineprofile apply androidx.baselineprofile (1.5+ / AGP 9).
+    # Regen still uses the GMD androidTest + install script so both api flavors
+    # share one SOURCE-name profile under app/src/release/. Plugin generate*
+    # tasks exist for a future cutover (automaticGenerationDuringBuild=false).
     ./gradlew :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :baselineprofile:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
+    ./gradlew :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile
     ./scripts/assert_tests_ran.sh 1 baselineprofile
     chmod +x ./scripts/install_baseline_profiles.sh
@@ -450,7 +454,7 @@ GRADLE_TASKS=(
     testCompatDebugUnitTest
     testFutureDebugUnitTest
     :macrobenchmark:assembleFutureRelease
-    :baselineprofile:assembleFutureRelease
+    :baselineprofile:assembleFutureNonMinifiedRelease
     :shippedsmoke:assembleFutureRelease
     assembleCompatDebug
     assembleFutureDebug
