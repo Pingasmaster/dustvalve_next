@@ -158,6 +158,15 @@ class DownloadController @Inject constructor(
                     purgeStalePartials(downloads)
                     reconcileOrphanFiles(downloads)
                 }
+                // DB rows whose files vanished (cleared externally, failed
+                // rename, etc.) otherwise leave a phantom "downloaded" badge.
+                try {
+                    downloadRepository.purgeOrphanDownloadRows()
+                } catch (e: android.database.SQLException) {
+                    Log.w(TAG, "Cold-start orphan-row purge failed", e)
+                } catch (e: IllegalStateException) {
+                    Log.w(TAG, "Cold-start orphan-row purge failed", e)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: java.io.IOException) {

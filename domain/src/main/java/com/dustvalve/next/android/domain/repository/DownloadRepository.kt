@@ -7,20 +7,15 @@ import kotlinx.coroutines.flow.Flow
 
 data class DownloadInfo(
     /**
-     * Either an absolute filesystem path (app-internal downloads) or a
-     * `content://` URI string (dedicated-folder mode). Prefer [streamUri]
-     * when handing to ExoPlayer.
+     * Absolute filesystem path under app-internal downloads. Prefer
+     * [streamUri] when handing the path to ExoPlayer.
      */
     val filePath: String,
     val format: AudioFormat,
 ) {
-    /** ExoPlayer-ready URI string; wraps file paths with `file://`. */
+    /** ExoPlayer-ready `file://` URI for [filePath]. */
     val streamUri: String
-        get() = if (filePath.startsWith("content://")) {
-            filePath
-        } else {
-            android.net.Uri.fromFile(java.io.File(filePath)).toString()
-        }
+        get() = "file://$filePath"
 }
 
 interface DownloadRepository {
@@ -41,9 +36,16 @@ interface DownloadRepository {
     fun getDownloadedAlbumIds(): Flow<List<String>>
 
     /**
-     * Every recorded download file path, raw and unfiltered (blank rows and
-     * `content://` URIs included); callers own filtering and error handling
+     * Every recorded download file path, raw and unfiltered (blank rows
+     * included); callers own filtering and error handling
      * (DownloadController's orphan-file reconciliation).
      */
     suspend fun getAllDownloadFilePaths(): List<String>
+
+    /**
+     * Deletes download rows whose file no longer exists on disk. Returns the
+     * number of rows removed. Used by the cold-start sweep so the UI cannot
+     * show a phantom "downloaded" badge for a missing file.
+     */
+    suspend fun purgeOrphanDownloadRows(): Int
 }

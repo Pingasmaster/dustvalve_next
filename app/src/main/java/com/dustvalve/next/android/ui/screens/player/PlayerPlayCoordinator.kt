@@ -4,7 +4,6 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
-import com.dustvalve.next.android.util.NetworkUtils
 import com.dustvalve.next.android.util.UiText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -21,10 +20,10 @@ internal class PlayerPlayCoordinator(
     private val queueManager = core.queueManager
     private val libraryRepository = core.libraryRepository
     private val downloadRepository = core.downloadRepository
+    private val downloadController = core.downloadController
     private val settingsDataStore = core.settingsDataStore
     private val resolveTrackForPlaybackUseCase = core.resolveTrackForPlaybackUseCase
     private val playbackStreamResolver = core.playbackStreamResolver
-    private val appContext = core.appContext
     private var progressiveDownloadJob: Job? = null
     private var playJob: Job? = null
     private var loadingGeneration = 0
@@ -68,18 +67,10 @@ internal class PlayerPlayCoordinator(
                     return@runPlayerUiAction
                 }
 
-                val formatOverride = if (track.source != TrackSource.YOUTUBE) {
-                    val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
-                    if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
-                        AudioFormat.MP3_320
-                    } else {
-                        null
-                    }
-                } else {
-                    null
-                }
-
-                downloadRepository.downloadTrack(track, formatOverride)
+                // Route through DownloadController so progressive work shares the
+                // FGS + pause/cancel notification path with explicit downloads
+                // (and de-dupes against an in-flight enqueue for the same track).
+                downloadController.downloadTrackBlocking(track)
 
                 val downloadInfo = downloadRepository.getDownloadInfo(track.id)
                 if (downloadInfo != null) {
@@ -112,19 +103,8 @@ internal class PlayerPlayCoordinator(
         if (existing != null && existing.format.qualityRank >= AudioFormat.MP3_128.qualityRank) return
         if (extraState.value.downloadingTrackId == nextTrack.id) return
 
-        runPlayerUiAction {
-            val formatOverride = if (nextTrack.source != TrackSource.YOUTUBE) {
-                val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
-                if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
-                    AudioFormat.MP3_320
-                } else {
-                    null
-                }
-            } else {
-                null
-            }
-            downloadRepository.downloadTrack(nextTrack, formatOverride)
-        }
+        // Fire-and-forget through the shared queue; no need to block playback.
+        downloadController.enqueueTrack(nextTrack)
     }
 
     fun playTrack(track: Track) {

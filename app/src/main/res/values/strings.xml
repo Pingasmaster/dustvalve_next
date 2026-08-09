@@ -286,9 +286,10 @@
     <string name="settings_update_download_failed">Download failed</string>
     <string name="settings_auto_update_title">Automatic update checks</string>
     <string name="settings_auto_update_desc">Check for a newer build on launch and prompt to install it. This app is in very heavy development with sometimes several updates a day, so it is strongly recommended to leave this on. You can always check manually above.</string>
-    <string name="settings_storage_limit_unlimited">Storage limit: Unlimited</string>
-    <string name="settings_storage_limit_mb">Storage limit: <xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
-    <string name="settings_storage_limit_gb">Storage limit: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
+    <string name="settings_storage_limit_unlimited">Cache limit: Unlimited</string>
+    <string name="settings_storage_limit_mb">Cache limit: <xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
+    <string name="settings_storage_limit_gb">Cache limit: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
+    <string name="settings_storage_limit_desc">Applies to auto-cached audio, covers, and stream cache. Explicit downloads are never deleted by this limit. Downloads also refuse to start when the device is nearly out of free space.</string>
 
     <!-- Local screen -->
     <string name="local_search_placeholder">Search local music…</string>

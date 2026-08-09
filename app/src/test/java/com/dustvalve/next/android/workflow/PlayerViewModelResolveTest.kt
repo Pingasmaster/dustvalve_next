@@ -119,6 +119,7 @@ class PlayerViewModelResolveTest {
                 queueManager = queueManager,
                 libraryRepository = libraryRepository,
                 downloadRepository = downloadRepository,
+                downloadController = mockk<DownloadController>(relaxed = true),
                 settingsDataStore = settingsDataStore,
                 resolveTrackForPlaybackUseCase = resolveUseCase,
                 playbackStreamResolver = streamResolver,

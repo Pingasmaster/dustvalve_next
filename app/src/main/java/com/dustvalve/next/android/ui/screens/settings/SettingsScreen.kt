@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,18 +30,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -56,9 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -71,13 +63,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 import com.dustvalve.next.android.ui.adaptive.adaptiveContentWidth
 import com.dustvalve.next.android.ui.components.update.AppUpdateDialog
 import com.dustvalve.next.android.ui.theme.AppShapes
-import com.dustvalve.next.android.ui.util.displayNameRes
 import com.dustvalve.next.android.util.isAtLeastBaklava
 
 // Shared left-padding for every child toggle that appears under a parent
@@ -95,7 +85,6 @@ internal val TOGGLE_LABEL_END_GAP = 16.dp
 fun SettingsScreen(adaptiveInfo: AdaptiveLayoutInfo, modifier: Modifier = Modifier, viewModel: SettingsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showRemoveDownloadsDialog by rememberSaveable { mutableStateOf(false) }
-    var showFormatSheet by rememberSaveable { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     SettingsScreenSnackbars(
@@ -112,17 +101,6 @@ fun SettingsScreen(adaptiveInfo: AdaptiveLayoutInfo, modifier: Modifier = Modifi
                 showRemoveDownloadsDialog = false
             },
             onDismiss = { showRemoveDownloadsDialog = false },
-        )
-    }
-
-    if (showFormatSheet) {
-        SettingsDownloadFormatSheet(
-            downloadFormat = state.downloadFormat,
-            onSelect = { key ->
-                viewModel.storageSources.setDownloadFormat(key)
-                showFormatSheet = false
-            },
-            onDismiss = { showFormatSheet = false },
         )
     }
 
@@ -146,13 +124,11 @@ fun SettingsScreen(adaptiveInfo: AdaptiveLayoutInfo, modifier: Modifier = Modifi
                 actions = SettingsListActions(
                     dialogs = SettingsListDialogActions(
                         onShowRemoveDownloads = { showRemoveDownloadsDialog = true },
-                        onShowFormatSheet = { showFormatSheet = true },
                         onSourcesAction = { handleSettingsSourcesAction(viewModel, it) },
                         onStorageAction = { handleSettingsStorageAction(viewModel, it) },
                         onAppearanceAction = { handleSettingsAppearanceAction(viewModel, it) },
                     ),
                     toggles = SettingsListToggleActions(
-                        onSetSaveDataOnMetered = viewModel.storageSources::setSaveDataOnMetered,
                         onSetProgressiveDownload = viewModel.storageSources::setProgressiveDownload,
                         onSetSeamlessQualityUpgrade = viewModel.storageSources::setSeamlessQualityUpgrade,
                         onSetShowInlineVolumeSlider = viewModel.appearance::setShowInlineVolumeSlider,
@@ -237,58 +213,15 @@ private fun SettingsRemoveDownloadsDialog(onConfirm: () -> Unit, onDismiss: () -
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SettingsDownloadFormatSheet(downloadFormat: String, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
-    val formatHaptic = LocalHapticFeedback.current
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberBottomSheetState(initialValue = SheetValue.Hidden),
-        sheetMaxWidth = AdaptiveTokens.SheetMaxWidth,
-    ) {
-        Text(
-            text = stringResource(R.string.settings_download_format),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-        )
-        AudioFormat.DOWNLOADABLE.forEach { format ->
-            val isSelected = format.key == downloadFormat
-            ListItem(
-                trailingContent = {
-                    if (isSelected) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_check),
-                            contentDescription = stringResource(R.string.common_cd_selected),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        formatHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSelect(format.key)
-                    },
-            ) {
-                Text(stringResource(format.displayNameRes))
-            }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
 @Composable
 private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActions) {
     val contentMaxWidth = host.contentMaxWidth
     val state = host.state
     val snackbarHostState = host.snackbarHostState
     val onShowRemoveDownloads = actions.dialogs.onShowRemoveDownloads
-    val onShowFormatSheet = actions.dialogs.onShowFormatSheet
     val onSourcesAction = actions.dialogs.onSourcesAction
     val onStorageAction = actions.dialogs.onStorageAction
     val onAppearanceAction = actions.dialogs.onAppearanceAction
-    val onSetSaveDataOnMetered = actions.toggles.onSetSaveDataOnMetered
     val onSetProgressiveDownload = actions.toggles.onSetProgressiveDownload
     val onSetSeamlessQualityUpgrade = actions.toggles.onSetSeamlessQualityUpgrade
     val onSetShowInlineVolumeSlider = actions.toggles.onSetShowInlineVolumeSlider
@@ -335,8 +268,6 @@ private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActi
         item {
             SettingsAudioQualitySection(
                 state = state,
-                onShowFormatSheet = onShowFormatSheet,
-                onSetSaveDataOnMetered = onSetSaveDataOnMetered,
                 onSetProgressiveDownload = onSetProgressiveDownload,
                 onSetSeamlessQualityUpgrade = onSetSeamlessQualityUpgrade,
             )

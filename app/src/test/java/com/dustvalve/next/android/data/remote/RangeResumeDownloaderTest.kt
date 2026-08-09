@@ -45,6 +45,22 @@ class RangeResumeDownloaderTest {
     }
 
     @Test
+    fun `rejects HTML Content-Type before writing bytes`() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setHeader("Content-Type", "text/html; charset=utf-8")
+                .setBody("<!DOCTYPE html><html>login</html>"),
+        )
+        val out = ByteArrayOutputStream()
+        val ex = runCatching {
+            RangeResumeDownloader.stream(client, server.url("/x").toString(), out, "html_wall")
+        }.exceptionOrNull()
+        assertThat(ex).isInstanceOf(DownloadPayloadValidator.InvalidPayloadException::class.java)
+        assertThat(out.size()).isEqualTo(0)
+    }
+
+    @Test
     fun `first request always includes Range bytes=0`() = runBlocking {
         val body = "x".repeat(4096).toByteArray()
         server.enqueue(
@@ -77,7 +93,7 @@ class RangeResumeDownloaderTest {
             sink = out,
             trackId = "no_range_support",
         )
-        assertThat(written.toInt()).isEqualTo(body.size)
+        assertThat(written.bytesWritten.toInt()).isEqualTo(body.size)
         assertThat(out.toByteArray()).isEqualTo(body)
     }
 
@@ -119,7 +135,7 @@ class RangeResumeDownloaderTest {
             backoffMillis = { 0L },
         )
 
-        assertThat(written.toInt()).isEqualTo(fullBody.size)
+        assertThat(written.bytesWritten.toInt()).isEqualTo(fullBody.size)
         assertThat(out.toByteArray()).isEqualTo(fullBody)
         server.takeRequest() // first
         val second = server.takeRequest()
@@ -221,7 +237,7 @@ class RangeResumeDownloaderTest {
         )
         // Returns the running total (offset + received); the append-mode sink
         // only receives the remainder bytes.
-        assertThat(written.toInt()).isEqualTo(total)
+        assertThat(written.bytesWritten.toInt()).isEqualTo(total)
         assertThat(out.toByteArray().size).isEqualTo(total - 4000)
         val request = server.takeRequest()
         assertThat(request.getHeader("Range")).isEqualTo("bytes=4000-")
@@ -333,7 +349,7 @@ class RangeResumeDownloaderTest {
             startOffset = 4000L,
             expectedTotalBytes = total.toLong(),
         )
-        assertThat(written.toInt()).isEqualTo(total)
+        assertThat(written.bytesWritten.toInt()).isEqualTo(total)
         assertThat(out.toByteArray()).isEqualTo(remainder)
     }
 

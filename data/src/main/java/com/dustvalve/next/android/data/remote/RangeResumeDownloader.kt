@@ -39,6 +39,7 @@ object RangeResumeDownloader {
     private const val INITIAL_BACKOFF_MS = 500L
     private const val BACKOFF_SHIFT_CAP = 4
     private const val MIN_BYTES_WITHOUT_CONTENT_LENGTH = 1024L
+    private const val SNIFF_BYTES = 64
 
     /**
      * The server's 206 response no longer lines up with the partial content
@@ -49,6 +50,13 @@ object RangeResumeDownloader {
      * discard the partial and restart from zero.
      */
     class ResumeMismatchException(message: String) : IOException(message)
+
+    /**
+     * Result of a successful [stream]: byte count plus the file extension
+     * inferred from Content-Type / magic bytes so callers can rename the
+     * committed file when the stream format's default extension was wrong.
+     */
+    data class StreamResult(val bytesWritten: Long, val suggestedExtension: String?)
 
     /**
      * @param client OkHttpClient to use. Caller provides one with appropriate
@@ -75,7 +83,8 @@ object RangeResumeDownloader {
      *   carrying (bytesWritten, expectedTotal). `bytesWritten` includes
      *   [startOffset]. `expectedTotal` is null until the first response headers
      *   are parsed.
-     * @return Total bytes written (including [startOffset]).
+     * @return [StreamResult] with total bytes written (including [startOffset])
+     *   and a suggested file extension from MIME / magic sniffing.
      */
     @Suppress("LongParameterList")
     suspend fun stream(
@@ -90,11 +99,15 @@ object RangeResumeDownloader {
             INITIAL_BACKOFF_MS * (1L shl (attempt - 1).coerceAtMost(BACKOFF_SHIFT_CAP))
         },
         onProgress: ((bytesWritten: Long, expectedTotal: Long?) -> Unit)? = null,
-    ): Long {
+    ): StreamResult {
         var bytesWritten = startOffset
         var expectedTotal: Long? = null
         var serverHonorsRange = false
         var attempt = 0
+        var suggestedExtension: String? = null
+        // MIME / magic are only authoritative on a from-zero body. Resumes
+        // append mid-file so the first chunk is not a container header.
+        val validatePayload = startOffset == 0L
 
         while (true) {
             val call = client.newCall(rangeRequest(url, bytesWritten))
@@ -123,12 +136,26 @@ object RangeResumeDownloader {
                             if (gotPartial) serverHonorsRange = true
                             checkResponseStatus(response, trackId)
                             checkResumeAlignment(response, bytesWritten, gotPartial, trackId)
+                            val contentType = response.header("Content-Type")
+                            if (validatePayload && bytesWritten == 0L) {
+                                DownloadPayloadValidator.assertAcceptableContentType(contentType, trackId)
+                                suggestedExtension = DownloadPayloadValidator.extensionForMime(contentType)
+                            }
                             if (expectedTotal == null) {
                                 expectedTotal = resolveExpectedTotal(response, bytesWritten, expectedTotalBytes, trackId)
                             }
                             // bytesWritten is updated per chunk (not just on return) so a
                             // mid-stream failure resumes from the real offset on retry.
-                            copyResponseBody(response, sink, bytesWritten) { written ->
+                            copyResponseBody(
+                                response = response,
+                                sink = sink,
+                                startBytes = bytesWritten,
+                                sniffPayload = validatePayload && bytesWritten == 0L,
+                                trackId = trackId,
+                                onSniffedExtension = { sniffed ->
+                                    if (suggestedExtension == null) suggestedExtension = sniffed
+                                },
+                            ) { written ->
                                 bytesWritten = written
                                 onProgress?.invoke(written, expectedTotal)
                             }
@@ -150,6 +177,7 @@ object RangeResumeDownloader {
                 // the same mismatched payload again. Propagate unwrapped so
                 // callers can discard the partial and start over.
                 if (e is ResumeMismatchException) throw e
+                if (e is DownloadPayloadValidator.InvalidPayloadException) throw e
                 attempt++
                 val canRetry = attempt <= maxRetries &&
                     (bytesWritten == 0L || serverHonorsRange)
@@ -166,7 +194,7 @@ object RangeResumeDownloader {
 
         requireNonEmpty(bytesWritten, trackId)
         requireExpectedSize(bytesWritten, expectedTotal, trackId)
-        return bytesWritten
+        return StreamResult(bytesWritten, suggestedExtension)
     }
 
     private fun rangeRequest(url: String, bytesWritten: Long): Request = Request.Builder()
@@ -231,15 +259,40 @@ object RangeResumeDownloader {
         return cr ?: if (bytesWritten == 0L) cl else null
     }
 
-    /** Streams the response body into [sink], reporting the running total via [onWritten] after every write. */
-    private suspend fun copyResponseBody(response: Response, sink: OutputStream, startBytes: Long, onWritten: (Long) -> Unit) {
+    /**
+     * Streams the response body into [sink], reporting the running total via
+     * [onWritten] after every write. When [sniffPayload] is true the first
+     * chunk is checked for HTML/JSON/M3U / known audio magic before any
+     * subsequent writes continue.
+     */
+    private suspend fun copyResponseBody(
+        response: Response,
+        sink: OutputStream,
+        startBytes: Long,
+        sniffPayload: Boolean,
+        trackId: String,
+        onSniffedExtension: (String?) -> Unit,
+        onWritten: (Long) -> Unit,
+    ) {
         var written = startBytes
+        var sniffed = !sniffPayload
         response.body.byteStream().use { input ->
             val buffer = ByteArray(8192)
             while (true) {
                 val read = input.read(buffer)
                 if (read == -1) break
                 coroutineContext.ensureActive()
+                if (!sniffed) {
+                    val header = if (read >= SNIFF_BYTES) {
+                        buffer.copyOf(SNIFF_BYTES)
+                    } else {
+                        buffer.copyOf(read)
+                    }
+                    onSniffedExtension(
+                        DownloadPayloadValidator.sniffExtensionOrReject(header, trackId),
+                    )
+                    sniffed = true
+                }
                 sink.write(buffer, 0, read)
                 written += read
                 onWritten(written)
