@@ -83,6 +83,44 @@ class PlaylistRepositoryImplTest : DbTestBase() {
         }
     }
 
+    @Test fun `addTrackToPlaylist by Track caches missing rows and returns true`() = runTest {
+        val playlist = repo().createPlaylist("Mine")
+        val added = repo().addTrackToPlaylist(playlist.id, domainTrack("fresh"))
+
+        assertThat(added).isTrue()
+        assertThat(db.trackDao().getById("fresh")).isNotNull()
+        assertThat(db.playlistDao().getTracksInPlaylistSync(playlist.id).map { it.id }).containsExactly("fresh")
+    }
+
+    @Test fun `addTrackToPlaylist by id returns false when the tracks row is missing`() = runTest {
+        val playlist = repo().createPlaylist("Mine")
+        assertThat(repo().addTrackToPlaylist(playlist.id, "ghost")).isFalse()
+        assertThat(db.playlistDao().getTracksInPlaylistSync(playlist.id)).isEmpty()
+    }
+
+    @Test fun `getTracksInPlaylistSync merges Favorites override order like the UI Flow`() = runTest {
+        db.trackDao().insertAll(listOf(track("a"), track("b"), track("c")))
+        db.favoriteDao().insert(FavoriteEntity(id = "a", type = "track", addedAt = 3L))
+        db.favoriteDao().insert(FavoriteEntity(id = "b", type = "track", addedAt = 2L))
+        db.favoriteDao().insert(FavoriteEntity(id = "c", type = "track", addedAt = 1L))
+        // Manual override: c, a (b should append from source order).
+        db.playlistDao().insertPlaylist(
+            PlaylistEntity(
+                id = com.dustvalve.next.android.domain.model.Playlist.ID_FAVORITES,
+                name = "Favorites",
+                isSystem = true,
+                systemType = "FAVORITES",
+            ),
+        )
+        db.playlistDao().addTrackToPlaylist(com.dustvalve.next.android.domain.model.Playlist.ID_FAVORITES, "c")
+        db.playlistDao().addTrackToPlaylist(com.dustvalve.next.android.domain.model.Playlist.ID_FAVORITES, "a")
+
+        val ids = repo().getTracksInPlaylistSync(
+            com.dustvalve.next.android.domain.model.Playlist.ID_FAVORITES,
+        ).map { it.id }
+        assertThat(ids).containsExactly("c", "a", "b").inOrder()
+    }
+
     // --- importTracksAsPlaylist -----------------------------------------
 
     @Test fun `importTracksAsPlaylist imports tracks in order with no favorite by default`() = runTest {

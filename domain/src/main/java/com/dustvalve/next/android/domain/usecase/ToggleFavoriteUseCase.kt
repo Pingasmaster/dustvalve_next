@@ -1,5 +1,6 @@
 package com.dustvalve.next.android.domain.usecase
 
+import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
@@ -15,6 +16,8 @@ class ToggleFavoriteUseCase @Inject constructor(
     }
 
     suspend fun toggleTrackFavorite(trackId: String): Boolean = libraryRepository.toggleTrackFavorite(trackId)
+
+    suspend fun toggleTrackFavorite(track: Track): Boolean = libraryRepository.toggleTrackFavorite(track)
 
     suspend fun toggleArtistFavorite(artistId: String) {
         artistRepository.toggleFavorite(artistId)

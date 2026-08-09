@@ -93,6 +93,7 @@ import kotlin.coroutines.cancellation.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
@@ -142,7 +143,7 @@ fun YouTubeScreen(
     val hapticFeedback = LocalHapticFeedback.current
 
     var contextResult by remember { mutableStateOf<SearchResult?>(null) }
-    var addToPlaylistTrackId by remember { mutableStateOf<String?>(null) }
+    var addToPlaylistTrack by remember { mutableStateOf<Track?>(null) }
 
     val failedToPlayMsg = stringResource(R.string.common_failed_to_play)
     val loadingTrackMsg = stringResource(R.string.common_loading_track)
@@ -687,7 +688,7 @@ fun YouTubeScreen(
                     scope.launch {
                         runCatchingPlayback(snackbarHostState, failedLoadMsg) {
                             val track = viewModel.getTrackInfo(ctx.url)
-                            addToPlaylistTrackId = track.id
+                            addToPlaylistTrack = track
                         }
                     }
                 },
@@ -726,17 +727,17 @@ fun YouTubeScreen(
         )
     }
 
-    addToPlaylistTrackId?.let { trackId ->
+    addToPlaylistTrack?.let { track ->
         AddToPlaylistSheet(
             playlists = playerState.playlists,
-            onDismiss = { addToPlaylistTrackId = null },
+            onDismiss = { addToPlaylistTrack = null },
             onPlaylistSelected = { playlistId ->
-                playerViewModel.addTrackToPlaylist(playlistId, trackId)
-                addToPlaylistTrackId = null
+                playerViewModel.addTrackToPlaylist(playlistId, track)
+                addToPlaylistTrack = null
             },
             onCreatePlaylist = { name, shapeKey, iconUrl ->
-                playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, trackId)
-                addToPlaylistTrackId = null
+                playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, track)
+                addToPlaylistTrack = null
             },
         )
     }

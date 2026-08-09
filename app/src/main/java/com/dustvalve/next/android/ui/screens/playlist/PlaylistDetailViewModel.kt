@@ -50,6 +50,7 @@ class PlaylistDetailViewModel @Inject constructor(
 
     private var currentPlaylistId: String? = null
     private var downloadJob: Job? = null
+    private var loadJob: Job? = null
     var retryAction: (() -> Unit)? = null
         private set
 
@@ -78,8 +79,9 @@ class PlaylistDetailViewModel @Inject constructor(
     fun loadPlaylist(playlistId: String) {
         if (currentPlaylistId == playlistId) return
         currentPlaylistId = playlistId
+        loadJob?.cancel()
 
-        viewModelScope.launch {
+        loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             combine(

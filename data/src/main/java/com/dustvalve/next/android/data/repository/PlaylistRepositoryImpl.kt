@@ -202,9 +202,19 @@ class PlaylistRepositoryImpl(
     }
 
     override suspend fun getTracksInPlaylistSync(playlistId: String): List<Track> {
+        // Favorites / Downloads must use the same merge as the reactive UI
+        // path so export (and any other sync consumer) preserves manual order.
         val tracks = when (playlistId) {
-            Playlist.ID_FAVORITES -> trackDao.getFavorites().first()
-            Playlist.ID_DOWNLOADS -> trackDao.getDownloaded().first()
+            Playlist.ID_FAVORITES -> {
+                val source = trackDao.getFavorites().first()
+                val ordered = playlistDao.getTracksInPlaylistSync(playlistId)
+                mergeSystemPlaylist(source, ordered)
+            }
+            Playlist.ID_DOWNLOADS -> {
+                val source = trackDao.getDownloaded().first()
+                val ordered = playlistDao.getTracksInPlaylistSync(playlistId)
+                mergeSystemPlaylist(source, ordered)
+            }
             Playlist.ID_RECENT -> trackDao.getRecent().first()
             else -> playlistDao.getTracksInPlaylistSync(playlistId)
         }
@@ -220,8 +230,13 @@ class PlaylistRepositoryImpl(
         return tracks.map { it.toDomain(it.id in favoriteIds) }
     }
 
-    override suspend fun addTrackToPlaylist(playlistId: String, trackId: String) {
-        val trackEntity = trackDao.getById(trackId) ?: return
+    override suspend fun addTrackToPlaylist(playlistId: String, track: Track): Boolean {
+        trackDao.insertAll(listOf(track.toEntity()))
+        return addTrackToPlaylist(playlistId, track.id)
+    }
+
+    override suspend fun addTrackToPlaylist(playlistId: String, trackId: String): Boolean {
+        val trackEntity = trackDao.getById(trackId) ?: return false
         playlistDao.addTrackToPlaylist(playlistId, trackId)
 
         // Auto-download if playlist has autoDownload enabled
@@ -235,6 +250,7 @@ class PlaylistRepositoryImpl(
                 // Best-effort auto-download, ignore failures
             }
         }
+        return true
     }
 
     override suspend fun addTracksToPlaylist(playlistId: String, trackIds: List<String>) {

@@ -3,7 +3,9 @@
 package com.dustvalve.next.android.data.transfer
 
 import android.content.Context
+import androidx.room.withTransaction
 import androidx.test.core.app.ApplicationProvider
+import com.dustvalve.next.android.data.local.db.DustvalveNextDatabase
 import com.dustvalve.next.android.data.local.db.dao.DownloadDao
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
@@ -18,12 +20,16 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import io.mockk.slot
+import io.mockk.unmockkAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.serialization.encodeToString
 import okhttp3.OkHttpClient
+import org.junit.After
 import org.junit.Assert.assertThrows
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -35,6 +41,18 @@ import java.util.zip.ZipOutputStream
 
 @RunWith(RobolectricTestRunner::class)
 class PlaylistTransferRepositoryTest {
+
+    private lateinit var database: DustvalveNextDatabase
+
+    @Before fun setUp() {
+        database = mockk()
+        mockkStatic("androidx.room.RoomDatabaseKt")
+        coEvery { database.withTransaction(any<suspend () -> Any?>()) } coAnswers {
+            secondArg<suspend () -> Any?>().invoke()
+        }
+    }
+
+    @After fun tearDown() = unmockkAll()
 
     private fun track(id: String, title: String) = Track(
         id = id,
@@ -51,12 +69,16 @@ class PlaylistTransferRepositoryTest {
     private fun repo(
         context: Context,
         playlistRepo: PlaylistRepository,
-        trackDao: TrackDao = mockk<TrackDao>(relaxed = true).also { coEvery { it.insertAll(any()) } just Runs },
+        trackDao: TrackDao = mockk<TrackDao>(relaxed = true).also {
+            coEvery { it.insertAll(any()) } just Runs
+            coEvery { it.getByIdsChunk(any()) } returns emptyList()
+        },
         downloadDao: DownloadDao = mockk(relaxed = true),
     ) = PlaylistTransferRepository(
         context = context,
         playlistRepository = playlistRepo,
         downloadRepository = mockk<DownloadRepository>(relaxed = true),
+        database = database,
         trackDao = trackDao,
         downloadDao = downloadDao,
         client = mockk<OkHttpClient>(relaxed = true),

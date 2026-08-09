@@ -292,26 +292,36 @@ class CollectionDetailViewModelTest {
         coEvery { favoriteRepository.isFavorite(url) } returns false
         coEvery { playlistRepository.playlistExistsByName("My Mix") } returns false
         coEvery {
-            playlistRepository.importTracksAsPlaylist("My Mix", any())
+            playlistRepository.importTracksAsPlaylist(
+                name = "My Mix",
+                tracks = any(),
+                favoriteId = url,
+                favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+            )
         } returns Playlist(id = "imported_1", name = "My Mix")
 
         val vm = newVm()
         vm.load(sourceId = "youtube", url = url, nameHint = "My Mix")
         advanceUntilIdle()
 
-        vm.importToLibrary()
+        // Favoriting imports + favorites in one transaction (no separate add).
+        vm.toggleFavorite()
         advanceUntilIdle()
         assertThat(vm.uiState.value.importedPlaylistId).isEqualTo("imported_1")
+        assertThat(vm.uiState.value.isImported).isTrue()
 
-        // Favorite, then unfavorite: exactly the imported id is deleted.
-        vm.toggleFavorite()
-        advanceUntilIdle()
         vm.toggleFavorite()
         advanceUntilIdle()
 
-        // Favoriting a not-yet-imported collection inserts the favorite row
-        // OUTSIDE the import transaction, before the import runs.
-        coVerify(exactly = 1) { favoriteRepository.add(url, FavoriteType.YOUTUBE_PLAYLIST) }
+        coVerify(exactly = 0) { favoriteRepository.add(any(), any()) }
+        coVerify(exactly = 1) {
+            playlistRepository.importTracksAsPlaylist(
+                name = "My Mix",
+                tracks = any(),
+                favoriteId = url,
+                favoriteType = FavoriteType.YOUTUBE_PLAYLIST,
+            )
+        }
         coVerify(exactly = 1) { playlistRepository.deletePlaylist("imported_1") }
         assertThat(vm.uiState.value.importedPlaylistId).isNull()
         assertThat(vm.uiState.value.isImported).isFalse()

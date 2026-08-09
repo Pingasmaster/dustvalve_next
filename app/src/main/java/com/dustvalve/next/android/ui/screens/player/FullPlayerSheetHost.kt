@@ -59,7 +59,7 @@ internal fun FullPlayerSheetHost(
         adaptiveInfo = adaptiveInfo,
         contextEntry = sheets.upNextContextEntry,
         onDismiss = { sheets.upNextContextEntry = null },
-        onToggleFavorite = playerViewModel::toggleFavoriteById,
+        onToggleFavorite = playerViewModel::toggleFavorite,
         onAddToPlaylist = { sheets.showUpNextPlaylistSheet = true },
         onRemoveFromQueue = playerViewModel::removeQueueEntry,
     )
@@ -71,14 +71,14 @@ internal fun FullPlayerSheetHost(
         onSelectPlaylist = { playlistId ->
             sheets.showUpNextPlaylistSheet = false
             sheets.upNextContextEntry?.let { entry ->
-                playerViewModel.addTrackToPlaylist(playlistId, entry.track.id)
+                playerViewModel.addTrackToPlaylist(playlistId, entry.track)
             }
             sheets.upNextContextEntry = null
         },
         onCreatePlaylist = { name, shapeKey, iconUrl ->
             sheets.showUpNextPlaylistSheet = false
             sheets.upNextContextEntry?.let { entry ->
-                playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, entry.track.id)
+                playerViewModel.createPlaylistAndAddArbitraryTrack(name, shapeKey, iconUrl, entry.track)
             }
             sheets.upNextContextEntry = null
         },
