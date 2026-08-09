@@ -22,6 +22,7 @@ import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.MediaCacheClearer
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import com.dustvalve.next.android.download.isPauseCancellation
@@ -57,6 +58,7 @@ class DownloadRepositoryImpl(
     private val client: OkHttpClient,
     private val storageTracker: StorageTracker,
     private val youtubeRepository: YouTubeRepository,
+    private val soundCloudRepository: SoundCloudRepository,
     private val notificationCenter: DownloadProgressReporter,
     private val mediaCacheClearer: MediaCacheClearer,
     private val context: Context,
@@ -68,6 +70,7 @@ class DownloadRepositoryImpl(
         @MediaHttp client: OkHttpClient,
         storageTracker: StorageTracker,
         youtubeRepository: YouTubeRepository,
+        soundCloudRepository: SoundCloudRepository,
         notificationCenter: DownloadProgressReporter,
         mediaCacheClearer: MediaCacheClearer,
         @ApplicationContext context: Context,
@@ -79,6 +82,7 @@ class DownloadRepositoryImpl(
         client,
         storageTracker,
         youtubeRepository,
+        soundCloudRepository,
         notificationCenter,
         mediaCacheClearer,
         context,
@@ -131,7 +135,7 @@ class DownloadRepositoryImpl(
         }
         notificationCenter.withBatch(
             label = album.title,
-            totalTracks = album.tracks.count { it.streamUrl != null },
+            totalTracks = album.tracks.count { isDownloadCandidate(it) },
             kind = DownloadProgressReporter.BatchKind.ALBUM,
         ) {
             downloadAlbumInner(album)
@@ -139,7 +143,7 @@ class DownloadRepositoryImpl(
     }
 
     private suspend fun downloadAlbumInner(album: Album) {
-        val downloadable = album.tracks.filter { it.streamUrl != null }
+        val downloadable = album.tracks.filter { isDownloadCandidate(it) }
         val skipped = album.tracks.size - downloadable.size
         if (downloadable.isEmpty()) {
             throw IOException("No tracks available for download - all ${album.tracks.size} tracks lack stream URLs")
@@ -193,24 +197,29 @@ class DownloadRepositoryImpl(
 
     @Suppress("ThrowsCount")
     private suspend fun downloadTrackInner(track: Track) {
-        // YouTube watch-page -> resolved audio stream, otherwise the raw
-        // streamUrl as mp3-128 (free / preview formats only). Format
-        // preference / metered overrides only applied to HQ purchase
+        // YouTube watch-page -> resolved audio stream; SoundCloud resolves a
+        // progressive CDN URL on demand (parsed tracks ship streamUrl=null);
+        // otherwise the raw streamUrl as mp3-128 (free / preview formats only).
+        // Format preference / metered overrides only applied to HQ purchase
         // downloads, which were removed with account login.
-        val (downloadUrl, format) = if (track.source == TrackSource.YOUTUBE) {
-            // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream.
-            // Queue tracks may have resolved googlevideo.com URLs - reconstruct the watch URL.
-            val streamUrl = track.streamUrl
-                ?: throw IOException("Track '${track.title}' has no video URL")
-            val videoUrl = if (streamUrl.contains("youtube.com") || streamUrl.contains("youtu.be")) {
-                streamUrl
-            } else {
-                val videoId = track.id.removePrefix("yt_")
-                "https://www.youtube.com/watch?v=$videoId"
+        val (downloadUrl, format) = when (track.source) {
+            TrackSource.YOUTUBE -> {
+                // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream.
+                // Queue tracks may have resolved googlevideo.com URLs - reconstruct the watch URL.
+                val streamUrl = track.streamUrl
+                    ?: throw IOException("Track '${track.title}' has no video URL")
+                val videoUrl = if (streamUrl.contains("youtube.com") || streamUrl.contains("youtu.be")) {
+                    streamUrl
+                } else {
+                    val videoId = track.id.removePrefix("yt_")
+                    "https://www.youtube.com/watch?v=$videoId"
+                }
+                youtubeRepository.getDownloadableStream(videoUrl)
             }
-            youtubeRepository.getDownloadableStream(videoUrl)
-        } else {
-            (track.streamUrl to AudioFormat.MP3_128)
+
+            TrackSource.SOUNDCLOUD -> soundCloudRepository.getDownloadableStream(track)
+
+            else -> track.streamUrl to AudioFormat.MP3_128
         }
 
         if (downloadUrl == null) {
@@ -531,5 +540,12 @@ class DownloadRepositoryImpl(
     private companion object {
         /** Truncation length for unsafe download URLs in error messages. */
         private const val ERROR_URL_PREVIEW_CHARS = 50
+
+        /**
+         * SoundCloud tracks ship with streamUrl=null and resolve on demand;
+         * YouTube/Bandcamp already carry a usable URL (watch page or CDN).
+         */
+        fun isDownloadCandidate(track: Track): Boolean =
+            track.streamUrl != null || track.source == TrackSource.SOUNDCLOUD
     }
 }

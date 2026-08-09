@@ -42,7 +42,9 @@ internal class PlayerPlayCoordinator(
                 )
                 if (result.streamFailed) {
                     next = next.copy(
-                        snackbarMessage = UiText.StringResource(R.string.snackbar_audio_stream_failed),
+                        snackbarMessage = result.streamFailedMessage
+                            ?.let { UiText.DynamicString(it) }
+                            ?: UiText.StringResource(R.string.snackbar_audio_stream_failed),
                         isSnackbarError = true,
                     )
                 }

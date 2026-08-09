@@ -71,7 +71,12 @@ class PlaybackStreamResolver @Inject constructor(
         val streamUrl = track.streamUrl
         if (track.isLocal || streamUrl == null || !streamUrl.startsWith("http")) return false
         val resolvedAt = streamResolvedAtMs[track.id] ?: return false
-        return System.currentTimeMillis() - resolvedAt > STREAM_URL_TTL_MS
+        val ttlMs = if (track.source == TrackSource.SOUNDCLOUD) {
+            SOUNDCLOUD_STREAM_URL_TTL_MS
+        } else {
+            STREAM_URL_TTL_MS
+        }
+        return System.currentTimeMillis() - resolvedAt > ttlMs
     }
 
     /** Fetches a genuinely fresh stream URL, bypassing any cached/stale one. */
@@ -143,5 +148,11 @@ class PlaybackStreamResolver @Inject constructor(
          * one hour is comfortably inside both.
          */
         const val STREAM_URL_TTL_MS = 60L * 60L * 1000L
+
+        /**
+         * SoundCloud CDN signed URLs expire in roughly five minutes; re-resolve
+         * after two minutes so playback/auto-advance does not race the TTL.
+         */
+        const val SOUNDCLOUD_STREAM_URL_TTL_MS = 2L * 60L * 1000L
     }
 }

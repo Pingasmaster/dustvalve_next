@@ -26,6 +26,8 @@ data class PlaybackResolveResult(
     val sourcePath: String?,
     /** Remote resolution failed; surface a snackbar only when [reportFailure] was true. */
     val streamFailed: Boolean = false,
+    /** Optional detail for [streamFailed] (e.g. SoundCloud Go+/DRM). */
+    val streamFailedMessage: String? = null,
     /** A remote stream URL was freshly resolved; caller should stamp TTL. */
     val recordedRemoteResolution: Boolean = false,
 )
@@ -134,12 +136,12 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
             )
         } catch (e: CancellationException) {
             throw e
-        } catch (_: IOException) {
-            streamFailed(track, reportFailure)
-        } catch (_: IllegalStateException) {
-            streamFailed(track, reportFailure)
-        } catch (_: IllegalArgumentException) {
-            streamFailed(track, reportFailure)
+        } catch (e: IOException) {
+            streamFailed(track, reportFailure, e.message)
+        } catch (e: IllegalStateException) {
+            streamFailed(track, reportFailure, e.message)
+        } catch (e: IllegalArgumentException) {
+            streamFailed(track, reportFailure, e.message)
         }
     }
 
@@ -165,21 +167,23 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
             )
         } catch (e: CancellationException) {
             throw e
-        } catch (_: IOException) {
-            streamFailed(track, reportFailure)
-        } catch (_: IllegalStateException) {
-            streamFailed(track, reportFailure)
-        } catch (_: IllegalArgumentException) {
-            streamFailed(track, reportFailure)
+        } catch (e: IOException) {
+            streamFailed(track, reportFailure, e.message)
+        } catch (e: IllegalStateException) {
+            streamFailed(track, reportFailure, e.message)
+        } catch (e: IllegalArgumentException) {
+            streamFailed(track, reportFailure, e.message)
         }
     }
 
-    private fun streamFailed(track: Track, reportFailure: Boolean) = PlaybackResolveResult(
-        track = track.copy(streamUrl = null),
-        playbackFormat = null,
-        sourcePath = null,
-        streamFailed = reportFailure,
-    )
+    private fun streamFailed(track: Track, reportFailure: Boolean, message: String? = null) =
+        PlaybackResolveResult(
+            track = track.copy(streamUrl = null),
+            playbackFormat = null,
+            sourcePath = null,
+            streamFailed = reportFailure,
+            streamFailedMessage = message?.takeIf { reportFailure && it.isNotBlank() },
+        )
 
     companion object {
         /**

@@ -52,19 +52,35 @@ class SoundCloudClientIdProvider @Inject constructor(
         val homepage = httpGet(HOMEPAGE_URL)
         val scriptUrls = SCRIPT_SRC_REGEX.findAll(homepage)
             .map { it.groupValues[1] }
-            .filter { it.contains("sndcdn.com", ignoreCase = true) && it.endsWith(".js") }
+            .filter { src ->
+                src.contains("sndcdn.com", ignoreCase = true) &&
+                    SCRIPT_JS_PATH_REGEX.containsMatchIn(src)
+            }
             .toList()
             .asReversed()
 
         scriptUrls.firstNotNullOfOrNull { src ->
-            val body = try {
-                httpGet(src, rangeBytes = SCRIPT_RANGE_BYTES)
-            } catch (_: IOException) {
-                return@firstNotNullOfOrNull null
-            }
-            val match = CLIENT_ID_REGEX.find(body) ?: return@firstNotNullOfOrNull null
-            match.groupValues[1].takeIf { it.length == CLIENT_ID_LENGTH }
+            // Prefer a Range fetch for speed; fall back to the full body when
+            // the CDN rejects Range or the id sits past the window.
+            extractClientId(httpGetOrNull(src, rangeBytes = SCRIPT_RANGE_BYTES))
+                ?: extractClientId(httpGetOrNull(src, rangeBytes = null))
         } ?: throw IOException("Could not extract SoundCloud client_id from homepage scripts")
+    }
+
+    private fun extractClientId(body: String?): String? {
+        if (body.isNullOrBlank()) return null
+        for (regex in CLIENT_ID_REGEXES) {
+            val match = regex.find(body) ?: continue
+            val id = match.groupValues[1]
+            if (id.length == CLIENT_ID_LENGTH) return id
+        }
+        return null
+    }
+
+    private fun httpGetOrNull(url: String, rangeBytes: Int?): String? = try {
+        httpGet(url, rangeBytes = rangeBytes)
+    } catch (_: IOException) {
+        null
     }
 
     private fun httpGet(url: String, rangeBytes: Int? = null): String {
@@ -92,7 +108,15 @@ class SoundCloudClientIdProvider @Inject constructor(
         const val SCRIPT_RANGE_BYTES = 200_000
         const val HTTP_PARTIAL = 206
 
+        // Allow `.js`, `.js?v=...`, and `.js#...` (CDN cache-busters).
         val SCRIPT_SRC_REGEX = Regex("""src=["'](https?://[^"']+\.js[^"']*)["']""")
-        val CLIENT_ID_REGEX = Regex("""client_id\s*:\s*"([0-9a-zA-Z]{32})""")
+        val SCRIPT_JS_PATH_REGEX = Regex("""\.js(?:[?#].*)?$""", RegexOption.IGNORE_CASE)
+
+        // Match the shapes live_soundcloud_smoke.py tolerates.
+        val CLIENT_ID_REGEXES = listOf(
+            Regex("""client_id\s*[:=]\s*"([0-9a-zA-Z]{32})""""),
+            Regex(""""client_id"\s*:\s*"([0-9a-zA-Z]{32})""""),
+            Regex("""client_id\s*[:=]\s*'([0-9a-zA-Z]{32})'"""),
+        )
     }
 }

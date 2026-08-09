@@ -249,7 +249,10 @@ object SoundCloudMappers {
         else -> emptyList()
     }
 
-    fun pickBestTranscodingUrls(trackElement: JsonElement): List<String> {
+    fun pickBestTranscodingUrls(
+        trackElement: JsonElement,
+        progressiveOnly: Boolean = false,
+    ): List<String> {
         val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
             ?: return emptyList()
         data class Candidate(val url: String, val progressive: Boolean, val quality: Int)
@@ -258,10 +261,9 @@ object SoundCloudMappers {
             if (t.bool("snipped") == true) return@mapNotNull null
             val url = t.str("url") ?: return@mapNotNull null
             val protocol = t.path("format")?.str("protocol")?.lowercase().orEmpty()
-            if (protocol.contains("encrypted") || protocol.startsWith("ctr-") || protocol.startsWith("cbc-")) {
-                return@mapNotNull null
-            }
+            if (isEncryptedProtocol(protocol)) return@mapNotNull null
             if (protocol != "progressive" && protocol != "hls") return@mapNotNull null
+            if (progressiveOnly && protocol != "progressive") return@mapNotNull null
             val quality = when (t.str("quality")?.lowercase()) {
                 "hq" -> 3
                 "sq" -> 2
@@ -278,7 +280,43 @@ object SoundCloudMappers {
     }
 
     /** Best single URL for callers that only need one candidate. */
-    fun pickBestTranscodingUrl(trackElement: JsonElement): String? = pickBestTranscodingUrls(trackElement).firstOrNull()
+    fun pickBestTranscodingUrl(trackElement: JsonElement): String? =
+        pickBestTranscodingUrls(trackElement).firstOrNull()
+
+    /**
+     * True when the track lists media but every non-snipped transcoding is
+     * encrypted/Go+ DRM (no plain progressive or HLS left to try).
+     */
+    fun hasOnlyEncryptedTranscodings(trackElement: JsonElement): Boolean {
+        val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
+            ?: return false
+        var sawEncrypted = false
+        var sawPlain = false
+        for (t in transcodings) {
+            if (t.bool("snipped") == true) continue
+            val protocol = t.path("format")?.str("protocol")?.lowercase().orEmpty()
+            when {
+                isEncryptedProtocol(protocol) -> sawEncrypted = true
+                protocol == "progressive" || protocol == "hls" -> sawPlain = true
+            }
+        }
+        return sawEncrypted && !sawPlain
+    }
+
+    /** True when any non-snipped encrypted/Go+ transcoding is present. */
+    fun hasEncryptedTranscodings(trackElement: JsonElement): Boolean {
+        val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
+            ?: return false
+        return transcodings.any { t ->
+            t.bool("snipped") != true &&
+                isEncryptedProtocol(t.path("format")?.str("protocol")?.lowercase().orEmpty())
+        }
+    }
+
+    private fun isEncryptedProtocol(protocol: String): Boolean =
+        protocol.contains("encrypted") ||
+            protocol.startsWith("ctr-") ||
+            protocol.startsWith("cbc-")
 
     private fun parseShelfItem(element: JsonElement): SoundCloudShelfItem? {
         val kindRaw = element.str("kind")?.lowercase() ?: return null

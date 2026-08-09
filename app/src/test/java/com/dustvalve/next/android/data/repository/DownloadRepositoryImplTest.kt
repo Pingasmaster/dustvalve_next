@@ -13,6 +13,7 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadProgressReporter
 import com.dustvalve.next.android.domain.repository.MediaCacheClearer
+import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.google.common.truth.Truth.assertThat
 import io.mockk.Runs
@@ -56,6 +57,7 @@ class DownloadRepositoryImplTest {
     private lateinit var downloadDao: DownloadDao
     private lateinit var trackDao: TrackDao
     private lateinit var youtubeRepository: YouTubeRepository
+    private lateinit var soundCloudRepository: SoundCloudRepository
     private lateinit var mediaCacheClearer: MediaCacheClearer
     private lateinit var repo: DownloadRepositoryImpl
 
@@ -77,6 +79,7 @@ class DownloadRepositoryImplTest {
         trackDao = mockk(relaxed = true)
         coEvery { trackDao.getById(any()) } returns null
         youtubeRepository = mockk()
+        soundCloudRepository = mockk()
         mediaCacheClearer = mockk()
 
         val context = mockk<Context>()
@@ -90,6 +93,7 @@ class DownloadRepositoryImplTest {
             client = OkHttpClient(),
             storageTracker = mockk<StorageTracker>(relaxed = true),
             youtubeRepository = youtubeRepository,
+            soundCloudRepository = soundCloudRepository,
             notificationCenter = mockk<DownloadProgressReporter>(relaxed = true),
             mediaCacheClearer = mediaCacheClearer,
             context = context,
@@ -120,6 +124,11 @@ class DownloadRepositoryImplTest {
     private fun youtubeTrack(id: String) = bandcampTrack(id).copy(
         streamUrl = "https://www.youtube.com/watch?v=${id.removePrefix("yt_")}",
         source = TrackSource.YOUTUBE,
+    )
+
+    private fun soundCloudTrack(id: String) = bandcampTrack(id).copy(
+        streamUrl = null,
+        source = TrackSource.SOUNDCLOUD,
     )
 
     private fun stubStream(onCall: suspend (sink: OutputStream, startOffset: Long, expectedTotal: Long?) -> Long) {
@@ -217,6 +226,24 @@ class DownloadRepositoryImplTest {
         assertThat(inserted.captured.format).isEqualTo("opus")
         assertThat(File(inserted.captured.filePath).readBytes()).isEqualTo(newBody)
         assertThat(oldFile.exists()).isFalse()
+    }
+
+    @Test fun `soundcloud download resolves progressive stream before transfer`() = runBlocking {
+        val body = ByteArray(1024) { 7 }
+        coEvery { soundCloudRepository.getDownloadableStream(any()) } returns
+            ("https://cf-media.sndcdn.com/abc.mp3?Policy=x" to AudioFormat.MP3_128)
+        stubStream { sink, _, _ ->
+            sink.write(body)
+            body.size.toLong()
+        }
+        val inserted = slot<DownloadEntity>()
+        coEvery { downloadDao.insert(capture(inserted)) } just Runs
+
+        repo.downloadTrack(soundCloudTrack("sc_99"))
+
+        coVerify(exactly = 1) { soundCloudRepository.getDownloadableStream(any()) }
+        assertThat(inserted.captured.format).isEqualTo("mp3-128")
+        assertThat(File(filesRoot, "downloads/al1/sc_99.mp3").readBytes()).isEqualTo(body)
     }
 
     // --- M1/M2: resume sidecar ------------------------------------------
