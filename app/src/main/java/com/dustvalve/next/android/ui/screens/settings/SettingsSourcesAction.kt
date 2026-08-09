@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.ui.screens.settings
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.components.AppButtonGroup
@@ -134,11 +136,22 @@ internal fun SettingsSourcesSection(
             onAction(SettingsSourcesAction.SetLocalMusicEnabled(false))
         }
     }
+    // Rescan with missing MediaStore permission: grant then rescan without
+    // clearAll (SetLocalMusicUseMediaStore would wipe SAF folders).
+    val rescanAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted: Boolean ->
+        if (granted) {
+            onAction(SettingsSourcesAction.RescanLocalMusic)
+        }
+    }
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri: Uri? ->
         if (uri != null) {
-            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+            // READ|WRITE: deleteDocument needs a durable write grant across reboot.
+            val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             try {
                 localContext.contentResolver.takePersistableUriPermission(uri, takeFlags)
             } catch (_: SecurityException) {
@@ -183,6 +196,17 @@ internal fun SettingsSourcesSection(
                     audioPermissionLauncher.launch(legacyAudioPermission())
                 },
                 onPickFolder = { folderPickerLauncher.launch(null) },
+                onRescanMediaStore = {
+                    val granted = ContextCompat.checkSelfPermission(
+                        localContext,
+                        legacyAudioPermission(),
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (granted) {
+                        onAction(SettingsSourcesAction.RescanLocalMusic)
+                    } else {
+                        rescanAudioPermissionLauncher.launch(legacyAudioPermission())
+                    }
+                },
             )
         }
     }
@@ -197,6 +221,7 @@ private fun SourcesCardContent(
     onLocalEnableNeedsFolder: () -> Unit,
     onRequestAudioPermission: () -> Unit,
     onPickFolder: () -> Unit,
+    onRescanMediaStore: () -> Unit,
 ) {
     Column(modifier = Modifier.padding(16.dp)) {
         SettingsToggleRow(
@@ -225,6 +250,7 @@ private fun SourcesCardContent(
                 onAction = onAction,
                 onRequestAudioPermission = onRequestAudioPermission,
                 onPickFolder = onPickFolder,
+                onRescanMediaStore = onRescanMediaStore,
             )
         }
 
@@ -288,6 +314,7 @@ private fun LocalMusicSourceDetails(
     onAction: (SettingsSourcesAction) -> Unit,
     onRequestAudioPermission: () -> Unit,
     onPickFolder: () -> Unit,
+    onRescanMediaStore: () -> Unit,
 ) {
     Column(modifier = Modifier.padding(top = 12.dp)) {
         SettingsToggleRow(
@@ -322,7 +349,7 @@ private fun LocalMusicSourceDetails(
             ) {
                 LocalMusicRescanButton(
                     isScanning = state.isScanning,
-                    onRescan = { onAction(SettingsSourcesAction.RescanLocalMusic) },
+                    onRescan = onRescanMediaStore,
                 )
             }
         }

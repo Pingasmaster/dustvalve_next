@@ -1,5 +1,8 @@
 package com.dustvalve.next.android.ui.screens.settings
 
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.cache.StorageTracker
@@ -14,7 +17,9 @@ import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.update.AppUpdateController
 import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.legacyAudioPermission
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,6 +72,7 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext appContext: Context,
     storageTracker: StorageTracker,
     assetEvictionPolicy: AssetEvictionPolicy,
     settingsDataStore: SettingsDataStore,
@@ -86,6 +92,10 @@ class SettingsViewModel @Inject constructor(
         uiState = _uiState,
         settingsDataStore = settingsDataStore,
         localMusicRepository = localMusicRepository,
+        hasAudioPermission = {
+            ContextCompat.checkSelfPermission(appContext, legacyAudioPermission()) ==
+                PackageManager.PERMISSION_GRANTED
+        },
     )
 
     internal val appearance = SettingsAppearancePrefsCoordinator(

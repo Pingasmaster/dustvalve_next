@@ -2,10 +2,12 @@ package com.dustvalve.next.android.ui.screens.local
 
 import android.content.Context
 import android.content.IntentSender
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.MediaStore
 import androidx.annotation.StringRes
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -18,6 +20,7 @@ import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.util.LocaleCollation
 import com.dustvalve.next.android.util.isAtLeastR
+import com.dustvalve.next.android.util.legacyAudioPermission
 import com.dustvalve.next.android.util.runCatchingUiIgnore
 import com.dustvalve.next.android.util.runCatchingUiOrNull
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -115,8 +118,23 @@ class LocalViewModel @Inject constructor(
     val localMusicEnabled: StateFlow<Boolean> = settingsDataStore.localMusicEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val localMusicUseMediaStore: StateFlow<Boolean> = settingsDataStore.localMusicUseMediaStore
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     private val _isScanning = MutableStateFlow(false)
     val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
+    /** Bumped on resume so the screen re-reads [hasAudioPermission]. */
+    private val _permissionCheckEpoch = MutableStateFlow(0)
+    val permissionCheckEpoch: StateFlow<Int> = _permissionCheckEpoch.asStateFlow()
+
+    fun refreshPermissionCheck() {
+        _permissionCheckEpoch.update { it + 1 }
+    }
+
+    fun hasAudioPermission(): Boolean =
+        ContextCompat.checkSelfPermission(appContext, legacyAudioPermission()) ==
+            PackageManager.PERMISSION_GRANTED
 
     val allLocalTracks: StateFlow<List<Track>> = localMusicRepository.getLocalTracks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -325,13 +343,13 @@ class LocalViewModel @Inject constructor(
     }
 
     /**
-     * Permission denied: roll the enable flag back so the "Enable local
-     * music" button reappears and the user can retry (or grant from system
-     * settings). Without this, one "Deny" left localMusicEnabled = true with
-     * no scan source configured - a permanent "no local music found"
-     * dead-end with no in-app way back.
+     * Permission denied during a first-enable attempt: roll the enable flag
+     * back so the "Enable local music" button reappears. A re-grant denial
+     * (already enabled, MediaStore mode, permission still missing) must leave
+     * the flag on so the Local tab keeps showing the grant CTA.
      */
-    fun onAudioPermissionDenied() {
+    fun onAudioPermissionDenied(wasRegrant: Boolean = false) {
+        if (wasRegrant) return
         viewModelScope.launch {
             runCatchingUiIgnore {
                 settingsDataStore.setLocalMusicEnabled(false)
@@ -339,6 +357,12 @@ class LocalViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Audio permission granted. Respects the current local mode: never wipe
+     * SAF folders via [LocalMusicRepository.clearAll] just because the Local
+     * CTA ran. MediaStore scans upsert/diff on their own sentinel; SAF mode
+     * with folders configured stays on SAF and rescans those trees.
+     */
     fun onAudioPermissionGranted() {
         viewModelScope.launch {
             runCatchingUiIgnore(
@@ -346,8 +370,36 @@ class LocalViewModel @Inject constructor(
                     _isScanning.value = false
                 },
             ) {
-                localMusicRepository.clearAll()
-                settingsDataStore.setLocalMusicUseMediaStore(true)
+                val useMediaStore = settingsDataStore.getLocalMusicUseMediaStoreSync()
+                val folders = settingsDataStore.getLocalMusicFolderUrisSync()
+                if (!useMediaStore && folders.isNotEmpty()) {
+                    // Existing SAF setup: scan folders, do not force MediaStore.
+                    _isScanning.value = true
+                    localMusicRepository.scan()
+                    _isScanning.value = false
+                    localMusicRepository.scheduleSyncWork()
+                    return@runCatchingUiIgnore
+                }
+                // MediaStore path (default or empty SAF): enable MediaStore
+                // without clearAll so folder URI prefs survive accidental CTA.
+                if (!useMediaStore) {
+                    settingsDataStore.setLocalMusicUseMediaStore(true)
+                }
+                _isScanning.value = true
+                localMusicRepository.scan()
+                _isScanning.value = false
+                localMusicRepository.scheduleSyncWork()
+            }
+        }
+    }
+
+    /** Enable + scan when Local CTA does not need MediaStore audio permission. */
+    fun enableAndScanSaf() {
+        viewModelScope.launch {
+            runCatchingUiIgnore(
+                onFailure = { _isScanning.value = false },
+            ) {
+                settingsDataStore.setLocalMusicEnabled(true)
                 _isScanning.value = true
                 localMusicRepository.scan()
                 _isScanning.value = false

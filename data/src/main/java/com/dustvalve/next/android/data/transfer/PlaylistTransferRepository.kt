@@ -134,6 +134,11 @@ class PlaylistTransferRepository(
                                 throw ce
                             } catch (_: IOException) {
                                 null
+                            } catch (_: IllegalArgumentException) {
+                                // readLocalBytes refuse / bad URI: skip cover
+                                null
+                            } catch (_: SecurityException) {
+                                null
                             }
                             if (bytes != null) {
                                 zip.putNextEntry(ZipEntry(name))
@@ -510,15 +515,18 @@ class PlaylistTransferRepository(
         val uri = url.toUri()
         val stream = if (url.startsWith("file://")) {
             // Defense in depth against a poisoned DB row: only files the app
-            // itself wrote (downloads tree, which contains imagesDir) may be
-            // embedded into an exported bundle.
+            // itself wrote may be embedded (downloads tree + local_art cache).
             val file = File(requireNotNull(uri.path) { "Bad file URI: $url" }).canonicalFile
             val downloadsRoot = StoragePaths.downloadsDir(context).canonicalFile
-            require(file.path.startsWith(downloadsRoot.path + File.separator)) {
-                "Refusing to embed $url: outside the app's downloads tree"
+            val localArtRoot = File(context.filesDir, "local_art").canonicalFile
+            val underDownloads = file.path.startsWith(downloadsRoot.path + File.separator)
+            val underLocalArt = file.path.startsWith(localArtRoot.path + File.separator)
+            require(underDownloads || underLocalArt) {
+                "Refusing to embed $url: outside allowed app storage"
             }
             file.inputStream()
         } else {
+            // content:// including MediaStore albumart and SAF document URIs
             requireNotNull(context.contentResolver.openInputStream(uri)) { "Cannot open $url" }
         }
         return stream.use { it.readBytes() }

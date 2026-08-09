@@ -2,9 +2,12 @@ package com.dustvalve.next.android.data.local.scanner
 
 import android.content.ContentUris
 import android.content.Context
+import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
+import android.util.Size
 import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.dao.deleteByIds
@@ -16,6 +19,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,6 +35,7 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
     companion object {
         private const val FOLDER_URI_SENTINEL = "mediastore"
         private const val DB_INSERT_CHUNK_SIZE = 500
+        private const val THUMBNAIL_SIZE_PX = 512
     }
 
     suspend fun scan(): ScanResult = withContext(ioDispatcher) {
@@ -158,9 +163,10 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
     }
 
     /**
-     * Prefer embedded cover art from a sample track (full-res APIC/covr) over
-     * MediaStore's often-downscaled albumart URI. Cache under local_art/ so
-     * Coil and the player get a stable file:// URL.
+     * Prefer embedded cover art from a sample track (full-res APIC/covr), then
+     * [ContentResolver.loadThumbnail] on API 29+, then the legacy MediaStore
+     * albumart URI. Cache under local_art/ so Coil and the player get a stable
+     * file:// URL.
      */
     private fun resolveAlbumArt(albumId: Long, sampleTrackUri: Uri): String {
         val artFile = File(context.filesDir, "local_art/local_ms_album_$albumId.jpg")
@@ -173,9 +179,11 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
                 }
                 return Uri.fromFile(artFile).toString()
             } catch (_: Exception) {
-                // Fall through to MediaStore albumart.
+                // Fall through to thumbnail / albumart.
             }
         }
+        val fromThumbnail = loadThumbnailToFile(sampleTrackUri, artFile)
+        if (fromThumbnail != null) return fromThumbnail
         return mediaStoreAlbumArtUri(albumId)
     }
 
@@ -192,6 +200,29 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
             } catch (_: Exception) {
                 // Ignore release errors
             }
+        }
+    }
+
+    /**
+     * API 29+ thumbnail for the track URI. Prefer this over the deprecated
+     * albumart content URI when embedded art is missing.
+     */
+    private fun loadThumbnailToFile(trackUri: Uri, artFile: File): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        return try {
+            val bitmap = context.contentResolver.loadThumbnail(
+                trackUri,
+                Size(THUMBNAIL_SIZE_PX, THUMBNAIL_SIZE_PX),
+                null,
+            )
+            artFile.parentFile?.mkdirs()
+            FileOutputStream(artFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            }
+            bitmap.recycle()
+            Uri.fromFile(artFile).toString()
+        } catch (_: Exception) {
+            null
         }
     }
 
