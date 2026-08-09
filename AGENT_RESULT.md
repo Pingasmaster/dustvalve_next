@@ -9,7 +9,9 @@
 - Branch: `wip/lint-hard-unstable-collections`
 - Worktree: `/home/user/dustvalve_next_lint_unstable_collections`
 - Base: `f2c6019` (`wip/lint-hard-base`)
-- Tip SHA: see `git rev-parse HEAD` after commit on this branch
+- Ignore-removal SHA: `38dad4ae69329b31f4ae125f3cdc78c9609a3675`
+- Branch tip: see `git rev-parse HEAD` on this branch (AGENT_RESULT follow-up commits)
+
 
 ## Path taken
 
