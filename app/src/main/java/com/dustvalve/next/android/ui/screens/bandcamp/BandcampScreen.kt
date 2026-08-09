@@ -155,6 +155,7 @@ private val discoverCategories = listOf(
     GenreCategory("audiobooks", "audiobooks", Color(0xFFB0C846)),
     GenreCategory("world", "world", Color(0xFF83D048)),
     GenreCategory("spoken word", "spoken-word", Color(0xFFF7A664)),
+    GenreCategory("kids", "kids", Color(0xFFF67356)),
     GenreCategory("podcasts", "podcasts", Color(0xFFD6BE48)),
 )
 
@@ -213,6 +214,7 @@ fun BandcampScreen(
     val loadingAlbumMsg = stringResource(R.string.common_loading_album)
     val failedLoadMsg = stringResource(R.string.snackbar_failed_load)
     val failedToPlayMsg = stringResource(R.string.common_failed_to_play)
+    val previewUnavailableMsg = stringResource(R.string.snackbar_bandcamp_preview_unavailable)
 
     // Bridge TextFieldState changes to SearchViewModel
     LaunchedEffect(textFieldState) {
@@ -332,6 +334,9 @@ fun BandcampScreen(
                 CategorySheetContent(
                     carouselItemWidth = adaptiveInfo.carouselItemWidth,
                     albums = state.categoryAlbums,
+                    hasMore = state.categoryHasMore,
+                    isLoadingMore = state.isCategoryLoadingMore,
+                    onLoadMore = { viewModel.loadMoreCategory() },
                     onAlbumClick = { url ->
                         viewModel.dismissCategory()
                         onAlbumClick(url)
@@ -708,8 +713,12 @@ fun BandcampScreen(
                                                                 runCatchingPlayback(snackbarHostState, failedToPlayMsg) {
                                                                     val track = searchViewModel.resolveBandcampTrack(result.url)
                                                                         ?: error("no track match")
-                                                                    playerViewModel.playTrack(track)
-                                                                    onExpandPlayer()
+                                                                    if (track.streamUrl.isNullOrBlank()) {
+                                                                        snackbarHostState.showSnackbar(previewUnavailableMsg)
+                                                                    } else {
+                                                                        playerViewModel.playTrack(track)
+                                                                        onExpandPlayer()
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -1063,11 +1072,33 @@ private fun SearchResultItem(result: SearchResult) {
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun CategorySheetContent(carouselItemWidth: Dp, albums: List<Album>, onAlbumClick: (String) -> Unit) {
+private fun CategorySheetContent(
+    carouselItemWidth: Dp,
+    albums: List<Album>,
+    hasMore: Boolean,
+    isLoadingMore: Boolean,
+    onLoadMore: () -> Unit,
+    onAlbumClick: (String) -> Unit,
+) {
     val carouselAlbums = albums.take(10)
     val listAlbums = albums.drop(10)
+    val listState = rememberLazyListState()
+    val loadMore by rememberUpdatedState(onLoadMore)
+
+    LaunchedEffect(listState, hasMore, isLoadingMore, albums.size) {
+        snapshotFlow {
+            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()
+            val totalCount = listState.layoutInfo.totalItemsCount
+            last != null && totalCount > 0 && last.index >= totalCount - 3
+        }.collect { nearEnd ->
+            if (nearEnd && hasMore && !isLoadingMore && albums.isNotEmpty()) {
+                loadMore()
+            }
+        }
+    }
 
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(bottom = 10.dp),
     ) {
@@ -1177,6 +1208,17 @@ private fun CategorySheetContent(carouselItemWidth: Dp, albums: List<Album>, onA
                         color = Color.White,
                     )
                 }
+            }
+        }
+
+        if (isLoadingMore) {
+            item(key = "load_more") {
+                LinearWavyProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                        .animateItem(),
+                )
             }
         }
     }

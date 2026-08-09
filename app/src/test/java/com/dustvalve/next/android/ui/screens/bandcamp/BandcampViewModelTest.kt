@@ -89,4 +89,25 @@ class BandcampViewModelTest {
         assertThat(state.isCategoryLoading).isFalse()
         assertThat(state.categoryAlbums).hasSize(1)
     }
+
+    @Test fun `loadMoreCategory appends next page using cursor`() = runTest(dispatcher) {
+        val page1 = listOf(mockk<Album>(relaxed = true) { every { id } returns "a1" })
+        val page2 = listOf(mockk<Album>(relaxed = true) { every { id } returns "a2" })
+        coEvery { discover.invoke("rock", null) } returns DiscoverResult(page1, cursor = "cur1")
+        coEvery { discover.invoke("rock", "cur1") } returns DiscoverResult(page2, cursor = "cur2")
+        val vm = BandcampViewModel(discover, settings)
+        vm.selectCategory("rock", "rock")
+        advanceUntilIdle()
+        assertThat(vm.uiState.value.categoryHasMore).isTrue()
+        assertThat(vm.uiState.value.categoryCursor).isEqualTo("cur1")
+
+        vm.loadMoreCategory()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertThat(state.categoryAlbums.map { it.id }).containsExactly("a1", "a2").inOrder()
+        assertThat(state.categoryCursor).isEqualTo("cur2")
+        assertThat(state.isCategoryLoadingMore).isFalse()
+        coVerify { discover.invoke("rock", "cur1") }
+    }
 }

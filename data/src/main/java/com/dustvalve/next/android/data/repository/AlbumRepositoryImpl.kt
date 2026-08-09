@@ -49,12 +49,12 @@ class AlbumRepositoryImpl(
     ) : this(gateway.database, gateway.albumDao, gateway.trackDao, gateway.favoriteDao, albumScraper, downloadRepository, ioDispatcher)
 
     companion object {
-        // Albums are immutable once released - title, artist, tracks, art and
-        // tags don't change. We deliberately treat any cached row that has at
-        // least one persisted track as the source of truth and never refetch
-        // it, in line with the unified "never re-fetch a resource we've
-        // already gotten" caching policy. Stub rows (no tracks) and bare
-        // cache misses still trigger a foreground scrape.
+        // Album *metadata* (title, artist, track list, art, tags) is immutable
+        // once released, so any cached row with tracks is treated as the
+        // source of truth and never re-fetched. Stub rows and cache misses
+        // still scrape. Signed Bandcamp mp3-128 CDN URLs, however, expire in
+        // ~24h - DownloadRepositoryImpl / PlaybackStreamResolver force
+        // re-resolve those at use time rather than relying on this TTL.
         private const val REVALIDATE_THRESHOLD_MS = Long.MAX_VALUE
     }
 

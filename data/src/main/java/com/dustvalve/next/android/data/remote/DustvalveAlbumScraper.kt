@@ -104,8 +104,9 @@ class DustvalveAlbumScraper @Inject constructor(
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
-        val tralbumJson = HtmlUtils.extractJsonFromScript(html, "TralbumData")
-            ?: HtmlUtils.extractDataAttribute(html, "data-tralbum")
+        // Live Bandcamp pages ship data-tralbum; var TralbumData is legacy.
+        val tralbumJson = HtmlUtils.extractDataAttribute(html, "data-tralbum")
+            ?: HtmlUtils.extractJsonFromScript(html, "TralbumData")
             ?: throw IllegalStateException("Could not find TralbumData in page: $albumUrl")
         return AlbumPagePayload(
             requestedUrl = albumUrl,
@@ -175,7 +176,11 @@ class DustvalveAlbumScraper @Inject constructor(
             tags = tags,
             price = albumPrice,
             discographyOffer = extractDiscographyOffer(html),
-            singleTrackPrice = singleTrackPrice(tralbumData.defaultPrice, albumPrice),
+            // Album-page defaultPrice is the album PWYW suggestion, NOT the
+            // per-track sale price (often several times higher). Leave null
+            // here; AlbumDetailViewModel fills singleTrackPrice from track-
+            // page fan-out via fetchTrackPrice.
+            singleTrackPrice = null,
         )
     }
 
@@ -215,21 +220,11 @@ class DustvalveAlbumScraper @Inject constructor(
     }
 
     /**
-     * Only surface a per-track price when bandcamp gives us one AND it differs
-     * from the album price; otherwise the "Buy a single track" option would be
-     * redundant noise.
-     */
-    private fun singleTrackPrice(defaultPrice: Double?, albumPrice: AlbumPrice?): AlbumPrice? {
-        if (defaultPrice == null || defaultPrice <= 0.0 || albumPrice == null) return null
-        if (defaultPrice == albumPrice.amount) return null
-        return AlbumPrice(amount = defaultPrice, currency = albumPrice.currency)
-    }
-
-    /**
      * Fetches a single Bandcamp track page and returns the per-track
      * `defaultPrice` parsed from its `data-tralbum` JSON. Used by the album
      * detail viewmodel to fill the row subtitle with each track's individual
-     * sale price (Bandcamp doesn't ship per-track prices on the album page).
+     * sale price (Bandcamp doesn't ship per-track prices on the album page)
+     * and to populate [Album.singleTrackPrice] for the buy menu.
      *
      * Currency isn't reliably present on the track page's TralbumData, so the
      * caller passes the album-level currency (Bandcamp uses one currency per
@@ -250,8 +245,8 @@ class DustvalveAlbumScraper @Inject constructor(
             return@withContext null
         }
         ensureActive()
-        val tralbumJson = HtmlUtils.extractJsonFromScript(html, "TralbumData")
-            ?: HtmlUtils.extractDataAttribute(html, "data-tralbum")
+        val tralbumJson = HtmlUtils.extractDataAttribute(html, "data-tralbum")
+            ?: HtmlUtils.extractJsonFromScript(html, "TralbumData")
             ?: return@withContext null
         val tralbumData = try {
             json.decodeFromString<TralbumData>(tralbumJson)

@@ -52,8 +52,9 @@ class DustvalveStreamResolver @Inject constructor(
         }
         ensureActive()
 
-        val tralbumJson = HtmlUtils.extractJsonFromScript(html, "TralbumData")
-            ?: HtmlUtils.extractDataAttribute(html, "data-tralbum")
+        // Live pages ship data-tralbum; var TralbumData is legacy fallback.
+        val tralbumJson = HtmlUtils.extractDataAttribute(html, "data-tralbum")
+            ?: HtmlUtils.extractJsonFromScript(html, "TralbumData")
             ?: return@withContext null
 
         val tralbumData = try {

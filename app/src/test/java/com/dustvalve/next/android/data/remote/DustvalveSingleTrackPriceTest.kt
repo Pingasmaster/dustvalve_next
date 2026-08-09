@@ -2,7 +2,6 @@
 
 package com.dustvalve.next.android.data.remote
 
-import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -15,10 +14,11 @@ import org.junit.Test
 /**
  * Verifies the per-track ("Buy a single track") price plumbing. We feed real
  * captured album / track HTML into the scraper through a TLS test server and
- * assert the resulting [Album.singleTrackPrice]. Single-track pages should
- * NOT surface a per-track price (it'd be redundant with the album price);
- * multi-track albums should surface bandcamp's `defaultPrice` only when it
- * differs from the album's headline price.
+ * assert the resulting [com.dustvalve.next.android.domain.model.Album.singleTrackPrice].
+ * Album-page `defaultPrice` is the album PWYW suggestion and must NOT become
+ * singleTrackPrice (live track pages often list ~1.50 while album defaultPrice
+ * is ~9). The buy menu is filled later from track-page fan-out in
+ * AlbumDetailViewModel.
  */
 class DustvalveSingleTrackPriceTest {
 
@@ -41,31 +41,29 @@ class DustvalveSingleTrackPriceTest {
         ?: error("missing fixture fixtures/bandcamp/$name")
 
     @Test fun `single-track release does not surface a redundant per-track price`() = runTest {
-        // moeshop's HARDCODED is its own /track/ release: defaultPrice ==
-        // album price (both 1.50 USD), so singleTrackPrice should be null
-        // and the "Buy a single track" menu option will not be offered.
+        // moeshop's HARDCODED is its own /track/ release: scrape leaves
+        // singleTrackPrice null (album price alone is enough for the buy CTA).
         setup.server.enqueue(MockResponse().setBody(loadFixture("track_moeshop_hardcoded.html")))
         val album = scraper.scrapeAlbum(setup.url("/track/hardcoded"))
         assertThat(album.price).isEqualTo(AlbumPrice(amount = 1.5, currency = "USD"))
         assertThat(album.singleTrackPrice).isNull()
     }
 
-    @Test fun `multi-track album with differing defaultPrice surfaces a per-track price`() = runTest {
-        // Radiohead's "In Rainbows": album 9.99 GBP, defaultPrice 9.0 GBP.
-        // Different -> singleTrackPrice exposed so the album viewer can show
-        // a "Buy a single track (GBP 9.00)" option.
+    @Test fun `multi-track album does not map album defaultPrice to singleTrackPrice`() = runTest {
+        // Radiohead's "In Rainbows": album 9.99 GBP, album-page defaultPrice
+        // 9.0 GBP (PWYW suggestion). Real per-track sale price on /track/15-step
+        // is 1.5 - mapping defaultPrice here would show a false "Buy a single
+        // track (GBP 9.00)". Scrape must leave singleTrackPrice null.
         setup.server.enqueue(MockResponse().setBody(loadFixture("album_radiohead_in_rainbows.html")))
         val album = scraper.scrapeAlbum(setup.url("/album/in-rainbows"))
         assertThat(album.price).isEqualTo(AlbumPrice(amount = 9.99, currency = "GBP"))
-        assertThat(album.singleTrackPrice).isEqualTo(AlbumPrice(amount = 9.0, currency = "GBP"))
+        assertThat(album.singleTrackPrice).isNull()
     }
 
-    @Test fun `defaultPrice equal to album price is suppressed`() = runTest {
-        // moeshop track again - defaultPrice == album price (both 1.5). The
-        // suppression rule lives in the scraper, not the UI, so we double
-        // down on it here.
+    @Test fun `fetchTrackPrice reads the track-page defaultPrice`() = runTest {
+        // Live track pages advertise the real per-track sale price.
         setup.server.enqueue(MockResponse().setBody(loadFixture("track_moeshop_hardcoded.html")))
-        val album = scraper.scrapeAlbum(setup.url("/track/hardcoded"))
-        assertThat(album.singleTrackPrice).isNull()
+        val price = scraper.fetchTrackPrice(setup.url("/track/hardcoded"), "USD")
+        assertThat(price).isEqualTo(AlbumPrice(amount = 1.5, currency = "USD"))
     }
 }

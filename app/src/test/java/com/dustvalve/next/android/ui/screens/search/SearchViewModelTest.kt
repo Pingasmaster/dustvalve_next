@@ -141,18 +141,17 @@ class SearchViewModelTest {
         job.cancel()
     }
 
-    @Test fun `loadMore appends deduplicated results and bumps page`() = runTest(dispatcher) {
+    @Test fun `loadMore does nothing after page 1 because Bandcamp has no pagination`() = runTest(dispatcher) {
         coEvery { search.invoke(any(), 1, any()) } returns listOf(result("a"), result("b"))
-        coEvery { search.invoke(any(), 2, any()) } returns listOf(result("b"), result("c"))
         val vm = vm()
         vm.onQueryChange("beat")
         advanceUntilIdle()
+        assertThat(vm.uiState.value.hasMore).isFalse()
 
         vm.loadMore()
         advanceUntilIdle()
-
-        assertThat(vm.uiState.value.results.map { it.url }).containsExactly("a", "b", "c").inOrder()
-        assertThat(vm.uiState.value.page).isEqualTo(3)
+        coVerify(exactly = 1) { search.invoke(any(), any(), any()) }
+        assertThat(vm.uiState.value.results).hasSize(2)
     }
 
     @Test fun `loadMore does nothing when hasMore is false`() = runTest(dispatcher) {

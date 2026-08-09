@@ -515,6 +515,7 @@
     <string name="snackbar_create_playlist_failed">Не удалось создать плейлист</string>
     <string name="snackbar_playing_next">«<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>» будет следующим</string>
     <string name="snackbar_audio_stream_failed">Не удалось загрузить аудиопоток</string>
+    <string name="snackbar_bandcamp_preview_unavailable">Превью недоступно. Купите на <xliff:g id="brand">Bandcamp</xliff:g>.</string>
     <string name="snackbar_scan_failed">Сканирование не удалось: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
 
     <!-- Crash reporting (opt-in, on-device only) -->

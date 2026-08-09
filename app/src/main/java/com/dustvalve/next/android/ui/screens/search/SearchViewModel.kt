@@ -257,7 +257,10 @@ class SearchViewModel @Inject constructor(
                     results = mergedResults,
                     isLoading = false,
                     page = page + 1,
-                    hasMore = if (isLocalFilter) false else remoteResults.isNotEmpty(),
+                    // Bandcamp autocomplete_elastic has no page 2; scraper
+                    // returns empty for page > 1. Stop paging after the first
+                    // batch so the UI does not fire a useless empty request.
+                    hasMore = false,
                     error = null,
                 )
             }

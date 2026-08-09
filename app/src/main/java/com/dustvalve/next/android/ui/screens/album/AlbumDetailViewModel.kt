@@ -185,8 +185,22 @@ class AlbumDetailViewModel @Inject constructor(
                                 albumRepository.fetchBandcampTrackPrice(trackUrl, currency)
                             }
                             if (price != null) {
-                                _uiState.update {
-                                    it.copy(trackPrices = it.trackPrices + (trackId to price))
+                                _uiState.update { state ->
+                                    val prices = state.trackPrices + (trackId to price)
+                                    val single = representativeSingleTrackPrice(
+                                        prices = prices.values,
+                                        albumPrice = state.album?.price,
+                                    )
+                                    state.copy(
+                                        trackPrices = prices,
+                                        album = state.album?.let { album ->
+                                            if (album.singleTrackPrice == single) {
+                                                album
+                                            } else {
+                                                album.copy(singleTrackPrice = single)
+                                            }
+                                        },
+                                    )
                                 }
                             }
                         }
@@ -354,5 +368,34 @@ class AlbumDetailViewModel @Inject constructor(
     fun clearSnackbar() {
         retryAction = null
         _uiState.update { it.copy(snackbarMessage = null, isSnackbarError = false) }
+    }
+
+    /** Surface when every track lacks an mp3-128 preview (licensed / non-streamable). */
+    fun notifyPreviewUnavailable() {
+        _uiState.update {
+            it.copy(
+                snackbarMessage = UiText.StringResource(R.string.snackbar_bandcamp_preview_unavailable),
+                isSnackbarError = true,
+            )
+        }
+    }
+
+    companion object {
+        /**
+         * Pick a representative per-track sale price for the buy menu once
+         * track-page fan-out has returned prices. Album-page `defaultPrice` is
+         * NOT used (it is the album PWYW suggestion). Prefer a price that
+         * differs from the album headline; otherwise the first known track
+         * price. Null when every track price matches the album (redundant) or
+         * none are known yet.
+         */
+        internal fun representativeSingleTrackPrice(
+            prices: Collection<AlbumPrice>,
+            albumPrice: AlbumPrice?,
+        ): AlbumPrice? {
+            if (prices.isEmpty()) return null
+            val differing = prices.firstOrNull { albumPrice == null || it.amount != albumPrice.amount }
+            return differing
+        }
     }
 }

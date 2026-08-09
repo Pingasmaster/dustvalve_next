@@ -490,6 +490,7 @@
     <string name="snackbar_create_playlist_failed">Playlist konnte nicht erstellt werden</string>
     <string name="snackbar_playing_next">“<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>” wird als Nächstes abgespielt</string>
     <string name="snackbar_audio_stream_failed">Audiostream konnte nicht geladen werden</string>
+    <string name="snackbar_bandcamp_preview_unavailable">Vorschau nicht verfügbar. Auf <xliff:g id="brand">Bandcamp</xliff:g> kaufen.</string>
     <string name="snackbar_scan_failed">Scan fehlgeschlagen: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
 
     <!-- Crash reporting (opt-in, on-device only) -->
