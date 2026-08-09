@@ -10,6 +10,9 @@ import com.dustvalve.next.android.data.remote.genreSubTags
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.usecase.DiscoverDustvalveUseCase
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -22,7 +25,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class BandcampUiState(
     /** Preview thumbnails per genre tag (loaded on init) */
@@ -93,7 +95,13 @@ class BandcampViewModel @Inject constructor(
         }
         viewModelScope.launch {
             _uiState.update { it.copy(genreValidating = true, genreError = null) }
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NETWORK) }
+            
+                },
+            ) {
+
                 val result = discoverDustvalveUseCase(genre = slug)
                 if (result.albums.isEmpty()) {
                     _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NOT_FOUND) }
@@ -103,9 +111,6 @@ class BandcampViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(genreValidating = false, showAddGenreDialog = false, newGenreText = "")
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(genreValidating = false, genreError = GenreError.NETWORK) }
             }
         }
     }
@@ -125,31 +130,27 @@ class BandcampViewModel @Inject constructor(
             // firing all ~27 requests at Bandcamp at once; tiles fill in as they
             // arrive.
             val semaphore = Semaphore(PREVIEW_CONCURRENCY)
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause -> Log.e(TAG, "loadPreviews failed", cause) },
+            ) {
                 coroutineScope {
                     GENRE_TAGS.forEach { tag ->
                         launch {
                             semaphore.withPermit {
-                                try {
+                                runCatchingUiIgnore(
+                                    onFailure = { cause -> Log.e(TAG, "loadPreviews($tag) failed", cause) },
+                                ) {
                                     val genreParam = tag.takeIf { it.isNotEmpty() }
                                     val result = discoverDustvalveUseCase(genre = genreParam)
                                     val preview = result.albums.take(PREVIEW_COUNT)
                                     _uiState.update {
                                         it.copy(categoryPreviews = it.categoryPreviews + (tag to preview))
                                     }
-                                } catch (e: CancellationException) {
-                                    throw e
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "loadPreviews($tag) failed", e)
                                 }
                             }
                         }
                     }
                 }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e(TAG, "loadPreviews failed", e)
             }
         }
     }
@@ -190,7 +191,8 @@ class BandcampViewModel @Inject constructor(
         // shows the spinner, and clear any stale error from a previous attempt.
         _uiState.update { it.copy(isCategoryLoading = true, categoryError = null) }
         loadCategoryJob = viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_failed_load) {
+
                 val genreParam = tag.takeIf { it.isNotEmpty() }
                 val result = discoverDustvalveUseCase(genre = genreParam)
                 Log.d(TAG, "loadCategoryAlbums($tag): ${result.albums.size} albums returned")
@@ -201,15 +203,15 @@ class BandcampViewModel @Inject constructor(
                         categoryError = null,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.e(TAG, "loadCategoryAlbums($tag) failed", e)
+            }.onFailure { error, cause ->
+                Log.e(TAG, "loadCategoryAlbums($tag) failed", cause)
                 _uiState.update {
                     it.copy(
                         isCategoryLoading = false,
-                        categoryError = UiText.orResource(e.message, R.string.snackbar_failed_load),
+                        categoryError = error,
                     )
                 }
+            
             }
         }
     }

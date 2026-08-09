@@ -10,6 +10,9 @@ import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +23,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class PlaylistDetailUiState(
     val playlist: Playlist? = null,
@@ -114,12 +116,15 @@ class PlaylistDetailViewModel @Inject constructor(
         val newPinned = !playlist.isPinned
         _uiState.update { it.copy(playlist = playlist.copy(isPinned = newPinned)) }
         viewModelScope.launch {
-            try {
-                playlistRepository.pinPlaylist(playlist.id, newPinned)
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+            runCatchingUiIgnore(
+                onFailure = { _ ->
                 // Roll back the optimistic flip on failure.
                 _uiState.update { it.copy(playlist = playlist) }
+            
+                },
+            ) {
+
+                playlistRepository.pinPlaylist(playlist.id, newPinned)
             }
         }
     }
@@ -132,7 +137,8 @@ class PlaylistDetailViewModel @Inject constructor(
 
         _uiState.update { it.copy(isDownloading = true) }
         downloadJob = viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_download_failed) {
+
                 downloadController.downloadPlaylistBlocking(
                     label = playlist?.name.orEmpty(),
                     tracks = tracks,
@@ -153,43 +159,45 @@ class PlaylistDetailViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 retryAction = { downloadAll() }
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
                         snackbarMessage =
-                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
 
     fun removeTrack(trackId: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.playlist_error_remove_track) {
+
                 currentPlaylistId?.let { playlistId ->
                     playlistRepository.removeTrackFromPlaylist(playlistId, trackId)
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.playlist_error_remove_track)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(error = error) }
+            
             }
         }
     }
 
     fun moveTrack(fromIndex: Int, toIndex: Int) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.playlist_error_move_track) {
+
                 currentPlaylistId?.let { playlistId ->
                     playlistRepository.moveTrackInPlaylist(playlistId, fromIndex, toIndex)
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.playlist_error_move_track)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(error = error) }
+            
             }
         }
     }

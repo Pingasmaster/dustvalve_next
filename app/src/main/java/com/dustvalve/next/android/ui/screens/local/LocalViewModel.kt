@@ -17,6 +17,8 @@ import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.util.LocaleCollation
+import com.dustvalve.next.android.util.runCatchingUiOrNull
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import com.dustvalve.next.android.util.isAtLeastR
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -39,7 +41,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class LocalUiState(
     val query: String = "",
@@ -172,7 +173,8 @@ class LocalViewModel @Inject constructor(
         // One-shot restore at construction. Sort + filters are independently
         // gated by their own toggles in Settings.
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 if (settingsDataStore.keepLocalSort.first()) {
                     val sortName = settingsDataStore.localSortOption.first()
                     val reverse = settingsDataStore.localReverseOrder.first()
@@ -201,7 +203,7 @@ class LocalViewModel @Inject constructor(
                         )
                     }
                 }
-            } catch (_: Throwable) { /* best-effort restore */ }
+            }
         }
         // Persist sort changes when the toggle is on. drop(1) skips the
         // initial state (we don't want to overwrite restored values with the
@@ -213,9 +215,10 @@ class LocalViewModel @Inject constructor(
                 .drop(1)
                 .collect { (name, reverse) ->
                     if (settingsDataStore.keepLocalSort.first()) {
-                        try {
+                        runCatchingUiIgnore {
+
                             settingsDataStore.setLocalSort(name, reverse)
-                        } catch (_: Throwable) { }
+                        }
                     }
                 }
         }
@@ -234,7 +237,8 @@ class LocalViewModel @Inject constructor(
                 .drop(1)
                 .collect { snap ->
                     if (settingsDataStore.keepLocalFilters.first()) {
-                        try {
+                        runCatchingUiIgnore {
+
                             settingsDataStore.setLocalFilters(
                                 artists = snap.artists,
                                 albums = snap.albums,
@@ -242,7 +246,7 @@ class LocalViewModel @Inject constructor(
                                 favoritesOnly = snap.favoritesOnly,
                                 folders = snap.folders,
                             )
-                        } catch (_: Throwable) { }
+                        }
                     }
                 }
         }
@@ -314,10 +318,9 @@ class LocalViewModel @Inject constructor(
 
     fun enableLocalMusic() {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 settingsDataStore.setLocalMusicEnabled(true)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -331,26 +334,28 @@ class LocalViewModel @Inject constructor(
      */
     fun onAudioPermissionDenied() {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 settingsDataStore.setLocalMusicEnabled(false)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun onAudioPermissionGranted() {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                _isScanning.value = false
+            
+                },
+            ) {
+
                 localMusicRepository.clearAll()
                 settingsDataStore.setLocalMusicUseMediaStore(true)
                 _isScanning.value = true
                 localMusicRepository.scan()
                 _isScanning.value = false
                 localMusicRepository.scheduleSyncWork()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _isScanning.value = false
             }
         }
     }
@@ -451,7 +456,13 @@ class LocalViewModel @Inject constructor(
 
     private suspend fun performSearch(query: String) {
         _uiState.update { it.copy(isSearching = true) }
-        try {
+        runCatchingUiIgnore(
+            onFailure = { cause ->
+            _uiState.update { it.copy(isSearching = false) }
+        
+            },
+        ) {
+
             val filter = _uiState.value.searchFilter
             val results = withContext(ioDispatcher) {
                 // The IO wrap stays here (not in the repository) so the
@@ -468,9 +479,6 @@ class LocalViewModel @Inject constructor(
                 }
             }
             _uiState.update { it.copy(searchResults = results, isSearching = false) }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            _uiState.update { it.copy(isSearching = false) }
         }
     }
 
@@ -487,7 +495,13 @@ class LocalViewModel @Inject constructor(
      */
     fun deleteLocalTrack(track: Track) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                reportDeleteFailure()
+            
+                },
+            ) {
+
                 val rawUrl = track.streamUrl
                 if (rawUrl.isNullOrBlank()) {
                     deleteDbRow(track.id)
@@ -499,10 +513,8 @@ class LocalViewModel @Inject constructor(
                         // Not a content URI (e.g. plain file path): best-effort direct
                         // delete; the DB row goes regardless since there is no
                         // consent flow to fall back to.
-                        try {
+                        runCatchingUiIgnore {
                             appContext.contentResolver.delete(uri, null, null)
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
                         }
                         deleteDbRow(track.id)
                     }
@@ -511,20 +523,14 @@ class LocalViewModel @Inject constructor(
 
                     else -> deleteMediaStoreItem(track.id, uri)
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                reportDeleteFailure()
             }
         }
     }
 
     private suspend fun deleteSafDocument(trackId: String, uri: Uri) {
-        val deleted = try {
+        val deleted = runCatchingUiOrNull {
             DocumentsContract.deleteDocument(appContext.contentResolver, uri)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            false
-        }
+        } ?: false
         if (deleted) deleteDbRow(trackId) else reportDeleteFailure()
     }
 
@@ -534,14 +540,9 @@ class LocalViewModel @Inject constructor(
      * user-consent delete request whose IntentSender the screen launches.
      */
     private suspend fun deleteMediaStoreItem(trackId: String, uri: Uri) {
-        val deleted = try {
+        val deleted = runCatchingUiOrNull {
             appContext.contentResolver.delete(uri, null, null) > 0
-        } catch (_: SecurityException) {
-            false
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            false
-        }
+        } ?: false
         if (deleted) {
             deleteDbRow(trackId)
             return
@@ -551,11 +552,9 @@ class LocalViewModel @Inject constructor(
         val sender = if (!isAtLeastR()) {
             null
         } else {
-            try {
+            runCatchingUiOrNull {
+
                 MediaStore.createDeleteRequest(appContext.contentResolver, listOf(uri)).intentSender
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
             }
         }
         if (sender != null) {
@@ -586,15 +585,18 @@ class LocalViewModel @Inject constructor(
     }
 
     private suspend fun deleteDbRow(trackId: String) {
-        try {
+        runCatchingUiIgnore(
+            onFailure = { cause ->
+            reportDeleteFailure()
+        
+            },
+        ) {
+
             localMusicRepository.deleteTrackRows(listOf(trackId))
             // SAF-mode covers live at local_art/<trackId>.jpg; drop the orphan.
             // The cover file deletion deliberately stays in the ViewModel: the
             // repository deletes DB rows only.
             File(appContext.filesDir, "local_art/$trackId.jpg").delete()
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            reportDeleteFailure()
         }
     }
 

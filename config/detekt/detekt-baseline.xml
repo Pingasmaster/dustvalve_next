@@ -11,7 +11,8 @@
     Mix playlistId wire offsets (protocol literals clearer as numbers).
   - MaxLineLength on test fixtures / SQL / ytcfg HTML samples.
   - ParameterNaming on Compose onXyz callbacks (past-tense event names).
-  - TooGenericExceptionCaught on ViewModel catch (Exception) UI error surfaces.
+  - TooGenericExceptionCaught confined to UiResult.kt (shared ViewModel
+    failure choke point); AppUpdateController still pending.
   - LoopWithTooManyJumpStatements / NestedBlockDepth / ReturnCount / ThrowsCount
     on HTML/JSON parsers where early-continue is the natural shape.
   - SwallowedException on intentional best-effort scrape/download paths.
@@ -114,19 +115,8 @@
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToInternal: Pair&lt;String, Long&gt;</ID>
     <ID>ThrowsCount:YouTubeMusicParser.kt:YouTubeMusicParser$fun parseHome: YouTubeMusicHomeFeed</ID>
     <ID>ThrowsCount:YouTubePlayerParser.kt:YouTubePlayerParser$fun parsePlayerStreamInfo: PlayerStreamInfo</ID>
-    <ID>TooGenericExceptionCaught:AlbumDetailViewModel.kt:AlbumDetailViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:ArtistDetailViewModel.kt:ArtistDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:BandcampViewModel.kt:BandcampViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:CollectionDetailViewModel.kt:CollectionDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:LibraryViewModel.kt:LibraryViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:LocalViewModel.kt:LocalViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:NavigationViewModel.kt:NavigationViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:PlayerViewModel.kt:PlayerViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:PlaylistDetailViewModel.kt:PlaylistDetailViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:SearchViewModel.kt:SearchViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:SettingsViewModel.kt:SettingsViewModel$e: Exception</ID>
-    <ID>TooGenericExceptionCaught:YouTubeViewModel.kt:YouTubeViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:UiResult.kt:e: Exception</ID>
     <ID>TooManyFunctions:LibraryViewModel.kt:LibraryViewModel : ViewModel</ID>
     <ID>TooManyFunctions:LocalViewModel.kt:LocalViewModel : ViewModel</ID>
     <ID>TooManyFunctions:PlaybackManager.kt:PlaybackManager</ID>

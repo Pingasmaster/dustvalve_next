@@ -30,6 +30,10 @@ import com.dustvalve.next.android.player.QueueEntry
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.NetworkUtils
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiOrNull
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -42,7 +46,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.math.roundToInt
 
 data class PlayerUiState(
@@ -245,10 +248,9 @@ class PlayerViewModel @Inject constructor(
         val resumeAt = playbackManager.currentPosition.value
         _extraState.update { it.copy(isLoadingTrack = true) }
         val fresh = try {
-            playbackStreamResolver.reResolve(track)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            null
+            runCatchingUiOrNull {
+                playbackStreamResolver.reResolve(track)
+            }
         } finally {
             _extraState.update { it.copy(isLoadingTrack = false) }
         }
@@ -310,7 +312,8 @@ class PlayerViewModel @Inject constructor(
         if (track.isLocal) return // Local tracks don't need downloading
         progressiveDownloadJob?.cancel()
         progressiveDownloadJob = viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 val progressiveEnabled = settingsDataStore.getProgressiveDownloadSync()
                 if (!progressiveEnabled) return@launch
 
@@ -357,9 +360,6 @@ class PlayerViewModel @Inject constructor(
 
                 // Current track download complete - precache next track in queue
                 precacheNextTrack()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // Best-effort: progressive download failure is silent
             }
         }
     }
@@ -380,7 +380,8 @@ class PlayerViewModel @Inject constructor(
         // Already being manually downloaded - don't duplicate
         if (_extraState.value.downloadingTrackId == nextTrack.id) return
 
-        try {
+        runCatchingUiIgnore {
+
             val formatOverride = if (nextTrack.source != TrackSource.YOUTUBE) {
                 val saveOnMetered = settingsDataStore.getSaveDataOnMeteredSync()
                 if (saveOnMetered && NetworkUtils.isMeteredConnection(appContext)) {
@@ -392,9 +393,6 @@ class PlayerViewModel @Inject constructor(
                 null
             }
             downloadRepository.downloadTrack(nextTrack, formatOverride)
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            // Best-effort: precache failure is silent
         }
     }
 
@@ -602,13 +600,12 @@ class PlayerViewModel @Inject constructor(
             queueManager.setQueue(listOf(resolved), 0)
             playbackManager.playTrack(resolved)
             triggerProgressiveDownload(track)
-            try {
+            runCatchingUiIgnore {
+
                 libraryRepository.addToRecent(track)
                 if (track.source == TrackSource.YOUTUBE) {
                     settingsDataStore.setLastYoutubeVideoId(track.id.removePrefix("yt_"))
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -638,10 +635,9 @@ class PlayerViewModel @Inject constructor(
             val queueTracks = tracks.toMutableList().also { it[index] = resolvedTarget }
             playbackManager.playQueue(queueTracks, index)
             triggerProgressiveDownload(targetTrack)
-            try {
+            runCatchingUiIgnore {
+
                 libraryRepository.addToRecent(targetTrack)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
             // Resolve remaining tracks in background for seamless queue transitions
             resolveRemainingTracks(queueTracks, index)
@@ -673,10 +669,9 @@ class PlayerViewModel @Inject constructor(
             val queueTracks = tracks.toMutableList().also { it[startIndex] = resolvedTarget }
             playbackManager.playQueue(queueTracks, startIndex)
             triggerProgressiveDownload(targetTrack)
-            try {
+            runCatchingUiIgnore {
+
                 libraryRepository.addToRecent(targetTrack)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
             // Resolve remaining tracks in background for seamless queue transitions
             resolveRemainingTracks(queueTracks, startIndex)
@@ -703,10 +698,9 @@ class PlayerViewModel @Inject constructor(
     fun skipToQueueIndex(index: Int) {
         playbackManager.skipToQueueIndex(index)
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 queueManager.queue.value.getOrNull(index)?.let { libraryRepository.addToRecent(it) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -717,12 +711,11 @@ class PlayerViewModel @Inject constructor(
         if (favoriteJob?.isActive == true) return
         val track = uiState.value.currentTrack ?: return
         favoriteJob = viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 libraryRepository.toggleTrackFavorite(track.id)
                 // Queue state is patched via collectFavoriteTrackIds -> applyFavoriteIds,
                 // which preserves the unshuffle snapshot. setQueue here would null it.
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -735,7 +728,8 @@ class PlayerViewModel @Inject constructor(
         if (_extraState.value.downloadingTrackId != null) return
         _extraState.update { it.copy(downloadingTrackId = track.id) }
         downloadJob = viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_download_failed) {
+
                 downloadController.downloadTrackBlocking(track)
                 _extraState.update {
                     it.copy(
@@ -744,16 +738,16 @@ class PlayerViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _extraState.update {
                     it.copy(
                         downloadingTrackId = null,
                         snackbarMessage =
-                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
@@ -761,7 +755,8 @@ class PlayerViewModel @Inject constructor(
     fun onDeleteTrackDownload() {
         val track = uiState.value.currentTrack ?: return
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_delete_failed) {
+
                 downloadAlbumUseCase.deleteTrackDownload(track.id)
                 _extraState.update {
                     it.copy(
@@ -769,15 +764,15 @@ class PlayerViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _extraState.update {
                     it.copy(
                         snackbarMessage =
-                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_delete_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
@@ -785,7 +780,8 @@ class PlayerViewModel @Inject constructor(
     fun addToPlaylist(playlistId: String) {
         val track = uiState.value.currentTrack ?: return
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_add_to_playlist_failed) {
+
                 playlistRepository.addTrackToPlaylist(playlistId, track.id)
                 val playlist = _extraState.value.playlists.find { it.id == playlistId }
                 _extraState.update {
@@ -797,15 +793,15 @@ class PlayerViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _extraState.update {
                     it.copy(
                         snackbarMessage =
-                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
@@ -813,7 +809,8 @@ class PlayerViewModel @Inject constructor(
     fun createPlaylistAndAddTrack(name: String, shapeKey: String?, iconUrl: String?) {
         val track = uiState.value.currentTrack ?: return
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_create_playlist_failed) {
+
                 val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
                 playlistRepository.addTrackToPlaylist(playlist.id, track.id)
                 _extraState.update {
@@ -822,15 +819,15 @@ class PlayerViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _extraState.update {
                     it.copy(
                         snackbarMessage =
-                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
@@ -857,12 +854,11 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleFavoriteById(trackId: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 libraryRepository.toggleTrackFavorite(trackId)
                 // Same as onToggleFavorite: applyFavoriteIds runs via the DB observer
                 // and preserves the unshuffle snapshot.
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -900,7 +896,8 @@ class PlayerViewModel @Inject constructor(
 
     fun addTrackToPlaylist(playlistId: String, trackId: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_add_to_playlist_failed) {
+
                 playlistRepository.addTrackToPlaylist(playlistId, trackId)
                 val playlist = _extraState.value.playlists.find { it.id == playlistId }
                 _extraState.update {
@@ -912,22 +909,23 @@ class PlayerViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _extraState.update {
                     it.copy(
                         snackbarMessage =
-                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_add_to_playlist_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
 
     fun createPlaylistAndAddArbitraryTrack(name: String, shapeKey: String?, iconUrl: String?, trackId: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_create_playlist_failed) {
+
                 val playlist = playlistRepository.createPlaylist(name, shapeKey, iconUrl)
                 playlistRepository.addTrackToPlaylist(playlist.id, trackId)
                 _extraState.update {
@@ -936,15 +934,15 @@ class PlayerViewModel @Inject constructor(
                         isSnackbarError = false,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _extraState.update {
                     it.copy(
                         snackbarMessage =
-                        e.message?.let { UiText.DynamicString(it) } ?: UiText.StringResource(R.string.snackbar_create_playlist_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }

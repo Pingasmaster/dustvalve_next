@@ -1,5 +1,9 @@
 package com.dustvalve.next.android.ui.navigation
 
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.runCatchingUiIgnoreSync
+import com.dustvalve.next.android.util.runCatchingUiOrNull
+import com.dustvalve.next.android.util.runCatchingUiOrNullSync
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -139,7 +143,14 @@ class NavigationViewModel @Inject constructor(
      */
     fun openLink(raw: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                Log.e(TAG, "openLink failed for input", cause)
+                _unsupportedLinkEvents.tryEmit(Unit)
+            
+                },
+            ) {
+
                 val detected = DeepLinkRouter.detect(raw)
                     ?: if (hasExplicitWebScheme(raw) && DeepLinkRouter.looksLikeUrl(raw)) {
                         bandcampDomainSniffer.sniff(raw)
@@ -154,23 +165,15 @@ class NavigationViewModel @Inject constructor(
                 // _activeProviders may still hold its {LOCAL} default because the
                 // DataStore emission hasn't landed yet, which would raise a spurious
                 // enable-provider dialog.
-                val activeProviders = try {
+                val activeProviders = runCatchingUiOrNull {
                     providerStateUseCase.activeProviders.first()
-                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    _activeProviders.value
-                }
+                } ?: _activeProviders.value
                 if (detected.provider !in activeProviders) {
                     _pendingLinkConfirmation.value =
                         PendingLink(detected.provider, detected.type, detected.action)
                 } else {
                     execute(detected.action)
                 }
-            } catch (e: Exception) {
-                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                Log.e(TAG, "openLink failed for input", e)
-                _unsupportedLinkEvents.tryEmit(Unit)
             }
         }
     }
@@ -199,12 +202,10 @@ class NavigationViewModel @Inject constructor(
             is DeepLinkAction.PlayYouTubeVideo -> {
                 navigateTo(NavDestination.YouTubeHome)
                 viewModelScope.launch {
-                    try {
+                    runCatchingUiIgnore {
+
                         val track = youtubeRepository.getTrackInfo(action.videoUrl)
                         _deepLinkTrack.value = track
-                    } catch (e: Exception) {
-                        if (e is kotlin.coroutines.cancellation.CancellationException) throw e
-                        // Track resolution failed - silently ignore
                     }
                 }
             }
@@ -212,11 +213,10 @@ class NavigationViewModel @Inject constructor(
             is DeepLinkAction.PlaySoundCloudTrack -> {
                 navigateTo(NavDestination.SoundCloudHome)
                 viewModelScope.launch {
-                    try {
+                    runCatchingUiIgnore {
+
                         val track = soundCloudRepository.getTrack(action.url)
                         _deepLinkTrack.value = track
-                    } catch (e: Exception) {
-                        if (e is kotlin.coroutines.cancellation.CancellationException) throw e
                     }
                 }
             }
@@ -324,20 +324,18 @@ class NavigationViewModel @Inject constructor(
 
     /** Persist current tab, per-tab back stacks, and player expansion. */
     private fun persistState() {
-        try {
+        runCatchingUiIgnoreSync {
             savedStateHandle[KEY_TAB] = _currentTab.value.name
             savedStateHandle[KEY_SHOW_FULL_PLAYER] = _showFullPlayer.value
             for ((tab, stack) in tabStacks) {
                 savedStateHandle[stackKey(tab)] = ArrayList(stack.map { encodeDestination(it) })
             }
-        } catch (_: Exception) {
-            // Best-effort: never let persistence break navigation.
         }
     }
 
     private fun restoreSavedState() {
         val savedTab = savedStateHandle.get<String>(KEY_TAB) ?: return
-        try {
+        runCatchingUiIgnoreSync {
             for (tab in BottomNavItem.entries) {
                 val saved = savedStateHandle.get<ArrayList<String>>(stackKey(tab)) ?: continue
                 val decoded = saved.mapNotNull { decodeDestination(it) }
@@ -358,8 +356,6 @@ class NavigationViewModel @Inject constructor(
             }
             _showFullPlayer.value = savedStateHandle.get<Boolean>(KEY_SHOW_FULL_PLAYER) ?: false
             refreshAllDestinations()
-        } catch (_: Exception) {
-            // Corrupt saved state: fall back to the default cold-start stacks.
         }
     }
 
@@ -413,7 +409,7 @@ class NavigationViewModel @Inject constructor(
         private const val IDX_NAME = 3
         private const val IDX_IMAGE_OR_COVER = 4
 
-        internal fun decodeDestination(raw: String): NavDestination? = try {
+        internal fun decodeDestination(raw: String): NavDestination? = runCatchingUiOrNullSync {
             val parts = raw.split('|')
             when (parts[IDX_KIND]) {
                 "local" -> NavDestination.LocalHome
@@ -448,8 +444,6 @@ class NavigationViewModel @Inject constructor(
 
                 else -> null
             }
-        } catch (_: Exception) {
-            null
         }
 
         private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")

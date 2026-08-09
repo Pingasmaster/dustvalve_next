@@ -14,6 +14,9 @@ import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +27,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class LibraryUiState(
     val libraryItems: List<LibraryItem> = emptyList(),
@@ -80,11 +82,10 @@ class LibraryViewModel @Inject constructor(
     fun showRenameDialog(playlist: Playlist) {
         _uiState.update { it.copy(renameTarget = playlist) }
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 val tracks = playlistRepository.getTracksInPlaylistSync(playlist.id)
                 _uiState.update { it.copy(renameTargetTracks = tracks) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -127,7 +128,8 @@ class LibraryViewModel @Inject constructor(
         _uiState.update { it.copy(exportTarget = null) }
         viewModelScope.launch {
             _uiState.update { it.copy(transfer = TransferProgress(importing = false, done = 0, total = playlist.trackCount)) }
-            try {
+            runCatchingUi(R.string.library_error_export) {
+
                 val out = context.contentResolver.openOutputStream(uri)
                 if (out == null) {
                     _uiState.update {
@@ -143,9 +145,9 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(transfer = null, message = UiText.StringResource(R.string.library_exported, listOf(playlist.name)))
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(transfer = null, error = UiText.orResource(e.message, R.string.library_error_export)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(transfer = null, error = error) }
+            
             }
         }
     }
@@ -154,7 +156,8 @@ class LibraryViewModel @Inject constructor(
     fun importPlaylist(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { it.copy(transfer = TransferProgress(importing = true, done = 0, total = 0)) }
-            try {
+            runCatchingUi(R.string.library_error_import) {
+
                 val inp = context.contentResolver.openInputStream(uri)
                 if (inp == null) {
                     _uiState.update { it.copy(transfer = null, error = UiText.StringResource(R.string.library_error_open_import_file)) }
@@ -168,91 +171,98 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(transfer = null, message = UiText.StringResource(R.string.library_imported, listOf(playlist.name)))
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(transfer = null, error = UiText.orResource(e.message, R.string.library_error_import)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(transfer = null, error = error) }
+            
             }
         }
     }
 
     fun createPlaylist(name: String, shapeKey: String? = null, iconUrl: String? = null) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_create_playlist_failed) {
+
                 playlistRepository.createPlaylist(name, shapeKey, iconUrl)
                 _uiState.update { it.copy(showCreateDialog = false) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.snackbar_create_playlist_failed)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(error = error) }
+            
             }
         }
     }
 
     fun updatePlaylistAppearance(playlistId: String, name: String, shapeKey: String?, iconUrl: String?) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.library_error_update_playlist) {
+
                 playlistRepository.updatePlaylistAppearance(playlistId, name, shapeKey, iconUrl)
                 _uiState.update { it.copy(renameTarget = null, renameTargetTracks = emptyList()) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.library_error_update_playlist)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(error = error) }
+            
             }
         }
     }
 
     fun deletePlaylist(playlistId: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.library_error_delete_playlist) {
+
                 playlistRepository.deletePlaylist(playlistId)
                 _uiState.update { it.copy(deleteTarget = null) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.library_error_delete_playlist)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(error = error) }
+            
             }
         }
     }
 
     fun pinPlaylist(playlistId: String, isPinned: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.library_error_update_playlist) {
+
                 playlistRepository.pinPlaylist(playlistId, isPinned)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.orResource(e.message, R.string.library_error_update_playlist)) }
+            }.onFailure { error, cause ->
+                _uiState.update { it.copy(error = error) }
+            
             }
         }
     }
 
     fun pinFavorite(favoriteId: String, isPinned: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { _ ->
+                    _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_pin)) }
+                },
+            ) {
                 favoriteRepository.setPinned(favoriteId, isPinned)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_pin)) }
             }
         }
     }
 
     fun deleteFavorite(favoriteId: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { _ ->
+                    _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_remove)) }
+                },
+            ) {
                 favoriteRepository.remove(favoriteId)
                 _uiState.update { it.copy(deleteTarget = null) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_remove)) }
             }
         }
     }
 
     fun updateFavoriteShape(favoriteId: String, shapeKey: String?) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { _ ->
+                    _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_shape)) }
+                },
+            ) {
                 favoriteRepository.setShapeKey(favoriteId, shapeKey)
                 _uiState.update { it.copy(shapeTarget = null) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(error = UiText.StringResource(R.string.library_error_update_shape)) }
             }
         }
     }
@@ -338,11 +348,9 @@ class LibraryViewModel @Inject constructor(
 
     private fun syncSystemPlaylists() {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 playlistRepository.syncRecentPlaylist()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // Best-effort sync
             }
         }
     }

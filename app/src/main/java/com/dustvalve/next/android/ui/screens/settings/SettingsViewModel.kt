@@ -13,6 +13,7 @@ import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.update.AppUpdateController
 import com.dustvalve.next.android.update.UpdateUiState
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.runCatchingUiIgnore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.coroutines.cancellation.CancellationException
 
 data class SettingsUiState(
     val cacheInfo: CacheInfo? = null,
@@ -110,87 +110,71 @@ class SettingsViewModel @Inject constructor(
 
     fun setThemeMode(mode: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setThemeMode(mode)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setDynamicColor(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setDynamicColor(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setOledBlack(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setOledBlack(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setAlbumArtTheme(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setAlbumArtTheme(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setProgressBarStyle(style: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setProgressBarStyle(style)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setProgressBarSizeDp(sizeDp: Int) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setProgressBarSizeDp(sizeDp)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setAutoDownloadFavorites(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setAutoDownloadFavorites(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setDownloadNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setDownloadNotificationsEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setStorageLimit(gb: Float) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 val bytes = when {
                     gb < 0f -> Long.MAX_VALUE
 
@@ -205,58 +189,46 @@ class SettingsViewModel @Inject constructor(
                     assetEvictionPolicy.evict(overage)
                     storageTracker.notifyChanged()
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setAutoDownloadFutureContent(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setAutoDownloadFutureContent(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setDownloadFormat(formatKey: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setDownloadFormat(formatKey)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setSaveDataOnMetered(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setSaveDataOnMetered(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setProgressiveDownload(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setProgressiveDownload(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setSeamlessQualityUpgrade(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setSeamlessQualityUpgrade(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -275,88 +247,72 @@ class SettingsViewModel @Inject constructor(
 
     fun setBandcampEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setBandcampEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setYoutubeEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setYoutubeEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setSoundcloudEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setSoundcloudEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setShowInlineVolumeSlider(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setShowInlineVolumeSlider(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setShowVolumeButton(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setShowVolumeButton(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setSearchHistoryEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setSearchHistoryEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setSearchHistorySource(source: String, enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 when (source) {
                     "bandcamp" -> settingsDataStore.setSearchHistoryBandcamp(enabled)
                     "youtube" -> settingsDataStore.setSearchHistoryYoutube(enabled)
                     "soundcloud" -> settingsDataStore.setSearchHistorySoundcloud(enabled)
                     "local" -> settingsDataStore.setSearchHistoryLocal(enabled)
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun clearAllSearchHistory() {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 recentSearchRepository.clearAllSources()
                 _uiState.update {
                     it.copy(searchHistoryClearedMessage = UiText.StringResource(R.string.settings_search_history_cleared))
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
@@ -381,80 +337,64 @@ class SettingsViewModel @Inject constructor(
 
     fun setAutoUpdateCheckEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setAutoUpdateCheckEnabled(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setYoutubeDefaultSource(source: String) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setYoutubeDefaultSource(source)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setPlayerDebugOverlay(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setPlayerDebugOverlay(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setKeepScreenOnInApp(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setKeepScreenOnInApp(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setKeepScreenOnWhilePlaying(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setKeepScreenOnWhilePlaying(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun removeAllDownloads() {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 downloadRepository.clearAll()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setKeepLocalSort(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setKeepLocalSort(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }
 
     fun setKeepLocalFilters(enabled: Boolean) {
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
                 settingsDataStore.setKeepLocalFilters(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             }
         }
     }

@@ -18,6 +18,10 @@ import com.dustvalve.next.android.download.BatchDownloadResult
 import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import com.dustvalve.next.android.util.UiText
+import com.dustvalve.next.android.util.onFailure
+import com.dustvalve.next.android.util.runCatchingUi
+import com.dustvalve.next.android.util.runCatchingUiIgnore
+import com.dustvalve.next.android.util.runCatchingUiOrNull
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -172,7 +176,8 @@ class ArtistDetailViewModel @Inject constructor(
                 return@launch
             }
 
-            try {
+            runCatchingUi(R.string.detail_error_load_artist) {
+
                 val artist = source.getArtist(url)
                 val isFav = favoriteRepository.isFavorite(url)
                 _uiState.update {
@@ -205,17 +210,18 @@ class ArtistDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
                 }
                 loadedKey = key
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 _uiState.update {
-                    it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_artist))
+                    it.copy(isLoading = false, error = error)
                 }
+            
             }
         }
     }
 
     private suspend fun loadBandcampArtist(url: String, imageUrl: String?, key: String) {
-        try {
+        runCatchingUi(R.string.detail_error_load_artist) {
+
             artistRepository.getArtistDetailFlow(url)
                 .catch { e ->
                     if (e is CancellationException) throw e
@@ -246,11 +252,11 @@ class ArtistDetailViewModel @Inject constructor(
                         preloadMixPool()
                     }
                 }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        }.onFailure { error, cause ->
             _uiState.update {
-                it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_artist))
+                it.copy(isLoading = false, error = error)
             }
+        
         }
     }
 
@@ -262,7 +268,13 @@ class ArtistDetailViewModel @Inject constructor(
 
         _uiState.update { it.copy(isLoadingMore = true) }
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                _uiState.update { it.copy(isLoadingMore = false) }
+            
+                },
+            ) {
+
                 val page = source.getArtistTracks(state.artistUrl, continuation = nextPage)
                 nextPage = page.continuation
                 if (page.tracks.isNotEmpty()) {
@@ -277,9 +289,6 @@ class ArtistDetailViewModel @Inject constructor(
                         hasMore = page.hasMore,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(isLoadingMore = false) }
             }
         }
     }
@@ -290,7 +299,13 @@ class ArtistDetailViewModel @Inject constructor(
         val prev = state.isFavorite
         _uiState.update { it.copy(isFavorite = !prev) }
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore(
+                onFailure = { cause ->
+                _uiState.update { it.copy(isFavorite = prev) }
+            
+                },
+            ) {
+
                 if (state.sourceId == "bandcamp") {
                     val artistId = state.artist?.id ?: return@launch
                     artistRepository.toggleFavorite(artistId)
@@ -312,9 +327,6 @@ class ArtistDetailViewModel @Inject constructor(
                         }
                     }
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                _uiState.update { it.copy(isFavorite = prev) }
             }
         }
     }
@@ -337,7 +349,8 @@ class ArtistDetailViewModel @Inject constructor(
         if (state.isDownloading) return
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
-            try {
+            runCatchingUi(R.string.snackbar_download_failed) {
+
                 if (state.sourceId == "bandcamp") {
                     val artist = state.artist
                     if (artist == null || artist.albums.isEmpty()) {
@@ -390,18 +403,17 @@ class ArtistDetailViewModel @Inject constructor(
                         isSnackbarError = result.allFailed,
                     )
                 }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+            }.onFailure { error, cause ->
                 retryAction = { downloadAll() }
                 _uiState.update {
                     it.copy(
                         isDownloading = false,
                         snackbarMessage =
-                        e.message?.let { m -> UiText.DynamicString(m) }
-                            ?: UiText.StringResource(R.string.snackbar_download_failed),
+                        error,
                         isSnackbarError = true,
                     )
                 }
+            
             }
         }
     }
@@ -429,7 +441,7 @@ class ArtistDetailViewModel @Inject constructor(
         if (SourceConcept.ARTIST_TRACKS !in source.capabilities) return state.tracks
         if (state.tracks.isEmpty() && !state.hasMore) return emptyList()
         _uiState.update { it.copy(isLoadingMore = true) }
-        return try {
+        return runCatchingUiOrNull {
             val expanded = expandSourceTracks.expandArtistTracks(
                 source = source,
                 url = state.artistUrl,
@@ -449,8 +461,7 @@ class ArtistDetailViewModel @Inject constructor(
                 )
             }
             expanded
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
+        } ?: run {
             _uiState.update { it.copy(isLoadingMore = false) }
             state.tracks
         }
@@ -462,18 +473,16 @@ class ArtistDetailViewModel @Inject constructor(
             if (state.sourceId == "bandcamp") {
                 val artist = state.artist ?: return@launch
                 // Album stubs have empty tracks; delete by album id instead.
-                try {
+                runCatchingUiIgnore {
+
                     downloadAlbumUseCase.deleteArtistDownloads(artist)
-                } catch (e: Exception) {
-                    if (e is CancellationException) throw e
                 }
             } else {
                 val ids = state.tracks.map { it.id }
                 for (id in ids) {
-                    try {
+                    runCatchingUiIgnore {
+
                         downloadAlbumUseCase.deleteTrackDownload(id)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
                     }
                 }
             }
@@ -510,16 +519,16 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isLoadingMix = true) }
         viewModelScope.launch {
             try {
-                val albumIds = albums.map { it.id }
-                if (artistRepository.albumIdsMissingTracks(albumIds).isNotEmpty()) {
-                    // Preload still running (or it failed): stock what is left
-                    // before playing, so the first tap is never a thin mix.
-                    stockMixPool()
+                runCatchingUiIgnore {
+                    val albumIds = albums.map { it.id }
+                    if (artistRepository.albumIdsMissingTracks(albumIds).isNotEmpty()) {
+                        // Preload still running (or it failed): stock what is left
+                        // before playing, so the first tap is never a thin mix.
+                        stockMixPool()
+                    }
+                    val tracks = artistRepository.getArtistMixTracks(albumIds)
+                    if (tracks.isNotEmpty()) onLoaded(tracks)
                 }
-                val tracks = artistRepository.getArtistMixTracks(albumIds)
-                if (tracks.isNotEmpty()) onLoaded(tracks)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
             } finally {
                 _uiState.update { it.copy(isLoadingMix = false) }
             }
@@ -539,10 +548,10 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isLoadingMix = true) }
         viewModelScope.launch {
             try {
-                val tracks = expandLoadedArtistTracks()
-                if (tracks.isNotEmpty()) play(tracks.shuffled(), 0)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
+                runCatchingUiIgnore {
+                    val tracks = expandLoadedArtistTracks()
+                    if (tracks.isNotEmpty()) play(tracks.shuffled(), 0)
+                }
             } finally {
                 _uiState.update { it.copy(isLoadingMix = false) }
             }
@@ -561,12 +570,9 @@ class ArtistDetailViewModel @Inject constructor(
         val state = _uiState.value
         if (state.artist?.albums.isNullOrEmpty()) return
         viewModelScope.launch {
-            try {
+            runCatchingUiIgnore {
+
                 stockMixPool()
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // Best effort: a failed preload only means the mix falls back
-                // to stocking on demand.
             }
         }
     }
@@ -580,13 +586,11 @@ class ArtistDetailViewModel @Inject constructor(
         val missing = artistRepository.albumIdsMissingTracks(albums.map { it.id }).toSet()
         if (missing.isEmpty()) return
         for (album in albums.filter { it.id in missing }) {
-            try {
+            runCatchingUiIgnore {
+
                 // Persists the album with its tracks; the mix reads them back
                 // out of the database on the next getArtistMixTracks call.
                 source.getAlbum(album.url)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // One unreachable album must not strand the rest of the mix.
             }
         }
     }
