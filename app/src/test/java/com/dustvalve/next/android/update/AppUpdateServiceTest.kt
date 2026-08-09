@@ -213,6 +213,14 @@ class AppUpdateServiceTest {
             .isEqualTo(AppUpdateService.COMPAT_APK_ASSET)
         assertThat(AppUpdateService.selectedApkAsset("futureRelease"))
             .isEqualTo(AppUpdateService.FUTURE_APK_ASSET)
+        assertThat(AppUpdateService.selectedApkAssets("compat")).containsExactly(
+            AppUpdateService.COMPAT_APK_ASSET,
+            AppUpdateService.COMPAT_APK_ASSET_FALLBACK,
+        ).inOrder()
+        assertThat(AppUpdateService.selectedApkAssets("future")).containsExactly(
+            AppUpdateService.FUTURE_APK_ASSET,
+            AppUpdateService.FUTURE_APK_ASSET_FALLBACK,
+        ).inOrder()
     }
 
     @Test fun `picks the apk asset matching this build flavor when both ship`() = runTest {
@@ -239,6 +247,54 @@ class AppUpdateServiceTest {
 
         val update = svc.checkForUpdate()
         assertThat(update?.apkDownloadUrl).endsWith(AppUpdateService.selectedApkAsset())
+    }
+
+    @Test fun `falls back to dustvalve_next asset names when documented names are absent`() = runTest {
+        // Live GitHub "Latest" has shipped dustvalve_next*.apk while the
+        // documented / build.sh root names are app-release*.apk. Prefer the
+        // documented name when present; otherwise accept the legacy upload.
+        val preferred = AppUpdateService.selectedApkAsset()
+        val fallback = AppUpdateService.selectedApkAssets().last()
+        val release = """
+            {
+              "tag_name": "v1.2.3",
+              "name": "v1.2.3",
+              "body": "notes",
+              "prerelease": true,
+              "draft": false,
+              "assets": [
+                {"name": "$fallback", "browser_download_url": "https://releases.example/v1.2.3/$fallback"}
+              ]
+            }
+        """.trimIndent()
+        server.enqueue(MockResponse().setBody("[$release]"))
+        val svc = testService(installed = "1.0.0")
+
+        val update = svc.checkForUpdate()
+        assertThat(update?.apkDownloadUrl).endsWith(fallback)
+        assertThat(preferred).isNotEqualTo(fallback)
+    }
+
+    @Test fun `prefers documented app-release name over dustvalve_next fallback when both ship`() = runTest {
+        val preferred = AppUpdateService.selectedApkAsset()
+        val fallback = AppUpdateService.selectedApkAssets().last()
+        val release = """
+            {
+              "tag_name": "v1.2.3",
+              "name": "v1.2.3",
+              "body": "notes",
+              "prerelease": true,
+              "draft": false,
+              "assets": [
+                {"name": "$fallback", "browser_download_url": "https://releases.example/v1.2.3/$fallback"},
+                {"name": "$preferred", "browser_download_url": "https://releases.example/v1.2.3/$preferred"}
+              ]
+            }
+        """.trimIndent()
+        server.enqueue(MockResponse().setBody("[$release]"))
+        val svc = testService(installed = "1.0.0")
+
+        assertThat(svc.checkForUpdate()?.apkDownloadUrl).endsWith(preferred)
     }
 
     @Test fun `skips release that only has the other flavor apk`() = runTest {

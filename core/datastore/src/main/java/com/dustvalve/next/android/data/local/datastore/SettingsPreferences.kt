@@ -51,11 +51,12 @@ internal class SettingsPreferences(context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val STORAGE_LIMIT = longPreferencesKey("storage_limit")
-        val ACCOUNT_USERNAME = stringPreferencesKey("account_username")
-        val ACCOUNT_AVATAR = stringPreferencesKey("account_avatar")
+        // Abandoned keys (account_username / account_avatar / account_fan_id /
+        // auto_download_collection / ytm_connected) may still exist as bytes
+        // in older settings.preferences_pb files. They are intentionally not
+        // defined here: nothing reads or writes them. DataStore leaves orphan
+        // keys alone; do not reintroduce without a one-shot migration.
         val AUTH_COOKIES = stringPreferencesKey("auth_cookies")
-        val ACCOUNT_FAN_ID = longPreferencesKey("account_fan_id")
-        val AUTO_DOWNLOAD_COLLECTION = booleanPreferencesKey("auto_download_collection")
         val AUTO_DOWNLOAD_FUTURE_CONTENT = booleanPreferencesKey("auto_download_future_content")
         val DOWNLOAD_FORMAT = stringPreferencesKey("download_format")
         val SAVE_DATA_ON_METERED = booleanPreferencesKey("save_data_on_metered")
@@ -83,7 +84,6 @@ internal class SettingsPreferences(context: Context) {
         val SEARCH_HISTORY_SOUNDCLOUD = booleanPreferencesKey("search_history_soundcloud")
         val SEARCH_HISTORY_LOCAL = booleanPreferencesKey("search_history_local")
         val ALBUM_COVER_LONG_PRESS_CAROUSEL = booleanPreferencesKey("album_cover_long_press_carousel")
-        val YTM_CONNECTED = booleanPreferencesKey("ytm_connected")
         val YOUTUBE_DEFAULT_SOURCE = stringPreferencesKey("youtube_default_source")
         val KEEP_SCREEN_ON_IN_APP = booleanPreferencesKey("keep_screen_on_in_app")
         val KEEP_SCREEN_ON_WHILE_PLAYING = booleanPreferencesKey("keep_screen_on_while_playing")
