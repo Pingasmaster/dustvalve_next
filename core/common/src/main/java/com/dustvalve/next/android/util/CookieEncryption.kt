@@ -19,6 +19,7 @@ object CookieEncryption {
     private const val TRANSFORMATION = "AES/GCM/NoPadding"
     private const val GCM_IV_LENGTH = 12
     private const val GCM_TAG_LENGTH = 128
+    private const val AES_KEY_SIZE_BITS = 256
 
     // Synchronized: the check-then-generate below is not atomic. Two threads racing here
     // could each generateKey() for the same alias; the second key silently replaces the
@@ -40,7 +41,7 @@ object CookieEncryption {
             )
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                .setKeySize(256)
+                .setKeySize(AES_KEY_SIZE_BITS)
                 .build(),
         )
         return keyGenerator.generateKey()

@@ -394,10 +394,6 @@ class NavigationViewModel @Inject constructor(
 
             NavDestination.Settings -> "settings"
 
-            NavDestination.AccountLogin -> "accountLogin"
-
-            NavDestination.YouTubeMusicLogin -> "ytmLogin"
-
             is NavDestination.AlbumDetail -> "album|" + enc(dest.url)
 
             is NavDestination.ArtistDetail ->
@@ -410,11 +406,16 @@ class NavigationViewModel @Inject constructor(
                     enc(dest.name) + "|" + enc(dest.coverUrl.orEmpty())
         }
 
-        // Numeric literals here are pipe-field indices, not magic numbers.
-        @Suppress("MagicNumber")
+        // Pipe-field indices for the compact destination encoding above.
+        private const val IDX_KIND = 0
+        private const val IDX_URL = 1
+        private const val IDX_SOURCE_ID = 2
+        private const val IDX_NAME = 3
+        private const val IDX_IMAGE_OR_COVER = 4
+
         internal fun decodeDestination(raw: String): NavDestination? = try {
             val parts = raw.split('|')
-            when (parts[0]) {
+            when (parts[IDX_KIND]) {
                 "local" -> NavDestination.LocalHome
 
                 "bandcampHome" -> NavDestination.BandcampHome
@@ -427,26 +428,22 @@ class NavigationViewModel @Inject constructor(
 
                 "settings" -> NavDestination.Settings
 
-                "accountLogin" -> NavDestination.AccountLogin
-
-                "ytmLogin" -> NavDestination.YouTubeMusicLogin
-
-                "album" -> NavDestination.AlbumDetail(url = dec(parts[1]))
+                "album" -> NavDestination.AlbumDetail(url = dec(parts[IDX_URL]))
 
                 "artist" -> NavDestination.ArtistDetail(
-                    url = dec(parts[1]),
-                    sourceId = dec(parts[2]),
-                    name = dec(parts[3]).takeIf { it.isNotEmpty() },
-                    imageUrl = dec(parts[4]).takeIf { it.isNotEmpty() },
+                    url = dec(parts[IDX_URL]),
+                    sourceId = dec(parts[IDX_SOURCE_ID]),
+                    name = dec(parts[IDX_NAME]).takeIf { it.isNotEmpty() },
+                    imageUrl = dec(parts[IDX_IMAGE_OR_COVER]).takeIf { it.isNotEmpty() },
                 )
 
-                "playlist" -> NavDestination.PlaylistDetail(playlistId = dec(parts[1]))
+                "playlist" -> NavDestination.PlaylistDetail(playlistId = dec(parts[IDX_URL]))
 
                 "collection" -> NavDestination.CollectionDetail(
-                    url = dec(parts[1]),
-                    sourceId = dec(parts[2]),
-                    name = dec(parts[3]),
-                    coverUrl = parts.getOrNull(4)?.let { dec(it) }?.takeIf { it.isNotEmpty() },
+                    url = dec(parts[IDX_URL]),
+                    sourceId = dec(parts[IDX_SOURCE_ID]),
+                    name = dec(parts[IDX_NAME]),
+                    coverUrl = parts.getOrNull(IDX_IMAGE_OR_COVER)?.let { dec(it) }?.takeIf { it.isNotEmpty() },
                 )
 
                 else -> null

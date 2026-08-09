@@ -84,7 +84,7 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
             "YouTube landing missing ytcfg.set block " +
                 "(primary=HTTP ${primary.status}, ${primary.body.length} B; " +
                 "fallback=HTTP ${fallback.status}, ${fallback.body.length} B; " +
-                "head='${primary.body.take(120).replace('\n', ' ')}')",
+                "head='${primary.body.take(ERROR_BODY_PREVIEW_CHARS).replace('\n', ' ')}')",
         )
     }
 
@@ -120,6 +120,8 @@ open class YouTubeVisitorDataFetcher @Inject constructor(
 
     companion object {
         const val DEFAULT_CLIENT_VERSION = "2.20260421.00.00"
+
+        private const val ERROR_BODY_PREVIEW_CHARS = 120
 
         private const val DESKTOP_CHROME_UA =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 " +

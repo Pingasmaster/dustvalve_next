@@ -24,7 +24,6 @@
     <string name="common_action_save">Сохранить</string>
     <string name="common_action_create">Создать</string>
     <string name="common_action_remove">Убрать</string>
-    <string name="common_action_disconnect">Отключить</string>
     <string name="common_play_all">Слушать все</string>
 
     <string name="link_open_video">Открыть видео <xliff:g id="brand">YouTube</xliff:g></string>
@@ -78,7 +77,6 @@
     <string name="common_action_add">Добавить</string>
     <string name="common_play_mix">Слушать микс</string>
     <string name="common_loading">Загрузка…</string>
-    <string name="common_connected">Подключено</string>
     <string name="common_selected_folder">Выбранная папка</string>
     <string name="common_failed_to_play">Не удалось воспроизвести</string>
     <string name="common_playlist_imported">Плейлист импортирован: <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
@@ -169,7 +167,6 @@
 
     <string name="settings_title">Настройки</string>
     <string name="settings_section_sources">Источники</string>
-    <string name="settings_section_connections">Подключения</string>
     <string name="settings_section_storage">Хранилище</string>
     <string name="settings_section_audio_quality">Качество звука</string>
     <string name="settings_section_appearance">Внешний вид</string>
@@ -184,23 +181,14 @@
     <string name="settings_remove_downloads_text">Будет очищен весь пул загрузок: скачанные вручную треки, автоматически кешированное аудио, обложки альбомов и фото исполнителей.</string>
     <string name="settings_download_format">Формат загрузки</string>
     <string name="settings_download_format_desc">Формат скачиваемых покупок <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g> отключен</string>
-    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g> отключен</string>
     <string name="settings_add_folder">Добавить папку</string>
     <string name="settings_rescan">Пересканировать</string>
     <string name="settings_cd_remove_folder">Убрать папку</string>
-    <string name="settings_cd_avatar">Аватар</string>
-    <string name="settings_connect_bandcamp">Подключить <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Подключи, чтобы получить доступ к своим покупкам <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_youtube">Подключить <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Подключи, чтобы получить доступ к своей библиотеке <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="settings_youtube_default_source_title">Вид по умолчанию</string>
     <string name="settings_youtube_default_source_desc">Что открывается при нажатии на вкладку <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="common_play">Играть</string>
     <string name="ytm_artist_spotlight">В центре внимания</string>
     <string name="settings_remove_all_downloads">Удалить все загрузки</string>
-    <string name="settings_auto_download_purchases">Автозагрузка покупок</string>
-    <string name="settings_auto_download_purchases_desc">Автоматически скачивать твои покупки <xliff:g id="brand">Dustvalve</xliff:g></string>
     <string name="settings_auto_download_future">Автозагрузка новинок</string>
     <string name="settings_auto_download_future_desc">Автоматически скачивать новые треки для загруженных плейлистов, альбомов и исполнителей</string>
     <string name="settings_mp3_on_metered">Только <xliff:g id="format">MP3</xliff:g> в мобильной сети</string>
@@ -326,7 +314,6 @@
     <string name="youtube_tab_artists">Исполнители</string>
     <string name="youtube_tab_playlists">Плейлисты</string>
     <string name="youtube_tab_tracks">Треки</string>
-
 
     <!-- SoundCloud screen -->
     <string name="soundcloud_search_hint">Поиск в SoundCloud</string>
@@ -541,7 +528,6 @@
     <string name="crash_report_github_action">Создать issue на GitHub</string>
     <string name="crash_report_dismiss_action">Не сейчас</string>
     <!-- Security-block + missing-playlist UI (added with default strings) -->
-    <string name="login_navigation_blocked">Заблокировано в целях безопасности: здесь может открыться только страница входа</string>
     <string name="playlist_gone_title">Этот плейлист больше не существует</string>
     <string name="playlist_gone_subtitle">Возможно, он был удалён из вашей библиотеки</string>
     <string name="common_action_back">Назад</string>

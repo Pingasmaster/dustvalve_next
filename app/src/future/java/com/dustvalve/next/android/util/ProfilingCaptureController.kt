@@ -30,7 +30,12 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
 
     private val executor = Executors.newSingleThreadExecutor()
 
-    @Suppress("TooGenericExceptionCaught") // Robolectric NPE catch - see below.
+    /**
+     * Detekt lists NullPointerException under TooGenericExceptionCaught; the
+     * catch is intentional when ProfilingManager's binder is absent
+     * (Robolectric / headless).
+     */
+    @Suppress("TooGenericExceptionCaught")
     fun start() {
         try {
             val pm = context.getSystemService(ProfilingManager::class.java) ?: return
@@ -48,13 +53,13 @@ class ProfilingCaptureController @Inject constructor(@param:ApplicationContext p
             Log.w(TAG, "start: missing permission", se)
         } catch (iae: IllegalArgumentException) {
             Log.w(TAG, "start: invalid trigger config", iae)
-        } catch (t: Throwable) {
+        } catch (npe: NullPointerException) {
             // Robolectric and other headless environments throw NPE from
             // ProfilingManager.registerForAllProfilingResults because the
             // IProfilingService binder is absent. Real devices succeed;
             // anything else is best-effort diagnostics we never want to
             // crash the app over.
-            Log.w(TAG, "start: platform ProfilingManager unavailable", t)
+            Log.w(TAG, "start: platform ProfilingManager unavailable", npe)
         }
     }
 

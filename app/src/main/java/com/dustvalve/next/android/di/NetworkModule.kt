@@ -28,7 +28,7 @@ object NetworkModule {
         "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
     /**
-     * Matches [com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeClient.ANDROID_VR_NO_AUTH.userAgent].
+     * Matches [com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeClient.AndroidVrNoAuth.userAgent].
      * Kept as a duplicate constant (rather than a cross-module import) so this
      * low-level network module has no dependency on the YouTube innertube
      * layer - it only needs the UA string for host-based routing.
@@ -44,6 +44,7 @@ object NetworkModule {
     private var lastRequestTime = 0L
 
     private const val HTTP_CACHE_BYTES = 10L * 1024 * 1024 // 10 MB
+    private const val CONNECTION_KEEPALIVE_MINUTES = 5L
 
     // OkHttp 5 Duration timeouts. callTimeout caps the whole call (incl.
     // retries) so a flapping host can't hang a Worker past
@@ -69,7 +70,7 @@ object NetworkModule {
             // Bumped from default 5 idle since we hit several hosts concurrently
             // (innertube, googlevideo, bandcamp). 5 min keepalive avoids the
             // TaskRunner CPU drain seen with short values.
-            .connectionPool(ConnectionPool(8, 5, TimeUnit.MINUTES))
+            .connectionPool(ConnectionPool(8, CONNECTION_KEEPALIVE_MINUTES, TimeUnit.MINUTES))
             // OkHttp 5 Duration API. callTimeout caps the whole call (incl.
             // retries) so a flapping host can't hang a Worker past
             // STOP_REASON_TIMEOUT. connectTimeout is short for fast-fail on

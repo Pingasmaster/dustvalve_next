@@ -198,7 +198,6 @@ class DownloadNotificationCenter @Inject constructor(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun refresh(snapshot: State, enabled: Boolean) {
         try {
             val hasWork = snapshot.activeTracks.isNotEmpty() ||

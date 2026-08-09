@@ -58,7 +58,6 @@ import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.TrackSource
-import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.ProvideAdaptiveLayout
@@ -88,9 +87,6 @@ import kotlin.coroutines.cancellation.CancellationException
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    @Inject
-    lateinit var accountRepository: AccountRepository
 
     @Inject
     lateinit var settingsDataStore: SettingsDataStore
@@ -167,7 +163,7 @@ class MainActivity : ComponentActivity() {
                 oledBlack = config.oledBlack,
                 albumSeedColor = config.albumSeedColor,
             ) {
-                MainContent(accountRepository = accountRepository, activity = this@MainActivity)
+                MainContent(activity = this@MainActivity)
 
                 // Pre-alpha nag: the cold-start silent check (fired from
                 // Application.onCreate) may have populated this while the
@@ -283,10 +279,9 @@ private val MINI_BAR_HEIGHT = 66.dp
 // the same branching, so it is suppressed alongside LongMethod.
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
-private fun MainContent(accountRepository: AccountRepository, activity: MainActivity) {
+private fun MainContent(activity: MainActivity) {
     ProvideAdaptiveLayout {
         MainContentBody(
-            accountRepository = accountRepository,
             activity = activity,
         )
     }
@@ -298,7 +293,6 @@ private fun MainContent(accountRepository: AccountRepository, activity: MainActi
 @Composable
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 private fun MainContentBody(
-    accountRepository: AccountRepository,
     activity: MainActivity,
     playerViewModel: PlayerViewModel = hiltViewModel(),
     navViewModel: NavigationViewModel = hiltViewModel(),
@@ -502,7 +496,6 @@ private fun MainContentBody(
                         },
                     ) { innerPadding ->
                         AppNavigation(
-                            accountRepository = accountRepository,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(innerPadding),
@@ -526,7 +519,6 @@ private fun MainContentBody(
                     },
                 ) { innerPadding ->
                     AppNavigation(
-                        accountRepository = accountRepository,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerPadding),

@@ -303,7 +303,7 @@ class YouTubePlaylistParser @Inject constructor() {
         val parts = text.split(":").mapNotNull { it.toIntOrNull() }
         if (parts.isEmpty()) return 0f
         var total = 0
-        for (p in parts) total = total * 60 + p
+        for (p in parts) total = total * SECONDS_PER_MINUTE + p
         return total.toFloat()
     }
 
@@ -335,5 +335,9 @@ class YouTubePlaylistParser @Inject constructor() {
 
             else -> null
         }
+    }
+
+    private companion object {
+        private const val SECONDS_PER_MINUTE = 60
     }
 }

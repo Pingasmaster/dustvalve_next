@@ -58,7 +58,6 @@ fun PlaylistListItem(
         Playlist.SystemPlaylistType.FAVORITES -> AppShapes.PlaylistFavorites
         Playlist.SystemPlaylistType.DOWNLOADS -> AppShapes.PlaylistDownloads
         Playlist.SystemPlaylistType.RECENT -> AppShapes.PlaylistRecent
-        Playlist.SystemPlaylistType.COLLECTION -> AppShapes.PlaylistCollection
         else -> resolvePlaylistShape(playlist.shapeKey)
     }
 
@@ -180,6 +179,5 @@ fun getPlaylistIconRes(playlist: Playlist): Int = when (playlist.systemType) {
     Playlist.SystemPlaylistType.FAVORITES -> R.drawable.ic_favorite
     Playlist.SystemPlaylistType.DOWNLOADS -> R.drawable.ic_cloud_download
     Playlist.SystemPlaylistType.RECENT -> R.drawable.ic_history
-    Playlist.SystemPlaylistType.COLLECTION -> R.drawable.ic_library_music
     else -> R.drawable.ic_music_note
 }

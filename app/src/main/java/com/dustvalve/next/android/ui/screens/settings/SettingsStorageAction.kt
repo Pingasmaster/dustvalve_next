@@ -32,7 +32,6 @@ import kotlin.math.roundToInt
 /** Actions emitted by [SettingsStorageSection]. */
 internal sealed interface SettingsStorageAction {
     data class SetStorageLimit(val limitGb: Float) : SettingsStorageAction
-    data class SetAutoDownloadCollection(val enabled: Boolean) : SettingsStorageAction
     data class SetAutoDownloadFutureContent(val enabled: Boolean) : SettingsStorageAction
     data class SetAutoDownloadFavorites(val enabled: Boolean) : SettingsStorageAction
     data class SetDownloadNotificationsEnabled(val enabled: Boolean) : SettingsStorageAction
@@ -42,9 +41,6 @@ internal fun handleSettingsStorageAction(viewModel: SettingsViewModel, action: S
     when (action) {
         is SettingsStorageAction.SetStorageLimit ->
             viewModel.setStorageLimit(action.limitGb)
-
-        is SettingsStorageAction.SetAutoDownloadCollection ->
-            viewModel.setAutoDownloadCollection(action.enabled)
 
         is SettingsStorageAction.SetAutoDownloadFutureContent ->
             viewModel.setAutoDownloadFutureContent(action.enabled)
@@ -147,18 +143,6 @@ private fun StorageLimitSlider(storageLimitIndex: Int, onAction: (SettingsStorag
 @Composable
 private fun StorageAutoDownloadControls(state: SettingsUiState, onAction: (SettingsStorageAction) -> Unit) {
     Column {
-        if (state.accountState.isLoggedIn) {
-            Spacer(modifier = Modifier.height(16.dp))
-            SettingsToggleRow(
-                title = stringResource(R.string.settings_auto_download_purchases),
-                description = stringResource(R.string.settings_auto_download_purchases_desc),
-                checked = state.autoDownloadCollection,
-                onCheckedChange = {
-                    onAction(SettingsStorageAction.SetAutoDownloadCollection(it))
-                },
-            )
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
         SettingsToggleRow(
             title = stringResource(R.string.settings_auto_download_future),

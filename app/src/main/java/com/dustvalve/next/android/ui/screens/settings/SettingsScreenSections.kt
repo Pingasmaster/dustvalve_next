@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
@@ -27,11 +26,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,19 +38,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.ui.components.AppButtonGroup
-import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.util.displayNameRes
 import com.dustvalve.next.android.update.UpdateUiState
 import kotlin.math.roundToInt
@@ -247,163 +240,6 @@ private fun ProgressBarAppearanceControls(state: SettingsUiState, onAction: (Set
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-internal fun SettingsConnectionsSection(
-    state: SettingsUiState,
-    onBandcampLoginClick: () -> Unit,
-    onYouTubeMusicLoginClick: () -> Unit,
-    onSignOutBandcamp: () -> Unit,
-    onSignOutYouTubeMusic: () -> Unit,
-) {
-    SettingsSection(
-        title = stringResource(R.string.settings_section_connections),
-        icon = R.drawable.ic_account_circle,
-    ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            ),
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                BandcampConnectionBlock(
-                    state = state,
-                    onLoginClick = onBandcampLoginClick,
-                    onSignOut = onSignOutBandcamp,
-                )
-                Spacer(modifier = Modifier.height(20.dp))
-                YoutubeMusicConnectionBlock(
-                    isLoggedIn = state.ytmAccountState.isLoggedIn,
-                    onLoginClick = onYouTubeMusicLoginClick,
-                    onSignOut = onSignOutYouTubeMusic,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun BandcampConnectionBlock(state: SettingsUiState, onLoginClick: () -> Unit, onSignOut: () -> Unit) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_cloud),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = stringResource(R.string.settings_source_bandcamp),
-                style = MaterialTheme.typography.titleSmall,
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        if (state.accountState.isLoggedIn) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (state.accountState.avatarUrl != null) {
-                    AsyncImage(
-                        model = state.accountState.avatarUrl,
-                        contentDescription = stringResource(R.string.settings_cd_avatar),
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(AppShapes.Avatar),
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = state.accountState.username ?: stringResource(R.string.common_connected),
-                        style = MaterialTheme.typography.bodyMedium,
-                        // Primary accent - matches the YouTube
-                        // Music connected state below.
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onSignOut,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.common_action_disconnect))
-            }
-        } else {
-            Text(
-                text = stringResource(R.string.settings_connect_bandcamp_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = onLoginClick,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.settings_connect_bandcamp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun YoutubeMusicConnectionBlock(isLoggedIn: Boolean, onLoginClick: () -> Unit, onSignOut: () -> Unit) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_play_circle),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = stringResource(R.string.settings_youtube_music),
-                style = MaterialTheme.typography.titleSmall,
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        if (isLoggedIn) {
-            Text(
-                text = stringResource(R.string.common_connected),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedButton(
-                onClick = onSignOut,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.common_action_disconnect))
-            }
-        } else {
-            Text(
-                text = stringResource(R.string.settings_connect_youtube_desc),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = onLoginClick,
-                shapes = ButtonDefaults.shapes(),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(R.string.settings_connect_youtube))
-            }
-        }
-    }
-}
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

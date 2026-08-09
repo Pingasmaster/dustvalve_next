@@ -2,7 +2,6 @@ package com.dustvalve.next.android.domain.repository
 
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
-import com.dustvalve.next.android.domain.model.PurchaseInfo
 import kotlinx.coroutines.flow.Flow
 
 interface AlbumRepository {
@@ -10,7 +9,6 @@ interface AlbumRepository {
     fun getAlbumDetailFlow(url: String): Flow<Album>
     suspend fun toggleFavorite(albumId: String)
     suspend fun setAutoDownload(albumId: String, autoDownload: Boolean)
-    suspend fun updatePurchaseInfo(albumId: String, purchaseInfo: PurchaseInfo)
 
     /**
      * Fetches the per-track price for a single Bandcamp track URL. Returns

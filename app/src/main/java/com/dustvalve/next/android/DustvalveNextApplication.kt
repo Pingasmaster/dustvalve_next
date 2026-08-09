@@ -198,7 +198,7 @@ class DustvalveNextApplication :
             }
             .memoryCache {
                 MemoryCache.Builder()
-                    .maxSizePercent(context, 0.25)
+                    .maxSizePercent(context, COIL_MEMORY_CACHE_PERCENT)
                     .build()
             }
             .diskCache {
@@ -218,6 +218,9 @@ class DustvalveNextApplication :
     }
 
     private companion object {
+        /** Fraction of available memory for Coil's in-memory bitmap cache. */
+        private const val COIL_MEMORY_CACHE_PERCENT = 0.25
+
         /** Coil disk cache budget for full-original covers (~1-10 MB each). */
         private const val COIL_DISK_CACHE_BYTES = 512L * 1024L * 1024L
     }

@@ -1,16 +1,12 @@
 package com.dustvalve.next.android.ui.screens.settings
 
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.asset.AssetEvictionPolicy
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.domain.model.AccountState
 import com.dustvalve.next.android.domain.model.CacheInfo
-import com.dustvalve.next.android.domain.model.YouTubeMusicAccountState
-import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
@@ -27,16 +23,11 @@ import javax.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 
 data class SettingsUiState(
-    val accountState: AccountState = AccountState(),
     val cacheInfo: CacheInfo? = null,
     val themeMode: String = "system",
     val dynamicColor: Boolean = true,
     val storageLimitIndex: Int = 3, // default 2 GB
-    val autoDownloadCollection: Boolean = true,
     val autoDownloadFutureContent: Boolean = false,
-    val bandcampSignOutSuccess: Boolean = false,
-    val ytmAccountState: YouTubeMusicAccountState = YouTubeMusicAccountState(),
-    val ytmSignOutSuccess: Boolean = false,
     val downloadFormat: String = "flac",
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
@@ -76,7 +67,6 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val accountRepository: AccountRepository,
     private val storageTracker: StorageTracker,
     private val assetEvictionPolicy: AssetEvictionPolicy,
     private val settingsDataStore: SettingsDataStore,
@@ -100,7 +90,6 @@ class SettingsViewModel @Inject constructor(
         SettingsUiCollectors(
             scope = viewModelScope,
             uiState = _uiState,
-            accountRepository = accountRepository,
             storageTracker = storageTracker,
             settingsDataStore = settingsDataStore,
         ).start()
@@ -222,16 +211,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setAutoDownloadCollection(enabled: Boolean) {
-        viewModelScope.launch {
-            try {
-                settingsDataStore.setAutoDownloadCollection(enabled)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
     fun setAutoDownloadFutureContent(enabled: Boolean) {
         viewModelScope.launch {
             try {
@@ -280,70 +259,6 @@ class SettingsViewModel @Inject constructor(
                 if (e is CancellationException) throw e
             }
         }
-    }
-
-    fun signOutBandcamp() {
-        viewModelScope.launch {
-            try {
-                accountRepository.clearAccount()
-                // Clear only Bandcamp WebView cookies so re-login starts fresh
-                try {
-                    val cm = android.webkit.CookieManager.getInstance()
-                    cm.getCookie("https://bandcamp.com")
-                        ?.split(";")
-                        ?.forEach { cookie ->
-                            val name = cookie.trim().split("=", limit = 2).firstOrNull()?.trim()
-                            if (name != null) {
-                                cm.setCookie(
-                                    "https://bandcamp.com",
-                                    "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=.bandcamp.com",
-                                )
-                            }
-                        }
-                    cm.flush()
-                } catch (_: Exception) {
-                    // CookieManager may not be initialized if WebView was never used
-                }
-                _uiState.update { it.copy(bandcampSignOutSuccess = true) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
-    fun clearSignOutSuccess() {
-        _uiState.update { it.copy(bandcampSignOutSuccess = false) }
-    }
-
-    fun signOutYouTubeMusic() {
-        viewModelScope.launch {
-            try {
-                accountRepository.clearYouTubeMusicAccount()
-                // Clear YouTube/Google WebView cookies (domain-specific)
-                try {
-                    val cm = android.webkit.CookieManager.getInstance()
-                    listOf("https://youtube.com", "https://music.youtube.com", "https://google.com").forEach { url ->
-                        cm.getCookie(url)?.split(";")?.forEach { cookie ->
-                            val name = cookie.trim().split("=", limit = 2).firstOrNull()?.trim()
-                            if (name != null) {
-                                val domain = url.toUri().host?.let { ".$it" } ?: return@forEach
-                                cm.setCookie(url, "$name=; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=$domain")
-                            }
-                        }
-                    }
-                    cm.flush()
-                } catch (_: Exception) {
-                    // CookieManager may not be initialized if WebView was never used
-                }
-                _uiState.update { it.copy(ytmSignOutSuccess = true) }
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-            }
-        }
-    }
-
-    fun clearYtmSignOutSuccess() {
-        _uiState.update { it.copy(ytmSignOutSuccess = false) }
     }
 
     fun setLocalMusicEnabled(enabled: Boolean) = localMusic.setEnabled(enabled)

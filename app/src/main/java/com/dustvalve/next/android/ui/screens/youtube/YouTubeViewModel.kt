@@ -298,7 +298,7 @@ class YouTubeViewModel @Inject constructor(
         discoveryJobs += viewModelScope.launch { loadTrendingSection() }
         initialGenres.forEachIndexed { index, genre ->
             discoveryJobs += viewModelScope.launch {
-                delay(index * 150L) // Stagger to avoid rate limiting
+                delay(index * GENRE_LOAD_STAGGER_MS) // Stagger to avoid rate limiting
                 loadGenreSection(index, genre)
             }
         }
@@ -424,7 +424,7 @@ class YouTubeViewModel @Inject constructor(
         batch.forEachIndexed { batchIndex, genre ->
             val globalIndex = startIndex + batchIndex
             discoveryJobs += viewModelScope.launch {
-                delay(batchIndex * 150L)
+                delay(batchIndex * GENRE_LOAD_STAGGER_MS)
                 loadGenreSection(globalIndex, genre)
             }
         }
@@ -496,7 +496,7 @@ class YouTubeViewModel @Inject constructor(
         loadMoreJob?.cancel()
         if (query.isNotBlank()) {
             searchJob = viewModelScope.launch {
-                delay(400L)
+                delay(SEARCH_DEBOUNCE_MS)
                 performSearch(query, resetResults = true)
             }
         } else {
@@ -661,4 +661,9 @@ class YouTubeViewModel @Inject constructor(
     suspend fun getTrackInfo(videoUrl: String): Track = youtubeRepository.getTrackInfo(videoUrl)
 
     suspend fun resolvePlaylistTracks(playlistUrl: String): List<Track> = youtubeRepository.getPlaylistTracks(playlistUrl).tracks
+
+    private companion object {
+        private const val GENRE_LOAD_STAGGER_MS = 150L
+        private const val SEARCH_DEBOUNCE_MS = 400L
+    }
 }

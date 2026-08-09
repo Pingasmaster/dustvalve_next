@@ -44,7 +44,6 @@ class PlaylistTest {
         val ids = listOf(
             Playlist.ID_DOWNLOADS,
             Playlist.ID_RECENT,
-            Playlist.ID_COLLECTION,
             Playlist.ID_FAVORITES,
         )
         assertThat(ids).containsNoDuplicates()

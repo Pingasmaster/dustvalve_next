@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -34,7 +33,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.domain.repository.AccountRepository
 import com.dustvalve.next.android.ui.TestTags
 import com.dustvalve.next.android.ui.adaptive.LocalAdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.screens.album.AlbumDetailScreen
@@ -44,14 +42,11 @@ import com.dustvalve.next.android.ui.screens.detail.CollectionDetailScreen
 import com.dustvalve.next.android.ui.screens.library.LibraryScreen
 import com.dustvalve.next.android.ui.screens.local.LocalScreen
 import com.dustvalve.next.android.ui.screens.playlist.PlaylistDetailScreen
-import com.dustvalve.next.android.ui.screens.settings.AccountLoginScreen
 import com.dustvalve.next.android.ui.screens.settings.SettingsScreen
-import com.dustvalve.next.android.ui.screens.settings.YouTubeMusicLoginScreen
 import com.dustvalve.next.android.ui.screens.soundcloud.SoundCloudScreen
 import com.dustvalve.next.android.ui.screens.youtube.YouTubeScreen
 import com.dustvalve.next.android.ui.util.iconRes
 import com.dustvalve.next.android.util.LinkResourceType
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -60,7 +55,6 @@ import kotlinx.coroutines.launch
 // destination), so they are suppressed rather than split into artificial helpers.
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 fun AppNavigation(
-    accountRepository: AccountRepository,
     modifier: Modifier = Modifier,
     // Activity-scoped: hiltViewModel() resolves to MainActivity's
     // ViewModelStoreOwner, so this is the same instance MainContent owns.
@@ -73,7 +67,6 @@ fun AppNavigation(
     val isForward by navViewModel.lastNavigationForward.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
     val currentDestination = backStack.lastOrNull() ?: NavDestination.LocalHome
-    val coroutineScope = rememberCoroutineScope()
     val pendingLink by navViewModel.pendingLinkConfirmation.collectAsStateWithLifecycle()
     val linkSnackbarHostState = remember { SnackbarHostState() }
     val unsupportedMsg = stringResource(R.string.snackbar_unsupported_source)
@@ -205,10 +198,7 @@ fun AppNavigation(
                         onPlaylistClick = { playlistId -> navViewModel.navigateTo(NavDestination.PlaylistDetail(playlistId)) },
                     )
 
-                    is NavDestination.Settings -> SettingsScreen(
-                        onBandcampLoginClick = { navViewModel.navigateTo(NavDestination.AccountLogin) },
-                        onYouTubeMusicLoginClick = { navViewModel.navigateTo(NavDestination.YouTubeMusicLogin) },
-                    )
+                    is NavDestination.Settings -> SettingsScreen()
 
                     // Detail destinations: the detail ViewModel is resolved against a
                     // per-destination store owner (cleared once the destination leaves
@@ -277,38 +267,6 @@ fun AppNavigation(
                             viewModel = hiltViewModel(viewModelStoreOwner = detailVmStores.owner(storeKey), key = storeKey),
                         )
                     }
-
-                    is NavDestination.YouTubeMusicLogin -> YouTubeMusicLoginScreen(
-                        onLoginSuccess = { cookies ->
-                            coroutineScope.launch {
-                                try {
-                                    accountRepository.saveYouTubeMusicCookies(cookies)
-                                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
-                                    throw e
-                                } catch (_: Exception) {
-                                    // Cookie save failed - still navigate back
-                                }
-                                navViewModel.navigateBack()
-                            }
-                        },
-                        onBack = { navViewModel.navigateBack() },
-                    )
-
-                    is NavDestination.AccountLogin -> AccountLoginScreen(
-                        onLoginSuccess = { cookies ->
-                            coroutineScope.launch {
-                                try {
-                                    accountRepository.saveCookies(cookies)
-                                } catch (e: kotlin.coroutines.cancellation.CancellationException) {
-                                    throw e
-                                } catch (_: Exception) {
-                                    // Cookie save failed - still navigate back
-                                }
-                                navViewModel.navigateBack()
-                            }
-                        },
-                        onBack = { navViewModel.navigateBack() },
-                    )
                 }
             }
         }

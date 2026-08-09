@@ -21,16 +21,19 @@
     <issue id="TypographyDashes"              severity="error" />
     <issue id="RelativeOverlap"               severity="error" />
     <issue id="RtlHardcoded"                  severity="error" />
+    <!--
+        Not an App Indexing / web deep-link product. In-app deep links are for
+        navigation inside Dustvalve, not Google App Indexing crawl targets.
+    -->
     <issue id="GoogleAppIndexingWarning"      severity="ignore" />
     <issue id="ObsoleteSdkInt"                severity="error" />
 
     <!--
-        NewerVersionAvailable / AndroidGradlePluginVersion report that some
-        dependency in gradle/libs.versions.toml has a newer release. The
-        project tracks upgrades via routine dependency review (Dependabot +
-        manual sweep), not via lint. With warningsAsErrors = true these
-        would otherwise fail lintRelease. Demote to informational so they
-        stay visible in editor lint markers without blocking CI.
+        NewerVersionAvailable / AndroidGradlePluginVersion / GradleDependency
+        report that some catalog pin has a newer release. ./build.sh already
+        auto-bumps via scripts/check_latest_deps.py --apply on every build;
+        failing lintRelease on the same signal is redundant noise under
+        warningsAsErrors. Demote to informational so editor markers remain.
     -->
     <issue id="NewerVersionAvailable"         severity="informational" />
     <issue id="AndroidGradlePluginVersion"    severity="informational" />
@@ -89,13 +92,13 @@
     </issue>
 
     <!--
-        slack-lints' DenyListedApi forbids runCatching because in suspend
-        contexts it silently swallows CancellationException. In test code
-        runCatching{ ... }.exceptionOrNull() is the canonical pattern for
-        capturing exceptions in non-suspend assertions, and the
-        CancellationException concern does not apply. Production-source
-        runCatching calls remain flagged; they are replaced with try/catch +
-        explicit cancellation rethrow.
+        slack-lints DenyListedApi forbids runCatching (CancellationException
+        swallow risk in suspend code) plus legacy Date/Calendar APIs, etc.
+        In tests, runCatching { }.exceptionOrNull() is the idiomatic way to
+        assert thrown types without JUnit expected=; CancellationException
+        does not apply to non-suspend test bodies. Production DenyListedApi
+        stays enabled - production runCatching must be try/catch with
+        CancellationException rethrow.
     -->
     <issue id="DenyListedApi">
         <ignore path="**/src/test/**" />

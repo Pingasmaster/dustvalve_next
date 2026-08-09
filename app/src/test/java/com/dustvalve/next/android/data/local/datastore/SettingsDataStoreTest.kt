@@ -57,18 +57,6 @@ class SettingsDataStoreTest {
         assertThat(store.getStorageLimitSync()).isEqualTo(1_000_000L)
     }
 
-    @Test fun `account info atomic clear`() = runTest {
-        store.setAccountInfo("user", "https://a/img", fanId = 42L)
-        assertThat(store.accountUsername.first()).isEqualTo("user")
-        assertThat(store.accountAvatar.first()).isEqualTo("https://a/img")
-        assertThat(store.accountFanId.first()).isEqualTo(42L)
-
-        store.setAccountInfo(null, null, null)
-        assertThat(store.accountUsername.first()).isNull()
-        assertThat(store.accountAvatar.first()).isNull()
-        assertThat(store.accountFanId.first()).isNull()
-    }
-
     @Test fun `auth cookies roundtrip via encryption stub`() = runTest {
         store.setAuthCookies("""[{"name":"session","value":"xyz"}]""")
         assertThat(store.authCookies.first()).isEqualTo("""[{"name":"session","value":"xyz"}]""")
@@ -124,10 +112,6 @@ class SettingsDataStoreTest {
         assertThat(store.searchHistoryEnabled.first()).isFalse()
         store.setPlayerDebugOverlay(false)
         assertThat(store.playerDebugOverlay.first()).isFalse()
-        store.setYtmConnected(true)
-        assertThat(store.ytmConnected.first()).isTrue()
-        store.setAutoDownloadCollection(false)
-        assertThat(store.autoDownloadCollection.first()).isFalse()
         store.setAutoDownloadFutureContent(true)
         assertThat(store.getAutoDownloadFutureContentSync()).isTrue()
         store.setProgressiveDownload(false)
@@ -136,16 +120,6 @@ class SettingsDataStoreTest {
         assertThat(store.getSeamlessQualityUpgradeSync()).isFalse()
         store.setSaveDataOnMetered(false)
         assertThat(store.getSaveDataOnMeteredSync()).isFalse()
-    }
-
-    @Test fun `clearAccount removes all account fields`() = runTest {
-        store.setAccountInfo("u", "a", 1L)
-        store.setAuthCookies("c")
-        store.clearAccount()
-        assertThat(store.accountUsername.first()).isNull()
-        assertThat(store.accountAvatar.first()).isNull()
-        assertThat(store.accountFanId.first()).isNull()
-        assertThat(store.authCookies.first()).isNull()
     }
 
     @Test fun `download format roundtrip`() = runTest {

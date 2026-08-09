@@ -125,13 +125,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         prefs[Keys.STORAGE_LIMIT] ?: DEFAULT_STORAGE_LIMIT
     }
 
-    val accountUsername: Flow<String?> = guardedPreferences.map { prefs ->
-        prefs[Keys.ACCOUNT_USERNAME]
-    }
 
-    val accountAvatar: Flow<String?> = guardedPreferences.map { prefs ->
-        prefs[Keys.ACCOUNT_AVATAR]
-    }
 
     val authCookies: Flow<String?> = guardedPreferences.map { prefs ->
         prefs[Keys.AUTH_COOKIES]?.let { encrypted ->
@@ -144,13 +138,7 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    val accountFanId: Flow<Long?> = guardedPreferences.map { prefs ->
-        prefs[Keys.ACCOUNT_FAN_ID]
-    }
 
-    val autoDownloadCollection: Flow<Boolean> = guardedPreferences.map { prefs ->
-        prefs[Keys.AUTO_DOWNLOAD_COLLECTION] ?: true
-    }
 
     val autoDownloadFutureContent: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.AUTO_DOWNLOAD_FUTURE_CONTENT] ?: false
@@ -221,30 +209,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    /**
-     * Atomically sets all account info fields in a single DataStore edit.
-     * Passing null for a field clears it, preventing stale data from a previous login.
-     */
-    suspend fun setAccountInfo(username: String?, avatarUrl: String?, fanId: Long?) {
-        context.dataStore.edit { prefs ->
-            if (username != null) {
-                prefs[Keys.ACCOUNT_USERNAME] = username
-            } else {
-                prefs.remove(Keys.ACCOUNT_USERNAME)
-            }
-            if (avatarUrl != null) {
-                prefs[Keys.ACCOUNT_AVATAR] = avatarUrl
-            } else {
-                prefs.remove(Keys.ACCOUNT_AVATAR)
-            }
-            if (fanId != null) {
-                prefs[Keys.ACCOUNT_FAN_ID] = fanId
-            } else {
-                prefs.remove(Keys.ACCOUNT_FAN_ID)
-            }
-        }
-    }
-
     suspend fun setAuthCookies(cookiesJson: String?) {
         context.dataStore.edit { prefs ->
             if (cookiesJson != null) {
@@ -258,11 +222,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
     suspend fun getStorageLimitSync(): Long = guardedPreferences.firstOrNull()?.get(Keys.STORAGE_LIMIT)
         ?: DEFAULT_STORAGE_LIMIT
 
-    suspend fun setAutoDownloadCollection(enabled: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.AUTO_DOWNLOAD_COLLECTION] = enabled
-        }
-    }
 
     suspend fun setAutoDownloadFutureContent(enabled: Boolean) {
         context.dataStore.edit { prefs ->
@@ -335,14 +294,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
 
     suspend fun getSaveDataOnMeteredSync(): Boolean = guardedPreferences.firstOrNull()?.get(Keys.SAVE_DATA_ON_METERED) ?: true
 
-    suspend fun clearAccount() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(Keys.ACCOUNT_USERNAME)
-            prefs.remove(Keys.ACCOUNT_AVATAR)
-            prefs.remove(Keys.AUTH_COOKIES)
-            prefs.remove(Keys.ACCOUNT_FAN_ID)
-        }
-    }
 
     val localMusicEnabled: Flow<Boolean> = guardedPreferences.map { prefs ->
         prefs[Keys.LOCAL_MUSIC_ENABLED] ?: false
@@ -567,15 +518,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    val ytmConnected: Flow<Boolean> = guardedPreferences.map { prefs ->
-        prefs[Keys.YTM_CONNECTED] ?: false
-    }
-
-    suspend fun setYtmConnected(connected: Boolean) {
-        context.dataStore.edit { prefs ->
-            prefs[Keys.YTM_CONNECTED] = connected
-        }
-    }
 
     val youtubeDefaultSource: Flow<String> = guardedPreferences.map { prefs ->
         prefs[Keys.YOUTUBE_DEFAULT_SOURCE] ?: "youtube"
@@ -601,11 +543,6 @@ class SettingsDataStore @Inject constructor(@param:ApplicationContext private va
         }
     }
 
-    suspend fun clearYtmAccount() {
-        context.dataStore.edit { prefs ->
-            prefs.remove(Keys.YTM_CONNECTED)
-        }
-    }
 
     suspend fun setLastYoutubeVideoId(videoId: String?) {
         context.dataStore.edit { prefs ->

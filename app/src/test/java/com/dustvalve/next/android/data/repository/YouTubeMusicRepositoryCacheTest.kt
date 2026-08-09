@@ -25,8 +25,9 @@ import org.junit.Test
 
 /**
  * Verifies the YouTube Music home-cache behaviour. The home feed is
- * editorial (changes daily) but never blocks the UI - cached snapshots
- * always emit first; background refresh is best-effort and silent.
+ * editorial (changes frequently) but never blocks the UI - cached
+ * snapshots always emit first; every open silently revalidates in the
+ * background (best-effort).
  */
 class YouTubeMusicRepositoryCacheTest {
 
@@ -57,20 +58,21 @@ class YouTubeMusicRepositoryCacheTest {
         )
     }
 
-    @Test fun `getHome cache hit returns cached feed without browsing`() = runTest {
+    @Test fun `getHome cache hit returns cached feed and revalidates in background`() = runTest {
         // Cached payload - empty JSON object is fine; parser is mocked.
         coEvery { homeCache.getByKey("home") } returns YouTubeMusicHomeCacheEntity(
             key = "home",
             feedJson = "{}",
-            cachedAt = System.currentTimeMillis(), // Fresh - no background refresh.
+            cachedAt = System.currentTimeMillis(),
         )
         val cachedFeed = YouTubeMusicHomeFeed(chips = emptyList(), shelves = emptyList())
         every { parser.parseHome(any()) } returns cachedFeed
+        coEvery { client.browse(browseId = "FEmusic_home") } returns JsonObject(emptyMap())
 
         val feed = repo.getHome()
 
         assertThat(feed).isSameInstanceAs(cachedFeed)
-        coVerify(exactly = 0) { client.browse(any(), any()) }
+        coVerify(exactly = 1) { client.browse(browseId = "FEmusic_home") }
     }
 
     @Test fun `getHome cache miss fetches and persists`() = runTest {
@@ -97,11 +99,12 @@ class YouTubeMusicRepositoryCacheTest {
         )
         val cachedFeed = YouTubeMusicHomeFeed(chips = emptyList(), shelves = emptyList())
         every { parser.parseHome(any()) } returns cachedFeed
+        coEvery { client.browse(browseId = "FEmusic_home", params = moodParams) } returns JsonObject(emptyMap())
 
         val feed = repo.getMoodHome(moodParams)
 
         assertThat(feed).isSameInstanceAs(cachedFeed)
-        coVerify(exactly = 0) { client.browse(any(), any()) }
+        coVerify(exactly = 1) { client.browse(browseId = "FEmusic_home", params = moodParams) }
     }
 
     @Test fun `cache write failure does not break user-facing call`() = runTest {

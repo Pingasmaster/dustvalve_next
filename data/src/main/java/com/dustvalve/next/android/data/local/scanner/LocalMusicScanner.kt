@@ -31,6 +31,8 @@ class LocalMusicScanner(private val context: Context, private val trackDao: Trac
     ) : this(context, gateway.trackDao, ioDispatcher)
 
     companion object {
+        private const val DB_INSERT_CHUNK_SIZE = 500
+
         private val AUDIO_EXTENSIONS = setOf(
             "mp3", "flac", "m4a", "ogg", "wav", "opus", "aac", "wma", "alac",
         )
@@ -52,7 +54,7 @@ class LocalMusicScanner(private val context: Context, private val trackDao: Trac
 
         // Insert/update scanned tracks
         if (trackEntities.isNotEmpty()) {
-            trackEntities.chunked(500).forEach { chunk ->
+            trackEntities.chunked(DB_INSERT_CHUNK_SIZE).forEach { chunk ->
                 trackDao.insertAll(chunk)
             }
         }

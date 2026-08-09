@@ -68,34 +68,25 @@ class ArtistRepositoryImpl(
         ioDispatcher,
     )
 
-    companion object {
-        // Artists may grow new albums over time, so unlike fully-immutable
-        // album metadata we still revalidate periodically - but the cached
-        // copy is always emitted FIRST so the UI never blocks on the network.
-        // The artist-photo URL is content-addressed by Bandcamp (the image
-        // id changes whenever the artist re-uploads), so a fresh scrape that
-        // returns a different imageUrl is functionally a hash-mismatch and
-        // the new URL silently replaces the stored one when persisted.
-        private const val REVALIDATE_THRESHOLD_MS = 24 * 60 * 60 * 1000L // 24h
-    }
+    // Artists may grow (or shrink) their discography at any time, so unlike
+    // fully-immutable album metadata every open revalidates. The cached copy
+    // is always emitted FIRST so the UI never blocks on the network; a fresh
+    // scrape that changes albumIdOrder or imageUrl rewrites the row and
+    // re-emits. The artist-photo URL is content-addressed by Bandcamp (the
+    // image id changes on re-upload), so a different imageUrl is treated as
+    // a content change.
 
     override suspend fun getArtistDetail(url: String): Artist {
         val cleanUrl = url.substringBefore('?').substringBefore('#').trimEnd('/')
 
-        // Try cache first
         val cachedArtist = artistDao.getByUrl(cleanUrl) ?: artistDao.getByUrl(url)
         if (cachedArtist != null) {
-            val age = System.currentTimeMillis() - cachedArtist.cachedAt
-            if (age < REVALIDATE_THRESHOLD_MS) {
-                return buildCachedArtist(cachedArtist, cleanUrl, url)
-            }
-            // Stale: try revalidate, fall back to stale cache offline
+            // Always revalidate; fall back to cache offline.
             return orOnRemoteFailure(buildCachedArtist(cachedArtist, cleanUrl, url)) {
                 scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
             }
         }
 
-        // Cache miss: scrape and persist
         return scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
     }
 
@@ -104,17 +95,13 @@ class ArtistRepositoryImpl(
 
         val cachedArtist = artistDao.getByUrl(cleanUrl) ?: artistDao.getByUrl(url)
         if (cachedArtist != null) {
-            // Always emit cached data immediately
             emit(buildCachedArtist(cachedArtist, cleanUrl, url))
-
-            val age = System.currentTimeMillis() - cachedArtist.cachedAt
-            if (age < REVALIDATE_THRESHOLD_MS) return@flow // Fresh enough, no revalidation
         }
 
-        // No cache or stale: scrape in background and emit updated result
+        // Always scrape on open so newly published (or removed) releases
+        // rewrite the cache as soon as the user visits the page.
         try {
             val fresh = scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
-            // Only re-emit if we didn't have cache, or if content actually changed
             if (cachedArtist == null || didArtistChange(cachedArtist, fresh)) {
                 emit(fresh)
             }
@@ -122,7 +109,7 @@ class ArtistRepositoryImpl(
             throw e
         } catch (e: IOException) {
             if (cachedArtist == null) throw e
-            // Stale cache already emitted - swallow network error for offline use
+            // Cache already emitted - swallow network error for offline use
         } catch (e: SerializationException) {
             if (cachedArtist == null) throw e
         } catch (e: IllegalArgumentException) {
@@ -146,10 +133,11 @@ class ArtistRepositoryImpl(
                 null
             }
         }
+        // albumIdOrder is the live discography snapshot. Do NOT append DB
+        // rows missing from that list - insertIfAbsent leaves removed-release
+        // stubs behind, and showing them made delisted albums stick forever.
         val albums = if (orderedIds != null) {
-            val ordered = orderedIds.mapNotNull { albumMap[it] }
-            val remaining = albumMap.values.filter { it.id !in orderedIds.toSet() }
-            (ordered + remaining).map { it.toDomain(emptyList(), false) }
+            orderedIds.mapNotNull { albumMap[it] }.map { it.toDomain(emptyList(), false) }
         } else {
             albumMap.values.map { it.toDomain(emptyList(), false) }
         }

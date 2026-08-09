@@ -207,17 +207,23 @@ Status legend: [ ] backlog, [x] implemented (test class#method noted).
 
 ## K. Artist detail
 
-- [ ] bc-artist-load-grid [JVM, hermetic]: hero, name, location, bio,
-  2-column discography (fixtures incl. mobile + single-album layouts).
+- [x] bc-artist-cache-swr [JVM, hermetic]: cache emits first; every open
+  revalidates even when <24h old; new albumIdOrder re-emits; delisted album
+  stubs left by insertIfAbsent are not shown
+  (ArtistRepositoryImplTest).
+- [x] bc-artist-load-grid [JVM, hermetic]: hero, name, location, bio,
+  2-column discography via getArtistDetailFlow
+  (ArtistDetailViewModelTest).
 - [ ] bc-artist-single-album-layout [JVM, hermetic].
 - [ ] bc-artist-album-click [JVM, hermetic].
 - [ ] bc-artist-play-mix [smoke, hermetic]: loading state; one-track-per-album
   interleave plays.
-- [ ] bc-artist-favorite [JVM, hermetic]: type "artist" persisted.
-- [ ] bc-artist-download-all [E2E, hermetic]: ArtistWork; icon flips when all
-  albums downloaded.
-- [ ] bc-artist-delete-all-downloads [JVM, hermetic]: confirm dialog; files +
-  rows removed.
+- [x] bc-artist-favorite [JVM, hermetic]: type "artist" persisted by stable
+  hash id (not URL) (ArtistDetailViewModelTest).
+- [x] bc-artist-download-all [JVM, hermetic]: DownloadAlbumUseCase.downloadArtist
+  (stubs have empty tracks) (ArtistDetailViewModelTest).
+- [x] bc-artist-delete-all-downloads [JVM, hermetic]: deleteArtistDownloads by
+  album id (ArtistDetailViewModelTest).
 - [ ] bc-artist-buy-discography-cta [JVM, hermetic].
 - [ ] bc-artist-error-retry [JVM, hermetic].
 - [ ] bc-artist-empty-discography [JVM, hermetic]: detail_no_releases empty
@@ -259,22 +265,11 @@ Status legend: [ ] backlog, [x] implemented (test class#method noted).
 - [ ] bc-auto-download-album-flag [JVM, hermetic]: autoDownload=true persisted
   for future re-scrapes.
 
-## N. Account, collection, HQ downloads
+## N. Account, collection, HQ downloads (REMOVED)
 
-- [ ] bc-login-webview-flow [E2E, live]: FLAG_SECURE; identity cookie captured;
-  Settings shows account.
-- [ ] bc-login-blocks-foreign-domains [E2E, live].
-- [ ] bc-login-page-error [smoke, hermetic]: offline error text.
-- [ ] bc-signout [JVM, hermetic]: keys cleared, WebView cookies expired,
-  snackbar.
-- [ ] bc-collection-sync-playlist [E2E, hermetic]: fan_id POST; system
-  Collection playlist synced; purchase info persisted.
-- [ ] bc-collection-pagination [JVM, hermetic]: older_than_token followed.
-- [ ] bc-auto-download-collection-toggle [E2E, hermetic]: sequential
-  best-effort album downloads.
-- [ ] bc-hq-download-purchased [E2E, live]: download page -> preferred format
-  (FLAC -> MP3_320 -> V0 -> AAC -> OGG).
-- [ ] bc-hq-download-fallback-to-mp3128 [JVM, hermetic]: silent fallback.
+Bandcamp WebView login, purchases collection sync, and HQ purchase
+downloads were removed. Buy-on-Bandcamp CTAs that open an external
+browser remain.
 
 ## O. Library integration
 

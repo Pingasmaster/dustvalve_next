@@ -5,30 +5,22 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.data.remote.DustvalveCollectionScraper
 import com.dustvalve.next.android.data.transfer.PlaylistTransferRepository
-import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.LibraryItem
 import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
-import com.dustvalve.next.android.domain.repository.AccountRepository
-import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
-import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -57,11 +49,6 @@ data class TransferProgress(val importing: Boolean, val done: Int, val total: In
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val playlistRepository: PlaylistRepository,
-    private val albumRepository: AlbumRepository,
-    private val accountRepository: AccountRepository,
-    private val collectionScraper: DustvalveCollectionScraper,
-    private val settingsDataStore: SettingsDataStore,
-    private val downloadController: DownloadController,
     private val downloadRepository: DownloadRepository,
     private val favoriteRepository: FavoriteRepository,
     private val libraryRepository: LibraryRepository,
@@ -71,8 +58,6 @@ class LibraryViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
-
-    private var collectionJob: Job? = null
 
     init {
         initLibraryItems()
@@ -298,12 +283,11 @@ class LibraryViewModel @Inject constructor(
                 playlistRepository.getAllPlaylists(),
                 libraryRepository.getFavoriteAlbums(),
                 libraryRepository.getFavoriteArtists(),
-                accountRepository.getAccountState(),
-            ) { playlists, favAlbums, favArtists, accountState ->
-                val filteredPlaylists = playlists.filter { playlist ->
-                    // Hide Bandcamp purchases playlist when Bandcamp account is not connected
-                    if (playlist.id == Playlist.ID_COLLECTION) accountState.isLoggedIn else true
-                }
+            ) { playlists, favAlbums, favArtists ->
+                // ensureSystemPlaylistsExist sweeps the retired Bandcamp
+                // purchases system playlist; filter defensively if a stale
+                // row is still present mid-migration.
+                val filteredPlaylists = playlists.filter { it.id != "system_collection" }
                 val playlistItems = filteredPlaylists.map { LibraryItem.PlaylistItem(it) }
                 val albumItems = favAlbums.map { info ->
                     LibraryItem.AlbumItem(
@@ -359,56 +343,6 @@ class LibraryViewModel @Inject constructor(
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // Best-effort sync
-            }
-        }
-        loadCollection()
-    }
-
-    private fun loadCollection() {
-        collectionJob?.cancel()
-        collectionJob = viewModelScope.launch {
-            val accountState = accountRepository.getAccountState().first()
-            val fanId = accountState.fanId ?: return@launch
-
-            try {
-                val result = collectionScraper.getCollection(fanId)
-                // Persist purchase info for HQ downloads
-                for ((albumId, info) in result.purchaseInfo) {
-                    try {
-                        albumRepository.updatePurchaseInfo(albumId, info)
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        /* best-effort */
-                    }
-                }
-                playlistRepository.syncCollectionPlaylist(result.albums.map { it.id })
-                autoDownloadCollection(result.albums)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                // Best-effort
-            }
-        }
-    }
-
-    private fun autoDownloadCollection(albums: List<Album>) {
-        viewModelScope.launch {
-            try {
-                val enabled = settingsDataStore.autoDownloadCollection.first()
-                if (!enabled) return@launch
-                for (albumStub in albums) {
-                    try {
-                        val album = albumRepository.getAlbumDetail(albumStub.url)
-                        downloadController.downloadAlbumBlocking(album)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Exception) {
-                        // Best-effort: skip failures
-                    }
-                }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                // Best-effort: never block UI
             }
         }
     }

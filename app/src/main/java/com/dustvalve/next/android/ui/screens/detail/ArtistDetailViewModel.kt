@@ -19,6 +19,7 @@ import com.dustvalve.next.android.download.DownloadController
 import com.dustvalve.next.android.download.downloadEachDeferringFailures
 import com.dustvalve.next.android.util.UiText
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,7 +82,9 @@ class ArtistDetailViewModel @Inject constructor(
         private set
 
     private var loadedKey: String? = null
+    private var loadJob: Job? = null
     private var nextPage: Any? = null
+    private var preloadedAlbumIds: Set<String> = emptySet()
 
     init {
         collectDownloaded()
@@ -110,16 +113,20 @@ class ArtistDetailViewModel @Inject constructor(
      * YouTube channels whose browse endpoint doesn't return the channel
      * image, so the caller passes the thumbnail it already has from the
      * SearchResult.
+     *
+     * Bandcamp uses [ArtistRepository.getArtistDetailFlow]: cache first,
+     * then opportunistic revalidate on every open so new releases appear
+     * as soon as the page is visited. Flat-feed sources (YouTube,
+     * SoundCloud) keep the suspend + paginated track path.
      */
     fun load(sourceId: String, url: String, name: String? = null, imageUrl: String? = null) {
         val key = "$sourceId|$url"
-        if (loadedKey == key && _uiState.value.artist != null) return
-        // loadedKey is only set on SUCCESS (end of the try block below). Setting
-        // it up-front made a failed fetch permanent: with a seeded artist hint the
-        // guard above short-circuited every retry for the VM's whole lifetime.
+        val sameLoaded = loadedKey == key && _uiState.value.artist != null
+        // Flat-feed artists are expensive to re-page; Bandcamp must always
+        // re-subscribe so the Flow revalidates discography on every visit.
+        if (sameLoaded && sourceId != "bandcamp") return
         nextPage = null
 
-        // Seed with the caller-provided hint so the top bar isn't blank.
         val seed = if (name != null || imageUrl != null) {
             Artist(
                 id = url,
@@ -137,20 +144,31 @@ class ArtistDetailViewModel @Inject constructor(
             it.copy(
                 sourceId = sourceId,
                 artistUrl = url,
-                artist = seed,
-                tracks = emptyList(),
-                isLoading = true,
-                hasMore = false,
+                artist = when {
+                    sameLoaded -> it.artist
+                    seed != null -> seed
+                    else -> null
+                },
+                tracks = if (sameLoaded) it.tracks else emptyList(),
+                // Keep the current grid visible while Bandcamp revalidates.
+                isLoading = !sameLoaded,
+                hasMore = if (sameLoaded) it.hasMore else false,
                 error = null,
             )
         }
 
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             val source = sources[sourceId]
             if (source == null) {
                 _uiState.update {
                     it.copy(isLoading = false, error = UiText.StringResource(R.string.error_unknown_source, listOf(sourceId)))
                 }
+                return@launch
+            }
+
+            if (sourceId == "bandcamp") {
+                loadBandcampArtist(url, imageUrl, key)
                 return@launch
             }
 
@@ -160,18 +178,16 @@ class ArtistDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         artist = artist.copy(
-                            // Keep a hint image if the source didn't populate one.
                             imageUrl = artist.imageUrl ?: imageUrl,
                         ),
                         isFavorite = isFav,
                     )
                 }
 
-                // YouTube-style flat track feed.
                 if (SourceConcept.ARTIST_TRACKS in source.capabilities) {
                     artistRepository.cacheRemoteArtist(
                         artist.copy(imageUrl = artist.imageUrl ?: imageUrl),
-                        source = "youtube",
+                        source = sourceId,
                     )
                     val page = source.getArtistTracks(url, continuation = null)
                     nextPage = page.continuation
@@ -189,14 +205,51 @@ class ArtistDetailViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false) }
                 }
                 loadedKey = key
-                // The artist is on screen; start stocking the mix pool now so a
-                // later tap plays instantly and covers the whole catalogue.
-                preloadMixPool()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 _uiState.update {
                     it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_artist))
                 }
+            }
+        }
+    }
+
+    private suspend fun loadBandcampArtist(url: String, imageUrl: String?, key: String) {
+        try {
+            artistRepository.getArtistDetailFlow(url)
+                .catch { e ->
+                    if (e is CancellationException) throw e
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = UiText.orResource(e.message, R.string.detail_error_load_artist),
+                        )
+                    }
+                }
+                .collect { artist ->
+                    loadedKey = key
+                    _uiState.update {
+                        it.copy(
+                            artist = artist.copy(
+                                imageUrl = artist.imageUrl ?: imageUrl,
+                            ),
+                            // Favorite is keyed by the stable Bandcamp hash id,
+                            // not the URL - use the repository's value.
+                            isFavorite = artist.isFavorite,
+                            isLoading = false,
+                            error = null,
+                        )
+                    }
+                    val albumIds = artist.albums.map { it.id }.toSet()
+                    if (albumIds != preloadedAlbumIds) {
+                        preloadedAlbumIds = albumIds
+                        preloadMixPool()
+                    }
+                }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            _uiState.update {
+                it.copy(isLoading = false, error = UiText.orResource(e.message, R.string.detail_error_load_artist))
             }
         }
     }
@@ -285,11 +338,31 @@ class ArtistDetailViewModel @Inject constructor(
         _uiState.update { it.copy(isDownloading = true) }
         viewModelScope.launch {
             try {
-                val pending = if (state.sourceId == "bandcamp") {
-                    state.artist?.albums.orEmpty().flatMap { it.tracks }
-                } else {
-                    expandLoadedArtistTracks()
-                }.filter { it.id !in state.downloadedTrackIds }
+                if (state.sourceId == "bandcamp") {
+                    val artist = state.artist
+                    if (artist == null || artist.albums.isEmpty()) {
+                        _uiState.update { it.copy(isDownloading = false) }
+                        return@launch
+                    }
+                    // Artist-grid albums are stubs (empty tracks). Resolve and
+                    // download via the album path - flatMap { tracks } is a no-op.
+                    downloadAlbumUseCase.downloadArtist(artist)
+                    retryAction = null
+                    _uiState.update {
+                        it.copy(
+                            isDownloading = false,
+                            snackbarMessage = UiText.StringResource(
+                                R.string.snackbar_downloaded,
+                                listOf(artist.name),
+                            ),
+                            isSnackbarError = false,
+                        )
+                    }
+                    return@launch
+                }
+
+                val pending = expandLoadedArtistTracks()
+                    .filter { it.id !in state.downloadedTrackIds }
 
                 // One undownloadable track (typically an age-restricted
                 // YouTube video) used to end the whole artist download where
@@ -386,16 +459,22 @@ class ArtistDetailViewModel @Inject constructor(
     fun deleteAllDownloads() {
         viewModelScope.launch {
             val state = _uiState.value
-            val ids: List<String> = if (state.sourceId == "bandcamp") {
-                state.artist?.albums?.flatMap { it.tracks }?.map { it.id }.orEmpty()
-            } else {
-                state.tracks.map { it.id }
-            }
-            for (id in ids) {
+            if (state.sourceId == "bandcamp") {
+                val artist = state.artist ?: return@launch
+                // Album stubs have empty tracks; delete by album id instead.
                 try {
-                    downloadAlbumUseCase.deleteTrackDownload(id)
+                    downloadAlbumUseCase.deleteArtistDownloads(artist)
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
+                }
+            } else {
+                val ids = state.tracks.map { it.id }
+                for (id in ids) {
+                    try {
+                        downloadAlbumUseCase.deleteTrackDownload(id)
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                    }
                 }
             }
             _uiState.update {

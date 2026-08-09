@@ -23,7 +23,6 @@
     <string name="common_action_save">保存</string>
     <string name="common_action_create">作成</string>
     <string name="common_action_remove">削除</string>
-    <string name="common_action_disconnect">接続を解除</string>
     <string name="common_play_all">すべて再生</string>
     <string name="link_open_video"><xliff:g id="brand">YouTube</xliff:g>の動画を開く</string>
     <string name="link_open_song"><xliff:g id="brand">YouTube Music</xliff:g>の曲を開く</string>
@@ -74,7 +73,6 @@
     <string name="common_action_add">追加</string>
     <string name="common_play_mix">ミックスを再生</string>
     <string name="common_loading">読み込み中…</string>
-    <string name="common_connected">接続済み</string>
     <string name="common_selected_folder">選択したフォルダ</string>
     <string name="common_failed_to_play">再生に失敗しました</string>
     <string name="common_playlist_imported">プレイリストをインポートしました：<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
@@ -161,7 +159,6 @@
     <string name="player_audio_device_unknown">オーディオデバイス</string>
     <string name="settings_title">設定</string>
     <string name="settings_section_sources">ソース</string>
-    <string name="settings_section_connections">接続</string>
     <string name="settings_section_storage">ストレージ</string>
     <string name="settings_section_audio_quality">音質</string>
     <string name="settings_section_appearance">外観</string>
@@ -176,23 +173,14 @@
     <string name="settings_remove_downloads_text">ダウンロードプール全体（明示的なダウンロード、自動キャッシュされたオーディオ、アルバムカバー、アーティスト画像）が消去されます。</string>
     <string name="settings_download_format">ダウンロード形式</string>
     <string name="settings_download_format_desc">ダウンロードする<xliff:g id="brand">Bandcamp</xliff:g>購入品の形式</string>
-    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g>の接続を解除しました</string>
-    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g>の接続を解除しました</string>
     <string name="settings_add_folder">フォルダを追加</string>
     <string name="settings_rescan">再スキャン</string>
     <string name="settings_cd_remove_folder">フォルダを削除</string>
-    <string name="settings_cd_avatar">アバター</string>
-    <string name="settings_connect_bandcamp"><xliff:g id="brand">Bandcamp</xliff:g>に接続</string>
-    <string name="settings_connect_bandcamp_desc">接続すると<xliff:g id="brand">Bandcamp</xliff:g>の購入品にアクセスできます</string>
-    <string name="settings_connect_youtube"><xliff:g id="brand">YouTube Music</xliff:g>に接続</string>
-    <string name="settings_connect_youtube_desc">接続すると<xliff:g id="brand">YouTube Music</xliff:g>のライブラリにアクセスできます</string>
     <string name="settings_youtube_default_source_title">デフォルト表示</string>
     <string name="settings_youtube_default_source_desc"><xliff:g id="brand">YouTube</xliff:g>タブをタップしたときに開く表示</string>
     <string name="common_play">再生</string>
     <string name="ytm_artist_spotlight">アーティストスポットライト</string>
     <string name="settings_remove_all_downloads">すべてのダウンロードを削除</string>
-    <string name="settings_auto_download_purchases">購入品を自動ダウンロード</string>
-    <string name="settings_auto_download_purchases_desc"><xliff:g id="brand">Dustvalve</xliff:g>の購入品を自動的にダウンロード</string>
     <string name="settings_auto_download_future">今後のコンテンツを自動ダウンロード</string>
     <string name="settings_auto_download_future_desc">ダウンロード済みのプレイリスト、アルバム、アーティストの新しいコンテンツを自動的にダウンロード</string>
     <string name="settings_mp3_on_metered">従量制接続では<xliff:g id="format">MP3</xliff:g>のみ</string>
@@ -515,7 +503,6 @@
     <string name="crash_report_github_action">GitHub で Issue を作成</string>
     <string name="crash_report_dismiss_action">今はしない</string>
     <!-- Security-block + missing-playlist UI (added with default strings) -->
-    <string name="login_navigation_blocked">セキュリティのためブロックされました：ここで開けるのはサインインサイトのみです</string>
     <string name="playlist_gone_title">このプレイリストは存在しません</string>
     <string name="playlist_gone_subtitle">ライブラリから削除された可能性があります</string>
     <string name="common_action_back">戻る</string>

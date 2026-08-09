@@ -2,7 +2,6 @@ package com.dustvalve.next.android.ui.screens.settings
 
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
-import com.dustvalve.next.android.domain.repository.AccountRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,17 +18,13 @@ import kotlin.math.abs
 internal class SettingsUiCollectors(
     private val scope: CoroutineScope,
     private val uiState: MutableStateFlow<SettingsUiState>,
-    private val accountRepository: AccountRepository,
     private val storageTracker: StorageTracker,
     private val settingsDataStore: SettingsDataStore,
 ) {
     fun start() {
-        collect(accountRepository.getAccountState()) { copy(accountState = it) }
-        collect(accountRepository.getYouTubeMusicAccountState()) { copy(ytmAccountState = it) }
         collect(storageTracker.getCacheInfo()) { copy(cacheInfo = it) }
         collect(settingsDataStore.themeMode) { copy(themeMode = it) }
         collect(settingsDataStore.dynamicColor) { copy(dynamicColor = it) }
-        collect(settingsDataStore.autoDownloadCollection) { copy(autoDownloadCollection = it) }
         collect(settingsDataStore.autoDownloadFutureContent) { copy(autoDownloadFutureContent = it) }
         collect(settingsDataStore.downloadFormat) { copy(downloadFormat = it) }
         collect(settingsDataStore.saveDataOnMetered) { copy(saveDataOnMetered = it) }

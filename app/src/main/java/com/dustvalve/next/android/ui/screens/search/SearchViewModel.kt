@@ -76,7 +76,7 @@ class SearchViewModel @Inject constructor(
         loadMoreJob?.cancel()
         if (query.isNotBlank()) {
             searchJob = viewModelScope.launch {
-                delay(400L)
+                delay(SEARCH_DEBOUNCE_MS)
                 performSearch(resetResults = true)
             }
         } else {
@@ -250,5 +250,9 @@ class SearchViewModel @Inject constructor(
                 releaseDate = null,
             )
         }
+    }
+
+    private companion object {
+        private const val SEARCH_DEBOUNCE_MS = 400L
     }
 }

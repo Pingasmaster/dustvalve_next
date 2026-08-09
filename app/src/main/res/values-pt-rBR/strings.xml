@@ -23,7 +23,6 @@
     <string name="common_action_save">Salvar</string>
     <string name="common_action_create">Criar</string>
     <string name="common_action_remove">Remover</string>
-    <string name="common_action_disconnect">Desconectar</string>
     <string name="common_play_all">Tocar tudo</string>
     <string name="link_open_video">Abrir vídeo do <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="link_open_song">Abrir música do <xliff:g id="brand">YouTube Music</xliff:g></string>
@@ -74,7 +73,6 @@
     <string name="common_action_add">Adicionar</string>
     <string name="common_play_mix">Tocar mix</string>
     <string name="common_loading">Carregando…</string>
-    <string name="common_connected">Conectado</string>
     <string name="common_selected_folder">Pasta selecionada</string>
     <string name="common_failed_to_play">Falha ao tocar</string>
     <string name="common_playlist_imported">Playlist importada: <xliff:g id="playlist" example="Road Trip">%1$s</xliff:g></string>
@@ -161,7 +159,6 @@
     <string name="player_audio_device_unknown">Dispositivo de áudio</string>
     <string name="settings_title">Configurações</string>
     <string name="settings_section_sources">Fontes</string>
-    <string name="settings_section_connections">Conexões</string>
     <string name="settings_section_storage">Armazenamento</string>
     <string name="settings_section_audio_quality">Qualidade de áudio</string>
     <string name="settings_section_appearance">Aparência</string>
@@ -176,23 +173,14 @@
     <string name="settings_remove_downloads_text">Isso apaga todo o acervo de downloads: downloads feitos por você, áudio em cache automático, capas de álbum e imagens de artistas.</string>
     <string name="settings_download_format">Formato de download</string>
     <string name="settings_download_format_desc">Formato das compras baixadas do <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_bandcamp_disconnected"><xliff:g id="brand">Bandcamp</xliff:g> desconectado</string>
-    <string name="settings_youtube_disconnected"><xliff:g id="brand">YouTube Music</xliff:g> desconectado</string>
     <string name="settings_add_folder">Adicionar pasta</string>
     <string name="settings_rescan">Escanear de novo</string>
     <string name="settings_cd_remove_folder">Remover pasta</string>
-    <string name="settings_cd_avatar">Avatar</string>
-    <string name="settings_connect_bandcamp">Conectar <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_bandcamp_desc">Conecte para acessar suas compras do <xliff:g id="brand">Bandcamp</xliff:g></string>
-    <string name="settings_connect_youtube">Conectar <xliff:g id="brand">YouTube Music</xliff:g></string>
-    <string name="settings_connect_youtube_desc">Conecte para acessar sua biblioteca do <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="settings_youtube_default_source_title">Visualização padrão</string>
     <string name="settings_youtube_default_source_desc">Qual visualização abre ao tocar na aba do <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="common_play">Tocar</string>
     <string name="ytm_artist_spotlight">Artista em destaque</string>
     <string name="settings_remove_all_downloads">Remover todos os downloads</string>
-    <string name="settings_auto_download_purchases">Baixar compras automaticamente</string>
-    <string name="settings_auto_download_purchases_desc">Baixe automaticamente suas compras do <xliff:g id="brand">Dustvalve</xliff:g></string>
     <string name="settings_auto_download_future">Baixar conteúdo futuro automaticamente</string>
     <string name="settings_auto_download_future_desc">Baixe automaticamente o conteúdo novo de playlists, álbuns e artistas baixados</string>
     <string name="settings_mp3_on_metered"><xliff:g id="format">MP3</xliff:g> apenas em redes limitadas</string>
@@ -515,7 +503,6 @@
     <string name="crash_report_github_action">Abrir uma issue no GitHub</string>
     <string name="crash_report_dismiss_action">Agora não</string>
     <!-- Security-block + missing-playlist UI (added with default strings) -->
-    <string name="login_navigation_blocked">Bloqueado por segurança: apenas o site de login pode abrir aqui</string>
     <string name="playlist_gone_title">Esta playlist não existe mais</string>
     <string name="playlist_gone_subtitle">Ela pode ter sido excluída da sua biblioteca</string>
     <string name="common_action_back">Voltar</string>

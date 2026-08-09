@@ -24,14 +24,14 @@ class YouTubePlayerParser @Inject constructor() {
         val formats = playerJson.path("streamingData")?.path("adaptiveFormats")?.arr()
             ?: throw IllegalStateException(
                 "YouTube /player response has no streamingData.adaptiveFormats: " +
-                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(200)}",
+                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(ERROR_PREVIEW_CHARS)}",
             )
 
         val audio = formats.filter { it.str("mimeType")?.startsWith("audio/") == true }
         if (audio.isEmpty()) {
             throw IllegalStateException(
                 "YouTube /player response has no audio formats (had ${formats.size} adaptiveFormats); " +
-                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(200)}",
+                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(ERROR_PREVIEW_CHARS)}",
             )
         }
 
@@ -95,6 +95,10 @@ class YouTubePlayerParser @Inject constructor() {
         mime.contains("opus") -> AudioFormat.OPUS
         mime.contains("mp4a") || mime.startsWith("audio/mp4") -> AudioFormat.AAC
         else -> AudioFormat.OPUS
+    }
+
+    private companion object {
+        private const val ERROR_PREVIEW_CHARS = 200
     }
 }
 
