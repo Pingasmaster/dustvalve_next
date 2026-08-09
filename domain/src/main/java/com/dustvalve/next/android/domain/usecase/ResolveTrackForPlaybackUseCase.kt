@@ -127,9 +127,12 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
         }
 
         return try {
-            val streamUrl = soundCloudRepository.getStreamUrl(track)
+            val resolved = soundCloudRepository.resolvePlayableStream(track)
             PlaybackResolveResult(
-                track = track.copy(streamUrl = streamUrl),
+                track = track.copy(
+                    streamUrl = resolved.url,
+                    streamPolicy = resolved.streamPolicy,
+                ),
                 playbackFormat = null,
                 sourcePath = null,
                 recordedRemoteResolution = true,

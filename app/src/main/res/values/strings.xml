@@ -143,6 +143,7 @@
     <string name="player_cd_volume">Volume</string>
     <string name="player_cd_local_file">Local file</string>
     <string name="player_cd_delete_download">Delete download</string>
+    <string name="player_cd_download_unavailable">Download unavailable</string>
     <string name="player_cd_download_track">Download track</string>
     <string name="player_cd_remove_from_favorites">Remove from favorites</string>
     <string name="player_cd_add_to_favorites">Add to favorites</string>

@@ -11,8 +11,10 @@ import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.MusicCollection
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SoundCloudHomeFeed
+import com.dustvalve.next.android.domain.model.StreamPolicy
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.SoundCloudRepository
+import com.dustvalve.next.android.domain.repository.SoundCloudResolvedStream
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import java.io.IOException
@@ -23,33 +25,30 @@ import javax.inject.Singleton
 class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudApi) : SoundCloudRepository {
 
     override suspend fun getHome(genre: String): SoundCloudHomeFeed {
-        val slug = genre.removePrefix("soundcloud:genres:").ifBlank { CHARTS_GENRE_ALL }
-        // mixed-selections is genre-agnostic and still fills Discover shelves when
-        // per-genre charts 404 (everything except all-music).
+        // Per-genre charts 404; only all-music remains. mixed-selections still
+        // fills Discover shelves (genre-agnostic).
         val mixed = api.mixedSelections()
         val shelves = SoundCloudMappers.parseMixedSelections(mixed)
-        val trending = loadTrending(slug)
+        val trending = loadTrending()
+            .filter { it.streamPolicy != StreamPolicy.BLOCKED }
         if (trending.isEmpty() && shelves.isEmpty()) {
             throw IOException("SoundCloud home returned no charts or shelves")
         }
-        return SoundCloudHomeFeed(genre = slug, trending = trending, shelves = shelves)
+        return SoundCloudHomeFeed(
+            genre = CHARTS_GENRE_ALL,
+            trending = trending,
+            shelves = shelves,
+        )
     }
 
     /**
-     * Charts API only accepts [CHARTS_GENRE_ALL] today; other genre slugs 404.
-     * Non-all chips fall back to track search so the carousel is still useful.
-     * Soft-fails to empty trending so shelves can still render.
+     * Charts API only accepts [CHARTS_GENRE_ALL] today; soft-fails to empty
+     * trending so shelves can still render.
      */
-    private suspend fun loadTrending(slug: String): List<Track> = try {
-        if (slug == CHARTS_GENRE_ALL) {
-            SoundCloudMappers.parseChartsTracks(
-                api.charts(genreSlug = CHARTS_GENRE_ALL, kind = "trending"),
-            )
-        } else {
-            SoundCloudMappers.parseTracksArray(
-                api.search(query = genreSearchQuery(slug), filter = "tracks"),
-            )
-        }
+    private suspend fun loadTrending(): List<Track> = try {
+        SoundCloudMappers.parseChartsTracks(
+            api.charts(genreSlug = CHARTS_GENRE_ALL, kind = "trending"),
+        )
     } catch (_: IOException) {
         emptyList()
     }
@@ -71,30 +70,58 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
     }
 
     override suspend fun getStreamUrl(track: Track): String =
-        resolveStreamUrl(track, progressiveOnly = false)
+        resolvePlayableStream(track).url
 
-    override suspend fun getDownloadableStream(track: Track): Pair<String, AudioFormat> {
-        val url = resolveStreamUrl(track, progressiveOnly = true)
-        return url to mimeToAudioFormat(url)
+    override suspend fun resolvePlayableStream(track: Track): SoundCloudResolvedStream {
+        val resolved = resolveStream(track, progressiveOnly = false)
+        return SoundCloudResolvedStream(url = resolved.url, streamPolicy = resolved.streamPolicy)
     }
 
-    private suspend fun resolveStreamUrl(track: Track, progressiveOnly: Boolean): String {
+    override suspend fun getDownloadableStream(track: Track): Pair<String, AudioFormat> {
+        if (track.streamPolicy == StreamPolicy.STREAM_ONLY) {
+            throw IOException(HLS_ONLY_MESSAGE)
+        }
+        if (track.streamPolicy == StreamPolicy.BLOCKED) {
+            throw IOException(GO_PLUS_MESSAGE)
+        }
+        val resolved = resolveStream(track, progressiveOnly = true)
+        return resolved.url to mimeToAudioFormat(resolved.url)
+    }
+
+    private data class ResolvedStream(val url: String, val streamPolicy: StreamPolicy)
+
+    private suspend fun resolveStream(track: Track, progressiveOnly: Boolean): ResolvedStream {
+        if (track.streamPolicy == StreamPolicy.BLOCKED) {
+            throw IOException(GO_PLUS_MESSAGE)
+        }
+        if (progressiveOnly && track.streamPolicy == StreamPolicy.STREAM_ONLY) {
+            throw IOException(HLS_ONLY_MESSAGE)
+        }
         val numeric = numericIdFromTrackId(track.id)
             ?: throw IOException("Invalid SoundCloud track id: ${track.id}")
         val trackJson = api.track(numeric)
+        val policy = SoundCloudMappers.inferStreamPolicy(trackJson)
+        if (policy == StreamPolicy.BLOCKED) {
+            throw IOException(GO_PLUS_MESSAGE)
+        }
+        if (progressiveOnly && policy == StreamPolicy.STREAM_ONLY) {
+            throw IOException(HLS_ONLY_MESSAGE)
+        }
         val auth = trackJson.str("track_authorization")
         val candidates = SoundCloudMappers.pickBestTranscodingUrls(
             trackJson,
             progressiveOnly = progressiveOnly,
         )
         if (candidates.isEmpty()) {
-            throw IOException(unplayableMessage(trackJson, track.id, progressiveOnly))
+            throw IOException(unplayableMessage(trackJson, track.id, progressiveOnly, policy))
         }
         var lastError: IOException? = null
         for (url in candidates) {
             try {
                 val resolved = api.resolveStream(url, auth).str("url")
-                if (!resolved.isNullOrBlank()) return resolved
+                if (!resolved.isNullOrBlank()) {
+                    return ResolvedStream(url = resolved, streamPolicy = policy)
+                }
             } catch (e: IOException) {
                 lastError = e
             }
@@ -103,7 +130,8 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
         if (SoundCloudMappers.hasEncryptedTranscodings(trackJson)) {
             throw IOException(GO_PLUS_MESSAGE)
         }
-        throw lastError ?: IOException(unplayableMessage(trackJson, track.id, progressiveOnly))
+        throw lastError
+            ?: IOException(unplayableMessage(trackJson, track.id, progressiveOnly, policy))
     }
 
     override suspend fun getArtist(url: String): Artist {
@@ -186,23 +214,19 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
             .replace("https://www.soundcloud.com/", "https://soundcloud.com/")
     }
 
-    private fun genreSearchQuery(slug: String): String = when (slug) {
-        "hiphoprap" -> "hip hop"
-        "danceedm" -> "dance edm"
-        else -> slug.replace('-', ' ')
-    }
-
     private fun unplayableMessage(
         trackJson: JsonElement,
         trackId: String,
         progressiveOnly: Boolean,
+        policy: StreamPolicy,
     ): String {
         val encryptedOnly = SoundCloudMappers.hasOnlyEncryptedTranscodings(trackJson)
         return when {
-            encryptedOnly -> GO_PLUS_MESSAGE
+            encryptedOnly || policy == StreamPolicy.BLOCKED -> GO_PLUS_MESSAGE
 
-            progressiveOnly ->
-                "No progressive (downloadable) SoundCloud stream for $trackId"
+            progressiveOnly && policy == StreamPolicy.STREAM_ONLY -> HLS_ONLY_MESSAGE
+
+            progressiveOnly -> HLS_ONLY_MESSAGE
 
             else ->
                 "No playable SoundCloud stream for $trackId"
@@ -230,6 +254,7 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
         const val CHARTS_GENRE_ALL = "all-music"
         const val GO_PLUS_MESSAGE =
             "This SoundCloud track is DRM-protected or requires Go+ and cannot be played"
+        const val HLS_ONLY_MESSAGE = "HLS-only, play only"
 
         /** Match [ExpandSourceTracksUseCase.MAX_TRACKS] for queue/download parity. */
         const val MAX_PLAYLIST_TRACKS = 5_000

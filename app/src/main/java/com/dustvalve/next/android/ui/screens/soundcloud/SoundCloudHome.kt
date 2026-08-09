@@ -2,12 +2,10 @@ package com.dustvalve.next.android.ui.screens.soundcloud
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,13 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -58,7 +54,6 @@ import com.dustvalve.next.android.ui.theme.AppShapes
 internal fun SoundCloudHomeContent(
     carouselItemWidth: Dp,
     state: SoundCloudUiState,
-    onGenreSelect: (String) -> Unit,
     onRetry: () -> Unit,
     onPlayTrack: (Track) -> Unit,
     onShelfItemClick: (SoundCloudShelfItem) -> Unit,
@@ -123,9 +118,7 @@ internal fun SoundCloudHomeContent(
                 SoundCloudFeed(
                     carouselItemWidth = carouselItemWidth,
                     feed = state.feed,
-                    selectedGenre = state.selectedGenre,
                     isRefreshing = state.isHomeLoading,
-                    onGenreSelect = onGenreSelect,
                     onPlayTrack = onPlayTrack,
                     onShelfItemClick = onShelfItemClick,
                     modifier = Modifier.weight(1f),
@@ -150,9 +143,7 @@ internal fun SoundCloudHomeContent(
 private fun SoundCloudFeed(
     carouselItemWidth: Dp,
     feed: SoundCloudHomeFeed,
-    selectedGenre: String,
     isRefreshing: Boolean,
-    onGenreSelect: (String) -> Unit,
     onPlayTrack: (Track) -> Unit,
     onShelfItemClick: (SoundCloudShelfItem) -> Unit,
     modifier: Modifier = Modifier,
@@ -161,31 +152,6 @@ private fun SoundCloudFeed(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp),
     ) {
-        item(key = "sc_genres_header") {
-            Text(
-                text = stringResource(R.string.soundcloud_home_genres),
-                style = MaterialTheme.typography.titleMediumEmphasized,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            )
-        }
-        item(key = "sc_genres") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                soundCloudGenreChips.forEach { chip ->
-                    FilterChip(
-                        selected = selectedGenre == chip.slug,
-                        onClick = { onGenreSelect(chip.slug) },
-                        label = { Text(chip.label) },
-                    )
-                }
-            }
-        }
-
         if (isRefreshing) {
             item(key = "sc_refresh") {
                 LinearWavyProgressIndicator(

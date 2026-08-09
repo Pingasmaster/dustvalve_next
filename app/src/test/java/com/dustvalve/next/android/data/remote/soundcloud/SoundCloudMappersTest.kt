@@ -2,6 +2,7 @@ package com.dustvalve.next.android.data.remote.soundcloud
 
 import com.dustvalve.next.android.domain.model.SearchResultType
 import com.dustvalve.next.android.domain.model.SoundCloudShelfKind
+import com.dustvalve.next.android.domain.model.StreamPolicy
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.google.common.truth.Truth.assertThat
 import kotlinx.serialization.json.Json
@@ -27,11 +28,14 @@ class SoundCloudMappersTest {
         assertThat(first.duration).isEqualTo(180f)
         assertThat(first.streamUrl).isNull()
         assertThat(first.source).isEqualTo(TrackSource.SOUNDCLOUD)
+        // Fixture lists encrypted alongside plain progressive/HLS -> BLOCKED.
+        assertThat(first.streamPolicy).isEqualTo(StreamPolicy.BLOCKED)
         assertThat(first.artUrl).contains("-t500x500.")
         assertThat(first.artUrl).doesNotContain("-large.")
 
         // Missing artwork falls back to avatar, also upgraded.
         assertThat(tracks[1].artUrl).contains("avatars-bbb-t500x500")
+        assertThat(tracks[1].streamPolicy).isEqualTo(StreamPolicy.UNKNOWN)
     }
 
     @Test
@@ -110,6 +114,54 @@ class SoundCloudMappersTest {
         assertThat(SoundCloudMappers.pickBestTranscodingUrls(track, progressiveOnly = true))
             .containsExactly("https://api-v2.soundcloud.com/media/progressive")
         assertThat(SoundCloudMappers.hasOnlyEncryptedTranscodings(track)).isFalse()
+        assertThat(SoundCloudMappers.inferStreamPolicy(track)).isEqualTo(StreamPolicy.BLOCKED)
+    }
+
+    @Test
+    fun `inferStreamPolicy marks progressive as downloadable and hls-only as stream-only`() {
+        val progressive = json.parseToJsonElement(
+            """
+            {
+              "media": {
+                "transcodings": [
+                  {
+                    "url": "https://api-v2.soundcloud.com/media/progressive",
+                    "snipped": false,
+                    "format": { "protocol": "progressive" },
+                    "quality": "sq"
+                  },
+                  {
+                    "url": "https://api-v2.soundcloud.com/media/hls",
+                    "snipped": false,
+                    "format": { "protocol": "hls" },
+                    "quality": "sq"
+                  }
+                ]
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThat(SoundCloudMappers.inferStreamPolicy(progressive))
+            .isEqualTo(StreamPolicy.DOWNLOADABLE)
+
+        val hlsOnly = json.parseToJsonElement(
+            """
+            {
+              "media": {
+                "transcodings": [
+                  {
+                    "url": "https://api-v2.soundcloud.com/media/hls",
+                    "snipped": false,
+                    "format": { "protocol": "hls" },
+                    "quality": "sq"
+                  }
+                ]
+              }
+            }
+            """.trimIndent(),
+        )
+        assertThat(SoundCloudMappers.inferStreamPolicy(hlsOnly))
+            .isEqualTo(StreamPolicy.STREAM_ONLY)
     }
 
     @Test
@@ -132,6 +184,7 @@ class SoundCloudMappersTest {
         )
         assertThat(SoundCloudMappers.pickBestTranscodingUrls(track)).isEmpty()
         assertThat(SoundCloudMappers.hasOnlyEncryptedTranscodings(track)).isTrue()
+        assertThat(SoundCloudMappers.inferStreamPolicy(track)).isEqualTo(StreamPolicy.BLOCKED)
     }
 
     @Test

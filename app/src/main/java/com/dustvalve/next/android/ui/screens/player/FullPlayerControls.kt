@@ -68,6 +68,7 @@ internal fun FullPlayerTrackActionButtons(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val isLocalTrack = track.isLocal
+    val downloadAllowed = !isLocalTrack && !track.isStreamOnlyOrBlocked
     // SoundCloud standalone tracks reuse albumUrl for the track permalink;
     // only /sets/ URLs navigate to a collection.
     val albumNavEnabled = when (track.source) {
@@ -133,17 +134,18 @@ internal fun FullPlayerTrackActionButtons(
             )
         }
         // Download toggle (matches Favorite's interaction language).
+        // Hidden/disabled for HLS-only and DRM SoundCloud tracks.
         FilledTonalToggleButton(
             checked = isTrackDownloaded || isLocalTrack,
             onCheckedChange = {
-                if (isLocalTrack) return@FilledTonalToggleButton
+                if (!downloadAllowed) return@FilledTonalToggleButton
                 if (isTrackDownloaded) {
                     actions.onRequestDeleteDownload()
                 } else if (!isDownloading) {
                     actions.onDownloadTrack()
                 }
             },
-            enabled = !isDownloading && !isLocalTrack,
+            enabled = !isDownloading && downloadAllowed,
             shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
             modifier = Modifier.weight(1f),
         ) {
@@ -161,6 +163,7 @@ internal fun FullPlayerTrackActionButtons(
                     contentDescription = stringResource(
                         when {
                             isLocalTrack -> R.string.player_cd_local_file
+                            track.isStreamOnlyOrBlocked -> R.string.player_cd_download_unavailable
                             isTrackDownloaded -> R.string.player_cd_delete_download
                             else -> R.string.player_cd_download_track
                         },
