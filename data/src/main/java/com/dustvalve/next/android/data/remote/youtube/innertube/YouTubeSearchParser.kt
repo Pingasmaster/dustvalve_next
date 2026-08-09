@@ -11,7 +11,7 @@ import javax.inject.Singleton
  * primary section list and emits domain SearchResults for the renderer
  * shapes we recognize: videoRenderer, channelRenderer, playlistRenderer,
  * lockupViewModel (used for some playlist results), and contents nested
- * under officialCardViewModel (Official artist / playlist cards).
+ * under officialCardViewModel (official artist / playlist promo cards).
  *
  * Anything else (shelfRenderer, gridShelfViewModel, ads, etc.) is skipped
  * silently so the result list stays clean.
@@ -76,6 +76,9 @@ class YouTubeSearchParser @Inject constructor() {
     }
 
     private fun parseRow(row: JsonElement): SearchResult? {
+        row.path("officialCardViewModel")?.let { card ->
+            parseOfficialCard(card)?.let { return it }
+        }
         val parsers = listOf(
             "videoRenderer" to ::parseVideo,
             "playlistRenderer" to ::parsePlaylist,
@@ -85,6 +88,48 @@ class YouTubeSearchParser @Inject constructor() {
         return parsers.firstNotNullOfOrNull { (key, parser) ->
             row.path(key)?.let(parser)
         }
+    }
+
+    /**
+     * WEB search sometimes wraps the official artist / playlist promo in
+     * `officialCardViewModel`. Walk its nested contents for the same
+     * channelRenderer / playlist lockup shapes we already understand.
+     */
+    private fun parseOfficialCard(card: JsonElement): SearchResult? {
+        // Prefer an explicit contents array when present, then fall back to
+        // walking every nested object for known renderer keys.
+        val contents = card.path("contents")?.arr()
+        if (contents != null) {
+            for (child in contents) {
+                parseRow(child)?.let { return it }
+            }
+        }
+        return walkOfficialCard(card)
+    }
+
+    private fun walkOfficialCard(el: JsonElement?): SearchResult? {
+        when (el) {
+            is kotlinx.serialization.json.JsonObject -> {
+                // Avoid re-entering the same officialCardViewModel key.
+                for ((key, value) in el) {
+                    when (key) {
+                        "channelRenderer" -> parseChannel(value)?.let { return it }
+                        "playlistRenderer" -> parsePlaylist(value)?.let { return it }
+                        "lockupViewModel" -> parseLockup(value)?.let { return it }
+                        "videoRenderer" -> parseVideo(value)?.let { return it }
+                        "officialCardViewModel" -> Unit // already entered
+                        else -> walkOfficialCard(value)?.let { return it }
+                    }
+                }
+            }
+
+            is kotlinx.serialization.json.JsonArray -> {
+                for (child in el) walkOfficialCard(child)?.let { return it }
+            }
+
+            else -> Unit
+        }
+        return null
     }
 
     private fun parseVideo(vr: JsonElement): SearchResult? {

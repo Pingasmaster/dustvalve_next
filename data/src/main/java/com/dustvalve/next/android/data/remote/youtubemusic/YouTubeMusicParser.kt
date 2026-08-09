@@ -133,6 +133,9 @@ class YouTubeMusicParser @Inject constructor() {
         return chips.mapNotNull { chip ->
             val renderer = chip.path("chipCloudChipRenderer") ?: return@mapNotNull null
             val title = renderer.runsText("text") ?: return@mapNotNull null
+            // Podcast mood shelves use musicMultiRowListItemRenderer which we
+            // do not parse yet; hiding the chip avoids an empty-feed dead end.
+            if (title.equals("Podcasts", ignoreCase = true)) return@mapNotNull null
             val params = renderer.path("navigationEndpoint")
                 ?.path("browseEndpoint")?.path("params")?.str()
                 ?: return@mapNotNull null

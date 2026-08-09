@@ -19,6 +19,8 @@ class YouTubeMusicParserTest {
         assertThat(feed.chips).isNotEmpty()
         assertThat(feed.chips.first().title).isNotEmpty()
         assertThat(feed.chips.first().params).isNotEmpty()
+        // Podcasts mood uses unsupported multi-row renderers; chip is hidden.
+        assertThat(feed.chips.none { it.title.equals("Podcasts", ignoreCase = true) }).isTrue()
 
         assertThat(feed.shelves).hasSize(3)
         feed.shelves.forEach { shelf ->

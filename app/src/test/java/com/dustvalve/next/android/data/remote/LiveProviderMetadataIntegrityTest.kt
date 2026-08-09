@@ -607,6 +607,8 @@ class LiveProviderMetadataIntegrityTest {
         // Keep in sync with YouTubeRepositoryImpl / YouTubeMusicRepositoryImpl.
         const val VIDEOS_TAB_PARAMS = "EgZ2aWRlb3PyBgQKAjoA"
         const val YT_PLAYLIST_FILTER = "EgIQAw%3D%3D"
+        const val YT_CHANNEL_FILTER = "EgIQAg%3D%3D"
+        const val YT_VIDEOS_FILTER = "EgIQAQ%3D%3D"
         const val PLAYLISTS_PARAMS = "EgWKAQIoAWoMEA4QChADEAQQCRAF"
         const val ALBUMS_PARAMS = "EgWKAQIYAWoMEA4QChADEAQQCRAF"
         const val ARTISTS_PARAMS = "EgWKAQIgAWoMEA4QChADEAQQCRAF"

@@ -637,6 +637,9 @@ class YouTubeViewModel @Inject constructor(
     fun importPlaylist(playlistUrl: String, name: String): Deferred<Boolean> = viewModelScope.async {
         runCatchingUi(R.string.error_unknown) {
             val result = youtubeRepository.getPlaylistTracks(playlistUrl)
+            if (result.tracks.isEmpty()) {
+                throw IllegalStateException("Playlist has no tracks")
+            }
             // The favorite is created in the SAME transaction as the import
             // itself: cancellation between the two used to leave an
             // imported-but-unfavorited playlist.

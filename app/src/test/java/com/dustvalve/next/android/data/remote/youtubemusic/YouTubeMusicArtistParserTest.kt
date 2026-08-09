@@ -30,5 +30,66 @@ class YouTubeMusicArtistParserTest {
         assertThat(page.albums.first().title).isEqualTo("OK Computer")
         assertThat(page.albums.first().year).isEqualTo("1997")
         assertThat(page.linkedChannelId).isEqualTo("UCofficialchannel00000001")
+        assertThat(page.songsMoreEndpoint).isNull()
+    }
+
+    @Test fun `extracts Top songs Show all bottomEndpoint`() {
+        val root = json.parseToJsonElement(
+            """
+            {"header":{"musicImmersiveHeaderRenderer":{"title":{"runs":[{"text":"Artist"}]}}},
+             "contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
+               "sectionListRenderer":{"contents":[
+                 {"musicShelfRenderer":{
+                   "title":{"runs":[{"text":"Top songs"}]},
+                   "bottomEndpoint":{"browseEndpoint":{"browseId":"VLplaylistTopSongs"}},
+                   "contents":[
+                     {"musicResponsiveListItemRenderer":{
+                       "playlistItemData":{"videoId":"songVideo001"},
+                       "flexColumns":[
+                         {"musicResponsiveListItemFlexColumnRenderer":{
+                           "text":{"runs":[{"text":"Song One"}]}
+                         }}
+                       ]
+                     }}
+                   ]
+                 }}
+               ]}
+             }}}]}}}
+            """.trimIndent(),
+        )
+        val page = parser.parse(root, "UCartist000000000000001")
+        assertThat(page.songsMoreEndpoint?.browseId).isEqualTo("VLplaylistTopSongs")
+        assertThat(page.songs).hasSize(1)
+    }
+
+    @Test fun `parseSongList reads Show all shelf contents`() {
+        val root = json.parseToJsonElement(
+            """
+            {"contents":{"singleColumnBrowseResultsRenderer":{"tabs":[{"tabRenderer":{"content":{
+              "sectionListRenderer":{"contents":[
+                {"musicShelfRenderer":{"contents":[
+                  {"musicResponsiveListItemRenderer":{
+                    "playlistItemData":{"videoId":"fullSong0001"},
+                    "flexColumns":[
+                      {"musicResponsiveListItemFlexColumnRenderer":{
+                        "text":{"runs":[{"text":"Full Song"}]}
+                      }}
+                    ]
+                  }},
+                  {"musicResponsiveListItemRenderer":{
+                    "playlistItemData":{"videoId":"fullSong0002"},
+                    "flexColumns":[
+                      {"musicResponsiveListItemFlexColumnRenderer":{
+                        "text":{"runs":[{"text":"Full Song Two"}]}
+                      }}
+                    ]
+                  }}
+                ]}}
+              ]}
+            }}}]}}}
+            """.trimIndent(),
+        )
+        val songs = parser.parseSongList(root, "UCartist000000000000001", "Artist")
+        assertThat(songs.map { it.id }).containsExactly("yt_fullSong0001", "yt_fullSong0002").inOrder()
     }
 }

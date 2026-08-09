@@ -34,6 +34,10 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -109,6 +113,13 @@ class YouTubeRepositoryImpl(
         // not rotated it in years.
         const val VIDEOS_TAB_PARAMS = "EgZ2aWRlb3PyBgQKAjoA"
 
+        // Innertube /search filter params (sp= on youtube.com). Keep in sync
+        // with LiveProviderMetadataIntegrityTest. Client-side type filtering
+        // remains as a safety net when the server still mixes result kinds.
+        const val SEARCH_VIDEOS_PARAMS = "EgIQAQ%3D%3D"
+        const val SEARCH_CHANNELS_PARAMS = "EgIQAg%3D%3D"
+        const val SEARCH_PLAYLISTS_PARAMS = "EgIQAw%3D%3D"
+
         // YTM album browse ids. Album search results carry these inside
         // playlist-shaped URLs; they must be resolved to the album's real
         // audioPlaylistId (OLAK5uy_...) before the playlist browse.
@@ -127,10 +138,9 @@ class YouTubeRepositoryImpl(
      * continuation token; the [page] parameter is the opaque token from
      * the previous call (or null on the first page).
      *
-     * YT Innertube has dedicated `params` filter tokens (sp= URL params on
-     * the website). We don't currently send those; instead we filter the
-     * mixed results client-side. That matches what the legacy NewPipe
-     * wrapper did and avoids rotating filter tokens we'd have to update.
+     * When a filter chip is selected we send the matching Innertube `params`
+     * token (same values as the live integrity suite) and still filter
+     * client-side so mixed leftovers never leak into the chip view.
      */
     override suspend fun search(query: String, filter: String?, page: Any?): Pair<List<SearchResult>, Any?> {
         // page is the continuation token from the previous call. We always
@@ -139,7 +149,8 @@ class YouTubeRepositoryImpl(
         // previous NewPipe-backed implementation exposed a Page object the
         // caller passed back and forth; callers (search VM, etc.) tolerate
         // a null next-page sentinel meaning "no more pages".
-        val response = client.search(query = query)
+        val params = searchFilterParams(filter)
+        val response = client.search(query = query, params = params)
         val parsed = searchParser.parse(response)
         val filtered = when (filter) {
             "songs", "videos" -> parsed.items.filter { it.type == SearchResultType.YOUTUBE_TRACK }
@@ -151,6 +162,13 @@ class YouTubeRepositoryImpl(
         // response, matching the legacy behaviour for filtered searches.
         // page param accepted for ABI parity but unused.
         return filtered to null
+    }
+
+    private fun searchFilterParams(filter: String?): String? = when (filter) {
+        "songs", "videos" -> SEARCH_VIDEOS_PARAMS
+        "playlists" -> SEARCH_PLAYLISTS_PARAMS
+        "artists" -> SEARCH_CHANNELS_PARAMS
+        else -> null
     }
 
     override suspend fun getStreamUrl(videoUrl: String): String {
@@ -258,6 +276,19 @@ class YouTubeRepositoryImpl(
         val extractedId = extractPlaylistId(playlistUrl)
             ?: throw IllegalArgumentException("Cannot extract playlistId from $playlistUrl")
 
+        // Mixes (RD*) are not VL-browsable; they paginate via /next. Import /
+        // resolvePlaylistTracks share this entry point with YouTubeSource, so
+        // route them through getMixPage and surface an empty Mix as an error
+        // instead of a silent 0-track success.
+        if (extractedId.startsWith("RD")) {
+            val (tracks, title, _) = getMixPage(mixUrl = playlistUrl)
+            if (tracks.isEmpty()) {
+                throw IllegalStateException("Mix returned no tracks")
+            }
+            val cover = tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() }
+            return YouTubePlaylistResult(tracks, title, cover)
+        }
+
         // Cache-first: rebuild the playlist from cached video metadata if
         // available. Then trigger a silent background refresh (errors
         // swallowed) to pick up any newly-added videos. MPREb album ids get
@@ -321,6 +352,12 @@ class YouTubeRepositoryImpl(
      */
     private suspend fun fetchAndCachePlaylist(playlistId: String, aliasId: String = playlistId): YouTubePlaylistResult {
         val response = client.browse("VL$playlistId")
+        // Unviewable / private / deleted playlists often return an ERROR
+        // alertRenderer with an empty section list. Fail clearly instead of
+        // treating that as a successful empty playlist.
+        playlistAlertMessage(response)?.let { msg ->
+            throw IllegalStateException(msg)
+        }
         val first = playlistParser.parse(response, playlistId)
         val all = first.tracks.toMutableList()
         var cont = first.continuation
@@ -457,8 +494,9 @@ class YouTubeRepositoryImpl(
         val ytmPage = ytmArtistPageOrNull(channelId)
 
         if (ytmPage != null && (ytmPage.songs.isNotEmpty() || ytmPage.albums.isNotEmpty())) {
+            val songs = expandYtmTopSongs(ytmPage, channelId)
             return YouTubeChannelResult(
-                tracks = ytmPage.songs,
+                tracks = songs,
                 channelName = ytmPage.name ?: videos.channelName,
                 nextPage = null,
                 avatarUrl = ytmPage.avatarUrl ?: videos.avatarUrl,
@@ -512,6 +550,73 @@ class YouTubeRepositoryImpl(
         throw e
     } catch (_: Exception) {
         null
+    }
+
+    /**
+     * When the Top songs shelf exposes a "Show all" bottomEndpoint, follow
+     * that browse/playlist for the full list; otherwise keep the shelf preview.
+     */
+    private suspend fun expandYtmTopSongs(
+        page: YouTubeMusicArtistParser.ArtistPage,
+        channelId: String,
+    ): List<Track> {
+        val endpoint = page.songsMoreEndpoint ?: return page.songs
+        return try {
+            val full = when {
+                !endpoint.browseId.isNullOrBlank() -> {
+                    val browseId = endpoint.browseId
+                    ytmArtistParser.parseSongList(
+                        root = ytmClient.browse(browseId),
+                        channelId = channelId,
+                        artistName = page.name,
+                    )
+                }
+
+                !endpoint.playlistId.isNullOrBlank() -> {
+                    val playlistId = endpoint.playlistId.removePrefix("VL")
+                    val result = fetchAndCachePlaylist(playlistId)
+                    result.tracks
+                }
+
+                else -> emptyList()
+            }
+            if (full.isNotEmpty()) full else page.songs
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            page.songs
+        }
+    }
+
+    /**
+     * Pulls ERROR / unviewable alert text from a playlist browse response.
+     * Returns null when the response has no actionable alert.
+     */
+    private fun playlistAlertMessage(root: JsonElement): String? {
+        val alerts = (root as? JsonObject)?.get("alerts") as? JsonArray ?: return null
+        for (alert in alerts) {
+            val renderer = (alert as? JsonObject)?.get("alertRenderer") as? JsonObject ?: continue
+            val type = (renderer["type"] as? JsonPrimitive)?.content
+            val text = alertRunsText(renderer)
+                ?: (renderer["text"] as? JsonObject)?.let { textObj ->
+                    (textObj["simpleText"] as? JsonPrimitive)?.content
+                }
+            if (text.isNullOrBlank()) continue
+            val looksFatal = type.equals("ERROR", ignoreCase = true) ||
+                text.contains("unviewable", ignoreCase = true) ||
+                text.contains("unavailable", ignoreCase = true) ||
+                text.contains("private", ignoreCase = true)
+            if (looksFatal) return text
+        }
+        return null
+    }
+
+    private fun alertRunsText(renderer: JsonObject): String? {
+        val text = renderer["text"] as? JsonObject ?: return null
+        val runs = text["runs"] as? JsonArray ?: return null
+        return runs.mapNotNull { (it as? JsonObject)?.get("text") as? JsonPrimitive }
+            .joinToString("") { it.content }
+            .takeIf { it.isNotBlank() }
     }
 
     /** Opaque page token for getChannelVideos pagination. */
