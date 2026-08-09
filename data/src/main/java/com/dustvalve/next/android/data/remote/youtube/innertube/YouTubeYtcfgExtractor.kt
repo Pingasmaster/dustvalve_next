@@ -40,26 +40,30 @@ internal object YouTubeYtcfgExtractor {
      */
     fun extract(html: String): YtcfgData? {
         for (body in allYtcfgBodies(html)) {
-            val obj = try {
-                json.parseToJsonElement(body).jsonObject
-            } catch (_: kotlinx.serialization.SerializationException) {
-                continue
-            } catch (_: IllegalArgumentException) {
-                continue
-            }
-            // Safe casts throughout: a hostile block (e.g. INNERTUBE_CONTEXT
-            // as a string, VISITOR_DATA as an array) must skip to the next
-            // candidate, not abort the whole extraction with a cast error.
-            val client = (obj["INNERTUBE_CONTEXT"] as? JsonObject)?.get("client") as? JsonObject
-            val visitor = (client?.get("visitorData") as? JsonPrimitive)?.contentOrNull
-                ?: (obj["VISITOR_DATA"] as? JsonPrimitive)?.contentOrNull
-                ?: continue
-            if (visitor.isBlank()) continue
-            val version = (obj["INNERTUBE_CLIENT_VERSION"] as? JsonPrimitive)?.contentOrNull
-                ?: (obj["INNERTUBE_CONTEXT_CLIENT_VERSION"] as? JsonPrimitive)?.contentOrNull
-            return YtcfgData(visitorData = visitor, clientVersion = version)
+            parseYtcfgBody(body)?.let { return it }
         }
         return null
+    }
+
+    private fun parseYtcfgBody(body: String): YtcfgData? {
+        val obj = try {
+            json.parseToJsonElement(body).jsonObject
+        } catch (_: kotlinx.serialization.SerializationException) {
+            return null
+        } catch (_: IllegalArgumentException) {
+            return null
+        }
+        // Safe casts throughout: a hostile block (e.g. INNERTUBE_CONTEXT
+        // as a string, VISITOR_DATA as an array) must skip to the next
+        // candidate, not abort the whole extraction with a cast error.
+        val client = (obj["INNERTUBE_CONTEXT"] as? JsonObject)?.get("client") as? JsonObject
+        val visitor = (client?.get("visitorData") as? JsonPrimitive)?.contentOrNull
+            ?: (obj["VISITOR_DATA"] as? JsonPrimitive)?.contentOrNull
+            ?: return null
+        if (visitor.isBlank()) return null
+        val version = (obj["INNERTUBE_CLIENT_VERSION"] as? JsonPrimitive)?.contentOrNull
+            ?: (obj["INNERTUBE_CONTEXT_CLIENT_VERSION"] as? JsonPrimitive)?.contentOrNull
+        return YtcfgData(visitorData = visitor, clientVersion = version)
     }
 
     /** All brace-balanced JSON bodies passed to `ytcfg.set(...)` in [html]. */
@@ -67,18 +71,28 @@ internal object YouTubeYtcfgExtractor {
         val marker = "ytcfg.set("
         var searchFrom = 0
         while (true) {
-            val call = html.indexOf(marker, searchFrom)
-            if (call < 0) return@sequence
-            val openBrace = html.indexOf('{', startIndex = call + marker.length)
-            if (openBrace < 0) return@sequence
-            val endBrace = findMatchingBrace(html, openBrace)
-            if (endBrace < 0) {
-                // Malformed call - skip past this occurrence and keep looking.
-                searchFrom = call + marker.length
-                continue
-            }
-            yield(html.substring(openBrace, endBrace + 1))
-            searchFrom = endBrace + 1
+            val next = nextYtcfgBody(html, marker, searchFrom) ?: return@sequence
+            yield(next.body)
+            searchFrom = next.nextSearchFrom
+        }
+    }
+
+    private data class YtcfgBodySpan(val body: String, val nextSearchFrom: Int)
+
+    private fun nextYtcfgBody(html: String, marker: String, searchFrom: Int): YtcfgBodySpan? {
+        val call = html.indexOf(marker, searchFrom)
+        if (call < 0) return null
+        val openBrace = html.indexOf('{', startIndex = call + marker.length)
+        if (openBrace < 0) return null
+        val endBrace = findMatchingBrace(html, openBrace)
+        return if (endBrace < 0) {
+            // Malformed call - skip past this occurrence and keep looking.
+            nextYtcfgBody(html, marker, call + marker.length)
+        } else {
+            YtcfgBodySpan(
+                body = html.substring(openBrace, endBrace + 1),
+                nextSearchFrom = endBrace + 1,
+            )
         }
     }
 

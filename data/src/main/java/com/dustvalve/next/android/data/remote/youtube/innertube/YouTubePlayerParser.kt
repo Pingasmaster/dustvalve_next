@@ -21,38 +21,42 @@ class YouTubePlayerParser @Inject constructor() {
      * "Best" = highest bitrate, with Opus tie-broken above AAC.
      */
     fun parsePlayerStreamInfo(playerJson: JsonElement): PlayerStreamInfo {
-        val formats = playerJson.path("streamingData")?.path("adaptiveFormats")?.arr()
-            ?: throw IllegalStateException(
-                "YouTube /player response has no streamingData.adaptiveFormats: " +
-                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(ERROR_PREVIEW_CHARS)}",
-            )
-
-        val audio = formats.filter { it.str("mimeType")?.startsWith("audio/") == true }
-        if (audio.isEmpty()) {
-            throw IllegalStateException(
-                "YouTube /player response has no audio formats (had ${formats.size} adaptiveFormats); " +
-                    "playabilityStatus=${playerJson.path("playabilityStatus")?.toString()?.take(ERROR_PREVIEW_CHARS)}",
-            )
-        }
-
-        val best = audio.maxWithOrNull(
-            compareBy<JsonElement> { it.int("bitrate") ?: 0 }
-                .thenBy { if (it.str("mimeType")?.contains("opus") == true) 1 else 0 },
-        ) ?: audio.first()
-
+        val best = selectBestAudioFormat(playerJson)
+            ?: throw IllegalStateException(missingAudioMessage(playerJson))
         val mime = best.str("mimeType") ?: ""
         val url = best.str("url")
             ?: throw IllegalStateException(
                 "YouTube /player best audio format missing url field; mime=$mime",
             )
         val bitrate = best.int("bitrate") ?: 0
-
         return PlayerStreamInfo(
             streamUrl = url,
             format = mimeToFormat(mime),
             bitrate = bitrate,
             mimeType = mime,
         )
+    }
+
+    private fun selectBestAudioFormat(playerJson: JsonElement): JsonElement? {
+        val formats = playerJson.path("streamingData")?.path("adaptiveFormats")?.arr() ?: return null
+        val audio = formats.filter { it.str("mimeType")?.startsWith("audio/") == true }
+        if (audio.isEmpty()) return null
+        return audio.maxWithOrNull(
+            compareBy<JsonElement> { it.int("bitrate") ?: 0 }
+                .thenBy { if (it.str("mimeType")?.contains("opus") == true) 1 else 0 },
+        ) ?: audio.first()
+    }
+
+    private fun missingAudioMessage(playerJson: JsonElement): String {
+        val formats = playerJson.path("streamingData")?.path("adaptiveFormats")?.arr()
+        val playability = playerJson.path("playabilityStatus")?.toString()?.take(ERROR_PREVIEW_CHARS)
+        return if (formats == null) {
+            "YouTube /player response has no streamingData.adaptiveFormats: " +
+                "playabilityStatus=$playability"
+        } else {
+            "YouTube /player response has no audio formats (had ${formats.size} adaptiveFormats); " +
+                "playabilityStatus=$playability"
+        }
     }
 
     /**

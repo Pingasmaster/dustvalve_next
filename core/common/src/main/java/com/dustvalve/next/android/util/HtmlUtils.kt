@@ -12,34 +12,43 @@ object HtmlUtils {
      * Handles nested braces by counting brace depth.
      */
     fun extractJsonFromScript(html: String, variableName: String): String? {
-        // Match patterns like: var TralbumData = {...}; or variableName = {...};
+        val jsonStart = findAssignedJsonStart(html, variableName) ?: return null
+        val endInclusive = scanBalancedJsonEnd(html, jsonStart) ?: return null
+        return html.substring(jsonStart, endInclusive + 1)
+    }
+
+    /** Locates the `{` or `[` that starts the RHS of `var Name = ...` / `Name = ...`. */
+    private fun findAssignedJsonStart(html: String, variableName: String): Int? {
         val varPattern = Regex(
             """(?:var\s+)?${Regex.escape(variableName)}\s*=\s*""",
             RegexOption.MULTILINE,
         )
         val matchResult = varPattern.find(html) ?: return null
         val startOfJson = matchResult.range.last + 1
-
         if (startOfJson >= html.length) return null
 
-        // Determine if the JSON starts with { or [
-        val jsonStart = html.indexOf('{', startOfJson).let { braceIdx ->
-            val bracketIdx = html.indexOf('[', startOfJson)
-            when {
-                braceIdx == -1 && bracketIdx == -1 -> return null
-                braceIdx == -1 -> bracketIdx
-                bracketIdx == -1 -> braceIdx
-                else -> minOf(braceIdx, bracketIdx)
-            }
+        val braceIdx = html.indexOf('{', startOfJson)
+        val bracketIdx = html.indexOf('[', startOfJson)
+        val jsonStart = when {
+            braceIdx == -1 && bracketIdx == -1 -> return null
+            braceIdx == -1 -> bracketIdx
+            bracketIdx == -1 -> braceIdx
+            else -> minOf(braceIdx, bracketIdx)
         }
 
         // Make sure there's no significant non-whitespace between the assignment and the JSON start
         val between = html.substring(startOfJson, jsonStart).trim()
-        if (between.isNotEmpty()) return null
+        return jsonStart.takeIf { between.isEmpty() }
+    }
 
+    /**
+     * Walks from [jsonStart] (a `{` or `[`) to the matching closer, honouring
+     * strings and JS comments. Returns the inclusive end index, or null if
+     * the input ends before the structure closes.
+     */
+    private fun scanBalancedJsonEnd(html: String, jsonStart: Int): Int? {
         val openChar = html[jsonStart]
         val closeChar = if (openChar == '{') '}' else ']'
-
         var depth = 0
         var inString = false
         var stringChar = ' '
@@ -47,66 +56,105 @@ object HtmlUtils {
         var i = jsonStart
 
         while (i < html.length) {
-            val c = html[i]
-
-            if (escaped) {
-                escaped = false
-                i++
-                continue
-            }
-
-            if (c == '\\' && inString) {
-                escaped = true
-                i++
-                continue
-            }
-
-            if (inString) {
-                if (c == stringChar) {
-                    inString = false
-                }
-                i++
-                continue
-            }
-
-            // Not in a string - skip JS comments
-            if (c == '/' && i + 1 < html.length) {
-                val next = html[i + 1]
-                if (next == '/') {
-                    // Line comment: skip to end of line
-                    val lineEnd = html.indexOf('\n', i + 2)
-                    i = if (lineEnd == -1) html.length else lineEnd + 1
-                    continue
-                } else if (next == '*') {
-                    // Block comment: skip to closing */
-                    val blockEnd = html.indexOf("*/", i + 2)
-                    i = if (blockEnd == -1) html.length else blockEnd + 2
-                    continue
+            val step = advanceJsonScan(
+                html = html,
+                index = i,
+                openChar = openChar,
+                closeChar = closeChar,
+                depth = depth,
+                inString = inString,
+                stringChar = stringChar,
+                escaped = escaped,
+            )
+            when (step) {
+                is JsonScanStep.Found -> return step.endInclusive
+                is JsonScanStep.Continue -> {
+                    depth = step.depth
+                    inString = step.inString
+                    stringChar = step.stringChar
+                    escaped = step.escaped
+                    i = step.nextIndex
                 }
             }
+        }
+        return null
+    }
 
-            if (c == '"' || c == '\'' || c == '`') {
-                inString = true
-                stringChar = c
-                i++
-                continue
-            }
+    private sealed class JsonScanStep {
+        data class Found(val endInclusive: Int) : JsonScanStep()
+        data class Continue(
+            val nextIndex: Int,
+            val depth: Int,
+            val inString: Boolean,
+            val stringChar: Char,
+            val escaped: Boolean,
+        ) : JsonScanStep()
+    }
 
-            when (c) {
-                openChar -> depth++
+    private fun advanceJsonScan(
+        html: String,
+        index: Int,
+        openChar: Char,
+        closeChar: Char,
+        depth: Int,
+        inString: Boolean,
+        stringChar: Char,
+        escaped: Boolean,
+    ): JsonScanStep {
+        val c = html[index]
 
-                closeChar -> {
-                    depth--
-                    if (depth == 0) {
-                        return html.substring(jsonStart, i + 1)
-                    }
-                }
-            }
-
-            i++
+        if (escaped) {
+            return JsonScanStep.Continue(index + 1, depth, inString, stringChar, escaped = false)
         }
 
-        return null
+        if (c == '\\' && inString) {
+            return JsonScanStep.Continue(index + 1, depth, inString, stringChar, escaped = true)
+        }
+
+        if (inString) {
+            val stillInString = c != stringChar
+            return JsonScanStep.Continue(index + 1, depth, stillInString, stringChar, escaped = false)
+        }
+
+        // Not in a string - skip JS comments
+        if (c == '/' && index + 1 < html.length) {
+            val next = html[index + 1]
+            val commentEnd = when (next) {
+                '/' -> {
+                    val lineEnd = html.indexOf('\n', index + 2)
+                    if (lineEnd == -1) html.length else lineEnd + 1
+                }
+
+                '*' -> {
+                    val blockEnd = html.indexOf("*/", index + 2)
+                    if (blockEnd == -1) html.length else blockEnd + 2
+                }
+
+                else -> null
+            }
+            if (commentEnd != null) {
+                return JsonScanStep.Continue(commentEnd, depth, inString = false, stringChar, escaped = false)
+            }
+        }
+
+        if (c == '"' || c == '\'' || c == '`') {
+            return JsonScanStep.Continue(index + 1, depth, inString = true, stringChar = c, escaped = false)
+        }
+
+        return when (c) {
+            openChar -> JsonScanStep.Continue(index + 1, depth + 1, inString = false, stringChar, escaped = false)
+
+            closeChar -> {
+                val newDepth = depth - 1
+                if (newDepth == 0) {
+                    JsonScanStep.Found(index)
+                } else {
+                    JsonScanStep.Continue(index + 1, newDepth, inString = false, stringChar, escaped = false)
+                }
+            }
+
+            else -> JsonScanStep.Continue(index + 1, depth, inString = false, stringChar, escaped = false)
+        }
     }
 
     /**
@@ -172,31 +220,27 @@ object HtmlUtils {
         val escapedProp = Regex.escape(property)
         // Try double-quoted content first, then single-quoted.
         // Each pattern only excludes its own delimiter, so the other quote type is allowed.
-        val dqPattern = Regex(
-            """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*"([^"]*)"[^>]*/?>""",
-            RegexOption.IGNORE_CASE,
+        // Also try reversed attribute order: content before property/name.
+        val patterns = listOf(
+            Regex(
+                """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*"([^"]*)"[^>]*/?>""",
+                RegexOption.IGNORE_CASE,
+            ),
+            Regex(
+                """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*'([^']*)'[^>]*/?>""",
+                RegexOption.IGNORE_CASE,
+            ),
+            Regex(
+                """<meta\s+[^>]*content\s*=\s*"([^"]*)"[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
+                RegexOption.IGNORE_CASE,
+            ),
+            Regex(
+                """<meta\s+[^>]*content\s*=\s*'([^']*)'[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
+                RegexOption.IGNORE_CASE,
+            ),
         )
-        dqPattern.find(html)?.let { return it.groupValues[1] }
-
-        val sqPattern = Regex(
-            """<meta\s+[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*content\s*=\s*'([^']*)'[^>]*/?>""",
-            RegexOption.IGNORE_CASE,
-        )
-        sqPattern.find(html)?.let { return it.groupValues[1] }
-
-        // Also try reversed attribute order: content before property/name
-        val dqReversed = Regex(
-            """<meta\s+[^>]*content\s*=\s*"([^"]*)"[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
-            RegexOption.IGNORE_CASE,
-        )
-        dqReversed.find(html)?.let { return it.groupValues[1] }
-
-        val sqReversed = Regex(
-            """<meta\s+[^>]*content\s*=\s*'([^']*)'[^>]*(?:property|name)\s*=\s*["']$escapedProp["'][^>]*/?>""",
-            RegexOption.IGNORE_CASE,
-        )
-        sqReversed.find(html)?.let { return it.groupValues[1] }
-
-        return null
+        return patterns.firstNotNullOfOrNull { pattern ->
+            pattern.find(html)?.groupValues?.get(1)
+        }
     }
 }

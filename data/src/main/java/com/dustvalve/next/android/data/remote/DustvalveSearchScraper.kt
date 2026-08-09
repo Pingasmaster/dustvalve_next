@@ -19,6 +19,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 @Singleton
 class DustvalveSearchScraper @Inject constructor(
@@ -58,107 +59,98 @@ class DustvalveSearchScraper @Inject constructor(
         @SerialName("tag_names") val tagNames: List<String> = emptyList(),
     )
 
-    suspend fun search(query: String, page: Int = 1, type: SearchResultType? = null): List<SearchResult> = withContext(ioDispatcher) {
-        val searchFilter = when (type) {
-            SearchResultType.ARTIST -> "b"
-
-            SearchResultType.ALBUM -> "a"
-
-            SearchResultType.TRACK -> "t"
-
-            SearchResultType.LOCAL_TRACK,
-            SearchResultType.YOUTUBE_TRACK,
-            SearchResultType.YOUTUBE_ALBUM,
-            SearchResultType.YOUTUBE_ARTIST,
-            SearchResultType.YOUTUBE_PLAYLIST,
-            SearchResultType.SOUNDCLOUD_TRACK,
-            SearchResultType.SOUNDCLOUD_ARTIST,
-            SearchResultType.SOUNDCLOUD_PLAYLIST,
-            SearchResultType.SOUNDCLOUD_ALBUM,
-            -> return@withContext emptyList()
-
-            null -> ""
+    suspend fun search(query: String, page: Int = 1, type: SearchResultType? = null): List<SearchResult> =
+        withContext(ioDispatcher) {
+            val searchFilter = bandcampSearchFilter(type) ?: return@withContext emptyList()
+            // The autocomplete_elastic endpoint returns a single batch (~50
+            // results) and has no pagination; subsequent pages are empty.
+            if (page > 1) return@withContext emptyList()
+            val envelope = fetchSearchEnvelope(query, searchFilter)
+            ensureActive()
+            envelope.auto.results.mapNotNull { item -> toSearchResult(item) }
         }
 
-        // The autocomplete_elastic endpoint returns a single batch (~50
-        // results) and has no pagination; subsequent pages are empty.
-        if (page > 1) return@withContext emptyList()
+    /** Bandcamp filter letter, or null when the requested type is not a Bandcamp result. */
+    private fun bandcampSearchFilter(type: SearchResultType?): String? = when (type) {
+        SearchResultType.ARTIST -> "b"
+        SearchResultType.ALBUM -> "a"
+        SearchResultType.TRACK -> "t"
+        SearchResultType.LOCAL_TRACK,
+        SearchResultType.YOUTUBE_TRACK,
+        SearchResultType.YOUTUBE_ALBUM,
+        SearchResultType.YOUTUBE_ARTIST,
+        SearchResultType.YOUTUBE_PLAYLIST,
+        SearchResultType.SOUNDCLOUD_TRACK,
+        SearchResultType.SOUNDCLOUD_ARTIST,
+        SearchResultType.SOUNDCLOUD_PLAYLIST,
+        SearchResultType.SOUNDCLOUD_ALBUM,
+        -> null
+        null -> ""
+    }
 
+    private suspend fun fetchSearchEnvelope(query: String, searchFilter: String): SearchEnvelope {
         val bodyJson = json.encodeToString(
             SearchRequest.serializer(),
             SearchRequest(searchText = query, searchFilter = searchFilter),
         )
-
         val request = Request.Builder()
             .url(SEARCH_API_URL)
             .post(bodyJson.toRequestBody(JSON_MEDIA))
             .header("Content-Type", "application/json")
             .build()
-
         val call = client.newCall(request)
         coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
         val responseBody = call.execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
-        ensureActive()
+        return json.decodeFromString(SearchEnvelope.serializer(), responseBody)
+    }
 
-        val envelope = json.decodeFromString(SearchEnvelope.serializer(), responseBody)
-
-        envelope.auto.results.mapNotNull { item ->
-            val searchResultType = when (item.type) {
-                "b" -> SearchResultType.ARTIST
-                "a" -> SearchResultType.ALBUM
-                "t" -> SearchResultType.TRACK
-                else -> return@mapNotNull null
-            }
-
-            val name = item.name.trim().takeIf { it.isNotEmpty() } ?: return@mapNotNull null
-
-            val url = when (searchResultType) {
-                SearchResultType.ARTIST -> item.itemUrlRoot
-                else -> item.itemUrlPath
-            }?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
-
-            if (!NetworkUtils.isValidHttpsUrl(url)) return@mapNotNull null
-
-            val imageUrl = item.img?.trim()?.takeIf { it.startsWith("https://") }
-
-            val artist: String?
-            val album: String?
-            when (searchResultType) {
-                SearchResultType.ALBUM -> {
-                    artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
-                    album = null
-                }
-
-                SearchResultType.TRACK -> {
-                    artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
-                    album = item.albumName?.trim()?.takeIf { it.isNotEmpty() }
-                }
-
-                else -> {
-                    artist = null
-                    album = null
-                }
-            }
-
-            val genre = item.tagNames
-                .mapNotNull { it.trim().takeIf { tag -> tag.isNotEmpty() } }
-                .joinToString(", ")
-                .takeIf { it.isNotEmpty() }
-
-            SearchResult(
-                type = searchResultType,
-                name = name,
-                url = url,
-                imageUrl = imageUrl,
-                artist = artist,
-                album = album,
-                genre = genre,
-                releaseDate = null,
-            )
+    private fun toSearchResult(item: SearchItem): SearchResult? {
+        val searchResultType = when (item.type) {
+            "b" -> SearchResultType.ARTIST
+            "a" -> SearchResultType.ALBUM
+            "t" -> SearchResultType.TRACK
+            else -> return null
         }
+        val name = item.name.trim().takeIf { it.isNotEmpty() } ?: return null
+        val url = when (searchResultType) {
+            SearchResultType.ARTIST -> item.itemUrlRoot
+            else -> item.itemUrlPath
+        }?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        if (!NetworkUtils.isValidHttpsUrl(url)) return null
+
+        val imageUrl = item.img?.trim()?.takeIf { it.startsWith("https://") }
+        val (artist, album) = artistAndAlbumFor(searchResultType, item)
+        val genre = item.tagNames
+            .mapNotNull { it.trim().takeIf { tag -> tag.isNotEmpty() } }
+            .joinToString(", ")
+            .takeIf { it.isNotEmpty() }
+
+        return SearchResult(
+            type = searchResultType,
+            name = name,
+            url = url,
+            imageUrl = imageUrl,
+            artist = artist,
+            album = album,
+            genre = genre,
+            releaseDate = null,
+        )
+    }
+
+    private fun artistAndAlbumFor(
+        type: SearchResultType,
+        item: SearchItem,
+    ): Pair<String?, String?> = when (type) {
+        SearchResultType.ALBUM -> item.bandName?.trim()?.takeIf { it.isNotEmpty() } to null
+        SearchResultType.TRACK -> {
+            val artist = item.bandName?.trim()?.takeIf { it.isNotEmpty() }
+            val album = item.albumName?.trim()?.takeIf { it.isNotEmpty() }
+            artist to album
+        }
+        else -> null to null
     }
 
     private companion object {

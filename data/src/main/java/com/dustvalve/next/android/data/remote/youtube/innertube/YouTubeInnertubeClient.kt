@@ -71,44 +71,55 @@ open class YouTubeInnertubeClient @Inject constructor(
         val clients = listOf(YouTubeClient.AndroidVrNoAuth, YouTubeClient.Ios)
         var lastError: String? = null
         for (client in clients) {
-            val response = try {
-                postWithRetry(
-                    client = client,
-                    endpointPath = "player",
-                    queryParams = "",
-                ) { cfg ->
-                    buildJsonObject {
-                        put(
-                            "context",
-                            buildJsonObject {
-                                put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
-                            },
-                        )
-                        put("videoId", videoId)
-                        put("contentCheckOk", true)
-                        put("racyCheckOk", true)
-                    }
-                }
-            } catch (e: CancellationException) {
-                // Caller cancellation must propagate, never be converted
-                // into a "failed across all clients" IllegalStateException.
-                throw e
-            } catch (e: IOException) {
-                lastError = "${client.clientName}: ${e.message}"
-                continue
-            } catch (e: IllegalStateException) {
-                lastError = "${client.clientName}: ${e.message}"
-                continue
-            } catch (e: IllegalArgumentException) {
-                lastError = "${client.clientName}: ${e.message}"
-                continue
+            when (val outcome = tryPlayerClient(client, videoId)) {
+                is PlayerAttempt.Success -> return outcome.response
+                is PlayerAttempt.Failure -> lastError = outcome.error
             }
-            if (hasAudioFormats(response)) return response
-            lastError = "${client.clientName}: no audio adaptiveFormats " +
-                "(playabilityStatus=${response.path("playabilityStatus")?.path("status")?.toString()})"
         }
         throw IllegalStateException(
             "YouTube /player failed for videoId=$videoId across all clients: $lastError",
+        )
+    }
+
+    private sealed class PlayerAttempt {
+        data class Success(val response: JsonElement) : PlayerAttempt()
+        data class Failure(val error: String) : PlayerAttempt()
+    }
+
+    private suspend fun tryPlayerClient(client: YouTubeClient, videoId: String): PlayerAttempt {
+        val response = try {
+            postWithRetry(
+                client = client,
+                endpointPath = "player",
+                queryParams = "",
+            ) { cfg ->
+                buildJsonObject {
+                    put(
+                        "context",
+                        buildJsonObject {
+                            put("client", client.toContext(cfg.visitorData, cfg.clientVersion))
+                        },
+                    )
+                    put("videoId", videoId)
+                    put("contentCheckOk", true)
+                    put("racyCheckOk", true)
+                }
+            }
+        } catch (e: CancellationException) {
+            // Caller cancellation must propagate, never be converted
+            // into a "failed across all clients" IllegalStateException.
+            throw e
+        } catch (e: IOException) {
+            return PlayerAttempt.Failure("${client.clientName}: ${e.message}")
+        } catch (e: IllegalStateException) {
+            return PlayerAttempt.Failure("${client.clientName}: ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            return PlayerAttempt.Failure("${client.clientName}: ${e.message}")
+        }
+        if (hasAudioFormats(response)) return PlayerAttempt.Success(response)
+        return PlayerAttempt.Failure(
+            "${client.clientName}: no audio adaptiveFormats " +
+                "(playabilityStatus=${response.path("playabilityStatus")?.path("status")?.toString()})",
         )
     }
 

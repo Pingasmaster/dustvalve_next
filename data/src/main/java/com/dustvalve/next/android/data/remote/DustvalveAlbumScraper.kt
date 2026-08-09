@@ -4,6 +4,7 @@ import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AlbumPrice
+import com.dustvalve.next.android.domain.model.DiscographyOffer
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.util.HtmlUtils
 import com.dustvalve.next.android.util.NetworkUtils
@@ -14,6 +15,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -23,6 +28,7 @@ import java.security.MessageDigest
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.coroutineContext
 
 @Singleton
 class DustvalveAlbumScraper @Inject constructor(
@@ -79,37 +85,57 @@ class DustvalveAlbumScraper @Inject constructor(
     @Serializable
     data class TrackFile(@SerialName("mp3-128") val mp3128: String? = null)
 
+    /** Intermediate scrape payload after HTML fetch + TralbumData decode. */
+    private data class AlbumPagePayload(
+        val requestedUrl: String,
+        val html: String,
+        val tralbum: TralbumData,
+    )
+
     suspend fun scrapeAlbum(albumUrl: String, maxRedirects: Int = 3): Album = withContext(ioDispatcher) {
         require(NetworkUtils.isValidHttpsUrl(albumUrl)) { "Invalid Dustvalve URL: $albumUrl" }
+        val payload = fetchAlbumPage(albumUrl)
+        ensureActive()
+        redirectToAlbumIfNeeded(payload, maxRedirects)?.let { return@withContext it }
+        buildAlbum(payload)
+    }
 
-        val request = Request.Builder()
-            .url(albumUrl)
-            .build()
-
+    private suspend fun fetchAlbumPage(albumUrl: String): AlbumPagePayload {
+        val request = Request.Builder().url(albumUrl).build()
         val call = client.newCall(request)
         coroutineContext[Job]?.invokeOnCompletion { cause -> if (cause != null) call.cancel() }
         val html = call.execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
-        ensureActive()
-
         val tralbumJson = HtmlUtils.extractJsonFromScript(html, "TralbumData")
             ?: HtmlUtils.extractDataAttribute(html, "data-tralbum")
             ?: throw IllegalStateException("Could not find TralbumData in page: $albumUrl")
+        return AlbumPagePayload(
+            requestedUrl = albumUrl,
+            html = html,
+            tralbum = json.decodeFromString(tralbumJson),
+        )
+    }
 
-        val tralbumData = json.decodeFromString<TralbumData>(tralbumJson)
+    /**
+     * Track pages that advertise an album_url redirect to that album once.
+     * Returns the redirected Album, or null when this page should be kept.
+     */
+    private suspend fun redirectToAlbumIfNeeded(payload: AlbumPagePayload, maxRedirects: Int): Album? {
+        val tralbum = payload.tralbum
+        if (tralbum.itemType != "track" || tralbum.albumUrl.isNullOrBlank()) return null
+        if (maxRedirects <= 0) throw IOException("Too many redirects for ${payload.requestedUrl}")
+        val parsedBase = URL(payload.requestedUrl)
+        val resolvedAlbumUrl = URL(parsedBase, tralbum.albumUrl).toString()
+        if (!NetworkUtils.isValidHttpsUrl(resolvedAlbumUrl)) return null
+        return scrapeAlbum(resolvedAlbumUrl, maxRedirects - 1)
+    }
 
-        // If this is a track page with an album URL, redirect to the album page
-        if (tralbumData.itemType == "track" && !tralbumData.albumUrl.isNullOrBlank()) {
-            if (maxRedirects <= 0) throw IOException("Too many redirects for $albumUrl")
-            val parsedBase = URL(albumUrl)
-            val resolvedAlbumUrl = URL(parsedBase, tralbumData.albumUrl).toString()
-            if (NetworkUtils.isValidHttpsUrl(resolvedAlbumUrl)) {
-                ensureActive()
-                return@withContext scrapeAlbum(resolvedAlbumUrl, maxRedirects - 1)
-            }
-        }
+    private fun buildAlbum(payload: AlbumPagePayload): Album {
+        val albumUrl = payload.requestedUrl
+        val html = payload.html
+        val tralbumData = payload.tralbum
 
         val parsedUrl = URL(albumUrl)
         val baseUrl = "${parsedUrl.protocol}://${parsedUrl.host}"
@@ -124,34 +150,23 @@ class DustvalveAlbumScraper @Inject constructor(
         val artistName = tralbumData.current.artist ?: extractArtistFromHtml(html) ?: "Unknown Artist"
 
         val tags = extractTags(html)
-
         val resolvedAlbumUrl = tralbumData.url.ifEmpty { albumUrl }
+        val albumPrice = extractAlbumPrice(html)
         val tracks = tralbumData.trackinfo.mapIndexed { index, trackInfo ->
-            // Prefer Bandcamp's stable track id when present, else fall back
-            // to the 1-based positional index so sibling tracks with a null
-            // track id on the same album don't collide on the key.
-            val trackKey = trackInfo.id?.toString() ?: "idx${index + 1}"
-            val trackPageUrl = trackInfo.titleLink
-                ?.takeIf { it.isNotBlank() }
-                ?.let { resolveAgainst(parsedUrl, it) }
-                ?.takeIf { NetworkUtils.isValidHttpsUrl(it) }
-            Track(
-                id = "${albumId}_$trackKey",
+            trackFromInfo(
+                trackInfo = trackInfo,
+                index = index,
                 albumId = albumId,
-                title = trackInfo.title,
-                artist = artistName,
+                artistName = artistName,
                 artistUrl = artistUrl,
-                trackNumber = trackInfo.trackNum?.takeIf { it > 0 } ?: (index + 1),
-                duration = trackInfo.duration,
-                streamUrl = trackInfo.file?.mp3128,
                 artUrl = artUrl,
                 albumTitle = tralbumData.current.title,
                 albumUrl = resolvedAlbumUrl,
-                bandcampTrackUrl = trackPageUrl,
+                parsedUrl = parsedUrl,
             )
         }
 
-        Album(
+        return Album(
             id = albumId,
             url = tralbumData.url.ifEmpty { albumUrl },
             title = tralbumData.current.title,
@@ -162,21 +177,56 @@ class DustvalveAlbumScraper @Inject constructor(
             about = tralbumData.current.about,
             tracks = tracks,
             tags = tags,
-            price = extractAlbumPrice(html),
+            price = albumPrice,
             discographyOffer = extractDiscographyOffer(html),
-            singleTrackPrice = run {
-                val albumPrice = extractAlbumPrice(html)
-                val def = tralbumData.defaultPrice
-                // Only surface a per-track price when bandcamp gives us one
-                // AND it differs from the album price; otherwise the "Buy a
-                // single track" option would be redundant noise.
-                if (def != null && def > 0.0 && albumPrice != null && def != albumPrice.amount) {
-                    AlbumPrice(amount = def, currency = albumPrice.currency)
-                } else {
-                    null
-                }
-            },
+            singleTrackPrice = singleTrackPrice(tralbumData.defaultPrice, albumPrice),
         )
+    }
+
+    private fun trackFromInfo(
+        trackInfo: TrackInfo,
+        index: Int,
+        albumId: String,
+        artistName: String,
+        artistUrl: String,
+        artUrl: String,
+        albumTitle: String,
+        albumUrl: String,
+        parsedUrl: URL,
+    ): Track {
+        // Prefer Bandcamp's stable track id when present, else fall back
+        // to the 1-based positional index so sibling tracks with a null
+        // track id on the same album don't collide on the key.
+        val trackKey = trackInfo.id?.toString() ?: "idx${index + 1}"
+        val trackPageUrl = trackInfo.titleLink
+            ?.takeIf { it.isNotBlank() }
+            ?.let { resolveAgainst(parsedUrl, it) }
+            ?.takeIf { NetworkUtils.isValidHttpsUrl(it) }
+        return Track(
+            id = "${albumId}_$trackKey",
+            albumId = albumId,
+            title = trackInfo.title,
+            artist = artistName,
+            artistUrl = artistUrl,
+            trackNumber = trackInfo.trackNum?.takeIf { it > 0 } ?: (index + 1),
+            duration = trackInfo.duration,
+            streamUrl = trackInfo.file?.mp3128,
+            artUrl = artUrl,
+            albumTitle = albumTitle,
+            albumUrl = albumUrl,
+            bandcampTrackUrl = trackPageUrl,
+        )
+    }
+
+    /**
+     * Only surface a per-track price when bandcamp gives us one AND it differs
+     * from the album price; otherwise the "Buy a single track" option would be
+     * redundant noise.
+     */
+    private fun singleTrackPrice(defaultPrice: Double?, albumPrice: AlbumPrice?): AlbumPrice? {
+        if (defaultPrice == null || defaultPrice <= 0.0 || albumPrice == null) return null
+        if (defaultPrice == albumPrice.amount) return null
+        return AlbumPrice(amount = defaultPrice, currency = albumPrice.currency)
     }
 
     /**
@@ -235,21 +285,11 @@ class DustvalveAlbumScraper @Inject constructor(
      * up a MockWebServer.
      */
     fun extractAlbumPrice(html: String): AlbumPrice? {
-        for (releases in iterAlbumReleases(html)) {
-            for (release in releases) {
-                val obj = release as? kotlinx.serialization.json.JsonObject ?: continue
-                // Skip the discography bundle (item_type == "b"); we want the
-                // album/track itself (item_type == "a" or "t"), which on
-                // bandcamp is always the first non-bundle entry.
-                val itemType = additionalProperty(obj, "item_type")
-                if (itemType == "b") continue
-                val offer = obj["offers"] as? kotlinx.serialization.json.JsonObject ?: continue
-                val price = parseOffer(offer) ?: continue
-                return price
-            }
-            return null // Found a release block but no usable non-bundle offer.
-        }
-        return null
+        // Match prior behaviour: once a MusicAlbum/MusicRecording release block
+        // is found, do not scan later JSON-LD scripts even if this block has
+        // no usable non-bundle offer.
+        val releases = iterAlbumReleases(html).firstOrNull() ?: return null
+        return releases.firstNotNullOfOrNull { release -> albumPriceFromRelease(release) }
     }
 
     /**
@@ -259,27 +299,31 @@ class DustvalveAlbumScraper @Inject constructor(
      * means the album viewer can show a "Buy full discography (N)" menu
      * option without re-scraping.
      */
-    fun extractDiscographyOffer(html: String): com.dustvalve.next.android.domain.model.DiscographyOffer? {
-        for (releases in iterAlbumReleases(html)) {
-            for (release in releases) {
-                val obj = release as? kotlinx.serialization.json.JsonObject ?: continue
-                val itemType = additionalProperty(obj, "item_type")
-                if (itemType != "b") continue
-                val offer = obj["offers"] as? kotlinx.serialization.json.JsonObject ?: continue
-                val price = parseOffer(offer) ?: continue
-                val url = offer["url"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
-                    ?.contentOrNull
-                    ?: (obj["@id"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
-                    ?: continue
-                val name = (obj["name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull.orEmpty()
-                return com.dustvalve.next.android.domain.model.DiscographyOffer(
-                    price = price,
-                    url = url,
-                    name = name,
-                )
-            }
+    fun extractDiscographyOffer(html: String): DiscographyOffer? =
+        iterAlbumReleases(html).firstNotNullOfOrNull { releases ->
+            releases.firstNotNullOfOrNull { release -> discographyOfferFromRelease(release) }
         }
-        return null
+
+    private fun albumPriceFromRelease(release: JsonElement): AlbumPrice? {
+        val obj = release as? JsonObject ?: return null
+        // Skip the discography bundle (item_type == "b"); we want the
+        // album/track itself (item_type == "a" or "t"), which on
+        // bandcamp is always the first non-bundle entry.
+        if (additionalProperty(obj, "item_type") == "b") return null
+        val offer = obj["offers"] as? JsonObject ?: return null
+        return parseOffer(offer)
+    }
+
+    private fun discographyOfferFromRelease(release: JsonElement): DiscographyOffer? {
+        val obj = release as? JsonObject ?: return null
+        if (additionalProperty(obj, "item_type") != "b") return null
+        val offer = obj["offers"] as? JsonObject ?: return null
+        val price = parseOffer(offer) ?: return null
+        val url = offer["url"]?.let { it as? JsonPrimitive }?.contentOrNull
+            ?: (obj["@id"] as? JsonPrimitive)?.contentOrNull
+            ?: return null
+        val name = (obj["name"] as? JsonPrimitive)?.contentOrNull.orEmpty()
+        return DiscographyOffer(price = price, url = url, name = name)
     }
 
     /**
@@ -289,38 +333,40 @@ class DustvalveAlbumScraper @Inject constructor(
      * shape (track-only releases like moe shop's HARDCODED). We unify both
      * here so price + discography extraction works in either case.
      */
-    private fun iterAlbumReleases(html: String): Sequence<kotlinx.serialization.json.JsonArray> = sequence {
+    private fun iterAlbumReleases(html: String): Sequence<JsonArray> = sequence {
         val scriptRegex = Regex(
             """<script type="application/ld\+json"[^>]*>(.+?)</script>""",
             RegexOption.DOT_MATCHES_ALL,
         )
         for (m in scriptRegex.findAll(html)) {
-            val body = m.groupValues[1].trim()
-            val root = try {
-                json.parseToJsonElement(body)
-            } catch (_: Throwable) {
-                continue
-            }
-            val obj = root as? kotlinx.serialization.json.JsonObject ?: continue
-            val type = obj["@type"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }?.contentOrNull
-            val releases: kotlinx.serialization.json.JsonArray? = when (type) {
-                "MusicAlbum" -> obj["albumRelease"] as? kotlinx.serialization.json.JsonArray
-
-                "MusicRecording" -> (
-                    (obj["inAlbum"] as? kotlinx.serialization.json.JsonObject)
-                        ?.get("albumRelease") as? kotlinx.serialization.json.JsonArray
-                    )
-
-                else -> null
-            }
-            if (releases != null) yield(releases)
+            albumReleasesFromScript(m.groupValues[1].trim())?.let { yield(it) }
         }
     }
 
-    private fun parseOffer(offer: kotlinx.serialization.json.JsonObject): AlbumPrice? {
-        val priceNum = offer["price"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+    private fun albumReleasesFromScript(body: String): JsonArray? {
+        val root = try {
+            json.parseToJsonElement(body)
+        } catch (_: Throwable) {
+            return null
+        }
+        val obj = root as? JsonObject ?: return null
+        val type = obj["@type"]?.let { it as? JsonPrimitive }?.contentOrNull
+        return when (type) {
+            "MusicAlbum" -> obj["albumRelease"] as? JsonArray
+
+            "MusicRecording" -> (
+                (obj["inAlbum"] as? JsonObject)
+                    ?.get("albumRelease") as? JsonArray
+                )
+
+            else -> null
+        }
+    }
+
+    private fun parseOffer(offer: JsonObject): AlbumPrice? {
+        val priceNum = offer["price"]?.let { it as? JsonPrimitive }
             ?.contentOrNull?.toDoubleOrNull()
-        val currency = offer["priceCurrency"]?.let { it as? kotlinx.serialization.json.JsonPrimitive }
+        val currency = offer["priceCurrency"]?.let { it as? JsonPrimitive }
             ?.contentOrNull
         return if (priceNum != null && priceNum > 0.0 && !currency.isNullOrBlank()) {
             AlbumPrice(amount = priceNum, currency = currency)
@@ -329,39 +375,44 @@ class DustvalveAlbumScraper @Inject constructor(
         }
     }
 
-    private fun additionalProperty(obj: kotlinx.serialization.json.JsonObject, name: String): String? {
-        val arr = obj["additionalProperty"] as? kotlinx.serialization.json.JsonArray ?: return null
-        for (e in arr) {
-            val o = e as? kotlinx.serialization.json.JsonObject ?: continue
-            val n = (o["name"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+    private fun additionalProperty(obj: JsonObject, name: String): String? {
+        val arr = obj["additionalProperty"] as? JsonArray ?: return null
+        return arr.firstNotNullOfOrNull { e ->
+            val o = e as? JsonObject ?: return@firstNotNullOfOrNull null
+            val n = (o["name"] as? JsonPrimitive)?.contentOrNull
             if (n == name) {
-                return (o["value"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                (o["value"] as? JsonPrimitive)?.contentOrNull
+            } else {
+                null
             }
         }
-        return null
     }
 
     private fun extractArtistFromHtml(html: String): String? {
-        // 1. Schema.org itemprop="byArtist" - most structured
-        val byArtist = Regex("""<span[^>]*\bitemprop="byArtist"[^>]*>[^<]*<a[^>]*>([^<]+)</a>""")
-            .find(html)?.groupValues?.get(1)?.trim()
-        if (!byArtist.isNullOrBlank()) return HtmlUtils.decodeHtmlEntities(byArtist)
-
-        // 2. Band name from #band-name-location (present on all Dustvalve pages)
-        val bandName = Regex("""<(?:span|p)[^>]*id="?band-name-location"?[^>]*>[\s\S]*?class="?title"?[^>]*>([^<]+)<""")
-            .find(html)?.groupValues?.get(1)?.trim()
-        if (!bandName.isNullOrBlank()) return HtmlUtils.decodeHtmlEntities(bandName)
-
-        // 3. og:site_name meta tag - Dustvalve sets this to the band name
-        val ogSiteName = HtmlUtils.extractMetaContent(html, "og:site_name")?.trim()
-        if (!ogSiteName.isNullOrBlank()) return ogSiteName
-
-        // 4. Artist name from the #name-section .subheadline a
-        val subheadline = Regex("""class="?subheadline"?[^>]*>[\s\S]*?<a[^>]*>([^<]+)</a>""")
-            .find(html)?.groupValues?.get(1)?.trim()
-        if (!subheadline.isNullOrBlank()) return HtmlUtils.decodeHtmlEntities(subheadline)
-
-        return null
+        val candidates = listOf(
+            {
+                Regex("""<span[^>]*\bitemprop="byArtist"[^>]*>[^<]*<a[^>]*>([^<]+)</a>""")
+                    .find(html)?.groupValues?.get(1)?.trim()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { HtmlUtils.decodeHtmlEntities(it) }
+            },
+            {
+                Regex("""<(?:span|p)[^>]*id="?band-name-location"?[^>]*>[\s\S]*?class="?title"?[^>]*>([^<]+)<""")
+                    .find(html)?.groupValues?.get(1)?.trim()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { HtmlUtils.decodeHtmlEntities(it) }
+            },
+            {
+                HtmlUtils.extractMetaContent(html, "og:site_name")?.trim()?.takeIf { it.isNotBlank() }
+            },
+            {
+                Regex("""class="?subheadline"?[^>]*>[\s\S]*?<a[^>]*>([^<]+)</a>""")
+                    .find(html)?.groupValues?.get(1)?.trim()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { HtmlUtils.decodeHtmlEntities(it) }
+            },
+        )
+        return candidates.firstNotNullOfOrNull { it() }
     }
 
     private fun extractTags(html: String): List<String> {

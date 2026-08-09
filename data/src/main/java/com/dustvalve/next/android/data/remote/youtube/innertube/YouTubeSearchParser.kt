@@ -31,19 +31,19 @@ class YouTubeSearchParser @Inject constructor() {
         for (section in sectionContents) {
             // Continuation lives at the section list level, not inside
             // itemSectionRenderer. Look for it on every iteration.
-            section.path("continuationItemRenderer")
-                ?.path("continuationEndpoint")?.path("continuationCommand")
-                ?.str("token")
-                ?.let { continuation = it }
-
-            val isr = section.path("itemSectionRenderer") ?: continue
-            val rows = isr.path("contents")?.arr() ?: continue
-            for (row in rows) {
-                parseRow(row)?.let { items += it }
-            }
+            sectionContinuationToken(section)?.let { continuation = it }
+            items += itemSectionRows(section).mapNotNull { parseRow(it) }
         }
         return Page(items, continuation)
     }
+
+    private fun sectionContinuationToken(section: JsonElement): String? =
+        section.path("continuationItemRenderer")
+            ?.path("continuationEndpoint")?.path("continuationCommand")
+            ?.str("token")
+
+    private fun itemSectionRows(section: JsonElement): List<JsonElement> =
+        section.path("itemSectionRenderer")?.path("contents")?.arr().orEmpty()
 
     private fun resolvePrimarySectionList(root: JsonElement): List<JsonElement>? {
         val contents = root.path("contents") ?: return null
@@ -59,11 +59,15 @@ class YouTubeSearchParser @Inject constructor() {
     }
 
     private fun parseRow(row: JsonElement): SearchResult? {
-        row.path("videoRenderer")?.let { return parseVideo(it) }
-        row.path("playlistRenderer")?.let { return parsePlaylist(it) }
-        row.path("channelRenderer")?.let { return parseChannel(it) }
-        row.path("lockupViewModel")?.let { return parseLockup(it) }
-        return null
+        val parsers = listOf(
+            "videoRenderer" to ::parseVideo,
+            "playlistRenderer" to ::parsePlaylist,
+            "channelRenderer" to ::parseChannel,
+            "lockupViewModel" to ::parseLockup,
+        )
+        return parsers.firstNotNullOfOrNull { (key, parser) ->
+            row.path(key)?.let(parser)
+        }
     }
 
     private fun parseVideo(vr: JsonElement): SearchResult? {

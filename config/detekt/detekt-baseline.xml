@@ -5,27 +5,27 @@
 
   Remaining categories (kept on purpose):
   - LongMethod / CyclomaticComplexMethod / LargeClass / TooManyFunctions on
-    Compose screens, scrapers, and ViewModels: vertical UI/scrape flows where
-    extracting more helpers hurts readability more than it helps.
+    Compose screens and ViewModels: vertical UI flows where extracting more
+    helpers hurts readability more than it helps.
   - MagicNumber for HTTP status codes, AudioFormat quality ranks, and YouTube
     Mix playlistId wire offsets (protocol literals clearer as numbers).
   - MaxLineLength on test fixtures / SQL / ytcfg HTML samples.
   - ParameterNaming on Compose onXyz callbacks (past-tense event names).
   - TooGenericExceptionCaught on ViewModel catch (Exception) UI error surfaces.
-  - LoopWithTooManyJumpStatements / NestedBlockDepth / ReturnCount / ThrowsCount
-    on HTML/JSON parsers where early-continue is the natural shape.
   - SwallowedException on intentional best-effort scrape/download paths.
   - MultipleEmitters on PlaylistContent (Compose list + empty state).
   - ComplexCondition on pagination / deeplink host matching.
+  - ThrowsCount on download paths (DownloadAlbumUseCase / DownloadRepositoryImpl).
 
-  Do NOT re-add MagicNumbers that already have named constants in source.
+  Cleared (scrape/parse flatten): NestedBlockDepth / LoopWithTooManyJumpStatements
+  / ReturnCount / ThrowsCount / CyclomaticComplexMethod on Dustvalve scrapers,
+  HtmlUtils, and YouTube/YouTube Music parsers.
 -->
 <SmellBaseline>
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>ComplexCondition:BandcampScreen.kt:nearEnd &amp;&amp; currentState.hasMore &amp;&amp; !currentState.isLoading &amp;&amp; currentState.results.isNotEmpty()</ID>
     <ID>ComplexCondition:DeepLinkRouter.kt:DeepLinkRouter$path.startsWith(&quot;/channel/&quot;) || path.startsWith(&quot;/@&quot;) || path.startsWith(&quot;/c/&quot;) || path.startsWith(&quot;/user/&quot;)</ID>
-    <ID>ComplexCondition:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$def != null &amp;&amp; def &gt; 0.0 &amp;&amp; albumPrice != null &amp;&amp; def != albumPrice.amount</ID>
     <ID>ComplexCondition:SearchViewModel.kt:SearchViewModel$resetResults &amp;&amp; localSearchEnabled.value &amp;&amp; (state.selectedType == null || isLocalFilter)</ID>
     <ID>ComplexCondition:YouTubeScreen.kt:nearEnd &amp;&amp; state.hasMore &amp;&amp; !state.isLoading &amp;&amp; state.results.isNotEmpty()</ID>
     <ID>CyclomaticComplexMethod:AlbumDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun AlbumDetailScreen</ID>
@@ -33,11 +33,7 @@
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@Composable private fun SearchResultItem</ID>
     <ID>CyclomaticComplexMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>CyclomaticComplexMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
-    <ID>CyclomaticComplexMethod:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$suspend fun scrapeAlbum: Album</ID>
-    <ID>CyclomaticComplexMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
-    <ID>CyclomaticComplexMethod:DustvalveSearchScraper.kt:DustvalveSearchScraper$suspend fun search: List&lt;SearchResult&gt;</ID>
     <ID>CyclomaticComplexMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
-    <ID>CyclomaticComplexMethod:HtmlUtils.kt:HtmlUtils$fun extractJsonFromScript: String?</ID>
     <ID>CyclomaticComplexMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
     <ID>CyclomaticComplexMethod:LocalScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun LocalScreen</ID>
     <ID>CyclomaticComplexMethod:MiniPlayer.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable fun MiniPlayer</ID>
@@ -47,7 +43,6 @@
     <ID>LongMethod:ArtistDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun ArtistDetailScreen</ID>
     <ID>LongMethod:BandcampScreen.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class, ) @Composable fun BandcampScreen</ID>
     <ID>LongMethod:CollectionDetailScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun CollectionDetailScreen</ID>
-    <ID>LongMethod:DustvalveArtistScraper.kt:DustvalveArtistScraper$suspend fun scrapeArtist: Artist</ID>
     <ID>LongMethod:FullPlayer.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun FullPlayer</ID>
     <ID>LongMethod:FullPlayerControls.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class) @Composable internal fun FullPlayerSeekBar</ID>
     <ID>LongMethod:LibraryScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class) @Composable fun LibraryScreen</ID>
@@ -59,12 +54,6 @@
     <ID>LongMethod:PlaylistEditSheet.kt:@OptIn( ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalLayoutApi::class, ) @Composable fun PlaylistEditSheet</ID>
     <ID>LongMethod:PlaylistListItem.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable fun PlaylistListItem</ID>
     <ID>LongMethod:YouTubeScreen.kt:@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class) @Composable fun YouTubeScreen</ID>
-    <ID>LoopWithTooManyJumpStatements:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$for</ID>
-    <ID>LoopWithTooManyJumpStatements:HtmlUtils.kt:HtmlUtils$while</ID>
-    <ID>LoopWithTooManyJumpStatements:YouTubeInnertubeClient.kt:YouTubeInnertubeClient$for</ID>
-    <ID>LoopWithTooManyJumpStatements:YouTubePlaylistParser.kt:YouTubePlaylistParser$for</ID>
-    <ID>LoopWithTooManyJumpStatements:YouTubeSearchParser.kt:YouTubeSearchParser$for</ID>
-    <ID>LoopWithTooManyJumpStatements:YouTubeYtcfgExtractor.kt:YouTubeYtcfgExtractor$for</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.AAC$60</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.MP3_128$10</ID>
     <ID>MagicNumber:AudioFormat.kt:AudioFormat.MP3_320$80</ID>
@@ -93,8 +82,6 @@
     <ID>MaxLineLength:YouTubeYtcfgExtractorTest.kt:YouTubeYtcfgExtractorTest$val html = &quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;vd_brace&quot;}},&quot;DEVICE&quot;:&quot;cbr=Chrome; tricky }&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>
     <ID>MaxLineLength:YouTubeYtcfgExtractorTest.kt:YouTubeYtcfgExtractorTest$val html = &quot;&quot;&quot;&lt;script&gt;ytcfg.set({&quot;INNERTUBE_CONTEXT&quot;:{&quot;client&quot;:{&quot;visitorData&quot;:&quot;vd_nested&quot;}},&quot;TIMING&quot;:{},&quot;INNERTUBE_CLIENT_VERSION&quot;:&quot;2.0&quot;});&lt;/script&gt;&quot;&quot;&quot;</ID>
     <ID>MultipleEmitters:PlaylistDetailScreen.kt:@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class) @Composable private fun PlaylistContent</ID>
-    <ID>NestedBlockDepth:YouTubeChannelParser.kt:YouTubeChannelParser$fun parseContinuation: ChannelPage</ID>
-    <ID>NestedBlockDepth:YouTubePlaylistParser.kt:YouTubePlaylistParser$fun parse: PlaylistPage</ID>
     <ID>ParameterNaming:AddToPlaylistSheet.kt:onPlaylistSelected: (playlistId: String) -&gt; Unit</ID>
     <ID>ParameterNaming:BottomNavBar.kt:onItemSelected: (NavDestination) -&gt; Unit</ID>
     <ID>ParameterNaming:SettingsScreen.kt:onSetAutoUpdateCheckEnabled: (Boolean) -&gt; Unit</ID>
@@ -104,16 +91,10 @@
     <ID>ParameterNaming:SettingsScreenSections.kt:onSetSaveDataOnMetered: (Boolean) -&gt; Unit</ID>
     <ID>ParameterNaming:SettingsScreenSections.kt:onSetSearchHistoryEnabled: (Boolean) -&gt; Unit</ID>
     <ID>ParameterNaming:YouTubeMusicHome.kt:onChipSelected: (String?) -&gt; Unit</ID>
-    <ID>ReturnCount:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$private fun extractArtistFromHtml: String?</ID>
-    <ID>ReturnCount:HtmlUtils.kt:HtmlUtils$fun extractJsonFromScript: String?</ID>
-    <ID>ReturnCount:HtmlUtils.kt:HtmlUtils$fun extractMetaContent: String?</ID>
-    <ID>ReturnCount:YouTubeSearchParser.kt:YouTubeSearchParser$private fun parseRow: SearchResult?</ID>
     <ID>SwallowedException:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$e: IOException</ID>
     <ID>SwallowedException:DustvalveAlbumScraper.kt:DustvalveAlbumScraper$e: IOException</ID>
     <ID>ThrowsCount:DownloadAlbumUseCase.kt:DownloadAlbumUseCase$suspend fun downloadArtist</ID>
     <ID>ThrowsCount:DownloadRepositoryImpl.kt:DownloadRepositoryImpl$private suspend fun writeDownloadToInternal: Pair&lt;String, Long&gt;</ID>
-    <ID>ThrowsCount:YouTubeMusicParser.kt:YouTubeMusicParser$fun parseHome: YouTubeMusicHomeFeed</ID>
-    <ID>ThrowsCount:YouTubePlayerParser.kt:YouTubePlayerParser$fun parsePlayerStreamInfo: PlayerStreamInfo</ID>
     <ID>TooGenericExceptionCaught:AlbumDetailViewModel.kt:AlbumDetailViewModel$e: Exception</ID>
     <ID>TooGenericExceptionCaught:AppUpdateController.kt:AppUpdateController$e: Exception</ID>
     <ID>TooGenericExceptionCaught:ArtistDetailViewModel.kt:ArtistDetailViewModel$e: Exception</ID>

@@ -25,12 +25,11 @@ class YouTubeChannelParser @Inject constructor() {
         var continuation: String? = null
 
         for (entry in gridContents.orEmpty()) {
-            val ric = entry.path("richItemRenderer")
-            if (ric != null) {
-                parseRichItem(ric, channelId, channelName, tracks.size + 1)?.let { tracks += it }
-                continue
+            when (val parsed = parseContinuationEntry(entry, channelId, channelName, tracks.size + 1)) {
+                is ContEntry.TrackItem -> tracks += parsed.track
+                is ContEntry.Token -> continuation = parsed.token
+                null -> Unit
             }
-            entry.extractContinuationToken()?.let { continuation = it }
         }
         return ChannelPage(tracks, channelName, continuation, avatarUrl)
     }
@@ -39,21 +38,37 @@ class YouTubeChannelParser @Inject constructor() {
     fun parseContinuation(root: JsonElement, channelId: String, channelName: String?, startIndex: Int): ChannelPage {
         val tracks = mutableListOf<Track>()
         var continuation: String? = null
-
-        val actions = root.path("onResponseReceivedActions")?.arr().orEmpty()
-        for (action in actions) {
-            val items = action.path("appendContinuationItemsAction")
-                ?.path("continuationItems")?.arr().orEmpty()
-            for (entry in items) {
-                val ric = entry.path("richItemRenderer")
-                if (ric != null) {
-                    parseRichItem(ric, channelId, channelName, startIndex + tracks.size)?.let { tracks += it }
-                    continue
-                }
-                entry.extractContinuationToken()?.let { continuation = it }
+        for (entry in continuationEntries(root)) {
+            when (val parsed = parseContinuationEntry(entry, channelId, channelName, startIndex + tracks.size)) {
+                is ContEntry.TrackItem -> tracks += parsed.track
+                is ContEntry.Token -> continuation = parsed.token
+                null -> Unit
             }
         }
         return ChannelPage(tracks, channelName, continuation)
+    }
+
+    private fun continuationEntries(root: JsonElement): List<JsonElement> =
+        root.path("onResponseReceivedActions")?.arr().orEmpty().flatMap { action ->
+            action.path("appendContinuationItemsAction")
+                ?.path("continuationItems")?.arr().orEmpty()
+        }
+
+    private sealed class ContEntry {
+        data class TrackItem(val track: Track) : ContEntry()
+        data class Token(val token: String) : ContEntry()
+    }
+
+    private fun parseContinuationEntry(
+        entry: JsonElement,
+        channelId: String,
+        channelName: String?,
+        trackNumber: Int,
+    ): ContEntry? {
+        entry.path("richItemRenderer")?.let { ric ->
+            return parseRichItem(ric, channelId, channelName, trackNumber)?.let { ContEntry.TrackItem(it) }
+        }
+        return entry.extractContinuationToken()?.let { ContEntry.Token(it) }
     }
 
     private fun extractChannelName(root: JsonElement): String? {
