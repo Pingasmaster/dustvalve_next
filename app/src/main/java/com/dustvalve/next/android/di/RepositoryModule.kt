@@ -11,6 +11,7 @@ import com.dustvalve.next.android.data.repository.PlaylistRepositoryImpl
 import com.dustvalve.next.android.data.repository.RecentSearchRepositoryImpl
 import com.dustvalve.next.android.data.repository.SearchRepositoryImpl
 import com.dustvalve.next.android.data.repository.TrackCacheRepositoryImpl
+import com.dustvalve.next.android.download.ControllerTrackDownloadGateway
 import com.dustvalve.next.android.domain.repository.AlbumRepository
 import com.dustvalve.next.android.domain.repository.ArtistRepository
 import com.dustvalve.next.android.domain.repository.DiscoverRepository
@@ -22,6 +23,7 @@ import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
 import com.dustvalve.next.android.domain.repository.SearchRepository
 import com.dustvalve.next.android.domain.repository.TrackCacheRepository
+import com.dustvalve.next.android.domain.repository.TrackDownloadGateway
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -45,6 +47,9 @@ interface RepositoryModule {
 
     @Binds
     fun bindDownloadRepository(impl: DownloadRepositoryImpl): DownloadRepository
+
+    @Binds
+    fun bindTrackDownloadGateway(impl: ControllerTrackDownloadGateway): TrackDownloadGateway
 
     @Binds
     fun bindLibraryRepository(impl: LibraryRepositoryImpl): LibraryRepository

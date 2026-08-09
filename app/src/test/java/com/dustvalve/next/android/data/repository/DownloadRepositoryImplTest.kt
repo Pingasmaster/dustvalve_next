@@ -31,6 +31,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -416,5 +417,19 @@ class DownloadRepositoryImplTest {
         assertThat(repo.getAllDownloadFilePaths())
             .containsExactly("/data/files/t1.mp3", "/data/files/t2.mp3", "")
             .inOrder()
+    }
+
+    @Test fun `getDownloadedAlbumIds only includes albums with files on disk`() = runBlocking {
+        val real = File(filesRoot, "real.mp3").also { it.writeBytes(ByteArray(4)) }
+        every { downloadDao.getAll() } returns kotlinx.coroutines.flow.flowOf(
+            listOf(
+                DownloadEntity(trackId = "t1", albumId = "kept", filePath = real.absolutePath, sizeBytes = 4L),
+                DownloadEntity(trackId = "t2", albumId = "ghost", filePath = "/missing/ghost.mp3", sizeBytes = 99L),
+                DownloadEntity(trackId = "t3", albumId = "blank", filePath = "", sizeBytes = 99L),
+            ),
+        )
+
+        assertThat(repo.getDownloadedAlbumIds().first()).containsExactly("kept")
+        Unit
     }
 }

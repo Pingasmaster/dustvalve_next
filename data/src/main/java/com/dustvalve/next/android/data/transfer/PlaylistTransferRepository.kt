@@ -20,6 +20,7 @@ import com.dustvalve.next.android.domain.model.Playlist
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.domain.repository.TrackDownloadGateway
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
@@ -51,6 +52,7 @@ class PlaylistTransferRepository(
     private val context: Context,
     private val playlistRepository: PlaylistRepository,
     private val downloadRepository: DownloadRepository,
+    private val trackDownloadGateway: TrackDownloadGateway,
     private val database: DustvalveNextDatabase,
     private val trackDao: TrackDao,
     private val downloadDao: DownloadDao,
@@ -62,6 +64,7 @@ class PlaylistTransferRepository(
         @ApplicationContext context: Context,
         playlistRepository: PlaylistRepository,
         downloadRepository: DownloadRepository,
+        trackDownloadGateway: TrackDownloadGateway,
         gateway: DatabaseGateway,
         client: OkHttpClient,
         @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
@@ -69,6 +72,7 @@ class PlaylistTransferRepository(
         context,
         playlistRepository,
         downloadRepository,
+        trackDownloadGateway,
         gateway.database,
         gateway.trackDao,
         gateway.downloadDao,
@@ -98,12 +102,14 @@ class PlaylistTransferRepository(
                 if (offline) {
                     var info = downloadRepository.getDownloadInfo(track.id)
                     if (info == null) {
-                        // Safety net: download paths throw IOException (and
-                        // subtypes). Log and export the track without local
-                        // audio. CancellationException is rethrown so coroutine
+                        // Route through TrackDownloadGateway (DownloadController)
+                        // so offline export shares queue durability, FGS, and
+                        // DownloadPayloadValidator with UI downloads. Log and
+                        // export the track without local audio on failure.
+                        // CancellationException is rethrown so coroutine
                         // cancellation propagates.
                         try {
-                            downloadRepository.downloadTrack(track)
+                            trackDownloadGateway.downloadTrack(track)
                         } catch (ce: CancellationException) {
                             throw ce
                         } catch (e: IOException) {

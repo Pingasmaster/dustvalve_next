@@ -25,6 +25,8 @@ class AssetEvictionPolicyTest : DbTestBase() {
         lastAccessed: Long,
     ): File {
         val file = tmp.newFile("$trackId.mp3")
+        // Write real bytes so on-disk eviction accounting matches sizeBytes.
+        file.writeBytes(ByteArray(sizeBytes.toInt().coerceAtLeast(0)))
         db.downloadDao().insert(
             DownloadEntity(
                 trackId = trackId,
@@ -106,5 +108,18 @@ class AssetEvictionPolicyTest : DbTestBase() {
         policy().evict(targetBytes = 200)
 
         assertThat(db.downloadDao().getAllSync()).isEmpty()
+    }
+
+    @Test fun `phantom sizeBytes do not satisfy the eviction target alone`() = runTest {
+        // A missing file still has a large sizeBytes in the row; eviction must
+        // keep going until enough real on-disk bytes are freed.
+        val ghost = insert("ghost", sizeBytes = 10_000, pinned = false, lastAccessed = 1)
+        ghost.delete()
+        val real = insert("real", sizeBytes = 100, pinned = false, lastAccessed = 2)
+
+        policy().evict(targetBytes = 50)
+
+        assertThat(db.downloadDao().getAllSync()).isEmpty()
+        assertThat(real.exists()).isFalse()
     }
 }
