@@ -143,25 +143,25 @@ class YouTubeRepositoryImpl(
      * client-side so mixed leftovers never leak into the chip view.
      */
     override suspend fun search(query: String, filter: String?, page: Any?): Pair<List<SearchResult>, Any?> {
-        // page is the continuation token from the previous call. We always
-        // re-issue the same /search query; the search continuation API
-        // requires a dedicated route we have not implemented yet. The
-        // previous NewPipe-backed implementation exposed a Page object the
-        // caller passed back and forth; callers (search VM, etc.) tolerate
-        // a null next-page sentinel meaning "no more pages".
         val params = searchFilterParams(filter)
-        val response = client.search(query = query, params = params)
-        val parsed = searchParser.parse(response)
+        val continuation = page as? String
+        val response = if (continuation.isNullOrBlank()) {
+            client.search(query = query, params = params)
+        } else {
+            client.searchContinuation(continuation)
+        }
+        val parsed = if (continuation.isNullOrBlank()) {
+            searchParser.parse(response)
+        } else {
+            searchParser.parseContinuation(response)
+        }
         val filtered = when (filter) {
             "songs", "videos" -> parsed.items.filter { it.type == SearchResultType.YOUTUBE_TRACK }
             "playlists" -> parsed.items.filter { it.type == SearchResultType.YOUTUBE_PLAYLIST }
             "artists" -> parsed.items.filter { it.type == SearchResultType.YOUTUBE_ARTIST }
             else -> parsed.items
         }
-        // Surface no continuation: callers will treat this as a single-page
-        // response, matching the legacy behaviour for filtered searches.
-        // page param accepted for ABI parity but unused.
-        return filtered to null
+        return filtered to parsed.continuation
     }
 
     private fun searchFilterParams(filter: String?): String? = when (filter) {
@@ -280,12 +280,18 @@ class YouTubeRepositoryImpl(
         val extractedId = extractPlaylistId(playlistUrl)
             ?: throw IllegalArgumentException("Cannot extract playlistId from $playlistUrl")
 
+        // Album / playlist radio IDs are RDAMPL + inner playlist id. Strip the
+        // prefix so OLAK*/PL* land on the VL browse path; remaining RD* (including
+        // RDAMPLRDCLAK*) stay on the mix path below.
+        val playlistId = stripRdAmplPrefix(extractedId)
+
         // Mixes (RD*) are not VL-browsable; they paginate via /next. Import /
         // resolvePlaylistTracks share this entry point with YouTubeSource, so
         // route them through getMixPage and surface an empty Mix as an error
         // instead of a silent 0-track success.
-        if (extractedId.startsWith("RD")) {
-            val (tracks, title, _) = getMixPage(mixUrl = playlistUrl)
+        if (playlistId.startsWith("RD")) {
+            val mixUrl = "https://www.youtube.com/playlist?list=$playlistId"
+            val (tracks, title, _) = getMixPage(mixUrl = mixUrl)
             if (tracks.isEmpty()) {
                 throw IllegalStateException("Mix returned no tracks")
             }
@@ -299,6 +305,7 @@ class YouTubeRepositoryImpl(
         // a snapshot cached under their own key (see below), so this path
         // also serves them without a network round-trip.
         val cached = playlistCache.getById(extractedId)
+            ?: playlistCache.getById(playlistId)
         if (cached != null) {
             val ids = try {
                 json.decodeFromString(stringListSerializer, cached.videoIdsJson)
@@ -318,7 +325,7 @@ class YouTubeRepositoryImpl(
                     backgroundScope.launch {
                         try {
                             fetchAndCachePlaylist(
-                                playlistId = resolveBrowsablePlaylistId(extractedId),
+                                playlistId = resolveBrowsablePlaylistId(playlistId),
                                 aliasId = extractedId,
                             )
                         } catch (e: CancellationException) {
@@ -335,7 +342,7 @@ class YouTubeRepositoryImpl(
 
         // Cache miss / partial cache: fetch synchronously.
         return fetchAndCachePlaylist(
-            playlistId = resolveBrowsablePlaylistId(extractedId),
+            playlistId = resolveBrowsablePlaylistId(playlistId),
             aliasId = extractedId,
         )
     }
@@ -419,11 +426,26 @@ class YouTubeRepositoryImpl(
     }
 
     override suspend fun getMixPage(mixUrl: String, cursor: Any?, seenVideoIds: Set<String>): Triple<List<Track>, String, Any?> {
-        val mixId = extractPlaylistId(mixUrl)
+        val extractedId = extractPlaylistId(mixUrl)
             ?: throw IllegalArgumentException("Cannot extract mix playlistId from $mixUrl")
+        // RDAMPL + OLAK/PL is handled in getPlaylistTracks (strip + browse).
+        // Remaining RDAMPLRD* / RDGMEM / RDEM / RDCLAK / RD{video} use /next.
+        val mixId = stripRdAmplPrefix(extractedId)
+        if (!mixId.startsWith("RD")) {
+            throw IllegalArgumentException(
+                "Playlist $extractedId is not a Mix; open it as a regular playlist",
+            )
+        }
         val typed = cursor as? YouTubePlaylistParser.MixContinuation
+        val seed = if (typed == null) playlistParser.extractMixSeedVideoId(mixId) else null
+        // Seeded mixes (RD{video}, RDAMVM, RDMM) need a videoId. Seedless
+        // families (RDGMEM, RDEM, RDCLAK) accept playlistId alone on /next.
+        if (typed == null && seed == null && !playlistParser.isSeedlessMixId(mixId)) {
+            throw IllegalStateException(
+                "Unsupported Mix id $mixId (no seed video and not a known seedless family)",
+            )
+        }
         val response = if (typed == null) {
-            val seed = playlistParser.extractMixSeedVideoId(mixId)
             client.next(videoId = seed, playlistId = mixId)
         } else {
             client.next(
@@ -440,7 +462,11 @@ class YouTubeRepositoryImpl(
             startIndex = startIndex,
             seenVideoIds = seenVideoIds,
         )
-        // If pagination yields zero new tracks, treat the mix as exhausted.
+        // First page empty -> clear failure (not a silent empty playlist).
+        // Later pages empty -> mix exhausted (null cursor).
+        if (page.tracks.isEmpty() && typed == null) {
+            throw IllegalStateException("Mix returned no tracks")
+        }
         val nextCursor = if (page.tracks.isEmpty()) null else page.continuation
         // Best-effort cache write so freshly seen videos benefit getTrackInfo
         // etc. Non-destructive: default-seeded entities must not clobber
@@ -453,6 +479,18 @@ class YouTubeRepositoryImpl(
         } catch (_: Throwable) {}
         return Triple(page.tracks, page.title.orEmpty(), nextCursor)
     }
+
+    /**
+     * Album / playlist radio IDs are `RDAMPL` + the inner playlist id
+     * (`OLAK5uy_...`, `PL...`, or even `RDCLAK...`). Strip once so callers
+     * can browse the source playlist or keep routing an inner mix.
+     */
+    private fun stripRdAmplPrefix(playlistId: String): String =
+        if (playlistId.startsWith("RDAMPL") && playlistId.length > 6) {
+            playlistId.removePrefix("RDAMPL")
+        } else {
+            playlistId
+        }
 
     override suspend fun getChannelVideos(channelUrl: String, page: Any?): YouTubeChannelResult {
         val channelId = extractChannelId(channelUrl)

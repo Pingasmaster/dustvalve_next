@@ -268,6 +268,15 @@ class YouTubePlaylistParserTest {
         assertThat(parser.extractMixSeedVideoId("RDCLAK5uy_n20FRYQXNt1p1wS55Nj2r14IouO5weaYU")).isNull()
         assertThat(parser.extractMixSeedVideoId("RDGMEMYH9CUrFNJS4mrRH8FcQ")).isNull()
         assertThat(parser.extractMixSeedVideoId("RDEMabcdefghijklm")).isNull()
+        assertThat(parser.extractMixSeedVideoId("RDAMPLOLAK5uy_abcdefg")).isNull()
+    }
+
+    @Test fun `isSeedlessMixId recognizes RDGMEM RDEM RDCLAK`() {
+        assertThat(parser.isSeedlessMixId("RDGMEMYH9CUrFNJS4mrRH8FcQ")).isTrue()
+        assertThat(parser.isSeedlessMixId("RDEMabcdefghijklm")).isTrue()
+        assertThat(parser.isSeedlessMixId("RDCLAK5uy_n20FRYQXNt1p1wS55Nj2r14IouO5weaYU")).isTrue()
+        assertThat(parser.isSeedlessMixId("RDdQw4w9WgXcQ")).isFalse()
+        assertThat(parser.isSeedlessMixId("RDAMVMdQw4w9WgXcQ")).isFalse()
     }
 
     @Test fun `extractMixSeedVideoId returns null for non-mix ids`() {
