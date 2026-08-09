@@ -22,6 +22,7 @@ internal class LocalMusicSettingsCoordinator(
     private val uiState: MutableStateFlow<SettingsUiState>,
     private val settingsDataStore: SettingsDataStore,
     private val localMusicRepository: LocalMusicRepository,
+    private val hasAudioPermission: () -> Boolean,
 ) {
     private var scanJob: Job? = null
 
@@ -60,6 +61,15 @@ internal class LocalMusicSettingsCoordinator(
                 localMusicRepository.clearAll()
                 settingsDataStore.setLocalMusicUseMediaStore(enabled)
                 if (enabled) {
+                    if (!hasAudioPermission()) {
+                        uiState.update {
+                            it.copy(
+                                isScanning = false,
+                                scanMessage = UiText.StringResource(R.string.snackbar_scan_needs_permission),
+                            )
+                        }
+                        return@launch
+                    }
                     uiState.update { it.copy(isScanning = true) }
                     val result = localMusicRepository.scan()
                     uiState.update {
@@ -136,6 +146,15 @@ internal class LocalMusicSettingsCoordinator(
         scanJob?.cancel()
         scanJob = scope.launch {
             try {
+                if (settingsDataStore.getLocalMusicUseMediaStoreSync() && !hasAudioPermission()) {
+                    uiState.update {
+                        it.copy(
+                            isScanning = false,
+                            scanMessage = UiText.StringResource(R.string.snackbar_scan_needs_permission),
+                        )
+                    }
+                    return@launch
+                }
                 uiState.update { it.copy(isScanning = true) }
                 val result = localMusicRepository.scan()
                 uiState.update {

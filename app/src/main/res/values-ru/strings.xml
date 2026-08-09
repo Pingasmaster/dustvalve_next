@@ -261,6 +261,9 @@
     <string name="local_scan_title">Просканируй свою музыку</string>
     <string name="local_scan_subtitle">Найди и слушай музыку, которая хранится на устройстве</string>
     <string name="local_enable">Включить локальную музыку</string>
+    <string name="local_grant_permission">Разрешить доступ</string>
+    <string name="local_permission_needed_title">Нужен доступ к музыке</string>
+    <string name="local_permission_needed_subtitle">Разрешение отозвано. Дай доступ, чтобы сканировать и воспроизводить музыку на этом устройстве.</string>
     <string name="local_scanning">Сканируем твою музыку…</string>
     <string name="local_cd_mix">Микс</string>
     <string name="local_tab_favorites">Избранное</string>
@@ -517,6 +520,7 @@
     <string name="snackbar_audio_stream_failed">Не удалось загрузить аудиопоток</string>
     <string name="snackbar_bandcamp_preview_unavailable">Превью недоступно. Купите на <xliff:g id="brand">Bandcamp</xliff:g>.</string>
     <string name="snackbar_scan_failed">Сканирование не удалось: <xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+    <string name="snackbar_scan_needs_permission">Дай доступ к музыкальной библиотеке, чтобы пересканировать</string>
 
     <!-- Crash reporting (opt-in, on-device only) -->
     <string name="crash_report_title">В прошлый раз что-то пошло не так</string>

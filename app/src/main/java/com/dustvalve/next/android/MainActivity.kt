@@ -82,6 +82,7 @@ import com.dustvalve.next.android.ui.screens.player.showNoAlbumSnackbar
 import com.dustvalve.next.android.ui.theme.AlbumThemeManager
 import com.dustvalve.next.android.ui.theme.DustvalveNextTheme
 import com.dustvalve.next.android.util.isAtLeastTiramisu
+import com.dustvalve.next.android.util.legacyAudioPermission
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -209,6 +210,12 @@ class MainActivity : ComponentActivity() {
                             settingsDataStore.getLocalMusicFolderUrisSync().isNotEmpty()
                         )
                 ) {
+                    if (settingsDataStore.getLocalMusicUseMediaStoreSync() &&
+                        ContextCompat.checkSelfPermission(this@MainActivity, legacyAudioPermission())
+                        != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        return@launch
+                    }
                     localMusicRepository.scan()
                 }
             } catch (_: Exception) {

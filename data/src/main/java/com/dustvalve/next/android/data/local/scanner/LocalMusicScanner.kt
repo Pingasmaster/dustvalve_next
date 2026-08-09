@@ -35,6 +35,7 @@ class LocalMusicScanner(private val context: Context, private val trackDao: Trac
 
         private val AUDIO_EXTENSIONS = setOf(
             "mp3", "flac", "m4a", "ogg", "wav", "opus", "aac", "wma", "alac",
+            "aiff", "aif", "mka",
         )
     }
 
@@ -130,8 +131,12 @@ class LocalMusicScanner(private val context: Context, private val trackDao: Trac
                     }
                 }
             }
+        } catch (e: SecurityException) {
+            // Hard failure (revoked SAF grant, etc.): surface to the caller
+            // instead of looking like an empty tree.
+            throw e
         } catch (_: Exception) {
-            // Skip inaccessible directories
+            // Skip inaccessible directories (IO / provider soft failures)
         }
     }
 

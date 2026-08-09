@@ -252,6 +252,9 @@
     <string name="local_scan_title">扫描你的音乐</string>
     <string name="local_scan_subtitle">查找并播放存储在设备上的音乐</string>
     <string name="local_enable">启用本地音乐</string>
+    <string name="local_grant_permission">授予权限</string>
+    <string name="local_permission_needed_title">需要音乐访问权限</string>
+    <string name="local_permission_needed_subtitle">权限已被撤销。请授予访问权限以扫描并播放此设备上的音乐。</string>
     <string name="local_scanning">正在扫描你的音乐…</string>
     <string name="local_cd_mix">混音</string>
     <string name="local_tab_favorites">收藏</string>
@@ -492,6 +495,7 @@
     <string name="snackbar_audio_stream_failed">无法加载音频流</string>
     <string name="snackbar_bandcamp_preview_unavailable">无法预览。请在 <xliff:g id="brand">Bandcamp</xliff:g> 上购买。</string>
     <string name="snackbar_scan_failed">扫描失败：<xliff:g id="reason" example="folder unavailable">%1$s</xliff:g></string>
+    <string name="snackbar_scan_needs_permission">请授予音乐库权限以重新扫描</string>
 
     <!-- Crash reporting (opt-in, on-device only) -->
     <string name="crash_report_title">上次运行时出现了问题</string>

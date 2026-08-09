@@ -86,11 +86,11 @@ class LocalMusicRepositoryImpl(
             artFile.delete()
         }
 
-        // Release SAF permission
+        // Release SAF permission (both flags; must match takePersistableUriPermission)
         try {
             context.contentResolver.releasePersistableUriPermission(
                 uri.toUri(),
-                Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
             )
         } catch (_: Exception) {
             // Permission may already be released
@@ -110,12 +110,12 @@ class LocalMusicRepositoryImpl(
             artDir.deleteRecursively()
         }
 
-        // Release all persisted URI permissions
+        // Release all persisted URI permissions (both flags; must match take)
         for (uriString in settingsDataStore.getLocalMusicFolderUrisSync()) {
             try {
                 context.contentResolver.releasePersistableUriPermission(
                     uriString.toUri(),
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
                 )
             } catch (_: Exception) {
                 // Permission may already be released

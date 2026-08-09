@@ -63,6 +63,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +85,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
@@ -130,16 +134,41 @@ fun LocalScreen(
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val searchHistoryEnabled by viewModel.searchHistoryEnabled.collectAsStateWithLifecycle()
     val localMusicEnabled by viewModel.localMusicEnabled.collectAsStateWithLifecycle()
+    val localMusicUseMediaStore by viewModel.localMusicUseMediaStore.collectAsStateWithLifecycle()
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
+    val permissionCheckEpoch by viewModel.permissionCheckEpoch.collectAsStateWithLifecycle()
 
+    // Re-read runtime permission when returning from system Settings.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshPermissionCheck()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    val needsAudioPermissionRegrant = remember(
+        localMusicEnabled,
+        localMusicUseMediaStore,
+        permissionCheckEpoch,
+    ) {
+        localMusicEnabled && localMusicUseMediaStore && !viewModel.hasAudioPermission()
+    }
+
+    // Tracks whether the in-flight permission request is a re-grant (already
+    // enabled) so Deny does not roll localMusicEnabled back into a dead-end.
+    var permissionRequestIsRegrant by remember { mutableStateOf(false) }
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
     ) { granted: Boolean ->
         if (granted) {
             viewModel.onAudioPermissionGranted()
         } else {
-            viewModel.onAudioPermissionDenied()
+            viewModel.onAudioPermissionDenied(wasRegrant = permissionRequestIsRegrant)
         }
+        permissionRequestIsRegrant = false
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -292,8 +321,13 @@ fun LocalScreen(
                             ) {
                                 Button(
                                     onClick = {
-                                        viewModel.enableLocalMusic()
-                                        audioPermissionLauncher.launch(legacyAudioPermission())
+                                        if (localMusicUseMediaStore) {
+                                            permissionRequestIsRegrant = false
+                                            viewModel.enableLocalMusic()
+                                            audioPermissionLauncher.launch(legacyAudioPermission())
+                                        } else {
+                                            viewModel.enableAndScanSaf()
+                                        }
                                     },
                                     shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier
@@ -307,6 +341,32 @@ fun LocalScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(stringResource(R.string.local_enable))
+                                }
+                            }
+                        } else if (needsAudioPermissionRegrant) {
+                            // Enabled + MediaStore but permission revoked / never granted
+                            EmptyState(
+                                icon = R.drawable.ic_phone_android,
+                                title = stringResource(R.string.local_permission_needed_title),
+                                subtitle = stringResource(R.string.local_permission_needed_subtitle),
+                            ) {
+                                Button(
+                                    onClick = {
+                                        permissionRequestIsRegrant = true
+                                        audioPermissionLauncher.launch(legacyAudioPermission())
+                                    },
+                                    shapes = ButtonDefaults.shapes(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_phone_android),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(stringResource(R.string.local_grant_permission))
                                 }
                             }
                         } else if (isScanning) {
