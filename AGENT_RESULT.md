@@ -10,7 +10,7 @@ Owned mechanical detekt issue classes are cleared. `:app:compileCompatDebugKotli
 
 ## Commit
 
-(See git log on this branch after commit.)
+`642cfab24199ec7a7c4485a10ff759c5f5a65282` - Clear mechanical detekt findings outside LongParameterList hotspots.
 
 ## Fixed rules
 
