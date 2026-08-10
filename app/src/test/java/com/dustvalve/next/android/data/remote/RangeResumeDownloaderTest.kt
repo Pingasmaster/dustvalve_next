@@ -62,7 +62,9 @@ class RangeResumeDownloaderTest {
 
     @Test
     fun `first request always includes Range bytes=0`() = runBlocking {
-        val body = "x".repeat(4096).toByteArray()
+        // Binary body (not printable ASCII) so the payload sniffer does not
+        // reject the fixture as a text/error document.
+        val body = ByteArray(4096) { (0x80 + (it and 0x3F)).toByte() }
         server.enqueue(
             MockResponse()
                 .setResponseCode(206)
@@ -196,7 +198,9 @@ class RangeResumeDownloaderTest {
                 return MockResponse()
                     .setResponseCode(206)
                     .setHeader("Content-Range", "bytes $offset-9999/10000")
-                    .setBody(Buffer().write(ByteArray(1) { 0x42.toByte() }))
+                    // Non-printable byte so first-chunk sniff does not classify
+                    // the truncated body as a text/error document.
+                    .setBody(Buffer().write(ByteArray(1) { 0x80.toByte() }))
             }
         }
 

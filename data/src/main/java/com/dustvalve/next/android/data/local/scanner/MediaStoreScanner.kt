@@ -36,6 +36,7 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
         private const val FOLDER_URI_SENTINEL = "mediastore"
         private const val DB_INSERT_CHUNK_SIZE = 500
         private const val THUMBNAIL_SIZE_PX = 512
+        private const val THUMBNAIL_JPEG_QUALITY = 90
     }
 
     suspend fun scan(): ScanResult = withContext(ioDispatcher) {
@@ -217,7 +218,7 @@ class MediaStoreScanner(private val context: Context, private val trackDao: Trac
             )
             artFile.parentFile?.mkdirs()
             FileOutputStream(artFile).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                bitmap.compress(Bitmap.CompressFormat.JPEG, THUMBNAIL_JPEG_QUALITY, out)
             }
             bitmap.recycle()
             Uri.fromFile(artFile).toString()

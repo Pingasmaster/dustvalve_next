@@ -54,8 +54,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -267,7 +267,7 @@ class MainActivity : ComponentActivity() {
         val prefs = getPreferences(MODE_PRIVATE)
         val asked = prefs.getBoolean(PREF_NOTIFICATION_PERMISSION_ASKED, false)
         if (!asked) {
-            prefs.edit().putBoolean(PREF_NOTIFICATION_PERMISSION_ASKED, true).apply()
+            prefs.edit { putBoolean(PREF_NOTIFICATION_PERMISSION_ASKED, true) }
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             return
         }
@@ -349,9 +349,88 @@ private fun MainContentPlayerChrome(
         }
     }
 
-    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val gesture = rememberMainPlayerGestureState(
+        showFullPlayer = showFullPlayer,
+        expandPlayer = { navViewModel.expandPlayer() },
+        collapsePlayer = { navViewModel.collapsePlayer() },
+    )
 
+    // BackHandlers: later in composition = higher priority
+    // Lowest priority: at root of a non-home tab, switch to home instead of exiting.
+    // Home is Local when that source is enabled; otherwise Library (Local tab is gone).
+    val homeTab = if (BottomNavItem.LOCAL in visibleTabs) {
+        BottomNavItem.LOCAL
+    } else {
+        BottomNavItem.LIBRARY
+    }
+    BackHandler(enabled = !showFullPlayer && backStack.size <= 1 && currentTab != homeTab) {
+        navViewModel.navigateTo(homeTab.destination)
+    }
+    BackHandler(enabled = !showFullPlayer && backStack.size > 1) {
+        navViewModel.navigateBack()
+    }
+    // Highest priority: predictive-back scrubs the collapse with a live preview,
+    // commits on release, and springs back to full if the gesture is cancelled.
+    PredictiveBackHandler(enabled = showFullPlayer) { progress ->
+        try {
+            progress.collect { backEvent ->
+                gesture.seekState.seekTo(backEvent.progress.coerceIn(0f, 1f), targetState = false)
+            }
+            navViewModel.collapsePlayer()
+        } catch (_: CancellationException) {
+            gesture.seekState.animateTo(true)
+        }
+    }
+
+    // Do not key remember() on ViewModels: compose-lints DataFlowAnalyzer would
+    // treat the remember result (and anything built from it) as a forwarded
+    // ViewModel and flag MainContentSharedHost(session). Activity-scoped VMs
+    // are stable for this composition, so plain lambdas are enough.
+    val navActions = remember {
+        MainNavActions(
+            navigateTo = { dest -> navViewModel.navigateTo(dest) },
+            navigateBack = { navViewModel.navigateBack() },
+            expandPlayer = { navViewModel.expandPlayer() },
+            collapsePlayer = { navViewModel.collapsePlayer() },
+            requestLocalArtistFilter = { artist -> navViewModel.requestLocalArtistFilter(artist) },
+        )
+    }
+    val playerActions = remember {
+        MainPlayerActions(showNoAlbumSnackbar = { playerViewModel.showNoAlbumSnackbar() })
+    }
+
+    // Heights must outlive chrome recompositions: a fresh MainPlayerSession every
+    // frame used to reset them to 0/1f, and onSizeChanged does not re-fire when
+    // the measured size is unchanged (dock jump + mid-drag morph cancel).
+    val heights = remember { MainPlayerSessionHeights() }
+
+    val session = MainPlayerSession(
+        adaptiveInfo = adaptiveInfo,
+        chrome = MainPlayerChromeState(
+            backStackSize = backStack.size,
+            showFullPlayer = showFullPlayer,
+            currentTab = currentTab,
+            visibleTabs = visibleTabs,
+            miniVisible = miniVisible,
+        ),
+        gesture = gesture,
+        nav = navActions,
+        player = playerActions,
+        globalSnackbarHostState = globalSnackbarHostState,
+        density = density,
+        heights = heights,
+    )
+    MainContentSharedHost(session = session)
+}
+
+@Composable
+private fun rememberMainPlayerGestureState(
+    showFullPlayer: Boolean,
+    expandPlayer: () -> Unit,
+    collapsePlayer: () -> Unit,
+): MainPlayerGestureState {
+    val scope = rememberCoroutineScope()
     // Single source of truth for the mini <-> full container transform: a
     // seekable transition whose fraction (0 = mini, 1 = full) is driven
     // continuously by the drag gestures and the predictive-back gesture, and
@@ -374,96 +453,53 @@ private fun MainContentPlayerChrome(
         snapshotFlow { if (isSeekingDrag) seekFraction else -1f }
             .collect { f -> if (f >= 0f) seekState.seekTo(f.coerceIn(0f, 1f), targetState = seekTargetFull) }
     }
-
-    val onExpandSeek: (Float) -> Unit = { f ->
-        seekTargetFull = true
-        seekFraction = f
-        isSeekingDrag = f > 0f
-    }
-    val onExpandSettle: (Float) -> Unit = { velFrac ->
-        isSeekingDrag = false
-        if (seekFraction > 0.5f || velFrac > 0.8f) {
-            navViewModel.expandPlayer()
-        } else {
-            scope.launch { seekState.animateTo(false) }
+    // Notification shade / Home can cancel a mid-drag without changing
+    // showFullPlayer; snap the seekable morph back on resume.
+    LifecycleStartEffect(showFullPlayer) {
+        if (!isSeekingDrag) {
+            scope.launch { seekState.animateTo(showFullPlayer) }
         }
-    }
-    val onCollapseSeek: (Float) -> Unit = { g ->
-        seekTargetFull = false
-        seekFraction = g
-        isSeekingDrag = g > 0f
-    }
-    val onCollapseSettle: (Float) -> Unit = { velocityY ->
-        isSeekingDrag = false
-        if (seekFraction > 0.5f || velocityY > 1200f) {
-            navViewModel.collapsePlayer()
-        } else {
-            scope.launch { seekState.animateTo(true) }
-        }
+        onStopOrDispose { }
     }
 
-    // BackHandlers: later in composition = higher priority
-    // Lowest priority: at root of non-LOCAL tab, switch to LOCAL instead of exiting
-    BackHandler(enabled = !showFullPlayer && backStack.size <= 1 && currentTab != BottomNavItem.LOCAL) {
-        navViewModel.navigateTo(NavDestination.LocalHome)
-    }
-    BackHandler(enabled = !showFullPlayer && backStack.size > 1) {
-        navViewModel.navigateBack()
-    }
-    // Highest priority: predictive-back scrubs the collapse with a live preview,
-    // commits on release, and springs back to full if the gesture is cancelled.
-    PredictiveBackHandler(enabled = showFullPlayer) { progress ->
-        try {
-            progress.collect { backEvent ->
-                seekState.seekTo(backEvent.progress.coerceIn(0f, 1f), targetState = false)
+    return MainPlayerGestureState(
+        seekState = seekState,
+        playerTransition = playerTransition,
+        onExpandSeek = { f ->
+            seekTargetFull = true
+            seekFraction = f
+            isSeekingDrag = f > 0f
+        },
+        onExpandSettle = { velFrac ->
+            isSeekingDrag = false
+            if (seekFraction > 0.5f || velFrac > 0.8f) {
+                expandPlayer()
+            } else {
+                scope.launch { seekState.animateTo(false) }
             }
-            navViewModel.collapsePlayer()
-        } catch (_: CancellationException) {
-            seekState.animateTo(true)
-        }
-    }
-
-    // Do not key remember() on ViewModels: compose-lints DataFlowAnalyzer would
-    // treat the remember result (and anything built from it) as a forwarded
-    // ViewModel and flag MainContentSharedHost(session). Activity-scoped VMs
-    // are stable for this composition, so plain lambdas are enough.
-    val navActions = remember {
-        MainNavActions(
-            navigateTo = { dest -> navViewModel.navigateTo(dest) },
-            navigateBack = { navViewModel.navigateBack() },
-            expandPlayer = { navViewModel.expandPlayer() },
-            collapsePlayer = { navViewModel.collapsePlayer() },
-            requestLocalArtistFilter = { artist -> navViewModel.requestLocalArtistFilter(artist) },
-        )
-    }
-    val playerActions = remember {
-        MainPlayerActions(showNoAlbumSnackbar = { playerViewModel.showNoAlbumSnackbar() })
-    }
-
-    val session = MainPlayerSession(
-        adaptiveInfo = adaptiveInfo,
-        chrome = MainPlayerChromeState(
-            backStackSize = backStack.size,
-            showFullPlayer = showFullPlayer,
-            currentTab = currentTab,
-            visibleTabs = visibleTabs,
-            miniVisible = miniVisible,
-        ),
-        gesture = MainPlayerGestureState(
-            seekState = seekState,
-            playerTransition = playerTransition,
-            onExpandSeek = onExpandSeek,
-            onExpandSettle = onExpandSettle,
-            onCollapseSeek = onCollapseSeek,
-            onCollapseSettle = onCollapseSettle,
-        ),
-        nav = navActions,
-        player = playerActions,
-        globalSnackbarHostState = globalSnackbarHostState,
-        density = density,
+        },
+        onExpandCancel = {
+            isSeekingDrag = false
+            scope.launch { seekState.animateTo(showFullPlayer) }
+        },
+        onCollapseSeek = { g ->
+            seekTargetFull = false
+            seekFraction = g
+            isSeekingDrag = g > 0f
+        },
+        onCollapseSettle = { velocityY ->
+            isSeekingDrag = false
+            if (seekFraction > 0.5f || velocityY > 1200f) {
+                collapsePlayer()
+            } else {
+                scope.launch { seekState.animateTo(true) }
+            }
+        },
+        onCollapseCancel = {
+            isSeekingDrag = false
+            scope.launch { seekState.animateTo(showFullPlayer) }
+        },
     )
-    // Keep mutable height fields in sync: SharedHost writes session.containerHeightPx
-    MainContentSharedHost(session = session)
 }
 
 @Stable
@@ -493,9 +529,17 @@ private class MainPlayerGestureState(
     val playerTransition: Transition<Boolean>,
     val onExpandSeek: (Float) -> Unit,
     val onExpandSettle: (Float) -> Unit,
+    val onExpandCancel: () -> Unit,
     val onCollapseSeek: (Float) -> Unit,
     val onCollapseSettle: (Float) -> Unit,
+    val onCollapseCancel: () -> Unit,
 )
+
+@Stable
+private class MainPlayerSessionHeights {
+    var containerHeightPx by mutableFloatStateOf(1f)
+    var bottomBarHeightPx by mutableIntStateOf(0)
+}
 
 @Stable
 private class MainPlayerSession(
@@ -506,9 +550,18 @@ private class MainPlayerSession(
     val player: MainPlayerActions,
     val globalSnackbarHostState: SnackbarHostState,
     val density: Density,
+    val heights: MainPlayerSessionHeights,
 ) {
-    var containerHeightPx by mutableFloatStateOf(1f)
-    var bottomBarHeightPx by mutableIntStateOf(0)
+    var containerHeightPx: Float
+        get() = heights.containerHeightPx
+        set(value) {
+            heights.containerHeightPx = value
+        }
+    var bottomBarHeightPx: Int
+        get() = heights.bottomBarHeightPx
+        set(value) {
+            heights.bottomBarHeightPx = value
+        }
     val expandDistancePx: Float get() = containerHeightPx
     val miniBarHeightPx: Float get() = with(density) { MINI_BAR_HEIGHT.toPx() }
 }
@@ -622,6 +675,7 @@ private fun BoxScope.MainContentPlayerOverlay(session: MainPlayerSession, shared
                         onCollapse = { session.nav.collapsePlayer() },
                         onCollapseSeek = session.gesture.onCollapseSeek,
                         onCollapseSettle = session.gesture.onCollapseSettle,
+                        onCollapseCancel = session.gesture.onCollapseCancel,
                     ),
                     nav = com.dustvalve.next.android.ui.screens.player.FullPlayerNavActions(
                         onArtistClick = { track ->
@@ -710,6 +764,7 @@ private fun BoxScope.MainContentPlayerOverlay(session: MainPlayerSession, shared
                         onExpandClick = { session.nav.expandPlayer() },
                         onExpandSeek = session.gesture.onExpandSeek,
                         onExpandSettle = session.gesture.onExpandSettle,
+                        onExpandCancel = session.gesture.onExpandCancel,
                         modifier = if (miniMax == Dp.Unspecified) {
                             Modifier.fillMaxWidth()
                         } else {

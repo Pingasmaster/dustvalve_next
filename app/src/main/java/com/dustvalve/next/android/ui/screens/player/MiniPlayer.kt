@@ -83,6 +83,7 @@ fun MiniPlayer(
     onExpandClick: () -> Unit,
     onExpandSeek: (Float) -> Unit,
     onExpandSettle: (Float) -> Unit,
+    onExpandCancel: () -> Unit,
     modifier: Modifier = Modifier,
     // Activity-scoped: hiltViewModel() resolves to MainActivity, so this is
     // the same PlayerViewModel instance the rest of the UI sees.
@@ -217,7 +218,7 @@ fun MiniPlayer(
                             },
                             onDragCancel = {
                                 scope.launch { dismissOffset.animateTo(0f, dismissSpec) }
-                                onExpandSeek(0f)
+                                onExpandCancel()
                                 cumulativeDy = 0f
                                 pastThreshold = false
                             },

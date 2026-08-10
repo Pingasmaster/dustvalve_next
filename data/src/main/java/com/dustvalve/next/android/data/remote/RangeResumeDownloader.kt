@@ -176,8 +176,7 @@ object RangeResumeDownloader {
                 // Non-retryable restart-from-zero signal: retrying would hit
                 // the same mismatched payload again. Propagate unwrapped so
                 // callers can discard the partial and start over.
-                if (e is ResumeMismatchException) throw e
-                if (e is DownloadPayloadValidator.InvalidPayloadException) throw e
+                if (isNonRetryableDownloadFailure(e)) throw e
                 attempt++
                 val canRetry = attempt <= maxRetries &&
                     (bytesWritten == 0L || serverHonorsRange)
@@ -196,6 +195,9 @@ object RangeResumeDownloader {
         requireExpectedSize(bytesWritten, expectedTotal, trackId)
         return StreamResult(bytesWritten, suggestedExtension)
     }
+
+    private fun isNonRetryableDownloadFailure(e: IOException): Boolean =
+        e is ResumeMismatchException || e is DownloadPayloadValidator.InvalidPayloadException
 
     private fun rangeRequest(url: String, bytesWritten: Long): Request = Request.Builder()
         .url(url)

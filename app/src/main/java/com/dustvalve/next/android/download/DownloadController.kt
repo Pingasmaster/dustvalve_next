@@ -134,8 +134,6 @@ class DownloadController @Inject constructor(
     private val _events = MutableSharedFlow<DownloadEvent>(replay = 64, extraBufferCapacity = 32)
     val events: SharedFlow<DownloadEvent> = _events.asSharedFlow()
 
-    private fun nextId() = seq.incrementAndGet()
-
     private val coldStartPurgeStarted = AtomicBoolean(false)
     private val coldStartPurgeDone = CompletableDeferred<Unit>()
     private val pendingRestoreStarted = AtomicBoolean(false)
@@ -268,16 +266,18 @@ class DownloadController @Inject constructor(
         if (snapshot.items.isEmpty()) return
         Log.i(TAG, "Restoring ${snapshot.items.size} pending download(s) from durable queue")
         for (item in snapshot.items) {
-            if (item.trackId.isBlank()) continue
-            val alreadyDone = try {
-                downloadRepository.isTrackDownloaded(item.trackId)
-            } catch (_: android.database.SQLException) {
-                false
-            } catch (_: IllegalStateException) {
-                false
+            if (item.trackId.isNotBlank()) {
+                val alreadyDone = try {
+                    downloadRepository.isTrackDownloaded(item.trackId)
+                } catch (_: android.database.SQLException) {
+                    false
+                } catch (_: IllegalStateException) {
+                    false
+                }
+                if (!alreadyDone) {
+                    enqueueTrack(item.toTrack(), item.formatOverride())
+                }
             }
-            if (alreadyDone) continue
-            enqueueTrack(item.toTrack(), item.formatOverride())
         }
         // Rewrite so completed-before-restore items drop out of the snapshot.
         persistQueueAsync()
@@ -291,7 +291,7 @@ class DownloadController @Inject constructor(
     fun enqueueTrack(track: Track, formatOverride: AudioFormat? = null) {
         synchronized(lock) {
             if (isTrackQueuedOrActive(track.id)) return
-            queue.addLast(DownloadWork.TrackWork(nextId(), track, formatOverride))
+            queue.addLast(DownloadWork.TrackWork(seq.incrementAndGet(), track, formatOverride))
             persistQueueLocked()
         }
         onWorkAdded()
@@ -304,11 +304,12 @@ class DownloadController @Inject constructor(
      * *await* is cancelled; the download keeps going. This lets ViewModels keep
      * their existing spinner/snackbar logic with a one-line call swap.
      */
-    suspend fun downloadAlbumBlocking(album: Album) = awaitWork(DownloadWork.AlbumWork(nextId(), album))
+    suspend fun downloadAlbumBlocking(album: Album) = awaitWork(DownloadWork.AlbumWork(seq.incrementAndGet(), album))
 
-    suspend fun downloadArtistBlocking(artist: Artist) = awaitWork(DownloadWork.ArtistWork(nextId(), artist))
+    suspend fun downloadArtistBlocking(artist: Artist) = awaitWork(DownloadWork.ArtistWork(seq.incrementAndGet(), artist))
 
-    suspend fun downloadPlaylistBlocking(label: String, tracks: List<Track>) = awaitWork(DownloadWork.PlaylistWork(nextId(), label, tracks))
+    suspend fun downloadPlaylistBlocking(label: String, tracks: List<Track>) =
+        awaitWork(DownloadWork.PlaylistWork(seq.incrementAndGet(), label, tracks))
 
     suspend fun downloadTrackBlocking(track: Track, formatOverride: AudioFormat? = null) {
         val (work, alreadyQueued) = synchronized(lock) {
@@ -317,7 +318,7 @@ class DownloadController @Inject constructor(
             if (existing != null) {
                 existing to true
             } else {
-                DownloadWork.TrackWork(nextId(), track, formatOverride) to false
+                DownloadWork.TrackWork(seq.incrementAndGet(), track, formatOverride) to false
             }
         }
         awaitWork(work, alreadyQueued)
@@ -460,9 +461,18 @@ class DownloadController @Inject constructor(
             } catch (e: CancellationException) {
                 failure = e
                 throw e
-            } catch (e: Exception) {
-                // Broaden beyond IO/IAE/ISE so SecurityException and other
-                // work failures still emit Failed and unblock awaiters.
+            } catch (e: java.io.IOException) {
+                failure = e
+            } catch (e: SecurityException) {
+                failure = e
+            } catch (e: IllegalStateException) {
+                failure = e
+            } catch (e: IllegalArgumentException) {
+                failure = e
+            } catch (e: android.database.SQLException) {
+                failure = e
+            } catch (e: kotlinx.serialization.SerializationException) {
+                // Resume metadata / sidecar JSON can fail mid-download.
                 failure = e
             }
         }
@@ -553,9 +563,9 @@ class DownloadController @Inject constructor(
         val items = ArrayList<PendingDownloadItemV1>()
         for (work in works) {
             for (item in work.toPendingItems()) {
-                if (item.trackId.isBlank()) continue
-                if (!seen.add(item.trackId)) continue
-                items += item
+                if (item.trackId.isNotBlank() && seen.add(item.trackId)) {
+                    items += item
+                }
             }
         }
         return items
@@ -563,10 +573,13 @@ class DownloadController @Inject constructor(
 
     private fun DownloadWork.toPendingItems(): List<PendingDownloadItemV1> = when (this) {
         is DownloadWork.TrackWork -> listOf(PendingDownloadItemV1.fromTrack(track, formatOverride))
+
         is DownloadWork.AlbumWork -> album.tracks.map { PendingDownloadItemV1.fromTrack(it) }
+
         is DownloadWork.ArtistWork -> artist.albums.flatMap { album ->
             album.tracks.map { PendingDownloadItemV1.fromTrack(it) }
         }
+
         is DownloadWork.PlaylistWork -> tracks.map { PendingDownloadItemV1.fromTrack(it) }
     }
 

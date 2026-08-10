@@ -57,6 +57,16 @@ interface SourcesSearchPlayerPrefsStore {
     /** Custom Bandcamp genres added by the user, stored as JSON. */
     val bandcampCustomGenres: Flow<List<String>>
 
+    /**
+     * Bluetooth stability profile storage: "off", "normal", or "extreme".
+     * See app BluetoothStabilityMode for semantics.
+     */
+    val bluetoothStabilityMode: Flow<String>
+    val bluetoothPcmBufferMs: Flow<Int>
+    val bluetoothExoBufferBoost: Flow<Boolean>
+    val bluetoothPauseDownloadsWhilePlaying: Flow<Boolean>
+    val bluetoothDisableFloatOutput: Flow<Boolean>
+
     suspend fun setAuthCookies(cookiesJson: String?)
     suspend fun setBandcampEnabled(enabled: Boolean)
     suspend fun setYoutubeEnabled(enabled: Boolean)
@@ -77,4 +87,9 @@ interface SourcesSearchPlayerPrefsStore {
     suspend fun setAutoUpdateCheckEnabled(enabled: Boolean)
     suspend fun setLastYoutubeVideoId(videoId: String?)
     suspend fun setBandcampCustomGenres(genres: List<String>)
+    suspend fun setBluetoothStabilityMode(mode: String)
+    suspend fun setBluetoothPcmBufferMs(ms: Int)
+    suspend fun setBluetoothExoBufferBoost(enabled: Boolean)
+    suspend fun setBluetoothPauseDownloadsWhilePlaying(enabled: Boolean)
+    suspend fun setBluetoothDisableFloatOutput(enabled: Boolean)
 }

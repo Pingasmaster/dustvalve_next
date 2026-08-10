@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
-import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -14,6 +13,7 @@ import com.dustvalve.next.android.BuildConfig
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
+import com.dustvalve.next.android.util.isAtLeastP
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ensureActive
@@ -234,21 +234,27 @@ open class AppUpdateService @Inject constructor(
      * [tempFile] and throws on any mismatch or missing required digest.
      */
     private fun verifyDownload(tempFile: File, actualSha256: ByteArray, expectedSha256: String?, downloaded: Long, totalBytes: Long) {
-        if (expectedSha256 == null) {
-            if (requireApkDigest()) {
-                tempFile.delete()
-                throw IOException("APK digest required but missing from release asset")
+        val errorMessage = when {
+            expectedSha256 == null && requireApkDigest() ->
+                "APK digest required but missing from release asset"
+
+            expectedSha256 == null && totalBytes > 0L && downloaded != totalBytes ->
+                "truncated APK download: got $downloaded of $totalBytes bytes"
+
+            expectedSha256 != null -> {
+                val actual = actualSha256.joinToString("") { "%02x".format(Locale.US, it) }
+                if (!actual.equals(expectedSha256, ignoreCase = true)) {
+                    "APK SHA-256 mismatch: expected $expectedSha256, got $actual"
+                } else {
+                    null
+                }
             }
-            if (totalBytes > 0L && downloaded != totalBytes) {
-                tempFile.delete()
-                throw IOException("truncated APK download: got $downloaded of $totalBytes bytes")
-            }
-            return
+
+            else -> null
         }
-        val actual = actualSha256.joinToString("") { "%02x".format(Locale.US, it) }
-        if (!actual.equals(expectedSha256, ignoreCase = true)) {
+        if (errorMessage != null) {
             tempFile.delete()
-            throw IOException("APK SHA-256 mismatch: expected $expectedSha256, got $actual")
+            throw IOException(errorMessage)
         }
     }
 
@@ -294,8 +300,7 @@ open class AppUpdateService @Inject constructor(
     fun hasDownloadedApk(): Boolean = downloadedApkFile().exists()
 
     /** True when this package may install unknown apps (REQUEST_INSTALL_PACKAGES). */
-    fun canRequestPackageInstalls(): Boolean =
-        context.packageManager.canRequestPackageInstalls()
+    fun canRequestPackageInstalls(): Boolean = context.packageManager.canRequestPackageInstalls()
 
     private fun downloadedApkFile(): File = File(File(context.cacheDir, "updates"), "update.apk")
 
@@ -314,16 +319,27 @@ open class AppUpdateService @Inject constructor(
      */
     private fun verifyApkSigningMatchesInstalled(apk: File) {
         val installedDigests = installedSigningCertSha256Digests()
-        if (installedDigests.isEmpty()) {
-            throw IOException("cannot read installed app signing certificates; refusing update")
-        }
         val apkDigests = apkSigningCertSha256Digests(apk)
-        if (apkDigests.isEmpty()) {
-            throw IOException("cannot read downloaded APK signing certificates; refusing update")
-        }
-        if (installedDigests.intersect(apkDigests).isEmpty()) {
+        val signingMismatch = installedDigests.isNotEmpty() &&
+            apkDigests.isNotEmpty() &&
+            installedDigests.intersect(apkDigests).isEmpty()
+        if (signingMismatch) {
             apk.delete()
-            throw IOException("downloaded APK signing certificates do not match installed app")
+        }
+        val errorMessage = when {
+            installedDigests.isEmpty() ->
+                "cannot read installed app signing certificates; refusing update"
+
+            apkDigests.isEmpty() ->
+                "cannot read downloaded APK signing certificates; refusing update"
+
+            signingMismatch ->
+                "downloaded APK signing certificates do not match installed app"
+
+            else -> null
+        }
+        if (errorMessage != null) {
+            throw IOException(errorMessage)
         }
     }
 
@@ -345,29 +361,27 @@ open class AppUpdateService @Inject constructor(
     }
 
     @Suppress("DEPRECATION")
-    private fun installedPackageInfo(pm: PackageManager): PackageInfo =
-        if (Build.VERSION.SDK_INT >= 28) {
-            pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
-        } else {
-            pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
-        }
+    private fun installedPackageInfo(pm: PackageManager): PackageInfo = if (isAtLeastP()) {
+        pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+    } else {
+        pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES)
+    }
 
     @Suppress("DEPRECATION")
-    private fun packageInfoSigningFlags(): Int =
-        if (Build.VERSION.SDK_INT >= 28) {
-            PackageManager.GET_SIGNING_CERTIFICATES
-        } else {
-            PackageManager.GET_SIGNATURES
-        }
+    private fun packageInfoSigningFlags(): Int = if (isAtLeastP()) {
+        PackageManager.GET_SIGNING_CERTIFICATES
+    } else {
+        PackageManager.GET_SIGNATURES
+    }
 
     @Suppress("DEPRECATION")
     private fun signingCertSha256Digests(info: PackageInfo): Set<String> {
         val digester = MessageDigest.getInstance("SHA-256")
-        fun digest(bytes: ByteArray): String =
-            digester.digest(bytes).joinToString("") { "%02x".format(Locale.US, it) }
-                .also { digester.reset() }
+        fun digest(bytes: ByteArray): String = digester.digest(bytes).joinToString("") { "%02x".format(Locale.US, it) }
+            .also { digester.reset() }
 
-        return if (Build.VERSION.SDK_INT >= 28) {
+        // Gate via flavor-safe helper so future (minSdk 37) does not trip ObsoleteSdkInt.
+        return if (isAtLeastP()) {
             val signingInfo = info.signingInfo ?: return emptySet()
             val signers = if (signingInfo.hasMultipleSigners()) {
                 signingInfo.apkContentsSigners
@@ -453,8 +467,7 @@ open class AppUpdateService @Inject constructor(
          * [selectedApkAssets] when matching a release that may only ship the
          * fallback name.
          */
-        fun selectedApkAsset(flavor: String = BuildConfig.FLAVOR): String =
-            selectedApkAssets(flavor).first()
+        fun selectedApkAsset(flavor: String = BuildConfig.FLAVOR): String = selectedApkAssets(flavor).first()
 
         /**
          * True only for https URLs on GitHub-owned hosts. browser_download_url
@@ -505,6 +518,4 @@ open class AppUpdateService @Inject constructor(
  * sources settings. Distinct from a hard install failure so
  * [AppUpdateController] can retry the already-downloaded APK on resume.
  */
-class InstallPermissionRequiredException :
-    IOException("REQUEST_INSTALL_PACKAGES not granted")
-
+class InstallPermissionRequiredException : IOException("REQUEST_INSTALL_PACKAGES not granted")

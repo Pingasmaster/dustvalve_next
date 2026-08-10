@@ -14,19 +14,21 @@ import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.player.AudioPowerPolicy
+import com.dustvalve.next.android.player.HiFiAudioRenderersFactory
 import com.dustvalve.next.android.player.MediaSessionConstants
 import com.dustvalve.next.android.player.MediaSessionTrust
+import com.dustvalve.next.android.player.PlaybackAudioTuning
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueForwardingPlayer
 import com.dustvalve.next.android.player.QueueManager
@@ -76,6 +78,7 @@ object PlayerModule {
         @MediaHttp okHttpClient: OkHttpClient,
         simpleCache: SimpleCache,
         audioPowerPolicy: AudioPowerPolicy,
+        audioTuning: PlaybackAudioTuning,
     ): ExoPlayer {
         // Built directly on whatever thread Dagger resolves this dependency:
         // setLooper(mainLooper) in buildExoPlayer pins the player's application
@@ -84,7 +87,7 @@ object PlayerModule {
         // Dagger's DoubleCheck lock while waiting on the main thread - if the
         // main thread was itself entering the same DI graph, that deadlocked
         // (10 s frozen main thread, then IllegalStateException).
-        return buildExoPlayer(context, okHttpClient, simpleCache, audioPowerPolicy)
+        return buildExoPlayer(context, okHttpClient, simpleCache, audioPowerPolicy, audioTuning)
     }
 
     @OptIn(UnstableApi::class)
@@ -93,6 +96,7 @@ object PlayerModule {
         okHttpClient: OkHttpClient,
         simpleCache: SimpleCache,
         audioPowerPolicy: AudioPowerPolicy,
+        audioTuning: PlaybackAudioTuning,
     ): ExoPlayer {
         val audioAttributes = AudioAttributes.Builder()
             .setUsage(C.USAGE_MEDIA)
@@ -110,16 +114,18 @@ object PlayerModule {
         // Defaults are video-tuned. For audio-only HTTP streaming, bigger min/max
         // buffers (60s/120s) cut HTTP fetch cycles ~2x per hour at 128 kbps;
         // prioritizing time-over-size lets the player fill the time window even
-        // for high-bitrate streams. Back buffer disabled (music doesn't rewind).
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(60_000, 120_000, 1_000, 2_000)
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .setBackBuffer(0, false)
-            .build()
+        // for high-bitrate streams. Start / after-rebuffer thresholds match
+        // Media3's music-friendly defaults (was 1s/2s): thin cushions after a
+        // stall + LDAC underrun risk produced play/hiccup loops. Back buffer
+        // disabled (music doesn't rewind). Bluetooth stability mode may boost
+        // these further via [PlaybackAudioTuning].
+        val loadControl = audioTuning.buildLoadControl()
 
         val player = ExoPlayer.Builder(context)
             .setAudioAttributes(audioAttributes, true)
             .setLoadControl(loadControl)
+            // Larger PCM AudioTrack cushion + float output for hi-res / LDAC.
+            .setRenderersFactory(HiFiAudioRenderersFactory(context, audioTuning))
             .setMediaSourceFactory(
                 // Pass the DataSource.Factory directly: Media3 1.10 deprecated
                 // the (Context) ctor + setDataSourceFactory() flow. KEEP the
@@ -203,7 +209,7 @@ object PlayerModule {
                 args: Bundle,
             ): ListenableFuture<SessionResult> {
                 if (!MediaSessionTrust.isTrustedController(context, controller.packageName)) {
-                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_PERMISSION_DENIED))
+                    return Futures.immediateFuture(SessionResult(SessionError.ERROR_PERMISSION_DENIED))
                 }
                 if (customCommand.customAction == MediaSessionConstants.ACTION_TOGGLE_FAVORITE) {
                     scope.launch {

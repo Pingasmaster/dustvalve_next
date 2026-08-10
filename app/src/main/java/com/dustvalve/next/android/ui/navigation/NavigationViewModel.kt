@@ -46,7 +46,8 @@ class NavigationViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _activeProviders = MutableStateFlow(setOf(MusicProvider.LOCAL))
+    // Empty until DataStore emits: LOCAL defaults off, so do not flash the Local tab.
+    private val _activeProviders = MutableStateFlow<Set<MusicProvider>>(emptySet())
 
     val visibleTabs: StateFlow<List<BottomNavItem>> = _activeProviders
         .map { providers ->
@@ -58,13 +59,12 @@ class NavigationViewModel @Inject constructor(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
             listOf(
-                BottomNavItem.LOCAL,
                 BottomNavItem.LIBRARY,
                 BottomNavItem.SETTINGS,
             ),
         )
 
-    private val _currentTab = MutableStateFlow(BottomNavItem.LOCAL)
+    private val _currentTab = MutableStateFlow(BottomNavItem.LIBRARY)
     val currentTab: StateFlow<BottomNavItem> = _currentTab.asStateFlow()
 
     private val tabStacks = java.util.concurrent.ConcurrentHashMap<BottomNavItem, List<NavDestination>>(
@@ -78,7 +78,7 @@ class NavigationViewModel @Inject constructor(
         ),
     )
 
-    private val _backStack = MutableStateFlow<List<NavDestination>>(listOf(NavDestination.LocalHome))
+    private val _backStack = MutableStateFlow<List<NavDestination>>(listOf(NavDestination.Library))
     val backStack: StateFlow<List<NavDestination>> = _backStack.asStateFlow()
 
     private val _lastNavigationForward = MutableStateFlow(true)
@@ -106,10 +106,16 @@ class NavigationViewModel @Inject constructor(
                         tabStacks[item] = listOf(item.destination)
                     }
                 }
-                // If current tab's provider got disabled, redirect to LOCAL
+                // If current tab's provider got disabled, leave for a root that
+                // stays visible (Local when enabled, otherwise Library).
                 val currentProvider = _currentTab.value.provider
                 if (currentProvider != null && currentProvider !in providers) {
-                    navigateTo(NavDestination.LocalHome)
+                    val fallback = if (MusicProvider.LOCAL in providers) {
+                        NavDestination.LocalHome
+                    } else {
+                        NavDestination.Library
+                    }
+                    navigateTo(fallback)
                 } else {
                     refreshAllDestinations()
                     persistState()
@@ -164,7 +170,7 @@ class NavigationViewModel @Inject constructor(
                     return@launch
                 }
                 // Read the persisted provider set directly: on a cold-start deep link
-                // _activeProviders may still hold its {LOCAL} default because the
+                // _activeProviders may still hold its empty default because the
                 // DataStore emission hasn't landed yet, which would raise a spurious
                 // enable-provider dialog.
                 val activeProviders = runCatchingUiOrNull {
@@ -345,17 +351,21 @@ class NavigationViewModel @Inject constructor(
     /** Provider tab that owns a detail destination opened via deep link / share. */
     private fun tabForDetailDestination(dest: NavDestination): BottomNavItem? = when (dest) {
         is NavDestination.AlbumDetail -> BottomNavItem.BANDCAMP
+
         is NavDestination.ArtistDetail -> when (dest.sourceId) {
             "youtube" -> BottomNavItem.YOUTUBE
             "soundcloud" -> BottomNavItem.SOUNDCLOUD
             else -> BottomNavItem.BANDCAMP
         }
+
         is NavDestination.CollectionDetail -> when (dest.sourceId) {
             "youtube" -> BottomNavItem.YOUTUBE
             "soundcloud" -> BottomNavItem.SOUNDCLOUD
             else -> BottomNavItem.BANDCAMP
         }
+
         is NavDestination.PlaylistDetail -> BottomNavItem.LIBRARY
+
         else -> null
     }
 

@@ -16,7 +16,7 @@ import javax.inject.Singleton
 @Singleton
 class StartupMetricsCollector @Inject constructor(
     @Suppress("UnusedPrivateProperty")
-    @param:ApplicationContext context: Context,
+    @ApplicationContext context: Context,
 ) {
     fun collectOnColdStart() {
         // No-op on compat (minSdk 26).

@@ -252,8 +252,9 @@ class PlaylistTransferRepository(
             }
 
             val sanitizedIcon = sanitizeRemoteOrBlankUrl(manifest.playlist.iconUrl)
+            var importCommitted = false
             try {
-                database.withTransaction {
+                val created = database.withTransaction {
                     val playlist = playlistRepository.createPlaylist(
                         name = manifest.playlist.name,
                         shapeKey = manifest.playlist.shapeKey,
@@ -268,12 +269,12 @@ class PlaylistTransferRepository(
                     }
                     playlist
                 }
-            } catch (ce: CancellationException) {
-                cleanupWrittenFiles(writtenFiles)
-                throw ce
-            } catch (e: Exception) {
-                cleanupWrittenFiles(writtenFiles)
-                throw e
+                importCommitted = true
+                created
+            } finally {
+                // Any failure (including cancellation) must roll back files
+                // written before the DB transaction committed.
+                if (!importCommitted) cleanupWrittenFiles(writtenFiles)
             }
         } finally {
             try {
@@ -309,10 +310,7 @@ class PlaylistTransferRepository(
         }
     }
 
-    private data class MaterializedEntry(
-        val track: TrackSnapshot,
-        val download: DownloadEntity?,
-    )
+    private data class MaterializedEntry(val track: TrackSnapshot, val download: DownloadEntity?)
 
     /**
      * Dispatches one ZIP entry: records the manifest text via [onManifest],
@@ -445,8 +443,10 @@ class PlaylistTransferRepository(
             val sourceKey = raw.source
             val art = when {
                 raw.artUrl.isBlank() -> ""
+
                 isRemoteOrBlankUrl(raw.artUrl) ->
                     NetworkUtils.sanitizeImportedMediaUrl(raw.artUrl, sourceKey)
+
                 else -> ""
             }
             val stream = NetworkUtils.sanitizeImportedMediaUrl(raw.streamUrl, sourceKey)
@@ -631,19 +631,18 @@ private fun Playlist.toSnapshot() = PlaylistSnapshot(
  * otherwise keep the richer existing row. Duration keeps a positive incoming
  * value, else the existing duration.
  */
-fun mergeTrackEntityForImport(incoming: TrackEntity, existing: TrackEntity): TrackEntity =
-    incoming.copy(
-        streamUrl = incoming.streamUrl?.takeIf { it.isNotBlank() } ?: existing.streamUrl,
-        artUrl = incoming.artUrl.takeIf { it.isNotBlank() } ?: existing.artUrl,
-        title = incoming.title.takeIf { it.isNotBlank() } ?: existing.title,
-        artist = incoming.artist.takeIf { it.isNotBlank() } ?: existing.artist,
-        artistUrl = incoming.artistUrl.takeIf { it.isNotBlank() } ?: existing.artistUrl,
-        albumTitle = incoming.albumTitle.takeIf { it.isNotBlank() } ?: existing.albumTitle,
-        albumUrl = incoming.albumUrl.takeIf { it.isNotBlank() } ?: existing.albumUrl,
-        bandcampTrackUrl = incoming.bandcampTrackUrl?.takeIf { it.isNotBlank() }
-            ?: existing.bandcampTrackUrl,
-        duration = if (incoming.duration > 0f) incoming.duration else existing.duration,
-        year = if (incoming.year > 0) incoming.year else existing.year,
-        trackNumber = if (incoming.trackNumber > 0) incoming.trackNumber else existing.trackNumber,
-        albumId = incoming.albumId.takeIf { it.isNotBlank() } ?: existing.albumId,
-    )
+fun mergeTrackEntityForImport(incoming: TrackEntity, existing: TrackEntity): TrackEntity = incoming.copy(
+    streamUrl = incoming.streamUrl?.takeIf { it.isNotBlank() } ?: existing.streamUrl,
+    artUrl = incoming.artUrl.takeIf { it.isNotBlank() } ?: existing.artUrl,
+    title = incoming.title.takeIf { it.isNotBlank() } ?: existing.title,
+    artist = incoming.artist.takeIf { it.isNotBlank() } ?: existing.artist,
+    artistUrl = incoming.artistUrl.takeIf { it.isNotBlank() } ?: existing.artistUrl,
+    albumTitle = incoming.albumTitle.takeIf { it.isNotBlank() } ?: existing.albumTitle,
+    albumUrl = incoming.albumUrl.takeIf { it.isNotBlank() } ?: existing.albumUrl,
+    bandcampTrackUrl = incoming.bandcampTrackUrl?.takeIf { it.isNotBlank() }
+        ?: existing.bandcampTrackUrl,
+    duration = if (incoming.duration > 0f) incoming.duration else existing.duration,
+    year = if (incoming.year > 0) incoming.year else existing.year,
+    trackNumber = if (incoming.trackNumber > 0) incoming.trackNumber else existing.trackNumber,
+    albumId = incoming.albumId.takeIf { it.isNotBlank() } ?: existing.albumId,
+)

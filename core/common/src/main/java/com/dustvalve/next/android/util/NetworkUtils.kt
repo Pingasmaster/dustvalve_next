@@ -11,6 +11,23 @@ import java.net.UnknownHostException
 
 object NetworkUtils {
 
+    private const val BYTE_MASK = 0xff
+    private const val CGNAT_FIRST_OCTET = 100
+    private const val CGNAT_SECOND_MIN = 64
+    private const val CGNAT_SECOND_MAX = 127
+    private const val TEST_NET_1_FIRST = 192
+    private const val TEST_NET_1_THIRD = 2
+    private const val BENCHMARK_FIRST = 198
+    private const val BENCHMARK_SECOND_MIN = 18
+    private const val BENCHMARK_SECOND_MAX = 19
+    private const val IPV6_ULA_MASK = 0xfe
+    private const val IPV6_ULA_PREFIX = 0xfc
+    private const val IPV4_BYTE_COUNT = 4
+    private const val IPV6_BYTE_COUNT = 16
+    private const val IPV4_MAPPED_ZERO_PREFIX_LEN = 10
+    private const val IPV4_MAPPED_MARKER_INDEX = 10
+    private const val IPV4_MAPPED_MARKER_BYTE = 0xff
+
     private val DUSTVALVE_HOST_REGEX = Regex(
         """^(?:[\w-]+\.)?bandcamp\.com$""",
         RegexOption.IGNORE_CASE,
@@ -87,12 +104,10 @@ object NetworkUtils {
 
     /** True when [address] must not be contacted for user-supplied fetches. */
     fun isDisallowedAddress(address: InetAddress): Boolean {
-        if (address.isAnyLocalAddress ||
-            address.isLoopbackAddress ||
-            address.isLinkLocalAddress ||
-            address.isSiteLocalAddress ||
-            address.isMulticastAddress
-        ) {
+        if (address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress) {
+            return true
+        }
+        if (address.isSiteLocalAddress || address.isMulticastAddress) {
             return true
         }
         return when (address) {
@@ -143,9 +158,13 @@ object NetworkUtils {
     private fun isAllowedImportHost(host: String, sourceKey: String): Boolean {
         val hosts = when (sourceKey.lowercase()) {
             "bandcamp" -> BANDCAMP_IMPORT_HOSTS
+
             "youtube" -> YOUTUBE_IMPORT_HOSTS
+
             "soundcloud" -> SOUNDCLOUD_IMPORT_HOSTS
+
             "local" -> emptyList()
+
             // Playlist icon / unknown source: any known media host is fine.
             else -> BANDCAMP_IMPORT_HOSTS + YOUTUBE_IMPORT_HOSTS + SOUNDCLOUD_IMPORT_HOSTS
         }
@@ -173,40 +192,46 @@ object NetworkUtils {
     /** CGNAT shared address space 100.64.0.0/10 (RFC 6598). */
     private fun isCgNat(address: Inet4Address): Boolean {
         val b = address.address
-        val first = b[0].toInt() and 0xff
-        val second = b[1].toInt() and 0xff
-        return first == 100 && second in 64..127
+        val first = b[0].toInt() and BYTE_MASK
+        val second = b[1].toInt() and BYTE_MASK
+        return first == CGNAT_FIRST_OCTET && second in CGNAT_SECOND_MIN..CGNAT_SECOND_MAX
     }
 
     /** 0.0.0.0/8 already covered by isAnyLocal; also block 169.254/16 via link-local. */
     private fun isCarrierGradeOrBenchmark(address: Inet4Address): Boolean {
         val b = address.address
-        val first = b[0].toInt() and 0xff
+        val first = b[0].toInt() and BYTE_MASK
+        val second = b[1].toInt() and BYTE_MASK
+        val third = b[2].toInt() and BYTE_MASK
         // TEST-NET and documentation ranges are not useful as stream targets.
         return first == 0 ||
-            (first == 192 && (b[1].toInt() and 0xff) == 0 && (b[2].toInt() and 0xff) == 2) ||
-            (first == 198 && (b[1].toInt() and 0xff) in 18..19)
+            (first == TEST_NET_1_FIRST && second == 0 && third == TEST_NET_1_THIRD) ||
+            (first == BENCHMARK_FIRST && second in BENCHMARK_SECOND_MIN..BENCHMARK_SECOND_MAX)
     }
 
     /** IPv6 unique-local addresses fc00::/7 (RFC 4193). */
     private fun isUniqueLocalIpv6(address: Inet6Address): Boolean {
         val b = address.address
-        return (b[0].toInt() and 0xfe) == 0xfc
+        return (b[0].toInt() and IPV6_ULA_MASK) == IPV6_ULA_PREFIX
     }
 
     /** IPv4-mapped IPv6 that wraps a disallowed IPv4. */
     private fun isIpv4MappedDisallowed(address: Inet6Address): Boolean {
         if (!address.isIPv4CompatibleAddress && !isIpv4Mapped(address)) return false
         val bytes = address.address
-        val v4 = InetAddress.getByAddress(bytes.copyOfRange(bytes.size - 4, bytes.size))
+        val v4 = InetAddress.getByAddress(bytes.copyOfRange(bytes.size - IPV4_BYTE_COUNT, bytes.size))
         return isDisallowedAddress(v4)
     }
 
     private fun isIpv4Mapped(address: Inet6Address): Boolean {
         val b = address.address
-        if (b.size < 16) return false
-        for (i in 0 until 10) if (b[i].toInt() != 0) return false
-        return (b[10].toInt() and 0xff) == 0xff && (b[11].toInt() and 0xff) == 0xff
+        if (b.size < IPV6_BYTE_COUNT) return false
+        for (i in 0 until IPV4_MAPPED_ZERO_PREFIX_LEN) {
+            if (b[i].toInt() != 0) return false
+        }
+        val mappedHi = b[IPV4_MAPPED_MARKER_INDEX].toInt() and BYTE_MASK
+        val mappedLo = b[IPV4_MAPPED_MARKER_INDEX + 1].toInt() and BYTE_MASK
+        return mappedHi == IPV4_MAPPED_MARKER_BYTE && mappedLo == IPV4_MAPPED_MARKER_BYTE
     }
 
     /**

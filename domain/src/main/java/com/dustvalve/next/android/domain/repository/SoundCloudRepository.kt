@@ -26,11 +26,13 @@ interface SoundCloudRepository {
     suspend fun search(query: String, filter: String? = null): List<SearchResult>
     suspend fun getTrack(urlOrId: String): Track
     suspend fun getStreamUrl(track: Track): String
+
     /**
      * Resolve a playable CDN URL and the [StreamPolicy] inferred from the
      * fresh track JSON (so callers can stamp HLS-only / blocked on the queue).
      */
     suspend fun resolvePlayableStream(track: Track): SoundCloudResolvedStream
+
     /**
      * Progressive-only CDN URL suitable for file download (rejects HLS and
      * encrypted/Go+ transcodings). Pair is (url, format inferred from path).
@@ -43,7 +45,4 @@ interface SoundCloudRepository {
 }
 
 /** Playable SoundCloud stream plus policy inferred without guessing from the URL alone. */
-data class SoundCloudResolvedStream(
-    val url: String,
-    val streamPolicy: StreamPolicy,
-)
+data class SoundCloudResolvedStream(val url: String, val streamPolicy: StreamPolicy)

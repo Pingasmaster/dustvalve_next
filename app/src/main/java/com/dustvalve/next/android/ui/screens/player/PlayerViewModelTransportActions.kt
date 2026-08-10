@@ -8,19 +8,19 @@ fun PlayerViewModel.setAudioOutputDevice(device: AudioDeviceInfo?) = audio.setAu
 
 fun PlayerViewModel.setVolume(level: Float) = audio.setVolume(level)
 
-fun PlayerViewModel.onPlayPause() = library.onPlayPause()
+fun PlayerViewModel.onPlayPause() = transport.onPlayPause()
 
-fun PlayerViewModel.onNext() = library.onNext()
+fun PlayerViewModel.onNext() = transport.onNext()
 
-fun PlayerViewModel.onPrevious() = library.onPrevious()
+fun PlayerViewModel.onPrevious() = transport.onPrevious()
 
-fun PlayerViewModel.onSeek(ms: Long) = library.onSeek(ms)
+fun PlayerViewModel.onSeek(ms: Long) = transport.onSeek(ms)
 
-fun PlayerViewModel.onStop() = library.onStop()
+fun PlayerViewModel.onStop() = transport.onStop()
 
-fun PlayerViewModel.onToggleShuffle() = library.onToggleShuffle()
+fun PlayerViewModel.onToggleShuffle() = transport.onToggleShuffle()
 
-fun PlayerViewModel.onToggleRepeat() = library.onToggleRepeat()
+fun PlayerViewModel.onToggleRepeat() = transport.onToggleRepeat()
 
 fun PlayerViewModel.playTrack(track: Track) = play.playTrack(track)
 
@@ -28,13 +28,11 @@ suspend fun PlayerViewModel.playTrackAwaiting(track: Track): Boolean = play.play
 
 fun PlayerViewModel.playTrackInList(tracks: List<Track>, index: Int) = play.playTrackInList(tracks, index)
 
-suspend fun PlayerViewModel.playTrackInListAwaiting(tracks: List<Track>, index: Int): Boolean =
-    play.playTrackInListAwaiting(tracks, index)
+suspend fun PlayerViewModel.playTrackInListAwaiting(tracks: List<Track>, index: Int): Boolean = play.playTrackInListAwaiting(tracks, index)
 
 fun PlayerViewModel.playAlbum(tracks: List<Track>, startIndex: Int) = play.playAlbum(tracks, startIndex)
 
-suspend fun PlayerViewModel.playAlbumAwaiting(tracks: List<Track>, startIndex: Int): Boolean =
-    play.playAlbumAwaiting(tracks, startIndex)
+suspend fun PlayerViewModel.playAlbumAwaiting(tracks: List<Track>, startIndex: Int): Boolean = play.playAlbumAwaiting(tracks, startIndex)
 
 fun PlayerViewModel.skipToQueueIndex(index: Int) = play.skipToQueueIndex(index)
 

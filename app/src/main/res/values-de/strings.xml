@@ -93,7 +93,6 @@
     <string name="common_cd_now_playing">Aktuelle Wiedergabe</string>
     <string name="common_cd_create_playlist">Playlist erstellen</string>
     <string name="common_cd_more_options">Weitere Optionen</string>
-    <string name="common_cd_selected">Ausgewählt</string>
     <string name="common_cd_reorder">Neu anordnen</string>
     <string name="common_cd_delete">Löschen</string>
     <string name="common_cd_downloaded">Heruntergeladen</string>
@@ -118,6 +117,7 @@
     <string name="player_cd_volume">Lautstärke</string>
     <string name="player_cd_local_file">Lokale Datei</string>
     <string name="player_cd_delete_download">Download löschen</string>
+    <string name="player_cd_download_unavailable">Download nicht verfügbar</string>
     <string name="player_cd_download_track">Track herunterladen</string>
     <string name="player_cd_remove_from_favorites">Aus Favoriten entfernen</string>
     <string name="player_cd_add_to_favorites">Zu Favoriten hinzufügen</string>
@@ -161,6 +161,7 @@
     <string name="settings_section_sources">Quellen</string>
     <string name="settings_section_storage">Speicher</string>
     <string name="settings_section_audio_quality">Audioqualität</string>
+    <string name="settings_section_bluetooth_stability">Bluetooth-Stabilität</string>
     <string name="settings_section_appearance">Darstellung</string>
     <string name="settings_section_player">Player</string>
     <string name="settings_section_search">Suche</string>
@@ -171,8 +172,6 @@
     <string name="settings_use_individual_folders_desc">Bestimmte Ordner auswählen, statt alle Audiodateien zu scannen</string>
     <string name="settings_remove_downloads_title">Alle Downloads entfernen</string>
     <string name="settings_remove_downloads_text">Dies leert den gesamten Download-Speicher: manuelle Downloads, automatisch gecachtes Audio, Albumcover und Künstlerbilder.</string>
-    <string name="settings_download_format">Download-Format</string>
-    <string name="settings_download_format_desc">Format für heruntergeladene <xliff:g id="brand">Bandcamp</xliff:g>-Käufe</string>
     <string name="settings_add_folder">Ordner hinzufügen</string>
     <string name="settings_rescan">Neu scannen</string>
     <string name="settings_cd_remove_folder">Ordner entfernen</string>
@@ -183,12 +182,32 @@
     <string name="settings_remove_all_downloads">Alle Downloads entfernen</string>
     <string name="settings_auto_download_future">Neue Inhalte automatisch herunterladen</string>
     <string name="settings_auto_download_future_desc">Neue Inhalte heruntergeladener Playlists, Alben und Künstler automatisch herunterladen</string>
-    <string name="settings_mp3_on_metered">Bei mobilen Daten nur <xliff:g id="format">MP3</xliff:g></string>
-    <string name="settings_mp3_on_metered_desc">Bei mobilen Daten <xliff:g id="format">MP3</xliff:g> statt verlustfrei herunterladen</string>
     <string name="settings_progressive_download">Progressiver Download</string>
     <string name="settings_progressive_download_desc">In Vorschauqualität streamen, dann nahtlos auf volle Qualität wechseln</string>
     <string name="settings_seamless_upgrade">Nahtloses Qualitäts-Upgrade</string>
     <string name="settings_seamless_upgrade_desc">Erst streamen, im Hintergrund herunterladen, dann austauschen. Beim Wechsel kann es einmal kurz stocken.</string>
+    <string name="settings_bt_stability">Bluetooth-Stabilitätsmodus</string>
+    <string name="settings_bt_stability_desc">Verringert Bluetooth-Aussetzer, wenn WLAN und hochwertige Codecs um das Funkmodul konkurrieren</string>
+    <string name="settings_bt_stability_enable_title">Bluetooth-Stabilität aktivieren?</string>
+    <string name="settings_bt_stability_enable_text">Der Stabilitätsmodus stellt nur Wiedergabepuffer ein und mindert die Audioqualität nicht.\n\nDer extreme Stabilitätsmodus kann die Qualität mindern. Qualitätskompromisse bleiben aus, bis du sie einschaltest – und jeder verlangt eine Bestätigung.</string>
+    <string name="settings_bt_stability_enable_normal">Stabilitätsmodus</string>
+    <string name="settings_bt_stability_enable_extreme">Extreme Stabilität</string>
+    <string name="settings_bt_stability_enable_anyway">Trotzdem aktivieren</string>
+    <string name="settings_bt_stability_profile">Profil</string>
+    <string name="settings_bt_stability_profile_normal">Stabilität</string>
+    <string name="settings_bt_stability_profile_extreme">Extrem</string>
+    <string name="settings_bt_stability_applies_hint">PCM-Puffer und größere Stream-Puffer gelten nach einem Neustart der App. Downloads während der Wiedergabe pausieren gilt sofort.</string>
+    <string name="settings_bt_stability_pcm">PCM-Puffer: <xliff:g id="ms" example="3000">%1$d</xliff:g> ms</string>
+    <string name="settings_bt_stability_pcm_desc">Zusätzlicher AudioTrack-Spielraum für Bluetooth-Codecs wie LDAC. Größere Werte verringern Aussetzer bei etwas mehr Latenz.</string>
+    <string name="settings_bt_stability_exo_boost">Größere Stream-Puffer</string>
+    <string name="settings_bt_stability_exo_boost_desc">Hält mehr komprimiertes Audio bereit, damit kurze Funkkonflikte die Wiedergabe weniger unterbrechen</string>
+    <string name="settings_bt_stability_pause_downloads">Downloads während der Wiedergabe pausieren</string>
+    <string name="settings_bt_stability_pause_downloads_desc">Verhindert, dass progressive und Hintergrund-Downloads mit Bluetooth um dasselbe Funkmodul konkurrieren</string>
+    <string name="settings_bt_stability_extreme_options">Qualitätskompromisse</string>
+    <string name="settings_bt_stability_disable_float">Hi‑Fi-Float-Ausgabe deaktivieren</string>
+    <string name="settings_bt_stability_disable_float_desc">Nutzt 16‑Bit-PCM statt Float. Kann die CPU-Last auf schwachen Geräten senken, aber die Klangtreue mindern</string>
+    <string name="settings_bt_stability_float_warning_title">Audioqualität mindern?</string>
+    <string name="settings_bt_stability_float_warning_text">Das Deaktivieren der Hi‑Fi-Float-Ausgabe kann Bluetooth auf schwachen Geräten stabiler machen, kann aber die Treue bei hochauflösendem Audio mindern.</string>
     <string name="settings_theme">Design</string>
     <string name="settings_theme_light">Hell</string>
     <string name="settings_theme_dark">Dunkel</string>
@@ -207,6 +226,8 @@
     <string name="settings_auto_download_favorites_desc">Auch jeden favorisierten Track im Hintergrund herunterladen</string>
     <string name="settings_download_notifications">Download-Benachrichtigungen</string>
     <string name="settings_download_notifications_desc">Live-Benachrichtigung mit Fortschritt anzeigen, während Songs heruntergeladen werden</string>
+    <string name="settings_notifications_denied_hint">Benachrichtigungen sind für diese App blockiert. Aktiviere sie in den Systemeinstellungen, um Download- und Wiedergabehinweise zu sehen.</string>
+    <string name="settings_notifications_open_settings">Benachrichtigungseinstellungen öffnen</string>
     <string name="settings_live_updates_title">Live-Updates sind aus</string>
     <string name="settings_live_updates_desc">Erlaube Live-Updates in den Benachrichtigungseinstellungen, um den Download-Fortschritt als Chip in der Statusleiste zu sehen</string>
     <string name="settings_live_updates_action">Einstellungen öffnen</string>
@@ -248,6 +269,7 @@
     <string name="settings_storage_limit_unlimited">Speicherlimit: Unbegrenzt</string>
     <string name="settings_storage_limit_mb">Speicherlimit: <xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
     <string name="settings_storage_limit_gb">Speicherlimit: <xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
+    <string name="settings_storage_limit_desc">Gilt für automatisch gecachtes Audio, Cover und den Stream-Cache. Explizite Downloads werden durch dieses Limit nie gelöscht. Downloads starten außerdem nicht, wenn auf dem Gerät kaum noch freier Speicher ist.</string>
     <string name="local_search_placeholder">Lokale Musik durchsuchen…</string>
     <string name="local_scan_title">Deine Musik scannen</string>
     <string name="local_scan_subtitle">Finde und spiele Musik, die auf deinem Gerät gespeichert ist</string>
@@ -310,11 +332,9 @@
     <string name="soundcloud_search_hint">SoundCloud durchsuchen</string>
     <string name="soundcloud_home_trending">Trends</string>
     <string name="soundcloud_home_discover">Entdecken</string>
-    <string name="soundcloud_home_genres">Genres</string>
     <string name="soundcloud_home_empty">Noch nichts hier</string>
     <string name="soundcloud_home_retry">Erneut versuchen</string>
     <string name="soundcloud_error_load">SoundCloud konnte nicht geladen werden</string>
-
     <string name="ytm_section_trending">Gerade angesagt</string>
     <string name="ytm_section_discover">Entdecken: <xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
     <string name="ytm_section_recommended">Für dich empfohlen</string>

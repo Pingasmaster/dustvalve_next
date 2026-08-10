@@ -53,7 +53,7 @@ fun AppNavigation(
     val backStack by navViewModel.backStack.collectAsStateWithLifecycle()
     val isForward by navViewModel.lastNavigationForward.collectAsStateWithLifecycle()
     val currentTab by navViewModel.currentTab.collectAsStateWithLifecycle()
-    val currentDestination = backStack.lastOrNull() ?: NavDestination.LocalHome
+    val currentDestination = backStack.lastOrNull() ?: NavDestination.Library
     val pendingLink by navViewModel.pendingLinkConfirmation.collectAsStateWithLifecycle()
     val linkSnackbarHostState = remember { SnackbarHostState() }
     val unsupportedMsg = stringResource(R.string.snackbar_unsupported_source)

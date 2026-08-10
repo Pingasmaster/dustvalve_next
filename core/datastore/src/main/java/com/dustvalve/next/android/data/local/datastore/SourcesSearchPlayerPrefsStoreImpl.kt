@@ -73,6 +73,21 @@ internal class SourcesSearchPlayerPrefsStoreImpl(private val prefs: SettingsPref
     override val bandcampCustomGenres: Flow<List<String>> = prefs.guardedPreferences.map {
         StringListPreference.decode(it[keys.BANDCAMP_CUSTOM_GENRES])
     }
+    override val bluetoothStabilityMode: Flow<String> = prefs.guardedPreferences.map {
+        it[keys.BLUETOOTH_STABILITY_MODE] ?: "off"
+    }
+    override val bluetoothPcmBufferMs: Flow<Int> = prefs.guardedPreferences.map {
+        it[keys.BLUETOOTH_PCM_BUFFER_MS] ?: DEFAULT_PCM_BUFFER_MS
+    }
+    override val bluetoothExoBufferBoost: Flow<Boolean> = prefs.guardedPreferences.map {
+        it[keys.BLUETOOTH_EXO_BUFFER_BOOST] ?: true
+    }
+    override val bluetoothPauseDownloadsWhilePlaying: Flow<Boolean> = prefs.guardedPreferences.map {
+        it[keys.BLUETOOTH_PAUSE_DOWNLOADS_WHILE_PLAYING] ?: true
+    }
+    override val bluetoothDisableFloatOutput: Flow<Boolean> = prefs.guardedPreferences.map {
+        it[keys.BLUETOOTH_DISABLE_FLOAT_OUTPUT] ?: false
+    }
 
     override suspend fun setAuthCookies(cookiesJson: String?) {
         prefs.edit { p ->
@@ -170,5 +185,33 @@ internal class SourcesSearchPlayerPrefsStoreImpl(private val prefs: SettingsPref
                 p.remove(keys.BANDCAMP_CUSTOM_GENRES)
             }
         }
+    }
+
+    override suspend fun setBluetoothStabilityMode(mode: String) {
+        prefs.edit { it[keys.BLUETOOTH_STABILITY_MODE] = mode }
+    }
+
+    override suspend fun setBluetoothPcmBufferMs(ms: Int) {
+        prefs.edit {
+            it[keys.BLUETOOTH_PCM_BUFFER_MS] = ms.coerceIn(PCM_BUFFER_MS_MIN, PCM_BUFFER_MS_MAX)
+        }
+    }
+
+    override suspend fun setBluetoothExoBufferBoost(enabled: Boolean) {
+        prefs.edit { it[keys.BLUETOOTH_EXO_BUFFER_BOOST] = enabled }
+    }
+
+    override suspend fun setBluetoothPauseDownloadsWhilePlaying(enabled: Boolean) {
+        prefs.edit { it[keys.BLUETOOTH_PAUSE_DOWNLOADS_WHILE_PLAYING] = enabled }
+    }
+
+    override suspend fun setBluetoothDisableFloatOutput(enabled: Boolean) {
+        prefs.edit { it[keys.BLUETOOTH_DISABLE_FLOAT_OUTPUT] = enabled }
+    }
+
+    private companion object {
+        const val PCM_BUFFER_MS_MIN = 1_000
+        const val PCM_BUFFER_MS_MAX = 4_000
+        const val DEFAULT_PCM_BUFFER_MS = 2_000
     }
 }

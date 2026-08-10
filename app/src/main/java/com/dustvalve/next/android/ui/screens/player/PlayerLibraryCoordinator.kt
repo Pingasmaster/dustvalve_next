@@ -1,7 +1,6 @@
 package com.dustvalve.next.android.ui.screens.player
 
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.domain.model.RepeatMode
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.util.UiText
 import com.dustvalve.next.android.util.onFailure
@@ -11,7 +10,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Transport, queue edits, favorites, downloads, and playlist adds. */
+/** Queue edits, favorites, downloads, and playlist adds. */
 internal class PlayerLibraryCoordinator(
     private val scope: CoroutineScope,
     private val extraState: PlayerExtraStateFlow,
@@ -19,7 +18,6 @@ internal class PlayerLibraryCoordinator(
     libraryDeps: PlayerLibraryDeps,
     private val currentTrack: () -> Track?,
 ) {
-    private val playbackManager = core.playbackManager
     private val queueManager = core.queueManager
     private val libraryRepository = core.libraryRepository
     private val downloadAlbumUseCase = libraryDeps.downloadAlbumUseCase
@@ -27,29 +25,6 @@ internal class PlayerLibraryCoordinator(
     private val playlistRepository = libraryDeps.playlistRepository
     private var favoriteJob: Job? = null
     private var downloadJob: Job? = null
-
-    fun onPlayPause() = playbackManager.togglePlayPause()
-    fun onNext() = playbackManager.skipNext()
-    fun onPrevious() = playbackManager.skipPrevious()
-    fun onSeek(ms: Long) = playbackManager.seekTo(ms)
-
-    fun onStop() {
-        playbackManager.stop()
-        queueManager.clear()
-    }
-
-    fun onToggleShuffle() {
-        playbackManager.setShuffleEnabled(!playbackManager.shuffleEnabled.value)
-    }
-
-    fun onToggleRepeat() {
-        val nextMode = when (playbackManager.repeatMode.value) {
-            RepeatMode.OFF -> RepeatMode.ALL
-            RepeatMode.ALL -> RepeatMode.ONE
-            RepeatMode.ONE -> RepeatMode.OFF
-        }
-        playbackManager.setRepeatMode(nextMode)
-    }
 
     fun onToggleFavorite() {
         if (favoriteJob?.isActive == true) return

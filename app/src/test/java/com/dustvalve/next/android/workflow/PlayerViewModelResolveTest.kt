@@ -33,6 +33,7 @@ import com.dustvalve.next.android.ui.screens.player.playTrack
 import com.dustvalve.next.android.ui.screens.player.playTrackInList
 import com.dustvalve.next.android.workflow.support.AudioFixture
 import com.dustvalve.next.android.workflow.support.FixtureTracks
+import com.dustvalve.next.android.workflow.support.noopAudioPowerPolicy
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -98,7 +99,12 @@ class PlayerViewModelResolveTest {
             .setClock(FakeClock(true))
             .build()
         queueManager = QueueManager()
-        playbackManager = PlaybackManager(player, queueManager, ApplicationProvider.getApplicationContext())
+        playbackManager = PlaybackManager(
+            player,
+            queueManager,
+            noopAudioPowerPolicy(),
+            ApplicationProvider.getApplicationContext(),
+        )
         val soundCloudRepository = mockk<SoundCloudRepository>(relaxed = true)
         val resolveUseCase = ResolveTrackForPlaybackUseCase(
             downloadRepository,
@@ -121,6 +127,7 @@ class PlayerViewModelResolveTest {
                 downloadRepository = downloadRepository,
                 downloadController = mockk<DownloadController>(relaxed = true),
                 settingsDataStore = settingsDataStore,
+                playbackAudioTuning = mockk(relaxed = true),
                 resolveTrackForPlaybackUseCase = resolveUseCase,
                 playbackStreamResolver = streamResolver,
                 appContext = ApplicationProvider.getApplicationContext(),

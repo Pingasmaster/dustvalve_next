@@ -12,9 +12,8 @@ import javax.inject.Singleton
  * [com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase].
  */
 @Singleton
-class DustvalveBandcampStreamUrlResolver @Inject constructor(
-    private val dustvalveStreamResolver: DustvalveStreamResolver,
-) : BandcampStreamUrlResolver {
+class DustvalveBandcampStreamUrlResolver @Inject constructor(private val dustvalveStreamResolver: DustvalveStreamResolver) :
+    BandcampStreamUrlResolver {
     override suspend fun resolveStreamUrl(track: Track): String? {
         val pageUrl = track.albumUrl.takeIf { it.isNotBlank() } ?: track.bandcampTrackUrl
         if (pageUrl.isNullOrBlank()) return null

@@ -31,11 +31,13 @@ import javax.inject.Singleton
 // Main is intentionally absent from AppDispatchers (see Dispatcher.kt):
 // tests substitute it globally via Dispatchers.setMain, so qualifying
 // it would only add ceremony.
+@OptIn(UnstableApi::class)
 @Suppress("RawDispatchersUse")
 @Singleton
 class PlaybackManager @Inject constructor(
     private val player: ExoPlayer,
     private val queueManager: QueueManager,
+    private val audioPowerPolicy: AudioPowerPolicy,
     // Constructor param (not a property): only feeds [mediaPreparer] below.
     @ApplicationContext context: Context,
 ) {
@@ -456,6 +458,7 @@ class PlaybackManager @Inject constructor(
     fun setPreferredAudioDevice(device: AudioDeviceInfo?) {
         if (released) return
         player.setPreferredAudioDevice(device)
+        audioPowerPolicy.onPreferredAudioDeviceChanged(player, device)
     }
 
     internal fun release() {

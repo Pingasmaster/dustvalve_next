@@ -111,7 +111,6 @@
     <string name="common_cd_now_playing">Now playing</string>
     <string name="common_cd_create_playlist">Create playlist</string>
     <string name="common_cd_more_options">More options</string>
-    <string name="common_cd_selected">Selected</string>
     <string name="common_cd_reorder">Reorder</string>
     <string name="common_cd_delete">Delete</string>
     <string name="common_cd_downloaded">Downloaded</string>
@@ -192,6 +191,7 @@
     <string name="settings_section_sources">Sources</string>
     <string name="settings_section_storage">Storage</string>
     <string name="settings_section_audio_quality">Audio quality</string>
+    <string name="settings_section_bluetooth_stability">Bluetooth stability</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_player">Player</string>
     <string name="settings_section_search">Search</string>
@@ -205,8 +205,6 @@
     <string name="settings_use_individual_folders_desc">Pick specific folders instead of scanning all audio</string>
     <string name="settings_remove_downloads_title">Remove all downloads</string>
     <string name="settings_remove_downloads_text">This wipes the entire downloads pool: explicit downloads, auto-cached audio, album covers, and artist images.</string>
-    <string name="settings_download_format">Download Format</string>
-    <string name="settings_download_format_desc">Format for downloaded <xliff:g id="brand">Bandcamp</xliff:g> purchases</string>
     <string name="settings_add_folder">Add folder</string>
     <string name="settings_rescan">Rescan</string>
     <string name="settings_cd_remove_folder">Remove folder</string>
@@ -220,12 +218,32 @@
     <string name="settings_remove_all_downloads">Remove all downloads</string>
     <string name="settings_auto_download_future">Auto-download future content</string>
     <string name="settings_auto_download_future_desc">Automatically download new content for downloaded playlists, albums, and artists</string>
-    <string name="settings_mp3_on_metered"><xliff:g id="format">MP3</xliff:g> only on metered</string>
-    <string name="settings_mp3_on_metered_desc">Download <xliff:g id="format">MP3</xliff:g> instead of lossless on mobile data</string>
     <string name="settings_progressive_download">Progressive download</string>
     <string name="settings_progressive_download_desc">Stream preview quality, then seamlessly upgrade to full quality</string>
     <string name="settings_seamless_upgrade">Seamless quality upgrade</string>
     <string name="settings_seamless_upgrade_desc">Stream first, download in the background, then swap in. May cause a single brief stutter the moment the swap happens.</string>
+    <string name="settings_bt_stability">Bluetooth stability mode</string>
+    <string name="settings_bt_stability_desc">Reduces Bluetooth audio dropouts when Wi‑Fi and high‑quality codecs compete for the radio</string>
+    <string name="settings_bt_stability_enable_title">Enable Bluetooth stability?</string>
+    <string name="settings_bt_stability_enable_text">Stability mode tunes playback buffers only and does not reduce audio quality.\n\nExtreme stability mode can reduce quality. Quality tradeoffs stay off until you enable them, and each one asks for confirmation.</string>
+    <string name="settings_bt_stability_enable_normal">Stability mode</string>
+    <string name="settings_bt_stability_enable_extreme">Extreme stability</string>
+    <string name="settings_bt_stability_enable_anyway">Enable anyway</string>
+    <string name="settings_bt_stability_profile">Profile</string>
+    <string name="settings_bt_stability_profile_normal">Stability</string>
+    <string name="settings_bt_stability_profile_extreme">Extreme</string>
+    <string name="settings_bt_stability_applies_hint">PCM cushion and larger stream buffers apply after relaunching the app. Pausing downloads while playing applies immediately.</string>
+    <string name="settings_bt_stability_pcm">PCM cushion: <xliff:g id="ms" example="3000">%1$d</xliff:g> ms</string>
+    <string name="settings_bt_stability_pcm_desc">Extra AudioTrack headroom for Bluetooth codecs such as LDAC. Larger values reduce hiccups with a little more latency.</string>
+    <string name="settings_bt_stability_exo_boost">Larger stream buffers</string>
+    <string name="settings_bt_stability_exo_boost_desc">Keeps more compressed audio ready so brief radio contention is less likely to interrupt playback</string>
+    <string name="settings_bt_stability_pause_downloads">Pause downloads while playing</string>
+    <string name="settings_bt_stability_pause_downloads_desc">Stops progressive and background downloads from competing with Bluetooth on the same radio</string>
+    <string name="settings_bt_stability_extreme_options">Quality tradeoffs</string>
+    <string name="settings_bt_stability_disable_float">Disable Hi‑Fi float output</string>
+    <string name="settings_bt_stability_disable_float_desc">Uses 16‑bit PCM instead of float. Can lower CPU load on weak devices, but may reduce fidelity</string>
+    <string name="settings_bt_stability_float_warning_title">Reduce audio quality?</string>
+    <string name="settings_bt_stability_float_warning_text">Disabling Hi‑Fi float output can make Bluetooth playback more stable on weak devices, but it may reduce fidelity for high‑resolution audio.</string>
     <string name="settings_theme">Theme</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
@@ -361,7 +379,6 @@
     <string name="soundcloud_search_hint">Search SoundCloud</string>
     <string name="soundcloud_home_trending">Trending</string>
     <string name="soundcloud_home_discover">Discover</string>
-    <string name="soundcloud_home_genres">Genres</string>
     <string name="soundcloud_home_empty">Nothing here yet</string>
     <string name="soundcloud_home_retry">Retry</string>
     <string name="soundcloud_error_load">Couldn’t load SoundCloud</string>

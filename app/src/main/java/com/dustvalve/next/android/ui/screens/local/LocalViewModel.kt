@@ -132,9 +132,8 @@ class LocalViewModel @Inject constructor(
         _permissionCheckEpoch.update { it + 1 }
     }
 
-    fun hasAudioPermission(): Boolean =
-        ContextCompat.checkSelfPermission(appContext, legacyAudioPermission()) ==
-            PackageManager.PERMISSION_GRANTED
+    fun hasAudioPermission(): Boolean = ContextCompat.checkSelfPermission(appContext, legacyAudioPermission()) ==
+        PackageManager.PERMISSION_GRANTED
 
     val allLocalTracks: StateFlow<List<Track>> = localMusicRepository.getLocalTracks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

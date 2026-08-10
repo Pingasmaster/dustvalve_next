@@ -49,9 +49,12 @@ class NetworkModuleMediaClientTest {
         // No whole-call cap: streams and long downloads must be allowed to
         // outlive 30s.
         assertThat(media.callTimeoutMillis).isEqualTo(0)
-        // Stall guards survive the derivation.
+        // Media path uses a longer read stall guard than scraping (90s),
+        // matching download transfers for high-bitrate progressive streams.
         assertThat(media.connectTimeoutMillis).isEqualTo(base.connectTimeoutMillis)
-        assertThat(media.readTimeoutMillis).isEqualTo(base.readTimeoutMillis)
+        assertThat(media.readTimeoutMillis).isEqualTo(90_000)
+        // googlevideo / OkHttp+ExoPlayer mid-body resets on HTTP/2; force 1.1.
+        assertThat(media.protocols).containsExactly(okhttp3.Protocol.HTTP_1_1)
         // Shared infrastructure survives the derivation (same pool + cache).
         assertThat(media.connectionPool).isSameInstanceAs(base.connectionPool)
         assertThat(media.cache).isSameInstanceAs(base.cache)

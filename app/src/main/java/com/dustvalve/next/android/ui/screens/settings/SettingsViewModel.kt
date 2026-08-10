@@ -12,6 +12,7 @@ import com.dustvalve.next.android.domain.model.CacheInfo
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.LocalMusicRepository
 import com.dustvalve.next.android.domain.repository.RecentSearchRepository
+import com.dustvalve.next.android.player.BluetoothStabilityMode
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.update.AppUpdateController
@@ -68,6 +69,11 @@ data class SettingsUiState(
     val updateState: UpdateUiState = UpdateUiState.Idle,
     val updateMessage: UiText? = null,
     val autoUpdateCheckEnabled: Boolean = true,
+    val bluetoothStabilityMode: String = BluetoothStabilityMode.STORAGE_OFF,
+    val bluetoothPcmBufferMs: Int = BluetoothStabilityMode.DEFAULT_PCM_BUFFER_MS,
+    val bluetoothExoBufferBoost: Boolean = true,
+    val bluetoothPauseDownloadsWhilePlaying: Boolean = true,
+    val bluetoothDisableFloatOutput: Boolean = false,
 )
 
 @HiltViewModel
@@ -113,6 +119,11 @@ class SettingsViewModel @Inject constructor(
         recentSearchRepository = recentSearchRepository,
         playbackManager = playbackManager,
         queueManager = queueManager,
+    )
+
+    internal val bluetoothStability = SettingsBluetoothStabilityPrefsCoordinator(
+        scope = viewModelScope,
+        settingsDataStore = settingsDataStore,
     )
 
     init {

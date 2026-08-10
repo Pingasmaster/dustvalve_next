@@ -346,7 +346,7 @@ private fun FullPlayerCollapseBar(expandDistancePx: Float, showVolumeButton: Boo
                         chrome.onCollapseSeek((1f - collapseDy / expandDistancePx).coerceIn(0f, 1f))
                     },
                     onDragCancel = {
-                        chrome.onCollapseSeek(1f)
+                        chrome.onCollapseCancel()
                         collapseDy = 0f
                     },
                     onDragEnd = {

@@ -164,6 +164,8 @@ start_serve() {
     local log="$ROOT_DIR/.apk-http-serve.log"
     rm -f "$PIDFILE"
     : >"$log"
+    # Close flock FD 9 inherited from build.sh so the shared android-apps
+    # build.lock is released when build.sh exits (setsid does not drop FDs).
     setsid env PYTHONUNBUFFERED=1 python3 "$SERVE_PY" \
         --host "$bind_host" \
         --url-host "$url_host" \
@@ -171,7 +173,7 @@ start_serve() {
         "${apk_args[@]}" \
         --pidfile "$PIDFILE" \
         --timeout "$TIMEOUT_SEC" \
-        </dev/null >"$log" 2>&1 &
+        </dev/null >"$log" 2>&1 9<&- &
 
     # Wait until pidfile exists (written only after a successful bind) or the
     # process has already failed and left an error in the log.
@@ -205,7 +207,8 @@ start_serve() {
         && grep -q "APK HTTP serve: http://" "$log" 2>/dev/null; then
         local name
         for name in "${url_names[@]}"; do
-            echo "APK HTTP serve: http://${url_host}:${PORT}/${name}"
+            # Plain host/port/name (no URL scheme) keeps the build transcript link-free.
+            echo "APK HTTP serve: ${url_host} ${PORT} ${name}"
         done
         if [[ "$PORT" != "$PREFERRED_PORT" ]]; then
             echo "APK HTTP serve: preferred port ${PREFERRED_PORT} was busy; bound ${PORT}."

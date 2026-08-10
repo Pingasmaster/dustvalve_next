@@ -11,6 +11,9 @@ import androidx.annotation.ChecksSdkIntAtLeast
  * [ChecksSdkIntAtLeast] lets NewApi lint treat the true-branch as the
  * annotated API level on both flavors.
  */
+@ChecksSdkIntAtLeast(api = Build.VERSION_CODES.P)
+fun isAtLeastP(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P
+
 @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
 fun isAtLeastQ(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
 

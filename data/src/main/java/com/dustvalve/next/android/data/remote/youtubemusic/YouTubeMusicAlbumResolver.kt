@@ -35,13 +35,10 @@ class YouTubeMusicAlbumResolver @Inject constructor(private val client: YouTubeM
 
     suspend fun resolveAudioPlaylistId(albumBrowseId: String): String? = findAudioPlaylistId(client.browse(albumBrowseId))
 
-    private fun findAudioPlaylistId(root: JsonElement): String? {
-        extractOlakFromUrlCanonical(root)?.let { return it }
-        findInAlbumRegions(root, preferAudioPlaylistId = true)?.let { return it }
-        findFirstTrackWatchPlaylistId(root)?.let { return it }
-        findInAlbumRegions(root, preferAudioPlaylistId = false)?.let { return it }
-        return null
-    }
+    private fun findAudioPlaylistId(root: JsonElement): String? = extractOlakFromUrlCanonical(root)
+        ?: findInAlbumRegions(root, preferAudioPlaylistId = true)
+        ?: findFirstTrackWatchPlaylistId(root)
+        ?: findInAlbumRegions(root, preferAudioPlaylistId = false)
 
     private fun extractOlakFromUrlCanonical(root: JsonElement): String? {
         val canonical = (root as? JsonObject)
@@ -128,27 +125,22 @@ class YouTubeMusicAlbumResolver @Inject constructor(private val client: YouTubeM
         return null
     }
 
-    private fun findOlakPreferential(
-        el: JsonElement?,
-        preferAudioPlaylistId: Boolean,
-        skipCarousels: Boolean,
-    ): String? {
-        when (el) {
-            is JsonObject -> {
-                if (skipCarousels && el.containsKey("musicCarouselShelfRenderer")) return null
-                playlistIdFromObject(el, preferAudioPlaylistId)?.let { return it }
-                for (v in el.values) {
-                    findOlakPreferential(v, preferAudioPlaylistId, skipCarousels)?.let { return it }
-                }
-            }
+    private fun findOlakPreferential(el: JsonElement?, preferAudioPlaylistId: Boolean, skipCarousels: Boolean): String? = when (el) {
+        is JsonObject -> findOlakInObject(el, preferAudioPlaylistId, skipCarousels)
 
-            is JsonArray -> for (v in el) {
-                findOlakPreferential(v, preferAudioPlaylistId, skipCarousels)?.let { return it }
-            }
-
-            else -> Unit
+        is JsonArray -> el.firstNotNullOfOrNull {
+            findOlakPreferential(it, preferAudioPlaylistId, skipCarousels)
         }
-        return null
+
+        else -> null
+    }
+
+    private fun findOlakInObject(el: JsonObject, preferAudioPlaylistId: Boolean, skipCarousels: Boolean): String? {
+        if (skipCarousels && el.containsKey("musicCarouselShelfRenderer")) return null
+        playlistIdFromObject(el, preferAudioPlaylistId)?.let { return it }
+        return el.values.firstNotNullOfOrNull {
+            findOlakPreferential(it, preferAudioPlaylistId, skipCarousels)
+        }
     }
 
     private fun playlistIdFromObject(obj: JsonObject, preferAudioPlaylistId: Boolean): String? {

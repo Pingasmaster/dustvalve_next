@@ -10,6 +10,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -27,16 +28,14 @@ internal class PlayerPlayCoordinator(
     private val downloadRepository = core.downloadRepository
     private val downloadController = core.downloadController
     private val settingsDataStore = core.settingsDataStore
+    private val playbackAudioTuning = core.playbackAudioTuning
     private val resolveTrackForPlaybackUseCase = core.resolveTrackForPlaybackUseCase
     private val playbackStreamResolver = core.playbackStreamResolver
     private var progressiveDownloadJob: Job? = null
     private var playJob: Job? = null
     private var loadingGeneration = 0
 
-    private suspend fun resolveTrackForPlayback(
-        track: Track,
-        updateState: Boolean = true,
-    ): PlaybackResolveResult {
+    private suspend fun resolveTrackForPlayback(track: Track, updateState: Boolean = true): PlaybackResolveResult {
         val result = resolveTrackForPlaybackUseCase(track, reportFailure = updateState)
         if (result.recordedRemoteResolution) {
             playbackStreamResolver.recordResolved(result.track.id)
@@ -70,6 +69,13 @@ internal class PlayerPlayCoordinator(
             runPlayerUiAction {
                 val progressiveEnabled = settingsDataStore.getProgressiveDownloadSync()
                 if (!progressiveEnabled) return@runPlayerUiAction
+                // Bluetooth stability: keep the radio free for A2DP/LDAC.
+                if (playbackAudioTuning.shouldPauseDownloadsWhilePlaying()) return@runPlayerUiAction
+
+                // Give ExoPlayer time to fill its start buffer before a full-file
+                // download competes for the same CDN / radio. High-bitrate streams
+                // + LDAC are especially sensitive to early bandwidth contention.
+                delay(PROGRESSIVE_DOWNLOAD_START_DELAY_MS)
 
                 val existingDownload = downloadRepository.getDownloadInfo(track.id)
                 if (existingDownload != null && existingDownload.format.qualityRank > AudioFormat.MP3_128.qualityRank) {
@@ -233,8 +239,7 @@ internal class PlayerPlayCoordinator(
         playTrackInList(tracks, startIndex)
     }
 
-    suspend fun playAlbumAwaiting(tracks: List<Track>, startIndex: Int): Boolean =
-        playTrackInListAwaiting(tracks, startIndex)
+    suspend fun playAlbumAwaiting(tracks: List<Track>, startIndex: Int): Boolean = playTrackInListAwaiting(tracks, startIndex)
 
     /**
      * Like [com.dustvalve.next.android.player.PlaybackMediaPreparer.resolveAndPlay]:
@@ -242,11 +247,7 @@ internal class PlayerPlayCoordinator(
      * [playQueue] there. Leaves the prior queue intact when every candidate
      * from [startIndex] fails.
      */
-    private suspend fun playListFromIndex(
-        tracks: List<Track>,
-        startIndex: Int,
-        generation: Int,
-    ): Boolean {
+    private suspend fun playListFromIndex(tracks: List<Track>, startIndex: Int, generation: Int): Boolean {
         val first = tracks[startIndex]
         val showYtLoading = first.source == TrackSource.YOUTUBE &&
             downloadRepository.getDownloadInfo(first.id) == null
@@ -326,12 +327,16 @@ internal class PlayerPlayCoordinator(
         /** Indices around the playing entry to pre-resolve after list play. */
         internal const val RESOLVE_REMAINING_WINDOW = 5
 
-        internal fun streamFailedUiText(detail: String?): UiText =
-            when {
-                detail?.contains("LOGIN_REQUIRED") == true ->
-                    UiText.StringResource(R.string.snackbar_youtube_login_required)
-                !detail.isNullOrBlank() -> UiText.DynamicString(detail)
-                else -> UiText.StringResource(R.string.snackbar_audio_stream_failed)
-            }
+        /** Pause before progressive download so ExoPlayer can fill its start buffer. */
+        internal const val PROGRESSIVE_DOWNLOAD_START_DELAY_MS = 5_000L
+
+        internal fun streamFailedUiText(detail: String?): UiText = when {
+            detail?.contains("LOGIN_REQUIRED") == true ->
+                UiText.StringResource(R.string.snackbar_youtube_login_required)
+
+            !detail.isNullOrBlank() -> UiText.DynamicString(detail)
+
+            else -> UiText.StringResource(R.string.snackbar_audio_stream_failed)
+        }
     }
 }

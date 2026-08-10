@@ -25,15 +25,15 @@ private val Context.pendingDownloadQueueDataStore: DataStore<androidx.datastore.
         corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },
     )
 
+private const val TAG = "PendingDlQueue"
+
 /**
  * Durable snapshot of the in-memory [com.dustvalve.next.android.download.DownloadController]
  * queue. Survives process death so cold start can re-enqueue unfinished track
  * downloads. Schema: see docs/download-queue-schema.md (version 1).
  */
 @Singleton
-class PendingDownloadQueueStore @Inject constructor(
-    @param:ApplicationContext private val context: Context,
-) {
+class PendingDownloadQueueStore @Inject constructor(@param:ApplicationContext private val context: Context) {
     private val dataStore = context.pendingDownloadQueueDataStore
     private val json = Json {
         ignoreUnknownKeys = true
@@ -44,6 +44,8 @@ class PendingDownloadQueueStore @Inject constructor(
         val raw = try {
             dataStore.data.first()[KEY_QUEUE_JSON]
         } catch (e: IOException) {
+            // DataStore read can fail after process death / disk errors; start empty.
+            android.util.Log.w(TAG, "Pending download queue unreadable", e)
             null
         }
         if (raw.isNullOrBlank()) return PendingDownloadQueueV1()
@@ -79,10 +81,7 @@ class PendingDownloadQueueStore @Inject constructor(
 
 /** Versioned pending-download queue document (DataStore JSON). */
 @Serializable
-data class PendingDownloadQueueV1(
-    val version: Int = VERSION,
-    val items: List<PendingDownloadItemV1> = emptyList(),
-) {
+data class PendingDownloadQueueV1(val version: Int = VERSION, val items: List<PendingDownloadItemV1> = emptyList()) {
     companion object {
         const val VERSION = 1
     }

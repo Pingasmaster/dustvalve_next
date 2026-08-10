@@ -141,27 +141,29 @@ class YouTubeSearchParser @Inject constructor() {
         return walkOfficialCard(card)
     }
 
-    private fun walkOfficialCard(el: JsonElement?): SearchResult? {
-        when (el) {
-            is kotlinx.serialization.json.JsonObject -> {
+    private fun walkOfficialCard(el: JsonElement?): SearchResult? = when (el) {
+        is kotlinx.serialization.json.JsonObject -> walkOfficialCardObject(el)
+        is kotlinx.serialization.json.JsonArray -> el.firstNotNullOfOrNull { walkOfficialCard(it) }
+        else -> null
+    }
+
+    private fun walkOfficialCardObject(el: kotlinx.serialization.json.JsonObject): SearchResult? {
+        for ((key, value) in el) {
+            val hit = when (key) {
+                "channelRenderer" -> parseChannel(value)
+
+                "playlistRenderer" -> parsePlaylist(value)
+
+                "lockupViewModel" -> parseLockup(value)
+
+                "videoRenderer" -> parseVideo(value)
+
                 // Avoid re-entering the same officialCardViewModel key.
-                for ((key, value) in el) {
-                    when (key) {
-                        "channelRenderer" -> parseChannel(value)?.let { return it }
-                        "playlistRenderer" -> parsePlaylist(value)?.let { return it }
-                        "lockupViewModel" -> parseLockup(value)?.let { return it }
-                        "videoRenderer" -> parseVideo(value)?.let { return it }
-                        "officialCardViewModel" -> Unit // already entered
-                        else -> walkOfficialCard(value)?.let { return it }
-                    }
-                }
-            }
+                "officialCardViewModel" -> null
 
-            is kotlinx.serialization.json.JsonArray -> {
-                for (child in el) walkOfficialCard(child)?.let { return it }
+                else -> walkOfficialCard(value)
             }
-
-            else -> Unit
+            if (hit != null) return hit
         }
         return null
     }
@@ -231,23 +233,12 @@ class YouTubeSearchParser @Inject constructor() {
      * a documented reason.
      */
     private fun parseLockup(lvm: JsonElement): SearchResult? {
-        val type = lvm.str("contentType") ?: return null
-        when (type) {
-            "LOCKUP_CONTENT_TYPE_PLAYLIST",
-            "LOCKUP_CONTENT_TYPE_PODCAST",
-            -> Unit
-            // VIDEO lockups exist on some surfaces; WEB search still emits
-            // videoRenderer for tracks, so skip rather than double-count.
-            "LOCKUP_CONTENT_TYPE_VIDEO" -> return null
-            else -> return null
-        }
-        val playlistId = lvm.str("contentId")
-            ?: lvm.path("rendererContext")?.path("commandContext")
-                ?.path("onTap")?.path("innertubeCommand")
-                ?.path("watchEndpoint")?.str("playlistId")
-            ?: return null
-        val meta = lvm.path("metadata")?.path("lockupMetadataViewModel") ?: return null
-        val title = meta.path("title")?.str("content") ?: return null
+        val type = lvm.str("contentType")
+        if (type == null || type !in PLAYLIST_OR_PODCAST_LOCKUP_TYPES) return null
+        val playlistId = resolveLockupPlaylistId(lvm)
+        val meta = lvm.path("metadata")?.path("lockupMetadataViewModel")
+        val title = meta?.path("title")?.str("content")
+        if (playlistId == null || meta == null || title == null) return null
         val owner = meta.path("metadata")?.path("contentMetadataViewModel")
             ?.path("metadataRows")?.arr()?.firstOrNull()
             ?.path("metadataParts")?.arr()?.firstOrNull()
@@ -268,6 +259,18 @@ class YouTubeSearchParser @Inject constructor() {
             album = null,
             genre = null,
             releaseDate = null,
+        )
+    }
+
+    private fun resolveLockupPlaylistId(lvm: JsonElement): String? = lvm.str("contentId")
+        ?: lvm.path("rendererContext")?.path("commandContext")
+            ?.path("onTap")?.path("innertubeCommand")
+            ?.path("watchEndpoint")?.str("playlistId")
+
+    private companion object {
+        val PLAYLIST_OR_PODCAST_LOCKUP_TYPES = setOf(
+            "LOCKUP_CONTENT_TYPE_PLAYLIST",
+            "LOCKUP_CONTENT_TYPE_PODCAST",
         )
     }
 }

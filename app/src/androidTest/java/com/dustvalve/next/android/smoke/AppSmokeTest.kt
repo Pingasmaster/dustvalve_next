@@ -67,7 +67,7 @@ class AppSmokeTest {
     @Test
     fun appLaunches_bottomNavRenders() {
         composeRule.waitForTag(TestTags.BOTTOM_NAV)
-        composeRule.waitForTag(TestTags.bottomNavItem("local"))
+        composeRule.waitForTag(TestTags.bottomNavItem("library"))
         composeRule.waitForTag(TestTags.bottomNavItem("settings"))
     }
 

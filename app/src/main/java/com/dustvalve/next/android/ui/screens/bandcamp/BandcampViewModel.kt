@@ -241,11 +241,10 @@ class BandcampViewModel @Inject constructor(
     /** Append the next discover page when the category sheet scrolls near the end. */
     fun loadMoreCategory() {
         val current = _uiState.value
-        if (!current.showCategorySheet ||
-            !current.categoryHasMore ||
+        val sheetBusy = !current.showCategorySheet ||
             current.isCategoryLoading ||
             current.isCategoryLoadingMore
-        ) {
+        if (sheetBusy || !current.categoryHasMore) {
             return
         }
         val cursor = current.categoryCursor?.takeIf { it.isNotBlank() } ?: return

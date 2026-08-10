@@ -56,6 +56,13 @@ internal class SettingsUiCollectors(
         collect(settingsDataStore.keepScreenOnWhilePlaying) { copy(keepScreenOnWhilePlaying = it) }
         collect(settingsDataStore.keepLocalSort) { copy(keepLocalSort = it) }
         collect(settingsDataStore.keepLocalFilters) { copy(keepLocalFilters = it) }
+        collect(settingsDataStore.bluetoothStabilityMode) { copy(bluetoothStabilityMode = it) }
+        collect(settingsDataStore.bluetoothPcmBufferMs) { copy(bluetoothPcmBufferMs = it) }
+        collect(settingsDataStore.bluetoothExoBufferBoost) { copy(bluetoothExoBufferBoost = it) }
+        collect(settingsDataStore.bluetoothPauseDownloadsWhilePlaying) {
+            copy(bluetoothPauseDownloadsWhilePlaying = it)
+        }
+        collect(settingsDataStore.bluetoothDisableFloatOutput) { copy(bluetoothDisableFloatOutput = it) }
         collect(settingsDataStore.storageLimit) { bytes ->
             copy(storageLimitIndex = bytesToSliderIndex(bytes))
         }

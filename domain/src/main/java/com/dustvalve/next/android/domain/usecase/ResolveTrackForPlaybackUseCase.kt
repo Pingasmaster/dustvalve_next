@@ -179,14 +179,13 @@ class ResolveTrackForPlaybackUseCase @Inject constructor(
         }
     }
 
-    private fun streamFailed(track: Track, reportFailure: Boolean, message: String? = null) =
-        PlaybackResolveResult(
-            track = track.copy(streamUrl = null),
-            playbackFormat = null,
-            sourcePath = null,
-            streamFailed = reportFailure,
-            streamFailedMessage = message?.takeIf { reportFailure && it.isNotBlank() },
-        )
+    private fun streamFailed(track: Track, reportFailure: Boolean, message: String? = null) = PlaybackResolveResult(
+        track = track.copy(streamUrl = null),
+        playbackFormat = null,
+        sourcePath = null,
+        streamFailed = reportFailure,
+        streamFailedMessage = message?.takeIf { reportFailure && it.isNotBlank() },
+    )
 
     companion object {
         /**

@@ -28,7 +28,12 @@ internal class FullPlayerMotion(
 )
 
 @Stable
-class FullPlayerCollapseActions(val onCollapse: () -> Unit, val onCollapseSeek: (Float) -> Unit, val onCollapseSettle: (Float) -> Unit)
+class FullPlayerCollapseActions(
+    val onCollapse: () -> Unit,
+    val onCollapseSeek: (Float) -> Unit,
+    val onCollapseSettle: (Float) -> Unit,
+    val onCollapseCancel: () -> Unit,
+)
 
 @Stable
 class FullPlayerNavActions(val onArtistClick: (Track) -> Unit, val onAlbumClick: (Track) -> Unit)
@@ -54,6 +59,7 @@ class FullPlayerChrome(
     val onCollapse: () -> Unit get() = collapse.onCollapse
     val onCollapseSeek: (Float) -> Unit get() = collapse.onCollapseSeek
     val onCollapseSettle: (Float) -> Unit get() = collapse.onCollapseSettle
+    val onCollapseCancel: () -> Unit get() = collapse.onCollapseCancel
     val onArtistClick: (Track) -> Unit get() = nav.onArtistClick
     val onAlbumClick: (Track) -> Unit get() = nav.onAlbumClick
     val onShowVolumeSheet: () -> Unit get() = sheets.onShowVolumeSheet

@@ -13,6 +13,7 @@ import okhttp3.Cache
 import okhttp3.ConnectionPool
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Response
 import okhttp3.brotli.BrotliInterceptor
 import java.io.File
@@ -54,6 +55,10 @@ object NetworkModule {
     private val CALL_TIMEOUT = Duration.ofSeconds(30)
     private val CONNECT_TIMEOUT = Duration.ofSeconds(10)
     private val READ_TIMEOUT = Duration.ofSeconds(20)
+
+    // Matches the download-transfer client: high-bitrate progressive streams
+    // can stall >20s between chunks on slow links without being dead.
+    private val MEDIA_READ_TIMEOUT = Duration.ofSeconds(90)
 
     @Provides
     @Singleton
@@ -101,12 +106,20 @@ object NetworkModule {
      * regression); likewise any track/APK download outliving 30s. connect and
      * read timeouts remain: they bound inactivity, which is the correct guard
      * for stalled transfers. Duration.ZERO = no call timeout (OkHttp semantics).
+     *
+     * HTTP/1.1 only + 90s read: matches the download-transfer client. googlevideo
+     * (and OkHttp+ExoPlayer on HTTP/2 generally) can reset or stall mid-body;
+     * that resurfaces as periodic rebuffer hiccups under high-bitrate / LDAC
+     * load. Progressive downloads already forced HTTP/1.1; the player path must
+     * too or it remains the fragile half of the pair.
      */
     @Provides
     @Singleton
     @MediaHttp
     fun provideMediaOkHttpClient(base: OkHttpClient): OkHttpClient = base.newBuilder()
         .callTimeout(Duration.ZERO)
+        .readTimeout(MEDIA_READ_TIMEOUT)
+        .protocols(listOf(Protocol.HTTP_1_1))
         .build()
 
     /**

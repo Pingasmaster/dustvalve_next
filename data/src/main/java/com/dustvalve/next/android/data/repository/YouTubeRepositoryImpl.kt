@@ -200,11 +200,7 @@ class YouTubeRepositoryImpl(
             // caching a poisoned "no album" negative.
             val resolvedAlbumUrl = resolveAlbumOnce(videoId) ?: return cachedToTrack(cached)
             val upgraded = cached.copy(albumUrl = resolvedAlbumUrl, albumLookupDone = true)
-            try {
-                videoCache.insert(upgraded)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Throwable) {}
+            YouTubeRepositorySupport.bestEffort { videoCache.insert(upgraded) }
             return cachedToTrack(upgraded)
         }
         val response = client.player(videoId)
@@ -215,11 +211,7 @@ class YouTubeRepositoryImpl(
         // best-effort and must never break the user-facing call. A failed
         // album lookup (albumUrl == null) is persisted with
         // albumLookupDone=false so the next getTrackInfo retries it.
-        try {
-            videoCache.insert(track.toCacheEntity(videoId, albumLookupDone = albumUrl != null))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Throwable) {}
+        YouTubeRepositorySupport.bestEffort { videoCache.insert(track.toCacheEntity(videoId, albumLookupDone = albumUrl != null)) }
         return track
     }
 
@@ -230,12 +222,14 @@ class YouTubeRepositoryImpl(
      * FAILED (network / API error) - callers must not mark the row as
      * looked-up in that case. Cancellation always propagates.
      */
-    private suspend fun resolveAlbumOnce(videoId: String): String? = try {
-        youTubeMusicRepository.lookupAlbumPlaylistForVideo(videoId) ?: ""
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Throwable) {
-        null
+    private suspend fun resolveAlbumOnce(videoId: String): String? {
+        try {
+            return youTubeMusicRepository.lookupAlbumPlaylistForVideo(videoId) ?: ""
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+            return null
+        }
     }
 
     private fun cachedToTrack(cached: YouTubeVideoCacheEntity): Track = Track(
@@ -283,20 +277,14 @@ class YouTubeRepositoryImpl(
         // Album / playlist radio IDs are RDAMPL + inner playlist id. Strip the
         // prefix so OLAK*/PL* land on the VL browse path; remaining RD* (including
         // RDAMPLRDCLAK*) stay on the mix path below.
-        val playlistId = stripRdAmplPrefix(extractedId)
+        val playlistId = YouTubeRepositorySupport.stripRdAmplPrefix(extractedId)
 
         // Mixes (RD*) are not VL-browsable; they paginate via /next. Import /
         // resolvePlaylistTracks share this entry point with YouTubeSource, so
         // route them through getMixPage and surface an empty Mix as an error
         // instead of a silent 0-track success.
         if (playlistId.startsWith("RD")) {
-            val mixUrl = "https://www.youtube.com/playlist?list=$playlistId"
-            val (tracks, title, _) = getMixPage(mixUrl = mixUrl)
-            if (tracks.isEmpty()) {
-                throw IllegalStateException("Mix returned no tracks")
-            }
-            val cover = tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() }
-            return YouTubePlaylistResult(tracks, title, cover)
+            return playlistTracksFromMix(playlistId)
         }
 
         // Cache-first: rebuild the playlist from cached video metadata if
@@ -307,37 +295,8 @@ class YouTubeRepositoryImpl(
         val cached = playlistCache.getById(extractedId)
             ?: playlistCache.getById(playlistId)
         if (cached != null) {
-            val ids = try {
-                json.decodeFromString(stringListSerializer, cached.videoIdsJson)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Throwable) {
-                emptyList()
-            }
-            if (ids.isNotEmpty()) {
-                val cachedVideos = videoCache.getByIds(ids).associateBy { it.videoId }
-                val tracks = ids.mapNotNull { id -> cachedVideos[id]?.let { cachedToTrack(it) } }
-                if (tracks.size == ids.size) {
-                    // Playlists grow (and shrink) like artist discographies:
-                    // always return cache immediately, then silently revalidate
-                    // so newly-added videos land on the next open without a
-                    // hard TTL freeze.
-                    backgroundScope.launch {
-                        try {
-                            fetchAndCachePlaylist(
-                                playlistId = resolveBrowsablePlaylistId(playlistId),
-                                aliasId = extractedId,
-                            )
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (_: Throwable) {}
-                    }
-                    // Cache entity has no cover column yet; first-track art is
-                    // the best offline cover we can offer without a migration.
-                    val cover = tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() }
-                    return YouTubePlaylistResult(tracks, cached.title, cover)
-                }
-            }
+            val fromCache = playlistTracksFromCache(cached, playlistId, extractedId)
+            if (fromCache != null) return fromCache
         }
 
         // Cache miss / partial cache: fetch synchronously.
@@ -345,6 +304,46 @@ class YouTubeRepositoryImpl(
             playlistId = resolveBrowsablePlaylistId(playlistId),
             aliasId = extractedId,
         )
+    }
+
+    private suspend fun playlistTracksFromMix(playlistId: String): YouTubePlaylistResult {
+        val mixUrl = "https://www.youtube.com/playlist?list=$playlistId"
+        val (tracks, title, _) = getMixPage(mixUrl = mixUrl)
+        if (tracks.isEmpty()) {
+            throw IllegalStateException("Mix returned no tracks")
+        }
+        val cover = tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() }
+        return YouTubePlaylistResult(tracks, title, cover)
+    }
+
+    private suspend fun playlistTracksFromCache(
+        cached: YouTubePlaylistCacheEntity,
+        playlistId: String,
+        extractedId: String,
+    ): YouTubePlaylistResult? {
+        val ids = YouTubeRepositorySupport.bestEffortValue(emptyList()) {
+            json.decodeFromString(stringListSerializer, cached.videoIdsJson)
+        }
+        if (ids.isEmpty()) return null
+        val cachedVideos = videoCache.getByIds(ids).associateBy { it.videoId }
+        val tracks = ids.mapNotNull { id -> cachedVideos[id]?.let { cachedToTrack(it) } }
+        if (tracks.size != ids.size) return null
+        // Playlists grow (and shrink) like artist discographies:
+        // always return cache immediately, then silently revalidate
+        // so newly-added videos land on the next open without a
+        // hard TTL freeze.
+        backgroundScope.launch {
+            YouTubeRepositorySupport.bestEffort {
+                fetchAndCachePlaylist(
+                    playlistId = resolveBrowsablePlaylistId(playlistId),
+                    aliasId = extractedId,
+                )
+            }
+        }
+        // Cache entity has no cover column yet; first-track art is
+        // the best offline cover we can offer without a migration.
+        val cover = tracks.firstOrNull()?.artUrl?.takeIf { it.isNotBlank() }
+        return YouTubePlaylistResult(tracks, cached.title, cover)
     }
 
     /**
@@ -370,7 +369,7 @@ class YouTubeRepositoryImpl(
         // Unviewable / private / deleted playlists often return an ERROR
         // alertRenderer with an empty section list. Fail clearly instead of
         // treating that as a successful empty playlist.
-        playlistAlertMessage(response)?.let { msg ->
+        YouTubeRepositorySupport.playlistAlertMessage(response)?.let { msg ->
             throw IllegalStateException(msg)
         }
         val first = playlistParser.parse(response, playlistId)
@@ -398,7 +397,7 @@ class YouTubeRepositoryImpl(
         // non-destructive bulk insert: these entities carry default
         // albumUrl/albumLookupDone and must never clobber rows already
         // upgraded by the single-video path.
-        try {
+        YouTubeRepositorySupport.bestEffort {
             val ids = all.map { it.id.removePrefix("yt_") }
             val videoEntities = all.zip(ids).map { (track, vid) -> track.toCacheEntity(vid) }
             videoCache.insertAllIgnore(videoEntities)
@@ -419,32 +418,20 @@ class YouTubeRepositoryImpl(
                     ),
                 )
             }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Throwable) {}
+        }
         return YouTubePlaylistResult(all, title, coverUrl)
     }
 
     override suspend fun getMixPage(mixUrl: String, cursor: Any?, seenVideoIds: Set<String>): Triple<List<Track>, String, Any?> {
-        val extractedId = extractPlaylistId(mixUrl)
-            ?: throw IllegalArgumentException("Cannot extract mix playlistId from $mixUrl")
-        // RDAMPL + OLAK/PL is handled in getPlaylistTracks (strip + browse).
-        // Remaining RDAMPLRD* / RDGMEM / RDEM / RDCLAK / RD{video} use /next.
-        val mixId = stripRdAmplPrefix(extractedId)
-        if (!mixId.startsWith("RD")) {
-            throw IllegalArgumentException(
-                "Playlist $extractedId is not a Mix; open it as a regular playlist",
-            )
-        }
+        val mixId = YouTubeRepositorySupport.requireMixPlaylistId(mixUrl, ::extractPlaylistId)
         val typed = cursor as? YouTubePlaylistParser.MixContinuation
         val seed = if (typed == null) playlistParser.extractMixSeedVideoId(mixId) else null
-        // Seeded mixes (RD{video}, RDAMVM, RDMM) need a videoId. Seedless
-        // families (RDGMEM, RDEM, RDCLAK) accept playlistId alone on /next.
-        if (typed == null && seed == null && !playlistParser.isSeedlessMixId(mixId)) {
-            throw IllegalStateException(
-                "Unsupported Mix id $mixId (no seed video and not a known seedless family)",
-            )
-        }
+        YouTubeRepositorySupport.requireMixSeedOrSeedless(
+            mixId,
+            typed,
+            seed,
+            playlistParser::isSeedlessMixId,
+        )
         val response = if (typed == null) {
             client.next(videoId = seed, playlistId = mixId)
         } else {
@@ -471,26 +458,12 @@ class YouTubeRepositoryImpl(
         // Best-effort cache write so freshly seen videos benefit getTrackInfo
         // etc. Non-destructive: default-seeded entities must not clobber
         // rows already upgraded with a resolved albumUrl.
-        try {
+        YouTubeRepositorySupport.bestEffort {
             val entities = page.tracks.map { it.toCacheEntity(it.id.removePrefix("yt_")) }
             videoCache.insertAllIgnore(entities)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Throwable) {}
+        }
         return Triple(page.tracks, page.title.orEmpty(), nextCursor)
     }
-
-    /**
-     * Album / playlist radio IDs are `RDAMPL` + the inner playlist id
-     * (`OLAK5uy_...`, `PL...`, or even `RDCLAK...`). Strip once so callers
-     * can browse the source playlist or keep routing an inner mix.
-     */
-    private fun stripRdAmplPrefix(playlistId: String): String =
-        if (playlistId.startsWith("RDAMPL") && playlistId.length > 6) {
-            playlistId.removePrefix("RDAMPL")
-        } else {
-            playlistId
-        }
 
     override suspend fun getChannelVideos(channelUrl: String, page: Any?): YouTubeChannelResult {
         val channelId = extractChannelId(channelUrl)
@@ -606,10 +579,7 @@ class YouTubeRepositoryImpl(
      * When the Top songs shelf exposes a "Show all" bottomEndpoint, follow
      * that browse/playlist for the full list; otherwise keep the shelf preview.
      */
-    private suspend fun expandYtmTopSongs(
-        page: YouTubeMusicArtistParser.ArtistPage,
-        channelId: String,
-    ): List<Track> {
+    private suspend fun expandYtmTopSongs(page: YouTubeMusicArtistParser.ArtistPage, channelId: String): List<Track> {
         val endpoint = page.songsMoreEndpoint ?: return page.songs
         return try {
             val full = when {
@@ -636,37 +606,6 @@ class YouTubeRepositoryImpl(
         } catch (_: Exception) {
             page.songs
         }
-    }
-
-    /**
-     * Pulls ERROR / unviewable alert text from a playlist browse response.
-     * Returns null when the response has no actionable alert.
-     */
-    private fun playlistAlertMessage(root: JsonElement): String? {
-        val alerts = (root as? JsonObject)?.get("alerts") as? JsonArray ?: return null
-        for (alert in alerts) {
-            val renderer = (alert as? JsonObject)?.get("alertRenderer") as? JsonObject ?: continue
-            val type = (renderer["type"] as? JsonPrimitive)?.content
-            val text = alertRunsText(renderer)
-                ?: (renderer["text"] as? JsonObject)?.let { textObj ->
-                    (textObj["simpleText"] as? JsonPrimitive)?.content
-                }
-            if (text.isNullOrBlank()) continue
-            val looksFatal = type.equals("ERROR", ignoreCase = true) ||
-                text.contains("unviewable", ignoreCase = true) ||
-                text.contains("unavailable", ignoreCase = true) ||
-                text.contains("private", ignoreCase = true)
-            if (looksFatal) return text
-        }
-        return null
-    }
-
-    private fun alertRunsText(renderer: JsonObject): String? {
-        val text = renderer["text"] as? JsonObject ?: return null
-        val runs = text["runs"] as? JsonArray ?: return null
-        return runs.mapNotNull { (it as? JsonObject)?.get("text") as? JsonPrimitive }
-            .joinToString("") { it.content }
-            .takeIf { it.isNotBlank() }
     }
 
     /** Opaque page token for getChannelVideos pagination. */

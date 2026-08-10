@@ -62,7 +62,6 @@ class NavigationDeepLinkE2eTest {
 
     @Test
     fun defaultTabs_render() {
-        composeRule.waitForTag(TestTags.bottomNavItem("local"))
         composeRule.waitForTag(TestTags.bottomNavItem("library"))
         composeRule.waitForTag(TestTags.bottomNavItem("settings"))
     }
@@ -97,7 +96,7 @@ class NavigationDeepLinkE2eTest {
     @Test
     fun tabSweep_backStackSurvives() {
         composeRule.waitForTag(TestTags.BOTTOM_NAV)
-        for (tab in listOf("library", "settings", "local")) {
+        for (tab in listOf("library", "settings")) {
             composeRule.clickTab(tab)
         }
         assertThat(composeRule.activityRule.scenario.state.isAtLeast(Lifecycle.State.RESUMED)).isTrue()

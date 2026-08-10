@@ -12,9 +12,7 @@ import javax.inject.Singleton
  * validation with UI-initiated downloads.
  */
 @Singleton
-class ControllerTrackDownloadGateway @Inject constructor(
-    private val downloadController: DownloadController,
-) : TrackDownloadGateway {
+class ControllerTrackDownloadGateway @Inject constructor(private val downloadController: DownloadController) : TrackDownloadGateway {
     override suspend fun downloadTrack(track: Track, formatOverride: AudioFormat?) {
         downloadController.downloadTrackBlocking(track, formatOverride)
     }

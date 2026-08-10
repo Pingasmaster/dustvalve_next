@@ -129,50 +129,8 @@ internal fun SettingsSourcesSection(
     val localContext = LocalContext.current
     val activity = localContext as? Activity
     val folderPersistScope = rememberCoroutineScope()
-    var audioPermissionPermanentlyDenied by remember { mutableStateOf(false) }
-    val audioPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted: Boolean ->
-        if (granted) {
-            audioPermissionPermanentlyDenied = false
-            onAction(SettingsSourcesAction.SetLocalMusicUseMediaStore(true))
-        } else if (activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false) {
-            audioPermissionPermanentlyDenied = true
-        }
-    }
-    // Used only when the permission request came from flipping the
-    // Local source ON: a denial rolls the just-persisted enable
-    // back (mirrors LocalViewModel.onAudioPermissionDenied), so
-    // the toggle doesn't stay on with no way to scan anything.
-    val localEnableAudioPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted: Boolean ->
-        if (granted) {
-            audioPermissionPermanentlyDenied = false
-            onAction(SettingsSourcesAction.SetLocalMusicUseMediaStore(true))
-        } else {
-            val permanentlyDenied =
-                activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false
-            if (permanentlyDenied) {
-                // Keep Local enabled so the Open app settings CTA is reachable.
-                audioPermissionPermanentlyDenied = true
-            } else {
-                onAction(SettingsSourcesAction.SetLocalMusicEnabled(false))
-            }
-        }
-    }
-    // Rescan with missing MediaStore permission: grant then rescan without
-    // clearAll (SetLocalMusicUseMediaStore would wipe SAF folders).
-    val rescanAudioPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-    ) { granted: Boolean ->
-        if (granted) {
-            audioPermissionPermanentlyDenied = false
-            onAction(SettingsSourcesAction.RescanLocalMusic)
-        } else if (activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false) {
-            audioPermissionPermanentlyDenied = true
-        }
-    }
+    val folderPersistFailed = stringResource(R.string.snackbar_folder_persist_failed)
+    val audioPermissions = rememberSourcesAudioPermissions(activity, onAction)
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
     ) { uri: Uri? ->
@@ -193,9 +151,7 @@ internal fun SettingsSourcesSection(
             } else {
                 // Do not save a folder we cannot keep across process death.
                 folderPersistScope.launch {
-                    snackbarHostState.showSnackbar(
-                        localContext.getString(R.string.snackbar_folder_persist_failed),
-                    )
+                    snackbarHostState.showSnackbar(folderPersistFailed)
                 }
             }
         }
@@ -238,17 +194,15 @@ internal fun SettingsSourcesSection(
         ) {
             SourcesCardContent(
                 state = state,
-                audioPermissionPermanentlyDenied = audioPermissionPermanentlyDenied,
+                audioPermissionPermanentlyDenied = audioPermissions.permanentlyDenied,
                 onAction = onAction,
-                onLocalEnableNeedsAudioPermission = {
-                    localEnableAudioPermissionLauncher.launch(legacyAudioPermission())
-                },
+                onLocalEnableNeedsAudioPermission = audioPermissions.launchLocalEnable,
                 onLocalEnableNeedsFolder = { folderPickerLauncher.launch(null) },
                 onRequestAudioPermission = {
-                    if (audioPermissionPermanentlyDenied) {
+                    if (audioPermissions.permanentlyDenied) {
                         openAppDetailsSettings(localContext)
                     } else {
-                        audioPermissionLauncher.launch(legacyAudioPermission())
+                        audioPermissions.launchRequest()
                     }
                 },
                 onOpenAppPermissionSettings = { openAppDetailsSettings(localContext) },
@@ -260,13 +214,74 @@ internal fun SettingsSourcesSection(
                     ) == PackageManager.PERMISSION_GRANTED
                     when {
                         granted -> onAction(SettingsSourcesAction.RescanLocalMusic)
-                        audioPermissionPermanentlyDenied -> openAppDetailsSettings(localContext)
-                        else -> rescanAudioPermissionLauncher.launch(legacyAudioPermission())
+                        audioPermissions.permanentlyDenied -> openAppDetailsSettings(localContext)
+                        else -> audioPermissions.launchRescan()
                     }
                 },
             )
         }
     }
+}
+
+private class SourcesAudioPermissions(
+    val permanentlyDenied: Boolean,
+    val launchLocalEnable: () -> Unit,
+    val launchRequest: () -> Unit,
+    val launchRescan: () -> Unit,
+)
+
+@Composable
+private fun rememberSourcesAudioPermissions(activity: Activity?, onAction: (SettingsSourcesAction) -> Unit): SourcesAudioPermissions {
+    var permanentlyDenied by remember { mutableStateOf(false) }
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted: Boolean ->
+        if (granted) {
+            permanentlyDenied = false
+            onAction(SettingsSourcesAction.SetLocalMusicUseMediaStore(true))
+        } else if (activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false) {
+            permanentlyDenied = true
+        }
+    }
+    // Used only when the permission request came from flipping the
+    // Local source ON: a denial rolls the just-persisted enable
+    // back (mirrors LocalViewModel.onAudioPermissionDenied), so
+    // the toggle doesn't stay on with no way to scan anything.
+    val localEnableAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted: Boolean ->
+        if (granted) {
+            permanentlyDenied = false
+            onAction(SettingsSourcesAction.SetLocalMusicUseMediaStore(true))
+        } else {
+            val deniedForGood =
+                activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false
+            if (deniedForGood) {
+                // Keep Local enabled so the Open app settings CTA is reachable.
+                permanentlyDenied = true
+            } else {
+                onAction(SettingsSourcesAction.SetLocalMusicEnabled(false))
+            }
+        }
+    }
+    // Rescan with missing MediaStore permission: grant then rescan without
+    // clearAll (SetLocalMusicUseMediaStore would wipe SAF folders).
+    val rescanAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+    ) { granted: Boolean ->
+        if (granted) {
+            permanentlyDenied = false
+            onAction(SettingsSourcesAction.RescanLocalMusic)
+        } else if (activity?.shouldShowRequestPermissionRationale(legacyAudioPermission()) == false) {
+            permanentlyDenied = true
+        }
+    }
+    return SourcesAudioPermissions(
+        permanentlyDenied = permanentlyDenied,
+        launchLocalEnable = { localEnableAudioPermissionLauncher.launch(legacyAudioPermission()) },
+        launchRequest = { audioPermissionLauncher.launch(legacyAudioPermission()) },
+        launchRescan = { rescanAudioPermissionLauncher.launch(legacyAudioPermission()) },
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -296,6 +311,7 @@ private fun SourcesCardContent(
             },
             extras = SettingsToggleExtras(
                 icon = R.drawable.ic_phone_android,
+                switchTag = com.dustvalve.next.android.ui.TestTags.settingsSwitch("local"),
             ),
         )
 

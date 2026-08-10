@@ -51,6 +51,7 @@ internal class SettingsPreferences(context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val STORAGE_LIMIT = longPreferencesKey("storage_limit")
+
         // Abandoned keys (account_username / account_avatar / account_fan_id /
         // auto_download_collection / ytm_connected) may still exist as bytes
         // in older settings.preferences_pb files. They are intentionally not
@@ -98,5 +99,12 @@ internal class SettingsPreferences(context: Context) {
         val LOCAL_SELECTED_FOLDERS = stringSetPreferencesKey("local_selected_folders")
         val BANDCAMP_CUSTOM_GENRES = stringPreferencesKey("bandcamp_custom_genres")
         val AUTO_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_update_check_enabled")
+
+        // Bluetooth stability: "off" | "normal" | "extreme"
+        val BLUETOOTH_STABILITY_MODE = stringPreferencesKey("bluetooth_stability_mode")
+        val BLUETOOTH_PCM_BUFFER_MS = androidx.datastore.preferences.core.intPreferencesKey("bluetooth_pcm_buffer_ms")
+        val BLUETOOTH_EXO_BUFFER_BOOST = booleanPreferencesKey("bluetooth_exo_buffer_boost")
+        val BLUETOOTH_PAUSE_DOWNLOADS_WHILE_PLAYING = booleanPreferencesKey("bluetooth_pause_downloads_while_playing")
+        val BLUETOOTH_DISABLE_FLOAT_OUTPUT = booleanPreferencesKey("bluetooth_disable_float_output")
     }
 }

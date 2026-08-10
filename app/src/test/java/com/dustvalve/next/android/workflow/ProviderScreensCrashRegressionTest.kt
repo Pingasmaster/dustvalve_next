@@ -49,7 +49,7 @@ class ProviderScreensCrashRegressionTest {
 
     @Test
     fun appLaunches_defaultTabsRender() {
-        waitForText(string(R.string.nav_label_local))
+        waitForText(string(R.string.nav_label_library))
         composeRule.onNodeWithText(string(R.string.nav_label_library)).assertIsDisplayed()
         composeRule.onNodeWithText(string(R.string.nav_label_settings)).assertIsDisplayed()
     }

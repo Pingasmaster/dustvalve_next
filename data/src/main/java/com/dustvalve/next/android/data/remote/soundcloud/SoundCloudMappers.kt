@@ -251,10 +251,7 @@ object SoundCloudMappers {
         else -> emptyList()
     }
 
-    fun pickBestTranscodingUrls(
-        trackElement: JsonElement,
-        progressiveOnly: Boolean = false,
-    ): List<String> {
+    fun pickBestTranscodingUrls(trackElement: JsonElement, progressiveOnly: Boolean = false): List<String> {
         val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
             ?: return emptyList()
         data class Candidate(val url: String, val progressive: Boolean, val quality: Int)
@@ -282,8 +279,7 @@ object SoundCloudMappers {
     }
 
     /** Best single URL for callers that only need one candidate. */
-    fun pickBestTranscodingUrl(trackElement: JsonElement): String? =
-        pickBestTranscodingUrls(trackElement).firstOrNull()
+    fun pickBestTranscodingUrl(trackElement: JsonElement): String? = pickBestTranscodingUrls(trackElement).firstOrNull()
 
     /**
      * True when the track lists media but every non-snipped transcoding is
@@ -295,8 +291,7 @@ object SoundCloudMappers {
     }
 
     /** True when any non-snipped encrypted/Go+ transcoding is present. */
-    fun hasEncryptedTranscodings(trackElement: JsonElement): Boolean =
-        summarizeTranscodings(trackElement)?.hasEncrypted == true
+    fun hasEncryptedTranscodings(trackElement: JsonElement): Boolean = summarizeTranscodings(trackElement)?.hasEncrypted == true
 
     /**
      * Infer [StreamPolicy] from media.transcodings without resolving URLs.
@@ -313,11 +308,7 @@ object SoundCloudMappers {
         return StreamPolicy.UNKNOWN
     }
 
-    private data class TranscodingSummary(
-        val hasProgressive: Boolean,
-        val hasHls: Boolean,
-        val hasEncrypted: Boolean,
-    )
+    private data class TranscodingSummary(val hasProgressive: Boolean, val hasHls: Boolean, val hasEncrypted: Boolean)
 
     private fun summarizeTranscodings(trackElement: JsonElement): TranscodingSummary? {
         val transcodings = trackElement.path("media")?.path("transcodings")?.arr()
@@ -337,10 +328,9 @@ object SoundCloudMappers {
         return TranscodingSummary(hasProgressive, hasHls, hasEncrypted)
     }
 
-    private fun isEncryptedProtocol(protocol: String): Boolean =
-        protocol.contains("encrypted") ||
-            protocol.startsWith("ctr-") ||
-            protocol.startsWith("cbc-")
+    private fun isEncryptedProtocol(protocol: String): Boolean = protocol.contains("encrypted") ||
+        protocol.startsWith("ctr-") ||
+        protocol.startsWith("cbc-")
 
     private fun parseShelfItem(element: JsonElement): SoundCloudShelfItem? {
         val kindRaw = element.str("kind")?.lowercase() ?: return null

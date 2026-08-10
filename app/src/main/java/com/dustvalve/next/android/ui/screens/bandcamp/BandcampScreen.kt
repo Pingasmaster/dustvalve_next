@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -89,14 +90,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import kotlin.coroutines.cancellation.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.AdaptiveTokens
 import com.dustvalve.next.android.ui.components.AppFlowRow
@@ -126,6 +126,7 @@ import com.dustvalve.next.android.util.runCatchingUi
 import com.dustvalve.next.android.util.shareUrl
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 private data class GenreCategory(val name: String, val tag: String, val color: Color)
 
@@ -1095,7 +1096,8 @@ private fun CategorySheetContent(
             val totalCount = listState.layoutInfo.totalItemsCount
             last != null && totalCount > 0 && last.index >= totalCount - 3
         }.collect { nearEnd ->
-            if (nearEnd && hasMore && !isLoadingMore && albums.isNotEmpty()) {
+            val canPaginate = hasMore && !isLoadingMore && albums.isNotEmpty()
+            if (nearEnd && canPaginate) {
                 loadMore()
             }
         }
@@ -1153,66 +1155,12 @@ private fun CategorySheetContent(
             items = listAlbums,
             key = { _, album -> album.id },
         ) { index, album ->
-            val interactionSource = remember { MutableInteractionSource() }
-            val isPressed by interactionSource.collectIsPressedAsState()
-            val pressScale by animateFloatAsState(
-                targetValue = if (isPressed) 0.97f else 1f,
-                animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
-                label = "pressScale",
+            CategoryListAlbumRow(
+                album = album,
+                index = index,
+                listSize = listAlbums.size,
+                onAlbumClick = onAlbumClick,
             )
-
-            Surface(
-                onClick = { onAlbumClick(album.url) },
-                interactionSource = interactionSource,
-                shape = segmentedItemShape(index, listAlbums.size),
-                color = Color.White.copy(alpha = 0.12f),
-                modifier = Modifier
-                    .padding(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = if (index == 0) 0.dp else 1.dp,
-                        bottom = if (index == listAlbums.lastIndex) 0.dp else 1.dp,
-                    )
-                    .animateItem(
-                        fadeInSpec = null,
-                        fadeOutSpec = null,
-                        placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
-                    )
-                    .graphicsLayer {
-                        scaleX = pressScale
-                        scaleY = pressScale
-                    },
-            ) {
-                ListItem(
-                    supportingContent = {
-                        Text(
-                            text = album.artist,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = Color.White.copy(alpha = 0.7f),
-                        )
-                    },
-                    leadingContent = {
-                        AsyncImage(
-                            model = album.artUrl,
-                            contentDescription = album.title,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(AppShapes.SearchResultAlbum),
-                            contentScale = ContentScale.Crop,
-                            error = painterResource(R.drawable.ic_album),
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                ) {
-                    Text(
-                        text = album.title,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = Color.White,
-                    )
-                }
-            }
         }
 
         if (isLoadingMore) {
@@ -1224,6 +1172,71 @@ private fun CategorySheetContent(
                         .animateItem(),
                 )
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun LazyItemScope.CategoryListAlbumRow(album: Album, index: Int, listSize: Int, onAlbumClick: (String) -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        label = "pressScale",
+    )
+
+    Surface(
+        onClick = { onAlbumClick(album.url) },
+        interactionSource = interactionSource,
+        shape = segmentedItemShape(index, listSize),
+        color = Color.White.copy(alpha = 0.12f),
+        modifier = Modifier
+            .padding(
+                start = 16.dp,
+                end = 16.dp,
+                top = if (index == 0) 0.dp else 1.dp,
+                bottom = if (index == listSize - 1) 0.dp else 1.dp,
+            )
+            .animateItem(
+                fadeInSpec = null,
+                fadeOutSpec = null,
+                placementSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+            )
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            },
+    ) {
+        ListItem(
+            supportingContent = {
+                Text(
+                    text = album.artist,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White.copy(alpha = 0.7f),
+                )
+            },
+            leadingContent = {
+                AsyncImage(
+                    model = album.artUrl,
+                    contentDescription = album.title,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(AppShapes.SearchResultAlbum),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.ic_album),
+                )
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        ) {
+            Text(
+                text = album.title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = Color.White,
+            )
         }
     }
 }
@@ -1327,11 +1340,7 @@ private fun StaggeredAnimatedItem(index: Int, itemKey: String, tracker: StaggerA
 }
 
 /** Rethrows [CancellationException]; surfaces [failedMsg] for other failures. */
-private suspend fun runCatchingPlayback(
-    snackbarHostState: SnackbarHostState,
-    failedMsg: String,
-    block: suspend () -> Unit,
-) {
+private suspend fun runCatchingPlayback(snackbarHostState: SnackbarHostState, failedMsg: String, block: suspend () -> Unit) {
     try {
         block()
     } catch (e: CancellationException) {

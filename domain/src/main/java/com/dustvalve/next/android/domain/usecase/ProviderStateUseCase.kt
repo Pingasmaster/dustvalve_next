@@ -10,25 +10,26 @@ import javax.inject.Singleton
 @Singleton
 class ProviderStateUseCase @Inject constructor(private val settingsDataStore: SettingsDataStore) {
     val activeProviders: Flow<Set<MusicProvider>> = combine(
+        settingsDataStore.localMusicEnabled,
         settingsDataStore.bandcampEnabled,
         settingsDataStore.youtubeEnabled,
         settingsDataStore.soundcloudEnabled,
-    ) { bc, yt, sc ->
+    ) { local, bc, yt, sc ->
         buildSet {
-            add(MusicProvider.LOCAL)
+            if (local) add(MusicProvider.LOCAL)
             if (bc) add(MusicProvider.BANDCAMP)
             if (yt) add(MusicProvider.YOUTUBE)
             if (sc) add(MusicProvider.SOUNDCLOUD)
         }
     }
 
-    /** Enable or disable a provider. LOCAL is always on and ignored. */
+    /** Enable or disable a provider, including LOCAL (local music source). */
     suspend fun setEnabled(provider: MusicProvider, enabled: Boolean) {
         when (provider) {
             MusicProvider.BANDCAMP -> settingsDataStore.setBandcampEnabled(enabled)
             MusicProvider.YOUTUBE -> settingsDataStore.setYoutubeEnabled(enabled)
             MusicProvider.SOUNDCLOUD -> settingsDataStore.setSoundcloudEnabled(enabled)
-            MusicProvider.LOCAL -> Unit
+            MusicProvider.LOCAL -> settingsDataStore.setLocalMusicEnabled(enabled)
         }
     }
 }

@@ -15,8 +15,7 @@ class FavoriteRepositoryImpl(private val favoriteDao: FavoriteDao) : FavoriteRep
 
     @Inject constructor(gateway: DatabaseGateway) : this(gateway.favoriteDao)
 
-    override suspend fun isFavorite(id: String, type: FavoriteType): Boolean =
-        favoriteDao.isFavorite(id, type.key)
+    override suspend fun isFavorite(id: String, type: FavoriteType): Boolean = favoriteDao.isFavorite(id, type.key)
 
     // Deliberately no distinctUntilChanged: the emission cadence feeding the
     // VMs' stateIn/collect chains is load-bearing (see FavoriteRepository KDoc).

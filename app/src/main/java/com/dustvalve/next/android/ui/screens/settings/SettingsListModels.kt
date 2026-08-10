@@ -33,6 +33,7 @@ internal data class SettingsListToggleActions(
     val onSetKeepScreenOnInApp: (Boolean) -> Unit,
     val onSetKeepScreenOnWhilePlaying: (Boolean) -> Unit,
     val onSetSearchHistoryEnabled: (Boolean) -> Unit,
+    val onBluetoothStabilityAction: (SettingsBluetoothStabilityAction) -> Unit,
 )
 
 @Immutable

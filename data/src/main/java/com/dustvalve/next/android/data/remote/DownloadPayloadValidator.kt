@@ -15,6 +15,53 @@ object DownloadPayloadValidator {
 
     class InvalidPayloadException(message: String) : IOException(message)
 
+    private const val TEXT_SNIFF_BYTES = 64
+    private const val JSON_SNIFF_BYTES = 32
+    private const val M3U_SNIFF_BYTES = 16
+    private const val WAV_HEADER_MIN_BYTES = 12
+    private const val FTYP_HEADER_MIN_BYTES = 12
+    private const val FTYP_BRAND_OFFSET = 8
+    private const val FTYP_ATOM_OFFSET = 4
+    private const val FOURCC_LENGTH = 4
+    private const val UNSIGNED_BYTE_MASK = 0xFF
+    private const val MPEG_SYNC_SECOND_MASK = 0xE0
+    private const val ASCII_TAB = 9
+    private const val ASCII_LF = 10
+    private const val ASCII_CR = 13
+    private const val ASCII_PRINTABLE_MIN = 32
+    private const val ASCII_PRINTABLE_MAX = 126
+    private const val TEXT_PAYLOAD_PRINTABLE_PERCENT = 85
+    private const val PERCENT_BASE = 100
+
+    private val WEBM_MAGIC = byteArrayOf(0x1A, 0x45, 0xDF.toByte(), 0xA3.toByte())
+    private val FTYP_ATOM = byteArrayOf(
+        'f'.code.toByte(),
+        't'.code.toByte(),
+        'y'.code.toByte(),
+        'p'.code.toByte(),
+    )
+
+    private val MIME_TO_EXTENSION = mapOf(
+        "audio/mpeg" to "mp3",
+        "audio/mp3" to "mp3",
+        "audio/x-mpeg" to "mp3",
+        "audio/flac" to "flac",
+        "audio/x-flac" to "flac",
+        "audio/ogg" to "ogg",
+        "application/ogg" to "ogg",
+        "audio/vorbis" to "ogg",
+        "audio/opus" to "webm",
+        "video/webm" to "webm",
+        "audio/webm" to "webm",
+        "audio/mp4" to "m4a",
+        "audio/aac" to "m4a",
+        "audio/x-m4a" to "m4a",
+        "video/mp4" to "m4a",
+        "audio/wav" to "wav",
+        "audio/x-wav" to "wav",
+        "audio/wave" to "wav",
+    )
+
     /**
      * Rejects Content-Types that can never be playable audio. Null / blank
      * types are allowed through so magic-byte sniffing can decide; servers
@@ -74,19 +121,11 @@ object DownloadPayloadValidator {
      */
     fun extensionForMime(contentType: String?): String? {
         val mime = contentType?.substringBefore(';')?.trim()?.lowercase().orEmpty()
-        if (mime.isEmpty() || mime == "application/octet-stream" || mime == "binary/octet-stream") {
-            return null
-        }
-        return when {
-            mime == "audio/mpeg" || mime == "audio/mp3" || mime == "audio/x-mpeg" -> "mp3"
-            mime == "audio/flac" || mime == "audio/x-flac" -> "flac"
-            mime == "audio/ogg" || mime == "application/ogg" || mime == "audio/vorbis" -> "ogg"
-            mime == "audio/opus" || mime == "video/webm" || mime == "audio/webm" -> "webm"
-            mime == "audio/mp4" || mime == "audio/aac" || mime == "audio/x-m4a" || mime == "video/mp4" -> "m4a"
-            mime == "audio/wav" || mime == "audio/x-wav" || mime == "audio/wave" -> "wav"
-            else -> null
-        }
+        if (mime.isEmpty() || isGenericOctetStream(mime)) return null
+        return MIME_TO_EXTENSION[mime]
     }
+
+    private fun isGenericOctetStream(mime: String): Boolean = mime == "application/octet-stream" || mime == "binary/octet-stream"
 
     /**
      * Sniffs well-known audio container magic. Also detects HTML / JSON / XML /
@@ -100,40 +139,62 @@ object DownloadPayloadValidator {
      * @throws InvalidPayloadException when the payload is clearly not audio.
      */
     fun sniffExtensionOrReject(header: ByteArray, trackId: String): String? {
+        rejectIfEmpty(header, trackId)
+        rejectIfNonAudioDocument(header, trackId)
+        val ext = sniffKnownExtension(header)
+        if (ext != null) return ext
+        rejectIfTextPayload(header, trackId)
+        return null
+    }
+
+    private fun rejectIfEmpty(header: ByteArray, trackId: String) {
         if (header.isEmpty()) {
             throw InvalidPayloadException("Empty payload for track $trackId")
         }
-        if (looksLikeHtml(header) ||
-            looksLikeXml(header) ||
-            looksLikeJson(header) ||
-            looksLikeM3u(header)
-        ) {
+    }
+
+    private fun rejectIfNonAudioDocument(header: ByteArray, trackId: String) {
+        if (looksLikeNonAudioDocument(header)) {
             throw InvalidPayloadException(
                 "Downloaded payload is not audio (HTML/XML/JSON/playlist) for track $trackId",
             )
         }
-        val ext = when {
-            startsWith(header, "ID3") -> "mp3"
-            header.size >= 2 && (header[0] == 0xFF.toByte() && (header[1].toInt() and 0xE0) == 0xE0) -> "mp3"
-            startsWith(header, "fLaC") -> "flac"
-            startsWith(header, "OggS") -> "ogg"
-            startsWith(header, "RIFF") && header.size >= 12 &&
-                String(header, 8, 4, Charsets.US_ASCII) == "WAVE" -> "wav"
-            hasFtypBrand(header, "M4A", "mp4", "isom", "iso2", "MSDH") -> "m4a"
-            startsWith(header, byteArrayOf(0x1A, 0x45, 0xDF.toByte(), 0xA3.toByte())) -> "webm"
-            else -> null
-        }
-        if (ext != null) return ext
+    }
+
+    private fun rejectIfTextPayload(header: ByteArray, trackId: String) {
         if (looksLikeTextPayload(header)) {
             throw InvalidPayloadException(
                 "Downloaded payload is not audio (unknown text/error magic) for track $trackId",
             )
         }
-        return null
     }
 
+    private fun looksLikeNonAudioDocument(header: ByteArray): Boolean = looksLikeHtml(header) ||
+        looksLikeXml(header) ||
+        looksLikeJson(header) ||
+        looksLikeM3u(header)
+
+    private fun sniffKnownExtension(header: ByteArray): String? = when {
+        startsWith(header, "ID3") -> "mp3"
+        isMpegFrameSync(header) -> "mp3"
+        startsWith(header, "fLaC") -> "flac"
+        startsWith(header, "OggS") -> "ogg"
+        isWavHeader(header) -> "wav"
+        hasFtypBrand(header, "M4A", "mp4", "isom", "iso2", "MSDH") -> "m4a"
+        startsWith(header, WEBM_MAGIC) -> "webm"
+        else -> null
+    }
+
+    private fun isMpegFrameSync(header: ByteArray): Boolean = header.size >= 2 &&
+        header[0] == UNSIGNED_BYTE_MASK.toByte() &&
+        (header[1].toInt() and MPEG_SYNC_SECOND_MASK) == MPEG_SYNC_SECOND_MASK
+
+    private fun isWavHeader(header: ByteArray): Boolean = startsWith(header, "RIFF") &&
+        header.size >= WAV_HEADER_MIN_BYTES &&
+        String(header, FTYP_BRAND_OFFSET, FOURCC_LENGTH, Charsets.US_ASCII) == "WAVE"
+
     private fun looksLikeHtml(header: ByteArray): Boolean {
-        val s = asciiPrefix(header, 64).trimStart().lowercase()
+        val s = asciiPrefix(header, TEXT_SNIFF_BYTES).trimStart().lowercase()
         return s.startsWith("<!doctype html") ||
             s.startsWith("<html") ||
             s.startsWith("<head") ||
@@ -141,7 +202,7 @@ object DownloadPayloadValidator {
     }
 
     private fun looksLikeXml(header: ByteArray): Boolean {
-        val s = asciiPrefix(header, 64).trimStart().lowercase()
+        val s = asciiPrefix(header, TEXT_SNIFF_BYTES).trimStart().lowercase()
         return s.startsWith("<?xml") ||
             s.startsWith("<error") ||
             s.startsWith("<fault") ||
@@ -151,12 +212,12 @@ object DownloadPayloadValidator {
     }
 
     private fun looksLikeJson(header: ByteArray): Boolean {
-        val s = asciiPrefix(header, 32).trimStart()
+        val s = asciiPrefix(header, JSON_SNIFF_BYTES).trimStart()
         return s.startsWith("{") || s.startsWith("[")
     }
 
     private fun looksLikeM3u(header: ByteArray): Boolean {
-        val s = asciiPrefix(header, 16).trimStart().uppercase()
+        val s = asciiPrefix(header, M3U_SNIFF_BYTES).trimStart().uppercase()
         return s.startsWith("#EXTM3U") || s.startsWith("#EXT-X-")
     }
 
@@ -165,15 +226,19 @@ object DownloadPayloadValidator {
      * an error document or mislabeled text response, not a media container.
      */
     private fun looksLikeTextPayload(header: ByteArray): Boolean {
-        val n = header.size.coerceAtMost(64)
+        val n = header.size.coerceAtMost(TEXT_SNIFF_BYTES)
         if (n == 0) return true
         var printable = 0
         for (i in 0 until n) {
-            val b = header[i].toInt() and 0xFF
-            if (b == 9 || b == 10 || b == 13 || b in 32..126) printable++
+            if (isPrintableAsciiByte(header[i].toInt() and UNSIGNED_BYTE_MASK)) printable++
         }
-        return printable * 100 / n >= 85
+        return printable * PERCENT_BASE / n >= TEXT_PAYLOAD_PRINTABLE_PERCENT
     }
+
+    private fun isPrintableAsciiByte(b: Int): Boolean = b == ASCII_TAB ||
+        b == ASCII_LF ||
+        b == ASCII_CR ||
+        b in ASCII_PRINTABLE_MIN..ASCII_PRINTABLE_MAX
 
     private fun startsWith(header: ByteArray, ascii: String): Boolean {
         if (header.size < ascii.length) return false
@@ -193,16 +258,18 @@ object DownloadPayloadValidator {
 
     private fun hasFtypBrand(header: ByteArray, vararg brands: String): Boolean {
         // ISO BMFF: size(4) + 'ftyp'(4) + major_brand(4)
-        if (header.size < 12) return false
-        if (header[4] != 'f'.code.toByte() ||
-            header[5] != 't'.code.toByte() ||
-            header[6] != 'y'.code.toByte() ||
-            header[7] != 'p'.code.toByte()
-        ) {
-            return false
-        }
-        val brand = String(header, 8, 4, Charsets.US_ASCII)
+        if (header.size < FTYP_HEADER_MIN_BYTES) return false
+        if (!startsWithAt(header, FTYP_ATOM_OFFSET, FTYP_ATOM)) return false
+        val brand = String(header, FTYP_BRAND_OFFSET, FOURCC_LENGTH, Charsets.US_ASCII)
         return brands.any { brand.startsWith(it, ignoreCase = true) || brand.equals(it, ignoreCase = true) }
+    }
+
+    private fun startsWithAt(header: ByteArray, offset: Int, magic: ByteArray): Boolean {
+        if (header.size < offset + magic.size) return false
+        for (i in magic.indices) {
+            if (header[offset + i] != magic[i]) return false
+        }
+        return true
     }
 
     private fun asciiPrefix(header: ByteArray, max: Int): String {

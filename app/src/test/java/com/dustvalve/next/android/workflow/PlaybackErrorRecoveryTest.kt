@@ -10,6 +10,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.workflow.support.FixtureTracks
+import com.dustvalve.next.android.workflow.support.noopAudioPowerPolicy
 import com.google.common.truth.Truth.assertThat
 import org.junit.After
 import org.junit.Before
@@ -39,7 +40,12 @@ class PlaybackErrorRecoveryTest {
             .setClock(FakeClock(true))
             .build()
         queueManager = QueueManager()
-        manager = PlaybackManager(player, queueManager, ApplicationProvider.getApplicationContext())
+        manager = PlaybackManager(
+            player,
+            queueManager,
+            noopAudioPowerPolicy(),
+            ApplicationProvider.getApplicationContext(),
+        )
     }
 
     @After fun tearDown() {

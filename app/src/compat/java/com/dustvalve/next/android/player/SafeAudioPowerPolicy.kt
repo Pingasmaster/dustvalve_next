@@ -13,7 +13,8 @@ import javax.inject.Singleton
  * historical source of silent on-device playback failure on buggy OEM HALs
  * (no audio, position frozen at 0:00, no PlaybackException). The v0.5.x
  * "stuck at 0:00" reports on legacy devices traced to offload; future keeps
- * offload via [OffloadAudioPowerPolicy], compat does not.
+ * offload via [OffloadAudioPowerPolicy] for speaker/wired only (Bluetooth
+ * A2DP/LDAC forces offload off there), compat does not enable it at all.
  */
 @OptIn(UnstableApi::class)
 @Singleton

@@ -69,8 +69,7 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
             ?: throw IOException("SoundCloud track not found for $urlOrId")
     }
 
-    override suspend fun getStreamUrl(track: Track): String =
-        resolvePlayableStream(track).url
+    override suspend fun getStreamUrl(track: Track): String = resolvePlayableStream(track).url
 
     override suspend fun resolvePlayableStream(track: Track): SoundCloudResolvedStream {
         val resolved = resolveStream(track, progressiveOnly = false)
@@ -91,22 +90,11 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
     private data class ResolvedStream(val url: String, val streamPolicy: StreamPolicy)
 
     private suspend fun resolveStream(track: Track, progressiveOnly: Boolean): ResolvedStream {
-        if (track.streamPolicy == StreamPolicy.BLOCKED) {
-            throw IOException(GO_PLUS_MESSAGE)
-        }
-        if (progressiveOnly && track.streamPolicy == StreamPolicy.STREAM_ONLY) {
-            throw IOException(HLS_ONLY_MESSAGE)
-        }
-        val numeric = numericIdFromTrackId(track.id)
-            ?: throw IOException("Invalid SoundCloud track id: ${track.id}")
+        rejectUnplayablePolicy(track.streamPolicy, progressiveOnly)
+        val numeric = requireNumericTrackId(track.id)
         val trackJson = api.track(numeric)
         val policy = SoundCloudMappers.inferStreamPolicy(trackJson)
-        if (policy == StreamPolicy.BLOCKED) {
-            throw IOException(GO_PLUS_MESSAGE)
-        }
-        if (progressiveOnly && policy == StreamPolicy.STREAM_ONLY) {
-            throw IOException(HLS_ONLY_MESSAGE)
-        }
+        rejectUnplayablePolicy(policy, progressiveOnly)
         val auth = trackJson.str("track_authorization")
         val candidates = SoundCloudMappers.pickBestTranscodingUrls(
             trackJson,
@@ -115,6 +103,29 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
         if (candidates.isEmpty()) {
             throw IOException(unplayableMessage(trackJson, track.id, progressiveOnly, policy))
         }
+        return resolveFirstCandidate(candidates, auth, policy, trackJson, track.id, progressiveOnly)
+    }
+
+    private fun rejectUnplayablePolicy(policy: StreamPolicy, progressiveOnly: Boolean) {
+        if (policy == StreamPolicy.BLOCKED) {
+            throw IOException(GO_PLUS_MESSAGE)
+        }
+        if (progressiveOnly && policy == StreamPolicy.STREAM_ONLY) {
+            throw IOException(HLS_ONLY_MESSAGE)
+        }
+    }
+
+    private fun requireNumericTrackId(trackId: String): String = numericIdFromTrackId(trackId)
+        ?: throw IOException("Invalid SoundCloud track id: $trackId")
+
+    private suspend fun resolveFirstCandidate(
+        candidates: List<String>,
+        auth: String?,
+        policy: StreamPolicy,
+        trackJson: JsonElement,
+        trackId: String,
+        progressiveOnly: Boolean,
+    ): ResolvedStream {
         var lastError: IOException? = null
         for (url in candidates) {
             try {
@@ -131,7 +142,7 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
             throw IOException(GO_PLUS_MESSAGE)
         }
         throw lastError
-            ?: IOException(unplayableMessage(trackJson, track.id, progressiveOnly, policy))
+            ?: IOException(unplayableMessage(trackJson, trackId, progressiveOnly, policy))
     }
 
     override suspend fun getArtist(url: String): Artist {
@@ -214,12 +225,7 @@ class SoundCloudRepositoryImpl @Inject constructor(private val api: SoundCloudAp
             .replace("https://www.soundcloud.com/", "https://soundcloud.com/")
     }
 
-    private fun unplayableMessage(
-        trackJson: JsonElement,
-        trackId: String,
-        progressiveOnly: Boolean,
-        policy: StreamPolicy,
-    ): String {
+    private fun unplayableMessage(trackJson: JsonElement, trackId: String, progressiveOnly: Boolean, policy: StreamPolicy): String {
         val encryptedOnly = SoundCloudMappers.hasOnlyEncryptedTranscodings(trackJson)
         return when {
             encryptedOnly || policy == StreamPolicy.BLOCKED -> GO_PLUS_MESSAGE

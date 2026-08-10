@@ -4,12 +4,14 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
 import com.dustvalve.next.android.ui.TestTags
 
 /** Shared drive-the-app helpers for smoke + E2E suites. */
@@ -143,21 +145,35 @@ object Flows {
     }
 
     /**
-     * Drives the REAL local-music enable flow: taps the Local tab's
-     * "Enable local music" CTA (permission is pre-granted by the test rule),
-     * which runs the app's own MediaStore scan - the only thing that pulls
-     * the seeded tones into the DB. Merely setting the DataStore flag skips
-     * the scan and leaves the library empty. No-op when the CTA is absent
-     * (already enabled and scanned).
+     * Drives the REAL local-music enable + MediaStore scan. The Local tab is
+     * hidden while the source is off, so enable via Settings (permission is
+     * pre-granted). If the Local tab is already visible, use its in-tab CTA.
+     * Merely setting the DataStore flag skips the scan and leaves the library
+     * empty.
      */
     fun AndroidComposeTestRule<*, *>.enableLocalMusicViaCta(enableLabel: String) {
+        val localTabVisible = onAllNodesWithTag(TestTags.bottomNavItem("local"))
+            .fetchSemanticsNodes()
+            .isNotEmpty()
+        if (localTabVisible) {
+            clickTab("local")
+            waitForIdle()
+            val cta = onAllNodesWithText(enableLabel).fetchSemanticsNodes()
+            if (cta.isNotEmpty()) {
+                onAllNodesWithText(enableLabel)[0].performClick()
+                waitForIdle()
+            }
+            return
+        }
+        clickTab("settings")
+        waitForTag(TestTags.SETTINGS_LIST)
+        onNodeWithTag(TestTags.SETTINGS_LIST)
+            .performScrollToNode(hasTestTag(TestTags.settingsSwitch("local")))
+        onNodeWithTag(TestTags.settingsSwitch("local")).performClick()
+        waitForIdle()
+        waitForTag(TestTags.bottomNavItem("local"), timeoutMs = 30_000)
         clickTab("local")
         waitForIdle()
-        val cta = onAllNodesWithText(enableLabel).fetchSemanticsNodes()
-        if (cta.isNotEmpty()) {
-            onAllNodesWithText(enableLabel)[0].performClick()
-            waitForIdle()
-        }
     }
 
     /**

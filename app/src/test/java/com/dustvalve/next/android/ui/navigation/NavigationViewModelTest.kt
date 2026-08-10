@@ -118,7 +118,7 @@ class NavigationViewModelTest {
             awaitItem()
             cancelAndConsumeRemainingEvents()
         }
-        assertThat(vm.backStack.value).containsExactly(NavDestination.LocalHome)
+        assertThat(vm.backStack.value).containsExactly(NavDestination.Library)
     }
 
     @Test fun `unsupported link emits event`() = runTest(testDispatcher) {
@@ -198,7 +198,7 @@ class NavigationViewModelTest {
         val stack = vm.backStack.value
         assertThat(stack.size).isEqualTo(20)
         // Index 0 must remain the tab's home destination, never a detail page.
-        assertThat(stack.first()).isEqualTo(NavDestination.LocalHome)
+        assertThat(stack.first()).isEqualTo(NavDestination.Library)
         assertThat(stack.last()).isEqualTo(NavDestination.AlbumDetail("https://example.com/album/a25"))
     }
 

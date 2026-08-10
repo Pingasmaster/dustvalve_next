@@ -93,7 +93,6 @@
     <string name="common_cd_now_playing">再生中</string>
     <string name="common_cd_create_playlist">プレイリストを作成</string>
     <string name="common_cd_more_options">その他のオプション</string>
-    <string name="common_cd_selected">選択済み</string>
     <string name="common_cd_reorder">並べ替え</string>
     <string name="common_cd_delete">削除</string>
     <string name="common_cd_downloaded">ダウンロード済み</string>
@@ -118,6 +117,7 @@
     <string name="player_cd_volume">音量</string>
     <string name="player_cd_local_file">ローカルファイル</string>
     <string name="player_cd_delete_download">ダウンロードを削除</string>
+    <string name="player_cd_download_unavailable">ダウンロード不可</string>
     <string name="player_cd_download_track">トラックをダウンロード</string>
     <string name="player_cd_remove_from_favorites">お気に入りから削除</string>
     <string name="player_cd_add_to_favorites">お気に入りに追加</string>
@@ -161,6 +161,7 @@
     <string name="settings_section_sources">ソース</string>
     <string name="settings_section_storage">ストレージ</string>
     <string name="settings_section_audio_quality">音質</string>
+    <string name="settings_section_bluetooth_stability">Bluetooth安定性</string>
     <string name="settings_section_appearance">外観</string>
     <string name="settings_section_player">プレーヤー</string>
     <string name="settings_section_search">検索</string>
@@ -171,8 +172,6 @@
     <string name="settings_use_individual_folders_desc">すべてのオーディオをスキャンする代わりに特定のフォルダを選択</string>
     <string name="settings_remove_downloads_title">すべてのダウンロードを削除</string>
     <string name="settings_remove_downloads_text">ダウンロードプール全体（明示的なダウンロード、自動キャッシュされたオーディオ、アルバムカバー、アーティスト画像）が消去されます。</string>
-    <string name="settings_download_format">ダウンロード形式</string>
-    <string name="settings_download_format_desc">ダウンロードする<xliff:g id="brand">Bandcamp</xliff:g>購入品の形式</string>
     <string name="settings_add_folder">フォルダを追加</string>
     <string name="settings_rescan">再スキャン</string>
     <string name="settings_cd_remove_folder">フォルダを削除</string>
@@ -183,12 +182,32 @@
     <string name="settings_remove_all_downloads">すべてのダウンロードを削除</string>
     <string name="settings_auto_download_future">今後のコンテンツを自動ダウンロード</string>
     <string name="settings_auto_download_future_desc">ダウンロード済みのプレイリスト、アルバム、アーティストの新しいコンテンツを自動的にダウンロード</string>
-    <string name="settings_mp3_on_metered">従量制接続では<xliff:g id="format">MP3</xliff:g>のみ</string>
-    <string name="settings_mp3_on_metered_desc">モバイルデータではロスレスの代わりに<xliff:g id="format">MP3</xliff:g>をダウンロード</string>
     <string name="settings_progressive_download">プログレッシブダウンロード</string>
     <string name="settings_progressive_download_desc">プレビュー品質でストリーミングし、シームレスにフル品質へ切り替え</string>
     <string name="settings_seamless_upgrade">シームレスな品質アップグレード</string>
     <string name="settings_seamless_upgrade_desc">まずストリーミングし、バックグラウンドでダウンロードしてから差し替えます。差し替えの瞬間に一度だけ短い途切れが生じることがあります。</string>
+    <string name="settings_bt_stability">Bluetooth安定モード</string>
+    <string name="settings_bt_stability_desc">Wi‑Fiと高音質コーデックが同じ無線を奪い合うときのBluetooth音声の途切れを減らします</string>
+    <string name="settings_bt_stability_enable_title">Bluetooth安定モードを有効にしますか？</string>
+    <string name="settings_bt_stability_enable_text">安定モードは再生バッファだけを調整し、音質は下げません。\n\n極度の安定モードは音質を下げることがあります。音質を下げるオプションはオフのままで、有効にするたびに確認があります。</string>
+    <string name="settings_bt_stability_enable_normal">安定モード</string>
+    <string name="settings_bt_stability_enable_extreme">極度の安定</string>
+    <string name="settings_bt_stability_enable_anyway">それでも有効にする</string>
+    <string name="settings_bt_stability_profile">プロファイル</string>
+    <string name="settings_bt_stability_profile_normal">安定</string>
+    <string name="settings_bt_stability_profile_extreme">極度</string>
+    <string name="settings_bt_stability_applies_hint">PCMクッションと大きめのストリームバッファはアプリ再起動後に適用されます。再生中のダウンロード停止はすぐに適用されます。</string>
+    <string name="settings_bt_stability_pcm">PCMクッション: <xliff:g id="ms" example="3000">%1$d</xliff:g> ms</string>
+    <string name="settings_bt_stability_pcm_desc">LDACなどのBluetoothコーデック向けのAudioTrack余裕です。大きいほど途切れは減り、レイテンシは少し増えます。</string>
+    <string name="settings_bt_stability_exo_boost">大きめのストリームバッファ</string>
+    <string name="settings_bt_stability_exo_boost_desc">圧縮済み音声をより多く保持し、短い無線競合で再生が止まりにくくします</string>
+    <string name="settings_bt_stability_pause_downloads">再生中はダウンロードを停止</string>
+    <string name="settings_bt_stability_pause_downloads_desc">プログレッシブ／バックグラウンドダウンロードが同じ無線でBluetoothと競合しないようにします</string>
+    <string name="settings_bt_stability_extreme_options">音質とのトレードオフ</string>
+    <string name="settings_bt_stability_disable_float">Hi‑Fiフロート出力を無効化</string>
+    <string name="settings_bt_stability_disable_float_desc">フロートの代わりに16ビットPCMを使います。弱い端末ではCPU負荷を下げられますが、忠実度が下がることがあります</string>
+    <string name="settings_bt_stability_float_warning_title">音質を下げますか？</string>
+    <string name="settings_bt_stability_float_warning_text">Hi‑Fiフロート出力を無効にすると弱い端末でBluetoothが安定しやすくなりますが、高解像度音声の忠実度が下がることがあります。</string>
     <string name="settings_theme">テーマ</string>
     <string name="settings_theme_light">ライト</string>
     <string name="settings_theme_dark">ダーク</string>
@@ -207,6 +226,8 @@
     <string name="settings_auto_download_favorites_desc">お気に入りに追加したすべてのトラックもバックグラウンドでダウンロード</string>
     <string name="settings_download_notifications">ダウンロード通知</string>
     <string name="settings_download_notifications_desc">曲のダウンロード中に進行状況をリアルタイム通知で表示</string>
+    <string name="settings_notifications_denied_hint">このアプリの通知はブロックされています。ダウンロードと再生の通知を表示するには、システム設定で有効にしてください。</string>
+    <string name="settings_notifications_open_settings">通知設定を開く</string>
     <string name="settings_live_updates_title">ライブアップデートがオフです</string>
     <string name="settings_live_updates_desc">通知設定でライブアップデートを許可すると、ダウンロードの進行状況をステータスバーのチップで確認できます</string>
     <string name="settings_live_updates_action">設定を開く</string>
@@ -248,6 +269,7 @@
     <string name="settings_storage_limit_unlimited">ストレージ上限：無制限</string>
     <string name="settings_storage_limit_mb">ストレージ上限：<xliff:g id="size" example="500">%1$d</xliff:g> MB</string>
     <string name="settings_storage_limit_gb">ストレージ上限：<xliff:g id="size" example="2">%1$d</xliff:g> GB</string>
+    <string name="settings_storage_limit_desc">自動キャッシュの音声、カバー、ストリームキャッシュに適用されます。明示的なダウンロードはこの上限では削除されません。また、端末の空き容量がほとんどない場合はダウンロードが開始されません。</string>
     <string name="local_search_placeholder">ローカルの音楽を検索…</string>
     <string name="local_scan_title">音楽をスキャン</string>
     <string name="local_scan_subtitle">デバイスに保存された音楽を見つけて再生</string>
@@ -310,11 +332,9 @@
     <string name="soundcloud_search_hint">SoundCloudを検索</string>
     <string name="soundcloud_home_trending">トレンド</string>
     <string name="soundcloud_home_discover">発見</string>
-    <string name="soundcloud_home_genres">ジャンル</string>
     <string name="soundcloud_home_empty">まだ何もありません</string>
     <string name="soundcloud_home_retry">再試行</string>
     <string name="soundcloud_error_load">SoundCloudを読み込めませんでした</string>
-
     <string name="ytm_section_trending">急上昇</string>
     <string name="ytm_section_discover">見つける：<xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
     <string name="ytm_section_recommended">あなたへのおすすめ</string>

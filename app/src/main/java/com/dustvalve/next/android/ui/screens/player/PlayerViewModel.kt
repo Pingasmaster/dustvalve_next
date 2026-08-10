@@ -66,6 +66,11 @@ class PlayerViewModel @Inject constructor(core: PlayerCoreDeps, libraryDeps: Pla
         core = core,
     )
 
+    internal val transport = PlayerTransportCoordinator(
+        playbackManager = playbackManager,
+        queueManager = queueManager,
+    )
+
     internal val library = PlayerLibraryCoordinator(
         scope = viewModelScope,
         extraState = _extraState,

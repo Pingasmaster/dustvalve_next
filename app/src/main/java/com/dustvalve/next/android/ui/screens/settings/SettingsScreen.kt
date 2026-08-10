@@ -134,6 +134,9 @@ fun SettingsScreen(adaptiveInfo: AdaptiveLayoutInfo, modifier: Modifier = Modifi
                         onSetKeepScreenOnInApp = viewModel.appearance::setKeepScreenOnInApp,
                         onSetKeepScreenOnWhilePlaying = viewModel.appearance::setKeepScreenOnWhilePlaying,
                         onSetSearchHistoryEnabled = viewModel.storageSources::setSearchHistoryEnabled,
+                        onBluetoothStabilityAction = {
+                            handleSettingsBluetoothStabilityAction(viewModel, it)
+                        },
                     ),
                     misc = SettingsListMiscActions(
                         onSetSearchHistorySource = viewModel.storageSources::setSearchHistorySource,
@@ -227,6 +230,7 @@ private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActi
     val onSetKeepScreenOnInApp = actions.toggles.onSetKeepScreenOnInApp
     val onSetKeepScreenOnWhilePlaying = actions.toggles.onSetKeepScreenOnWhilePlaying
     val onSetSearchHistoryEnabled = actions.toggles.onSetSearchHistoryEnabled
+    val onBluetoothStabilityAction = actions.toggles.onBluetoothStabilityAction
     val onSetSearchHistorySource = actions.misc.onSetSearchHistorySource
     val onClearAllSearchHistory = actions.misc.onClearAllSearchHistory
     val onCheckForAppUpdate = actions.misc.onCheckForAppUpdate
@@ -268,6 +272,12 @@ private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActi
                 state = state,
                 onSetProgressiveDownload = onSetProgressiveDownload,
                 onSetSeamlessQualityUpgrade = onSetSeamlessQualityUpgrade,
+            )
+        }
+        item {
+            SettingsBluetoothStabilitySection(
+                state = state,
+                onAction = onBluetoothStabilityAction,
             )
         }
         item {

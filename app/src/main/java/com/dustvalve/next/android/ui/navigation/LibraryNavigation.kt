@@ -7,8 +7,10 @@ package com.dustvalve.next.android.ui.navigation
  */
 internal fun sourceIdFromLibraryUrl(url: String): String = when {
     url.contains("soundcloud.com", ignoreCase = true) -> "soundcloud"
+
     url.contains("youtube.com", ignoreCase = true) ||
         url.contains("youtu.be", ignoreCase = true) -> "youtube"
+
     else -> "bandcamp"
 }
 
@@ -24,12 +26,10 @@ internal fun libraryAlbumDestination(url: String): NavDestination {
 }
 
 /** Album/set tap from an artist detail screen, keyed by that artist's source. */
-internal fun artistAlbumDestination(url: String, artistSourceId: String): NavDestination =
-    when (artistSourceId) {
-        "youtube", "soundcloud" -> NavDestination.CollectionDetail(url = url, sourceId = artistSourceId)
-        else -> NavDestination.AlbumDetail(url)
-    }
+internal fun artistAlbumDestination(url: String, artistSourceId: String): NavDestination = when (artistSourceId) {
+    "youtube", "soundcloud" -> NavDestination.CollectionDetail(url = url, sourceId = artistSourceId)
+    else -> NavDestination.AlbumDetail(url)
+}
 
 /** SoundCloud playlist/album permalinks include `/sets/`; track permalinks do not. */
-internal fun isSoundCloudCollectionUrl(url: String): Boolean =
-    url.contains("soundcloud.com", ignoreCase = true) && url.contains("/sets/")
+internal fun isSoundCloudCollectionUrl(url: String): Boolean = url.contains("soundcloud.com", ignoreCase = true) && url.contains("/sets/")

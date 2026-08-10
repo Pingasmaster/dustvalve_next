@@ -495,11 +495,9 @@ class AppUpdateServiceTest {
         // signing-match tests opt in via [requireSigning] + digest fakes.
         override fun requireSigningMatch(): Boolean = requireSigning
 
-        override fun installedSigningCertSha256Digests(): Set<String> =
-            installedDigests ?: super.installedSigningCertSha256Digests()
+        override fun installedSigningCertSha256Digests(): Set<String> = installedDigests ?: super.installedSigningCertSha256Digests()
 
-        override fun apkSigningCertSha256Digests(apk: File): Set<String> =
-            apkDigests ?: super.apkSigningCertSha256Digests(apk)
+        override fun apkSigningCertSha256Digests(apk: File): Set<String> = apkDigests ?: super.apkSigningCertSha256Digests(apk)
     }
 
     private fun release(

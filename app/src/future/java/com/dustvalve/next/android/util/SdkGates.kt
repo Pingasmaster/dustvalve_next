@@ -10,6 +10,9 @@ import androidx.annotation.ChecksSdkIntAtLeast
  * Keep the [ChecksSdkIntAtLeast] mirrors so NewApi still understands
  * version-gated call sites shared with the compat flavor.
  */
+@ChecksSdkIntAtLeast(api = Build.VERSION_CODES.P)
+fun isAtLeastP(): Boolean = true
+
 @ChecksSdkIntAtLeast(api = Build.VERSION_CODES.Q)
 fun isAtLeastQ(): Boolean = true
 

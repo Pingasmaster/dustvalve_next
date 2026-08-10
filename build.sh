@@ -184,20 +184,29 @@ acquire_lock() {
     fi
 }
 
+
 GMD_GPU=(-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect)
+
+# Route every Gradle invocation through a noise filter so the build transcript
+# stays free of known-non-actionable toolchain WARNING / tip / report-link lines.
+# Script form (not a shell function) so `timeout` can exec it.
+gradle() {
+    ./scripts/run_gradle.sh "$@"
+}
+
 
 # Device lanes used by the default release path and by the standalone --smoke /
 # --e2e / --smoke-shipped modes. Kept as functions so release and opt-in share
 # one assertion floor.
 run_smoke_tests() {
-    ./gradlew :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
     # Process-level ceiling: a Compose idle deadlock must not wedge ./build.sh
     # for tens of minutes (override with APP_ANDROID_TEST_TIMEOUT_SEC).
     local app_timeout_sec="${APP_ANDROID_TEST_TIMEOUT_SEC:-600}"
     # Use `|| { rc=$?; ... }`, not `if ! cmd; then rc=$?`: the successful if
     # condition resets $? to 0 and silently green-lights GMD failures.
     timeout --foreground "${app_timeout_sec}s" \
-        ./gradlew :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
+        ./scripts/run_gradle.sh :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
             -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest \
         || {
             local rc=$?
@@ -211,10 +220,10 @@ run_smoke_tests() {
 }
 
 run_e2e_tests() {
-    ./gradlew :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
     local app_timeout_sec="${APP_ANDROID_TEST_TIMEOUT_SEC:-900}"
     timeout --foreground "${app_timeout_sec}s" \
-        ./gradlew :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
+        ./scripts/run_gradle.sh :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
             -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.dustvalve.next.android.testing.LiveNetwork \
         || {
             local rc=$?
@@ -229,12 +238,12 @@ run_e2e_tests() {
 }
 
 run_shipped_smoke_tests() {
-    ./gradlew :shippedsmoke:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    gradle :shippedsmoke:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
     # Hard ceiling on the instrumentation run so a residual UiAutomator hang
     # still fails the gate in minutes (override with SHIPPED_SMOKE_TIMEOUT_SEC).
     local smoke_timeout_sec="${SHIPPED_SMOKE_TIMEOUT_SEC:-600}"
     timeout --foreground "${smoke_timeout_sec}s" \
-        ./gradlew :shippedsmoke:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
+        ./scripts/run_gradle.sh :shippedsmoke:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
         || {
             local rc=$?
             if [[ "$rc" -eq 124 ]]; then
@@ -259,18 +268,26 @@ regenerate_baseline_profiles() {
     # Retry: GMD LMK can kill the app mid-flush ("never flushed profiles").
     local attempt=1
     local max_attempts=3
-    ./gradlew :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
+    gradle :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
     while true; do
-        if ./gradlew :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
+        local attempt_log
+        attempt_log="$(mktemp)"
+        if gradle :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
             -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile \
+            >"$attempt_log" 2>&1 \
             && ./scripts/assert_tests_ran.sh 1 baselineprofile; then
+            cat "$attempt_log"
+            rm -f "$attempt_log"
             break
         fi
         if [[ "$attempt" -ge "$max_attempts" ]]; then
+            cat "$attempt_log" >&2 || true
+            rm -f "$attempt_log"
             echo "ERROR: baseline profile generation failed after ${max_attempts} attempts." >&2
             return 1
         fi
-        echo "WARN: baseline profile attempt ${attempt}/${max_attempts} failed; retrying..." >&2
+        rm -f "$attempt_log"
+        echo "Baseline profile attempt ${attempt}/${max_attempts} failed; retrying..." >&2
         attempt=$((attempt + 1))
         sleep 5
     done
@@ -316,7 +333,7 @@ fi
 
 if [[ "$DO_CLEAN_ONLY" -eq 1 ]]; then
     acquire_lock
-    ./gradlew clean
+    gradle clean
     rm -f "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT" "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE"
     rm -f "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
     echo "Clean complete."
@@ -325,21 +342,21 @@ fi
 
 if [[ "$DO_FORMAT" -eq 1 ]]; then
     acquire_lock
-    ./gradlew ktlintFormat
+    gradle ktlintFormat
     echo "ktlintFormat complete. Re-run ./build.sh without --format to verify."
     exit 0
 fi
 
 if [[ "$DO_WORKFLOW_TESTS" -eq 1 ]]; then
     acquire_lock
-    ./gradlew :app:testFutureDebugUnitTest --tests 'com.dustvalve.next.android.workflow.*'
+    gradle :app:testFutureDebugUnitTest --tests 'com.dustvalve.next.android.workflow.*'
     echo "Workflow tests complete."
     exit 0
 fi
 
 if [[ "$DO_LIVE_NET" -eq 1 ]]; then
     acquire_lock
-    DUSTVALVE_LIVE_NET=1 ./gradlew :app:testFutureDebugUnitTest --tests '*Live*'
+    DUSTVALVE_LIVE_NET=1 gradle :app:testFutureDebugUnitTest --tests '*Live*'
     echo "Live-network JVM smokes complete."
     exit 0
 fi
@@ -353,8 +370,8 @@ fi
 
 if [[ "$DO_SMOKE_RELEASE" -eq 1 ]]; then
     acquire_lock
-    ./gradlew :app:pixel7aApi37Setup -PtestReleaseBuild "${GMD_GPU[@]}"
-    ./gradlew :app:pixel7aApi37FutureReleaseAndroidTest -PtestReleaseBuild "${GMD_GPU[@]}"
+    gradle :app:pixel7aApi37Setup -PtestReleaseBuild "${GMD_GPU[@]}"
+    gradle :app:pixel7aApi37FutureReleaseAndroidTest -PtestReleaseBuild "${GMD_GPU[@]}"
     ./scripts/assert_tests_ran.sh 1 app
     echo "Release smoke suite complete."
     exit 0
@@ -377,8 +394,8 @@ fi
 if [[ "$DO_E2E_LIVE" -eq 1 ]]; then
     acquire_lock
     echo "WARNING: this suite hits the real Bandcamp and YouTube services." >&2
-    ./gradlew :app:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
+    gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}"
+    gradle :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
     ./scripts/assert_tests_ran.sh 1 app
     echo "Live E2E suite complete."
@@ -387,8 +404,8 @@ fi
 
 if [[ "$DO_MACROBENCHMARK" -eq 1 ]]; then
     acquire_lock
-    ./gradlew :macrobenchmark:pixel7aApi37Setup "${GMD_GPU[@]}"
-    ./gradlew :macrobenchmark:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
+    gradle :macrobenchmark:pixel7aApi37Setup "${GMD_GPU[@]}"
+    gradle :macrobenchmark:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
     ./scripts/assert_tests_ran.sh 1 macrobenchmark
     echo "Macrobenchmark complete (emulator numbers are advisory)."
@@ -454,7 +471,7 @@ fi
 # trips over app/build/ intermediates that :app:clean is deleting underneath it
 # and fails with NoSuchFileException. Nothing declares an ordering between the
 # two, so the only reliable fix is to finish the delete first.
-if ! ./gradlew clean; then
+if ! gradle clean; then
     revert_version_bump
     exit 1
 fi
@@ -477,7 +494,7 @@ GRADLE_TASKS=(
     assembleFutureRelease
 )
 
-if ! ./gradlew "${GRADLE_TASKS[@]}"; then
+if ! gradle "${GRADLE_TASKS[@]}"; then
     revert_version_bump
     exit 1
 fi
@@ -504,7 +521,7 @@ if [[ "$DO_DEBUG" -eq 0 ]]; then
 fi
 
 if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
-    ./gradlew buildHealth || true
+    gradle buildHealth || true
     REPORT="build/reports/dependency-analysis/build-health-report.txt"
     [[ -f "$REPORT" ]] && echo "Dependency-analysis report: $REPORT"
 fi

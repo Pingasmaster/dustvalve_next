@@ -389,10 +389,7 @@ class AlbumDetailViewModel @Inject constructor(
          * price. Null when every track price matches the album (redundant) or
          * none are known yet.
          */
-        internal fun representativeSingleTrackPrice(
-            prices: Collection<AlbumPrice>,
-            albumPrice: AlbumPrice?,
-        ): AlbumPrice? {
+        internal fun representativeSingleTrackPrice(prices: Collection<AlbumPrice>, albumPrice: AlbumPrice?): AlbumPrice? {
             if (prices.isEmpty()) return null
             val differing = prices.firstOrNull { albumPrice == null || it.amount != albumPrice.amount }
             return differing

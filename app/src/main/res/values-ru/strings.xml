@@ -16,7 +16,6 @@
     <string name="notification_download_pause">Пауза</string>
     <string name="notification_download_resume">Продолжить</string>
     <string name="notification_download_cancel">Отмена</string>
-
     <string name="common_action_cancel">Отмена</string>
     <string name="common_action_enable">Включить</string>
     <string name="common_action_delete">Удалить</string>
@@ -25,7 +24,6 @@
     <string name="common_action_create">Создать</string>
     <string name="common_action_remove">Убрать</string>
     <string name="common_play_all">Слушать все</string>
-
     <string name="link_open_video">Открыть видео <xliff:g id="brand">YouTube</xliff:g></string>
     <string name="link_open_song">Открыть трек <xliff:g id="brand">YouTube Music</xliff:g></string>
     <string name="link_open_playlist">Открыть плейлист <xliff:g id="brand">YouTube</xliff:g></string>
@@ -41,7 +39,6 @@
     <string name="provider_enable_title">Включить <xliff:g id="provider" example="Bandcamp">%1$s</xliff:g>?</string>
     <string name="provider_enable_text"><xliff:g id="provider" example="Bandcamp">%1$s</xliff:g> сейчас отключен. Включить, чтобы открыть <xliff:g id="kind" example="album">%2$s</xliff:g>?</string>
     <string name="snackbar_unsupported_source">Эта ссылка не из поддерживаемого источника.</string>
-
     <string name="library_new_playlist">Новый плейлист</string>
     <string name="library_import_playlist">Импортировать плейлист</string>
     <string name="library_export_playlist">Экспортировать плейлист</string>
@@ -64,7 +61,6 @@
     <string name="library_error_remove">Не удалось убрать из библиотеки</string>
     <string name="library_error_update_shape">Не удалось изменить форму</string>
     <string name="library_error_load">Не удалось загрузить библиотеку</string>
-
     <string name="bandcamp_add_custom_genre">Добавить свой жанр</string>
     <string name="bandcamp_add_genre_title">Добавить свой жанр</string>
     <string name="bandcamp_add_genre_hint">Введи жанр <xliff:g id="brand">Bandcamp</xliff:g></string>
@@ -90,7 +86,6 @@
     <string name="common_loading_album">Загрузка альбома…</string>
     <string name="common_loading_playlist">Загрузка плейлиста…</string>
     <string name="snackbar_failed_load">Не удалось загрузить</string>
-
     <string name="common_cd_back">Назад</string>
     <string name="common_cd_search">Поиск</string>
     <string name="common_cd_clear">Очистить</string>
@@ -98,16 +93,13 @@
     <string name="common_cd_now_playing">Сейчас играет</string>
     <string name="common_cd_create_playlist">Создать плейлист</string>
     <string name="common_cd_more_options">Другие действия</string>
-    <string name="common_cd_selected">Выбрано</string>
     <string name="common_cd_reorder">Изменить порядок</string>
     <string name="common_cd_delete">Удалить</string>
     <string name="common_cd_downloaded">Скачано</string>
     <string name="common_cd_import_playlist">Импортировать плейлист</string>
-
     <string name="nav_label_local">Локально</string>
     <string name="nav_label_library">Библиотека</string>
     <string name="nav_label_settings">Настройки</string>
-
     <string name="player_volume">Громкость</string>
     <string name="player_output">Вывод звука</string>
     <string name="player_automatic">Автоматически</string>
@@ -125,6 +117,7 @@
     <string name="player_cd_volume">Громкость</string>
     <string name="player_cd_local_file">Локальный файл</string>
     <string name="player_cd_delete_download">Удалить загрузку</string>
+    <string name="player_cd_download_unavailable">Загрузка недоступна</string>
     <string name="player_cd_download_track">Скачать трек</string>
     <string name="player_cd_remove_from_favorites">Убрать из избранного</string>
     <string name="player_cd_add_to_favorites">В избранное</string>
@@ -164,11 +157,11 @@
     <string name="player_audio_device_ble_headset">BLE-гарнитура</string>
     <string name="player_audio_device_ble_speaker">BLE-колонка</string>
     <string name="player_audio_device_unknown">Аудиоустройство</string>
-
     <string name="settings_title">Настройки</string>
     <string name="settings_section_sources">Источники</string>
     <string name="settings_section_storage">Хранилище</string>
     <string name="settings_section_audio_quality">Качество звука</string>
+    <string name="settings_section_bluetooth_stability">Стабильность Bluetooth</string>
     <string name="settings_section_appearance">Внешний вид</string>
     <string name="settings_section_player">Плеер</string>
     <string name="settings_section_search">Поиск</string>
@@ -179,8 +172,6 @@
     <string name="settings_use_individual_folders_desc">Выбирать конкретные папки вместо сканирования всего аудио</string>
     <string name="settings_remove_downloads_title">Удалить все загрузки</string>
     <string name="settings_remove_downloads_text">Будет очищен весь пул загрузок: скачанные вручную треки, автоматически кешированное аудио, обложки альбомов и фото исполнителей.</string>
-    <string name="settings_download_format">Формат загрузки</string>
-    <string name="settings_download_format_desc">Формат скачиваемых покупок <xliff:g id="brand">Bandcamp</xliff:g></string>
     <string name="settings_add_folder">Добавить папку</string>
     <string name="settings_rescan">Пересканировать</string>
     <string name="settings_cd_remove_folder">Убрать папку</string>
@@ -191,12 +182,32 @@
     <string name="settings_remove_all_downloads">Удалить все загрузки</string>
     <string name="settings_auto_download_future">Автозагрузка новинок</string>
     <string name="settings_auto_download_future_desc">Автоматически скачивать новые треки для загруженных плейлистов, альбомов и исполнителей</string>
-    <string name="settings_mp3_on_metered">Только <xliff:g id="format">MP3</xliff:g> в мобильной сети</string>
-    <string name="settings_mp3_on_metered_desc">Скачивать <xliff:g id="format">MP3</xliff:g> вместо lossless при мобильном интернете</string>
     <string name="settings_progressive_download">Прогрессивная загрузка</string>
     <string name="settings_progressive_download_desc">Сначала стрим в качестве превью, затем плавный переход на полное качество</string>
     <string name="settings_seamless_upgrade">Бесшовное повышение качества</string>
     <string name="settings_seamless_upgrade_desc">Сначала стрим, затем фоновая загрузка и подмена. В момент подмены возможна одна короткая запинка.</string>
+    <string name="settings_bt_stability">Режим стабильности Bluetooth</string>
+    <string name="settings_bt_stability_desc">Снижает обрывы Bluetooth-звука, когда Wi‑Fi и высококачественные кодеки конкурируют за радио</string>
+    <string name="settings_bt_stability_enable_title">Включить стабильность Bluetooth?</string>
+    <string name="settings_bt_stability_enable_text">Режим стабильности только настраивает буферы воспроизведения и не снижает качество звука.\n\nЭкстремальный режим может снижать качество. Параметры, ухудшающие качество, остаются выключенными, пока вы их не включите — каждый запрашивает подтверждение.</string>
+    <string name="settings_bt_stability_enable_normal">Режим стабильности</string>
+    <string name="settings_bt_stability_enable_extreme">Экстремальная стабильность</string>
+    <string name="settings_bt_stability_enable_anyway">Всё равно включить</string>
+    <string name="settings_bt_stability_profile">Профиль</string>
+    <string name="settings_bt_stability_profile_normal">Стабильность</string>
+    <string name="settings_bt_stability_profile_extreme">Экстрим</string>
+    <string name="settings_bt_stability_applies_hint">PCM-запас и увеличенные буферы потока применяются после перезапуска приложения. Пауза загрузок во время воспроизведения действует сразу.</string>
+    <string name="settings_bt_stability_pcm">PCM-запас: <xliff:g id="ms" example="3000">%1$d</xliff:g> мс</string>
+    <string name="settings_bt_stability_pcm_desc">Дополнительный запас AudioTrack для Bluetooth-кодеков вроде LDAC. Большие значения меньше сбоев при чуть большей задержке.</string>
+    <string name="settings_bt_stability_exo_boost">Увеличенные буферы потока</string>
+    <string name="settings_bt_stability_exo_boost_desc">Держит больше сжатого аудио наготове, чтобы краткая конкуренция за радио реже прерывала воспроизведение</string>
+    <string name="settings_bt_stability_pause_downloads">Пауза загрузок во время воспроизведения</string>
+    <string name="settings_bt_stability_pause_downloads_desc">Не даёт прогрессивным и фоновым загрузкам конкурировать с Bluetooth за то же радио</string>
+    <string name="settings_bt_stability_extreme_options">Компромиссы по качеству</string>
+    <string name="settings_bt_stability_disable_float">Отключить Hi‑Fi float-вывод</string>
+    <string name="settings_bt_stability_disable_float_desc">Использует 16‑битный PCM вместо float. Может снизить нагрузку на CPU на слабых устройствах, но может уменьшить точность звука</string>
+    <string name="settings_bt_stability_float_warning_title">Снизить качество звука?</string>
+    <string name="settings_bt_stability_float_warning_text">Отключение Hi‑Fi float-вывода может сделать Bluetooth стабильнее на слабых устройствах, но может снизить точность высококачественного аудио.</string>
     <string name="settings_theme">Тема</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Темная</string>
@@ -215,6 +226,8 @@
     <string name="settings_auto_download_favorites_desc">Также скачивать в фоне каждый трек из избранного</string>
     <string name="settings_download_notifications">Уведомления о загрузках</string>
     <string name="settings_download_notifications_desc">Показывать уведомление с прогрессом, пока скачиваются песни</string>
+    <string name="settings_notifications_denied_hint">Уведомления для этого приложения заблокированы. Включи их в системных настройках, чтобы видеть оповещения о загрузках и воспроизведении.</string>
+    <string name="settings_notifications_open_settings">Открыть настройки уведомлений</string>
     <string name="settings_live_updates_title">Live Updates отключены</string>
     <string name="settings_live_updates_desc">Разреши Live Updates в настройках уведомлений, чтобы видеть прогресс загрузки в строке состояния</string>
     <string name="settings_live_updates_action">Открыть настройки</string>
@@ -256,7 +269,7 @@
     <string name="settings_storage_limit_unlimited">Лимит хранилища: без ограничений</string>
     <string name="settings_storage_limit_mb">Лимит хранилища: <xliff:g id="size" example="500">%1$d</xliff:g> МБ</string>
     <string name="settings_storage_limit_gb">Лимит хранилища: <xliff:g id="size" example="2">%1$d</xliff:g> ГБ</string>
-
+    <string name="settings_storage_limit_desc">Применяется к автоматически кэшированному аудио, обложкам и кэшу стрима. Явные загрузки этим лимитом никогда не удаляются. Загрузки также не запускаются, когда на устройстве почти нет свободного места.</string>
     <string name="local_search_placeholder">Поиск локальной музыки…</string>
     <string name="local_scan_title">Просканируй свою музыку</string>
     <string name="local_scan_subtitle">Найди и слушай музыку, которая хранится на устройстве</string>
@@ -296,11 +309,9 @@
     <string name="settings_local_keep_sort_desc">Восстанавливать сортировку (и обратный порядок) вкладки «Локально» при повторном открытии приложения</string>
     <string name="settings_local_keep_filters">Помнить фильтры между запусками</string>
     <string name="settings_local_keep_filters_desc">Восстанавливать фильтры вкладки «Локально» — исполнитель, альбом, папка, длительность и «только избранное» — при повторном открытии приложения</string>
-
     <string name="common_search_failed">Поиск не удался</string>
     <string name="common_no_results_title">Ничего не найдено</string>
     <string name="common_no_results_subtitle">Попробуй другой запрос</string>
-
     <string name="bandcamp_search_placeholder">Поиск на <xliff:g id="brand">Bandcamp</xliff:g>…</string>
     <string name="bandcamp_tab_all">Все</string>
     <string name="bandcamp_tab_artists">Исполнители</string>
@@ -311,7 +322,6 @@
     <string name="bandcamp_something_went_wrong">Что-то пошло не так</string>
     <string name="bandcamp_type_artist">Исполнитель</string>
     <string name="bandcamp_type_local">Локальный</string>
-
     <string name="youtube_search_placeholder">Поиск на <xliff:g id="brand">YouTube</xliff:g>…</string>
     <string name="youtube_tab_all">Все</string>
     <string name="youtube_tab_artists">Исполнители</string>
@@ -322,17 +332,14 @@
     <string name="soundcloud_search_hint">Поиск в SoundCloud</string>
     <string name="soundcloud_home_trending">В тренде</string>
     <string name="soundcloud_home_discover">Обзор</string>
-    <string name="soundcloud_home_genres">Жанры</string>
     <string name="soundcloud_home_empty">Пока ничего нет</string>
     <string name="soundcloud_home_retry">Повторить</string>
     <string name="soundcloud_error_load">Не удалось загрузить SoundCloud</string>
-
     <string name="ytm_section_trending">В тренде</string>
     <string name="ytm_section_discover">Открой для себя: <xliff:g id="genre" example="Jazz">%1$s</xliff:g></string>
     <string name="ytm_section_recommended">Рекомендации для тебя</string>
     <string name="ytm_section_because_listened">Похоже на <xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g></string>
     <string name="error_import_playlist">Не удалось импортировать плейлист: <xliff:g id="reason" example="network error">%1$s</xliff:g></string>
-
     <string name="mood_chill">Чилл</string>
     <string name="mood_energize">Энергия</string>
     <string name="mood_focus">Фокус</string>
@@ -344,7 +351,6 @@
     <string name="mood_romance">Романтика</string>
     <string name="mood_commute">В дорогу</string>
     <string name="mood_gaming">Игры</string>
-
     <string name="genre_pop">Поп</string>
     <string name="genre_rock">Рок</string>
     <string name="genre_hiphop">Хип-хоп</string>
@@ -391,7 +397,6 @@
     <string name="genre_soundtracks">Саундтреки</string>
     <string name="genre_musical_theater">Мюзиклы</string>
     <string name="genre_vgm">Игровая музыка</string>
-
     <string name="library_title">Библиотека</string>
     <string name="library_pin">Закрепить</string>
     <string name="library_unpin">Открепить</string>
@@ -408,7 +413,6 @@
     <string name="library_delete_playlist_text">Удалить «<xliff:g id="playlist" example="Road Trip">%1$s</xliff:g>»? Это действие нельзя отменить.</string>
     <string name="library_remove_title">Убрать из библиотеки</string>
     <string name="library_remove_text">Убрать «<xliff:g id="item" example="Night Drive">%1$s</xliff:g>» из библиотеки? Также будет удалено из избранного.</string>
-
     <string name="playlist_new">Новый плейлист</string>
     <string name="playlist_edit">Редактировать плейлист</string>
     <string name="playlist_name_label">Название</string>
@@ -430,7 +434,6 @@
     <string name="playlist_empty_custom_title">Пустой плейлист</string>
     <string name="playlist_empty_system_subtitle">Треки появятся здесь автоматически</string>
     <string name="playlist_empty_custom_subtitle">Добавь песни, чтобы начать</string>
-
     <string name="detail_tracks_label">Треки</string>
     <string name="label_count_duration"><xliff:g id="count" example="5 tracks">%1$s</xliff:g>  ·  <xliff:g id="duration" example="23 min">%2$s</xliff:g></string>
     <string name="metadata_separator">"  ·  "</string>
@@ -468,11 +471,9 @@
     <string name="detail_tags">Теги</string>
     <string name="detail_discography">Дискография</string>
     <string name="detail_no_releases">Релизов пока нет</string>
-
     <string name="search_recent">Недавние запросы</string>
     <string name="search_clear_all">Очистить все</string>
     <string name="search_cd_remove">Убрать</string>
-
     <string name="shape_choose">Выбери форму</string>
     <string name="shape_clover">Клевер</string>
     <string name="shape_heart">Сердце</string>
@@ -488,9 +489,7 @@
     <string name="shape_triangle">Треугольник</string>
     <string name="shape_sunny">Солнце</string>
     <string name="shape_arch">Арка</string>
-
     <string name="audio_format_flac">FLAC (без потерь)</string>
-
     <string name="sort_title_az">Название А–Я</string>
     <string name="sort_artist_az">Исполнитель А–Я</string>
     <string name="sort_album_az">Альбом А–Я</string>
@@ -498,17 +497,13 @@
     <string name="sort_longest">Сначала длинные</string>
     <string name="sort_date_added">Дата добавления</string>
     <string name="sort_release_year">Год выпуска</string>
-
     <string name="duration_under_3">До 3 мин</string>
     <string name="duration_3_to_5">3–5 мин</string>
     <string name="duration_over_5">Более 5 мин</string>
-
     <string name="storage_info">Загрузки: <xliff:g id="downloads" example="1.2 GB">%1$s</xliff:g>, кеш: <xliff:g id="cache" example="300 MB">%2$s</xliff:g>, свободно: <xliff:g id="free" example="12 GB">%3$s</xliff:g></string>
-
     <string name="error_unknown">Неизвестная ошибка</string>
     <string name="error_unknown_source">Неизвестный источник: <xliff:g id="source_id" example="youtube">%1$s</xliff:g></string>
     <string name="error_source_no_collections">Этот источник не поддерживает коллекции</string>
-
     <string name="snackbar_downloaded">Скачано: «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»</string>
     <string name="snackbar_deleted">Удалено: «<xliff:g id="track" example="Cosmic Dust">%1$s</xliff:g>»</string>
     <string name="snackbar_deleted_downloads_for">Загрузки «<xliff:g id="item" example="Night Drive">%1$s</xliff:g>» удалены</string>

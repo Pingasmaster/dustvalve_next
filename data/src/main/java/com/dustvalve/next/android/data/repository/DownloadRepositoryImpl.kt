@@ -1,6 +1,7 @@
 package com.dustvalve.next.android.data.repository
 
 import android.content.Context
+import android.os.StatFs
 import androidx.room.withTransaction
 import com.dustvalve.next.android.cache.StorageTracker
 import com.dustvalve.next.android.data.local.DatabaseGateway
@@ -10,15 +11,12 @@ import com.dustvalve.next.android.data.local.db.dao.TrackDao
 import com.dustvalve.next.android.data.local.db.entity.DownloadEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
-import com.dustvalve.next.android.data.remote.DownloadPayloadValidator
 import com.dustvalve.next.android.data.remote.DustvalveStreamResolver
-import com.dustvalve.next.android.data.remote.RangeResumeDownloader
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
 import com.dustvalve.next.android.di.qualifiers.Dispatcher
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.AudioFormat
-import com.dustvalve.next.android.domain.model.StreamPolicy
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
 import com.dustvalve.next.android.domain.repository.DownloadInfo
@@ -28,7 +26,6 @@ import com.dustvalve.next.android.domain.repository.MediaCacheClearer
 import com.dustvalve.next.android.domain.repository.SoundCloudRepository
 import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.download.downloadEachDeferringFailures
-import com.dustvalve.next.android.download.isPauseCancellation
 import com.dustvalve.next.android.util.NetworkUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,16 +35,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
-import android.os.StatFs
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
-import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -107,7 +98,11 @@ class DownloadRepositoryImpl(
     @Serializable
     internal data class ResumeMeta(val expectedTotalBytes: Long, val sourceIdentity: String)
 
-    private val metaJson = Json { ignoreUnknownKeys = true }
+    private val sourceResolver = DownloadSourceResolver(
+        youtubeRepository = youtubeRepository,
+        soundCloudRepository = soundCloudRepository,
+        dustvalveStreamResolver = dustvalveStreamResolver,
+    )
 
     /**
      * Per-track single-flight guard. Several callers reach [downloadTrack]
@@ -122,6 +117,36 @@ class DownloadRepositoryImpl(
     }
 
     private val trackLocks = HashMap<String, TrackLock>()
+
+    /**
+     * OkHttp client scoped to download transfers. Differences vs. the shared
+     * [client]:
+     *
+     * - 90-second read timeout (shared is 30s). A slow-network song download
+     *   can legitimately stall 30s+ between chunks on an LTE/3G connection;
+     *   with 30s we'd fail downloads that would have succeeded in 35s.
+     * - HTTP/1.1 only. `googlevideo.com` CDN nodes sporadically reset HTTP/2
+     *   streams mid-body when the request isn't a browser/Media3 shape; HTTP/1.1
+     *   is stable on the same endpoints (observed across yt-dlp, NewPipe,
+     *   Metrolist issues).
+     * - No cookie jar. A stale consent cookie can 403 the CDN.
+     */
+    private val downloadClient: OkHttpClient by lazy {
+        client.newBuilder()
+            .readTimeout(90, TimeUnit.SECONDS)
+            .callTimeout(0, TimeUnit.SECONDS)
+            .protocols(listOf(Protocol.HTTP_1_1))
+            .cookieJar(okhttp3.CookieJar.NO_COOKIES)
+            .build()
+    }
+
+    private val fileWriter by lazy {
+        DownloadFileWriter(
+            context = context,
+            downloadClient = downloadClient,
+            notificationCenter = notificationCenter,
+        )
+    }
 
     private suspend fun <T> withTrackLock(trackId: String, block: suspend () -> T): T {
         val lock = synchronized(trackLocks) {
@@ -205,54 +230,7 @@ class DownloadRepositoryImpl(
 
     @Suppress("ThrowsCount")
     private suspend fun downloadTrackInner(track: Track) {
-        // YouTube watch-page -> resolved audio stream; SoundCloud resolves a
-        // progressive CDN URL on demand (parsed tracks ship streamUrl=null);
-        // Bandcamp always re-resolves mp3-128 (CDN tokens expire ~24h);
-        // otherwise the raw streamUrl as mp3-128.
-        // Format preference / metered overrides only applied to HQ purchase
-        // downloads, which were removed with account login.
-        val (downloadUrl, format) = when (track.source) {
-            TrackSource.YOUTUBE -> {
-                // YouTube tracks store watch page URL in streamUrl; resolve actual audio stream.
-                // Queue tracks may have resolved googlevideo.com URLs - reconstruct the watch URL.
-                val streamUrl = track.streamUrl
-                    ?: throw IOException("Track '${track.title}' has no video URL")
-                val videoUrl = if (streamUrl.contains("youtube.com") || streamUrl.contains("youtu.be")) {
-                    streamUrl
-                } else {
-                    val videoId = track.id.removePrefix("yt_")
-                    "https://www.youtube.com/watch?v=$videoId"
-                }
-                youtubeRepository.getDownloadableStream(videoUrl)
-            }
-
-            TrackSource.SOUNDCLOUD -> {
-                if (track.isStreamOnlyOrBlocked) {
-                    throw IOException(
-                        when (track.streamPolicy) {
-                            StreamPolicy.STREAM_ONLY -> "HLS-only, play only"
-                            else ->
-                                "This SoundCloud track is DRM-protected or requires Go+ and cannot be downloaded"
-                        },
-                    )
-                }
-                soundCloudRepository.getDownloadableStream(track)
-            }
-
-            TrackSource.BANDCAMP -> {
-                val pageUrl = track.albumUrl.takeIf { it.isNotBlank() }
-                    ?: track.bandcampTrackUrl
-                    ?: throw IOException("Track '${track.title}' has no Bandcamp page URL to re-resolve")
-                // DustvalveStreamResolver returns an existing streamUrl untouched,
-                // so blank it first - same as PlaybackStreamResolver.reResolveBandcamp.
-                val freshUrl = dustvalveStreamResolver.resolveStreamUrl(
-                    track.copy(streamUrl = null),
-                    pageUrl,
-                ) ?: throw IOException("Track '${track.title}' has no downloadable stream after re-resolve")
-                freshUrl to AudioFormat.MP3_128
-            }
-            else -> track.streamUrl to AudioFormat.MP3_128
-        }
+        val (downloadUrl, format) = sourceResolver.resolve(track)
 
         if (downloadUrl == null) {
             throw IOException("Track '${track.title}' has no download or stream URL available")
@@ -288,7 +266,7 @@ class DownloadRepositoryImpl(
 
         // Downloads always land in app-private storage: the write goes via a
         // temp sibling and an atomic rename.
-        val (finalPath, fileSize) = writeDownloadToInternal(safeAlbumId, provisionalName, downloadUrl, track.id)
+        val (finalPath, fileSize) = fileWriter.write(safeAlbumId, provisionalName, downloadUrl, track.id)
 
         // Atomically insert the track row + the unified-pool download record.
         database.withTransaction {
@@ -318,130 +296,6 @@ class DownloadRepositoryImpl(
         storageTracker.notifyChanged()
     }
 
-    private suspend fun writeDownloadToInternal(
-        safeAlbumId: String,
-        provisionalFileName: String,
-        downloadUrl: String,
-        trackId: String,
-    ): Pair<String, Long> {
-        val downloadDir = File(context.filesDir, "downloads/$safeAlbumId")
-        if (!downloadDir.mkdirs() && !downloadDir.exists()) {
-            throw IOException("Failed to create download directory: ${downloadDir.absolutePath}")
-        }
-        // Temp / meta keys use the provisional name so a paused transfer can
-        // still resume; the final committed name may swap extension after
-        // MIME/magic validation.
-        val tempFile = File(downloadDir, "$provisionalFileName.tmp")
-        val metaFile = File(downloadDir, "$provisionalFileName.tmp.meta")
-        val identity = resumeSourceIdentity(downloadUrl)
-        var suggestedExtension: String? = null
-
-        // A leftover .tmp means a prior transfer was paused - resume from its
-        // current length via an HTTP Range request (append mode) instead of
-        // restarting from 0. Only append when the sidecar proves the partial
-        // came from the same source variant; a freshly re-resolved URL (e.g.
-        // a different YouTube itag) must restart from zero.
-        var resumeFrom = if (tempFile.exists()) tempFile.length() else 0L
-        var knownTotal: Long? = null
-        if (resumeFrom > 0L) {
-            val meta = readResumeMeta(metaFile)
-            if (meta == null || meta.sourceIdentity != identity) {
-                tempFile.delete()
-                metaFile.delete()
-                resumeFrom = 0L
-            } else {
-                knownTotal = meta.expectedTotalBytes
-            }
-        }
-
-        suspend fun transfer(offset: Long, expectedTotal: Long?) {
-            var metaPersisted = false
-            FileOutputStream(tempFile, offset > 0L).use { out ->
-                val result = RangeResumeDownloader.stream(
-                    client = downloadClient,
-                    url = downloadUrl,
-                    sink = out,
-                    trackId = trackId,
-                    startOffset = offset,
-                    expectedTotalBytes = expectedTotal,
-                    onProgress = { written, total ->
-                        if (!metaPersisted && total != null && total > 0L) {
-                            metaPersisted = true
-                            writeResumeMeta(metaFile, ResumeMeta(total, identity))
-                        }
-                        notificationCenter.trackProgress(trackId, written, total)
-                    },
-                )
-                if (result.suggestedExtension != null) {
-                    suggestedExtension = result.suggestedExtension
-                }
-            }
-        }
-
-        try {
-            try {
-                transfer(resumeFrom, knownTotal)
-            } catch (e: RangeResumeDownloader.ResumeMismatchException) {
-                // The server no longer serves the payload the partial came
-                // from (offset or total drifted). Discard and restart clean -
-                // once; a second mismatch propagates as a real failure.
-                android.util.Log.w(
-                    "DownloadRepo",
-                    "Resume mismatch for $trackId; discarding partial and restarting from zero: ${e.message}",
-                )
-                tempFile.delete()
-                metaFile.delete()
-                transfer(0L, null)
-            }
-        } catch (e: CancellationException) {
-            // Keep the partial (and its sidecar) on pause so resume can
-            // continue; delete both on any real failure or cancel.
-            if (!e.isPauseCancellation()) {
-                tempFile.delete()
-                metaFile.delete()
-            }
-            throw e
-        } catch (e: IOException) {
-            tempFile.delete()
-            metaFile.delete()
-            throw e
-        }
-
-        // Final sniff on the completed temp: catches resume paths that skipped
-        // the from-zero header check, and confirms MIME-suggested extensions.
-        val sniffBuf = ByteArray(64)
-        val sniffed = tempFile.inputStream().use { input ->
-            val n = input.read(sniffBuf)
-            if (n <= 0) {
-                tempFile.delete()
-                metaFile.delete()
-                throw DownloadPayloadValidator.InvalidPayloadException("Empty download for track: $trackId")
-            }
-            DownloadPayloadValidator.sniffExtensionOrReject(sniffBuf.copyOf(n), trackId)
-        }
-        val finalExtension = suggestedExtension ?: sniffed
-            ?: provisionalFileName.substringAfterLast('.', missingDelimiterValue = "mp3")
-        val baseName = provisionalFileName.substringBeforeLast('.', provisionalFileName)
-        val fileName = "$baseName.$finalExtension"
-        val targetFile = File(downloadDir, fileName)
-
-        metaFile.delete()
-        if (!tempFile.renameTo(targetFile)) {
-            try {
-                tempFile.copyTo(targetFile, overwrite = true)
-                tempFile.delete()
-            } catch (e: IOException) {
-                targetFile.delete()
-                tempFile.delete()
-                throw IOException("Failed to copy download to target: ${e.message}")
-            }
-        }
-        if (!targetFile.exists() || targetFile.length() == 0L) {
-            throw IOException("Failed to write download file: ${targetFile.absolutePath}")
-        }
-        return targetFile.absolutePath to targetFile.length()
-    }
-
     /**
      * Refuses to start a transfer when the data partition is nearly full.
      * Pinned user downloads are never evicted by the storage-limit slider, so
@@ -464,7 +318,7 @@ class DownloadRepositoryImpl(
         if (free < MIN_FREE_BYTES) {
             throw IOException(
                 "Not enough free storage to download " +
-                    "(${free / (1024L * 1024L)} MB free; need ${MIN_FREE_BYTES / (1024L * 1024L)} MB)",
+                    "(${free / BYTES_PER_MB} MB free; need ${MIN_FREE_BYTES / BYTES_PER_MB} MB)",
             )
         }
     }
@@ -476,76 +330,6 @@ class DownloadRepositoryImpl(
         try {
             File(path).delete()
         } catch (_: SecurityException) {
-        }
-    }
-
-    /**
-     * OkHttp client scoped to download transfers. Differences vs. the shared
-     * [client]:
-     *
-     * - 90-second read timeout (shared is 30s). A slow-network song download
-     *   can legitimately stall 30s+ between chunks on an LTE/3G connection;
-     *   with 30s we'd fail downloads that would have succeeded in 35s.
-     * - HTTP/1.1 only. `googlevideo.com` CDN nodes sporadically reset HTTP/2
-     *   streams mid-body when the request isn't a browser/Media3 shape; HTTP/1.1
-     *   is stable on the same endpoints (observed across yt-dlp, NewPipe,
-     *   Metrolist issues).
-     * - No cookie jar. A stale consent cookie can 403 the CDN.
-     */
-    private val downloadClient: OkHttpClient by lazy {
-        client.newBuilder()
-            .readTimeout(90, TimeUnit.SECONDS)
-            .callTimeout(0, TimeUnit.SECONDS)
-            .protocols(listOf(Protocol.HTTP_1_1))
-            .cookieJar(okhttp3.CookieJar.NO_COOKIES)
-            .build()
-    }
-
-    /** Thin wrapper: preserves the call-site shape and forwards byte progress to the download notification chip. */
-    private suspend fun streamWithResume(url: String, trackId: String, sink: OutputStream, startOffset: Long = 0L): Long =
-        RangeResumeDownloader.stream(
-            client = downloadClient,
-            url = url,
-            sink = sink,
-            trackId = trackId,
-            startOffset = startOffset,
-            onProgress = { written, total -> notificationCenter.trackProgress(trackId, written, total) },
-        ).bytesWritten
-
-    /**
-     * Stable identity of the *content* behind a download URL, persisted in the
-     * resume sidecar. googlevideo URLs rotate host/expiry/signature params on
-     * every resolve but keep serving the same bytes for a given `itag`; for
-     * everything else the URL minus its query is the best stable handle.
-     */
-    private fun resumeSourceIdentity(url: String): String {
-        val httpUrl = url.toHttpUrlOrNull() ?: return url.substringBefore('?')
-        val host = httpUrl.host
-        return if (host == "googlevideo.com" || host.endsWith(".googlevideo.com")) {
-            "itag=" + (httpUrl.queryParameter("itag") ?: "")
-        } else {
-            httpUrl.newBuilder().query(null).build().toString()
-        }
-    }
-
-    private fun readResumeMeta(metaFile: File): ResumeMeta? = try {
-        if (metaFile.exists()) metaJson.decodeFromString<ResumeMeta>(metaFile.readText()) else null
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: IOException) {
-        null
-    } catch (_: SerializationException) {
-        null
-    }
-
-    private fun writeResumeMeta(metaFile: File, meta: ResumeMeta) {
-        try {
-            metaFile.writeText(metaJson.encodeToString(ResumeMeta.serializer(), meta))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: IOException) {
-            // Best-effort: without a sidecar the next attempt simply restarts
-            // from zero instead of resuming.
         }
     }
 
@@ -672,5 +456,7 @@ class DownloadRepositoryImpl(
 
         /** Refuse new downloads when free space drops below this headroom. */
         private const val MIN_FREE_BYTES = 64L * 1024L * 1024L
+
+        private const val BYTES_PER_MB = 1024L * 1024L
     }
 }

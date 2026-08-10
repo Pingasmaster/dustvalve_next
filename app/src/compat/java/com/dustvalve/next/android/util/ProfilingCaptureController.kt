@@ -16,7 +16,7 @@ import javax.inject.Singleton
 @Singleton
 class ProfilingCaptureController @Inject constructor(
     @Suppress("UnusedPrivateProperty")
-    @param:ApplicationContext context: Context,
+    @ApplicationContext context: Context,
 ) {
     fun start() {
         // No-op on compat (minSdk 26).

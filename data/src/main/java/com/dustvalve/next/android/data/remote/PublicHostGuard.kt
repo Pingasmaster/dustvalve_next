@@ -62,8 +62,10 @@ object PublicHostGuard {
             delegate.lookup(hostname)
         } catch (e: UnknownHostException) {
             throw e
-        } catch (e: Exception) {
-            throw UnknownHostException("DNS lookup failed for $hostname: ${e.message}")
+        } catch (e: SecurityException) {
+            throw UnknownHostException("DNS lookup failed for $hostname: ${e.message}").apply {
+                initCause(e)
+            }
         }
         val publicAnswers = answers.filterNot(NetworkUtils::isDisallowedAddress)
         if (publicAnswers.isEmpty()) {
@@ -89,7 +91,7 @@ object PublicHostGuard {
      */
     private fun requestPriorResponse(prior: Request, nextUrl: HttpUrl, code: Int): Request {
         val builder = prior.newBuilder().url(nextUrl)
-        if (code == 307 || code == 308) {
+        if (code == HTTP_TEMP_REDIRECT || code == HTTP_PERM_REDIRECT) {
             return builder.build()
         }
         val method = prior.method
@@ -102,5 +104,19 @@ object PublicHostGuard {
         return builder.build()
     }
 
-    private val REDIRECT_CODES = setOf(300, 301, 302, 303, 307, 308)
+    private const val HTTP_MULTIPLE_CHOICES = 300
+    private const val HTTP_MOVED_PERMANENTLY = 301
+    private const val HTTP_FOUND = 302
+    private const val HTTP_SEE_OTHER = 303
+    private const val HTTP_TEMP_REDIRECT = 307
+    private const val HTTP_PERM_REDIRECT = 308
+
+    private val REDIRECT_CODES = setOf(
+        HTTP_MULTIPLE_CHOICES,
+        HTTP_MOVED_PERMANENTLY,
+        HTTP_FOUND,
+        HTTP_SEE_OTHER,
+        HTTP_TEMP_REDIRECT,
+        HTTP_PERM_REDIRECT,
+    )
 }

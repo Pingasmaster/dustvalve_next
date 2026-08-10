@@ -28,12 +28,14 @@ fun testSettings(): SettingsDataStore = SettingsDataStore(InstrumentationRegistr
  * declared state instead of racing a write against a live nav bar.
  */
 class ProviderStateRule(
+    private val local: Boolean = false,
     private val bandcamp: Boolean = false,
     private val youtube: Boolean = false,
     private val soundcloud: Boolean = false,
 ) : ExternalResource() {
     override fun before() {
         runBlocking {
+            testSettings().setLocalMusicEnabled(local)
             testSettings().setBandcampEnabled(bandcamp)
             testSettings().setYoutubeEnabled(youtube)
             testSettings().setSoundcloudEnabled(soundcloud)

@@ -27,7 +27,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -74,28 +73,7 @@ class PlaylistRepositoryImpl(
     override suspend fun getPlaylistByIdSync(playlistId: String): Playlist? = playlistDao.getPlaylistById(playlistId)?.toDomain()
 
     override suspend fun createPlaylist(name: String, shapeKey: String?, iconUrl: String?): Playlist =
-        insertUserPlaylist(name = name, shapeKey = shapeKey, iconUrl = iconUrl, sourceUrl = null)
-
-    private suspend fun insertUserPlaylist(
-        name: String,
-        shapeKey: String? = null,
-        iconUrl: String? = null,
-        sourceUrl: String? = null,
-    ): Playlist {
-        val playlist = PlaylistEntity(
-            id = UUID.randomUUID().toString(),
-            name = name,
-            shapeKey = shapeKey,
-            iconUrl = iconUrl,
-            isSystem = false,
-            isPinned = false,
-            sortOrder = 0,
-            trackCount = 0,
-            sourceUrl = sourceUrl,
-        )
-        playlistDao.insertPlaylist(playlist)
-        return playlist.toDomain()
-    }
+        insertUserPlaylist(playlistDao, name = name, shapeKey = shapeKey, iconUrl = iconUrl, sourceUrl = null)
 
     override suspend fun renamePlaylist(playlistId: String, newName: String): Boolean {
         val updated = playlistDao.renamePlaylist(playlistId, newName)
@@ -219,12 +197,15 @@ class PlaylistRepositoryImpl(
                 val ordered = playlistDao.getTracksInPlaylistSync(playlistId)
                 mergeSystemPlaylist(source, ordered)
             }
+
             Playlist.ID_DOWNLOADS -> {
                 val source = trackDao.getDownloaded().first()
                 val ordered = playlistDao.getTracksInPlaylistSync(playlistId)
                 mergeSystemPlaylist(source, ordered)
             }
+
             Playlist.ID_RECENT -> trackDao.getRecent().first()
+
             else -> playlistDao.getTracksInPlaylistSync(playlistId)
         }
         if (playlistId == Playlist.ID_FAVORITES) {
@@ -298,7 +279,7 @@ class PlaylistRepositoryImpl(
         // lists as soon as a track was (un)favorited after the first
         // reorder, silently turning later drags into no-ops.
         if (isSystemPlaylistId(playlistId)) {
-            reseedSystemPlaylistFromMergedView(playlistId)
+            reseedSystemPlaylistFromMergedView(database, playlistDao, trackDao, playlistId)
         }
 
         val tracks = playlistDao.getTracksInPlaylistSync(playlistId)
@@ -307,33 +288,6 @@ class PlaylistRepositoryImpl(
 
         val trackId = tracks[fromPosition].id
         playlistDao.reorderTrack(playlistId, trackId, fromPosition, toPosition)
-    }
-
-    /**
-     * Rewrites the playlist_tracks override for a system playlist so its
-     * rows exactly match the merged view the UI is displaying right now
-     * (override order, minus tracks that left the source, plus new source
-     * tracks appended). Guarantees contiguous 0..n-1 positions, which
-     * reorderTrack's range-shift arithmetic depends on.
-     */
-    private suspend fun reseedSystemPlaylistFromMergedView(playlistId: String) {
-        val source: List<com.dustvalve.next.android.data.local.db.entity.TrackEntity> = when (playlistId) {
-            Playlist.ID_FAVORITES -> trackDao.getFavorites().first()
-            Playlist.ID_DOWNLOADS -> trackDao.getDownloaded().first()
-            Playlist.ID_RECENT -> trackDao.getRecent().first()
-            else -> return
-        }
-        if (source.isEmpty()) return
-        val ordered = playlistDao.getTracksInPlaylistSync(playlistId)
-        val merged = mergeSystemPlaylist(source, ordered)
-        database.withTransaction {
-            playlistDao.clearPlaylistTracks(playlistId)
-            playlistDao.insertPlaylistTracks(
-                merged.mapIndexed { index, t ->
-                    PlaylistTrackEntity(playlistId = playlistId, trackId = t.id, position = index)
-                },
-            )
-        }
     }
 
     override suspend fun isTrackInPlaylist(playlistId: String, trackId: String): Boolean =
@@ -373,7 +327,7 @@ class PlaylistRepositoryImpl(
         // createPlaylist/addTracksToPlaylist withTransaction calls behave
         // exactly like the historical VM-side nesting of this block.
         trackDao.insertAll(tracks.map { it.toEntity() })
-        val playlist = insertUserPlaylist(name = name, sourceUrl = sourceUrl)
+        val playlist = insertUserPlaylist(playlistDao, name = name, sourceUrl = sourceUrl)
         addTracksToPlaylist(playlist.id, tracks.map { it.id })
         if (favoriteId != null) {
             // Same transaction as the import itself: cancellation between the
@@ -384,8 +338,7 @@ class PlaylistRepositoryImpl(
         playlist
     }
 
-    override suspend fun getPlaylistIdForSourceUrl(sourceUrl: String): String? =
-        playlistDao.getPlaylistBySourceUrl(sourceUrl)?.id
+    override suspend fun getPlaylistIdForSourceUrl(sourceUrl: String): String? = playlistDao.getPlaylistBySourceUrl(sourceUrl)?.id
 
     // Boolean on purpose - see the interface KDoc (deletion-authorization safety).
     override suspend fun playlistExistsByName(name: String): Boolean = playlistDao.getPlaylistByName(name) != null

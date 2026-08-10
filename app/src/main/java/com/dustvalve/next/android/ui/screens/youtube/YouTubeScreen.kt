@@ -89,13 +89,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import kotlin.coroutines.cancellation.CancellationException
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.dustvalve.next.android.R
-import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.SearchResult
 import com.dustvalve.next.android.domain.model.SearchResultType
+import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.ui.components.PastedLinkChip
@@ -120,6 +119,7 @@ import com.dustvalve.next.android.util.openInBrowser
 import com.dustvalve.next.android.util.runCatchingUi
 import com.dustvalve.next.android.util.shareUrl
 import kotlinx.coroutines.launch
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -1192,11 +1192,7 @@ private fun FeedErrorCard(message: String, onRetry: () -> Unit, modifier: Modifi
 }
 
 /** Rethrows [CancellationException]; surfaces [failedMsg] for other failures. */
-private suspend fun runCatchingPlayback(
-    snackbarHostState: SnackbarHostState,
-    failedMsg: String,
-    block: suspend () -> Unit,
-) {
+private suspend fun runCatchingPlayback(snackbarHostState: SnackbarHostState, failedMsg: String, block: suspend () -> Unit) {
     try {
         block()
     } catch (e: CancellationException) {
