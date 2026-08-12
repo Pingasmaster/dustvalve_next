@@ -31,11 +31,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
-import androidx.compose.material3.FilledTonalIconToggleButton
+import androidx.compose.material3.FilledTonalToggleButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.IconToggleButtonColors
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -45,8 +44,6 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ToggleButton
-import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -600,11 +597,10 @@ private fun AlbumActionBar(state: AlbumActionBarState, actions: AlbumActionBarAc
             )
         }
 
-        ToggleButton(
+        FilledTonalToggleButton(
             checked = isFavorite,
             onCheckedChange = { onToggleFavorite() },
             shapes = ButtonGroupDefaults.connectedMiddleButtonShapes(),
-            colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {
@@ -624,12 +620,11 @@ private fun AlbumActionBar(state: AlbumActionBarState, actions: AlbumActionBarAc
         // M3E shape morph + tonal-on-checked container styling - matches the
         // Favorite button's interaction language. While the download is in
         // flight, swap the icon for a circular wavy progress indicator.
-        ToggleButton(
+        FilledTonalToggleButton(
             checked = allTracksDownloaded,
             onCheckedChange = { onDownload() },
             enabled = !isDownloading,
             shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
-            colors = ToggleButtonDefaults.filledTonalToggleButtonColors(),
             contentPadding = PaddingValues(horizontal = 16.dp),
             modifier = Modifier.heightIn(min = 56.dp),
         ) {
