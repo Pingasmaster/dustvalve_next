@@ -207,8 +207,7 @@ start_serve() {
         && grep -q "APK HTTP serve: http://" "$log" 2>/dev/null; then
         local name
         for name in "${url_names[@]}"; do
-            # Plain host/port/name (no URL scheme) keeps the build transcript link-free.
-            echo "APK HTTP serve: ${url_host} ${PORT} ${name}"
+            echo "APK HTTP serve: http://${url_host}:${PORT}/${name}"
         done
         if [[ "$PORT" != "$PREFERRED_PORT" ]]; then
             echo "APK HTTP serve: preferred port ${PREFERRED_PORT} was busy; bound ${PORT}."
