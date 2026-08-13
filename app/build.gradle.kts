@@ -27,8 +27,8 @@ android {
     // Shared by defaultConfig + future flavor offset. build.sh bumps this
     // via sed on the defaultConfig assignment below; future re-reads it
     // on the next Gradle configure.
-    val baseVersionCode = 310
-    val baseVersionName = "0.5.32"
+    val baseVersionCode = 311
+    val baseVersionName = "0.5.33"
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
@@ -204,7 +204,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_26
         targetCompatibility = JavaVersion.VERSION_26
-        // Required for compat (minSdk 26 + JVM 25). Harmless no-op on future
+        // Required for compat (minSdk 26 + JVM 26). Harmless no-op on future
         // for APIs already present on Android 17; R8 strips unused bits.
         isCoreLibraryDesugaringEnabled = true
     }

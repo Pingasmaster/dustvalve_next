@@ -495,9 +495,6 @@ SPLandroidx/collection/MutableIntSet;->initializeStorage(I)V
 SPLandroidx/collection/MutableIntSet;->remove(I)Z
 Landroidx/collection/MutableLongList;
 SPLandroidx/collection/MutableLongList;-><init>(I)V
-SPLandroidx/collection/MutableLongList;-><init>(IILkotlin/jvm/internal/DefaultConstructorMarker;)V
-SPLandroidx/collection/MutableLongList;->add(J)Z
-SPLandroidx/collection/MutableLongList;->ensureCapacity(I)V
 Landroidx/collection/MutableLongObjectMap;
 SPLandroidx/collection/MutableLongObjectMap;-><init>(I)V
 SPLandroidx/collection/MutableLongObjectMap;-><init>(IILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -6868,19 +6865,10 @@ SPLandroidx/compose/runtime/snapshots/SnapshotDoubleIndexHeap;->remove(I)V
 SPLandroidx/compose/runtime/snapshots/SnapshotDoubleIndexHeap;->shiftDown(I)V
 SPLandroidx/compose/runtime/snapshots/SnapshotDoubleIndexHeap;->shiftUp(I)V
 SPLandroidx/compose/runtime/snapshots/SnapshotDoubleIndexHeap;->swap(II)V
-Landroidx/compose/runtime/snapshots/SnapshotIdArrayBuilder;
-SPLandroidx/compose/runtime/snapshots/SnapshotIdArrayBuilder;-><clinit>()V
-SPLandroidx/compose/runtime/snapshots/SnapshotIdArrayBuilder;-><init>([J)V
-SPLandroidx/compose/runtime/snapshots/SnapshotIdArrayBuilder;->add(J)V
-SPLandroidx/compose/runtime/snapshots/SnapshotIdArrayBuilder;->toArray()[J
 Landroidx/compose/runtime/snapshots/SnapshotIdSet;
 SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;-><clinit>()V
 SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;-><init>(JJJ[J)V
-SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->access$getBelowBound$p(Landroidx/compose/runtime/snapshots/SnapshotIdSet;)[J
 SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->access$getEMPTY$cp()Landroidx/compose/runtime/snapshots/SnapshotIdSet;
-SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->access$getLowerBound$p(Landroidx/compose/runtime/snapshots/SnapshotIdSet;)J
-SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->access$getLowerSet$p(Landroidx/compose/runtime/snapshots/SnapshotIdSet;)J
-SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->access$getUpperSet$p(Landroidx/compose/runtime/snapshots/SnapshotIdSet;)J
 SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->andNot(Landroidx/compose/runtime/snapshots/SnapshotIdSet;)Landroidx/compose/runtime/snapshots/SnapshotIdSet;
 SPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->clear(J)Landroidx/compose/runtime/snapshots/SnapshotIdSet;
 HSPLandroidx/compose/runtime/snapshots/SnapshotIdSet;->get(J)Z
@@ -6892,10 +6880,8 @@ SPLandroidx/compose/runtime/snapshots/SnapshotIdSet$Companion;-><init>()V
 SPLandroidx/compose/runtime/snapshots/SnapshotIdSet$Companion;-><init>(Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 SPLandroidx/compose/runtime/snapshots/SnapshotIdSet$Companion;->getEMPTY()Landroidx/compose/runtime/snapshots/SnapshotIdSet;
 Landroidx/compose/runtime/snapshots/SnapshotId_jvmKt;
-SPLandroidx/compose/runtime/snapshots/SnapshotId_jvmKt;->binarySearch([JJ)I
 SPLandroidx/compose/runtime/snapshots/SnapshotId_jvmKt;->snapshotIdArrayWithCapacity(I)[J
 SPLandroidx/compose/runtime/snapshots/SnapshotId_jvmKt;->toSnapshotId(I)J
-SPLandroidx/compose/runtime/snapshots/SnapshotId_jvmKt;->withIdRemovedAt([JI)[J
 Landroidx/compose/runtime/snapshots/SnapshotKt;
 SPLandroidx/compose/runtime/snapshots/SnapshotKt;-><clinit>()V
 SPLandroidx/compose/runtime/snapshots/SnapshotKt;->access$advanceGlobalSnapshot()V
@@ -13971,7 +13957,6 @@ Landroidx/emoji2/text/MetadataRepo$Node;
 SPLandroidx/emoji2/text/MetadataRepo$Node;-><init>()V
 SPLandroidx/emoji2/text/MetadataRepo$Node;-><init>(I)V
 SPLandroidx/emoji2/text/MetadataRepo$Node;->get(I)Landroidx/emoji2/text/MetadataRepo$Node;
-HSPLandroidx/emoji2/text/MetadataRepo$Node;->put(Landroidx/emoji2/text/TypefaceEmojiRasterizer;II)V
 Landroidx/emoji2/text/SpannableBuilder;
 Landroidx/emoji2/text/TypefaceEmojiRasterizer;
 SPLandroidx/emoji2/text/TypefaceEmojiRasterizer;-><clinit>()V
@@ -13987,7 +13972,7 @@ SPLandroidx/emoji2/text/flatbuffer/MetadataItem;->__assign(ILjava/nio/ByteBuffer
 HSPLandroidx/emoji2/text/flatbuffer/MetadataItem;->__init(ILjava/nio/ByteBuffer;)V
 SPLandroidx/emoji2/text/flatbuffer/MetadataItem;->codepoints(I)I
 SPLandroidx/emoji2/text/flatbuffer/MetadataItem;->codepointsLength()I
-HSPLandroidx/emoji2/text/flatbuffer/MetadataItem;->id()I
+SPLandroidx/emoji2/text/flatbuffer/MetadataItem;->id()I
 Landroidx/emoji2/text/flatbuffer/MetadataList;
 SPLandroidx/emoji2/text/flatbuffer/MetadataList;-><init>()V
 SPLandroidx/emoji2/text/flatbuffer/MetadataList;->__assign(ILjava/nio/ByteBuffer;)Landroidx/emoji2/text/flatbuffer/MetadataList;
@@ -14000,7 +13985,7 @@ Landroidx/emoji2/text/flatbuffer/Table;
 SPLandroidx/emoji2/text/flatbuffer/Table;-><init>()V
 SPLandroidx/emoji2/text/flatbuffer/Table;->__indirect(I)I
 SPLandroidx/emoji2/text/flatbuffer/Table;->__offset(I)I
-HSPLandroidx/emoji2/text/flatbuffer/Table;->__reset(ILjava/nio/ByteBuffer;)V
+SPLandroidx/emoji2/text/flatbuffer/Table;->__reset(ILjava/nio/ByteBuffer;)V
 SPLandroidx/emoji2/text/flatbuffer/Table;->__vector(I)I
 SPLandroidx/emoji2/text/flatbuffer/Table;->__vector_len(I)I
 Landroidx/emoji2/text/flatbuffer/Utf8;
@@ -15181,6 +15166,7 @@ Landroidx/media3/common/util/SystemClock;
 SPLandroidx/media3/common/util/SystemClock;-><init>()V
 SPLandroidx/media3/common/util/SystemClock;->createHandler(Landroid/os/Looper;Landroid/os/Handler$Callback;)Landroidx/media3/common/util/HandlerWrapper;
 SPLandroidx/media3/common/util/SystemClock;->elapsedRealtime()J
+SPLandroidx/media3/common/util/SystemClock;->onThreadBlocked()V
 Landroidx/media3/common/util/SystemHandlerWrapper;
 SPLandroidx/media3/common/util/SystemHandlerWrapper;-><clinit>()V
 SPLandroidx/media3/common/util/SystemHandlerWrapper;-><init>(Landroid/os/Handler;)V
@@ -15669,7 +15655,6 @@ Landroidx/media3/exoplayer/SuitableOutputChecker;
 Landroidx/media3/exoplayer/analytics/AnalyticsCollector;
 Landroidx/media3/exoplayer/analytics/AnalyticsListener;
 SPLandroidx/media3/exoplayer/analytics/AnalyticsListener;->onAudioSessionIdChanged(Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;I)V
-SPLandroidx/media3/exoplayer/analytics/AnalyticsListener;->onTrackSelectionParametersChanged(Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;Landroidx/media3/common/TrackSelectionParameters;)V
 Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;
 SPLandroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;-><init>(JLandroidx/media3/common/Timeline;ILandroidx/media3/exoplayer/source/MediaSource$MediaPeriodId;JLandroidx/media3/common/Timeline;ILandroidx/media3/exoplayer/source/MediaSource$MediaPeriodId;JJ)V
 Landroidx/media3/exoplayer/analytics/AnalyticsListener$Events;
@@ -15688,7 +15673,6 @@ SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->generateLoadi
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->generateReadingMediaPeriodEventTime()Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->lambda$onAudioSessionIdChanged$57(Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;ILandroidx/media3/exoplayer/analytics/AnalyticsListener;)V
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->lambda$onBandwidthSample$63(Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;IJJLandroidx/media3/exoplayer/analytics/AnalyticsListener;)V
-SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->lambda$onTrackSelectionParametersChanged$60(Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;Landroidx/media3/common/TrackSelectionParameters;Landroidx/media3/exoplayer/analytics/AnalyticsListener;)V
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->lambda$setPlayer$0$androidx-media3-exoplayer-analytics-DefaultAnalyticsCollector(Landroidx/media3/common/Player;Landroidx/media3/exoplayer/analytics/AnalyticsListener;Landroidx/media3/common/FlagSet;)V
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->onAudioSessionIdChanged(I)V
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->onBandwidthSample(IJJ)V
@@ -15698,7 +15682,6 @@ SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->sendEvent(Lan
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector;->setPlayer(Landroidx/media3/common/Player;Landroid/os/Looper;)V
 Landroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector$$ExternalSyntheticLambda1;
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector$$ExternalSyntheticLambda1;-><init>(Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;Landroidx/media3/common/TrackSelectionParameters;)V
-SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector$$ExternalSyntheticLambda1;->invoke(Ljava/lang/Object;)V
 Landroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector$$ExternalSyntheticLambda11;
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector$$ExternalSyntheticLambda11;-><init>(Landroidx/media3/exoplayer/analytics/AnalyticsListener$EventTime;IJJ)V
 SPLandroidx/media3/exoplayer/analytics/DefaultAnalyticsCollector$$ExternalSyntheticLambda11;->invoke(Ljava/lang/Object;)V
@@ -16316,14 +16299,9 @@ Landroidx/room/BaseRoomConnectionManager;
 SPLandroidx/room/BaseRoomConnectionManager;-><clinit>()V
 SPLandroidx/room/BaseRoomConnectionManager;-><init>()V
 SPLandroidx/room/BaseRoomConnectionManager;->checkIdentity(Landroidx/sqlite/SQLiteConnection;)V
-SPLandroidx/room/BaseRoomConnectionManager;->createMasterTableIfNotExists(Landroidx/sqlite/SQLiteConnection;)V
-SPLandroidx/room/BaseRoomConnectionManager;->hasEmptySchema(Landroidx/sqlite/SQLiteConnection;)Z
 SPLandroidx/room/BaseRoomConnectionManager;->hasRoomMasterTable(Landroidx/sqlite/SQLiteConnection;)Z
-SPLandroidx/room/BaseRoomConnectionManager;->invokeCreateCallback(Landroidx/sqlite/SQLiteConnection;)V
 SPLandroidx/room/BaseRoomConnectionManager;->invokeOpenCallback(Landroidx/sqlite/SQLiteConnection;)V
-SPLandroidx/room/BaseRoomConnectionManager;->onCreate(Landroidx/sqlite/SQLiteConnection;)V
 SPLandroidx/room/BaseRoomConnectionManager;->onOpen(Landroidx/sqlite/SQLiteConnection;)V
-SPLandroidx/room/BaseRoomConnectionManager;->updateIdentity(Landroidx/sqlite/SQLiteConnection;)V
 Landroidx/room/BaseRoomConnectionManager$Companion;
 SPLandroidx/room/BaseRoomConnectionManager$Companion;-><init>()V
 SPLandroidx/room/BaseRoomConnectionManager$Companion;-><init>(Lkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -16414,7 +16392,6 @@ SPLandroidx/room/RoomConnectionManager;->isSupportDatabaseOpen()Z
 SPLandroidx/room/RoomConnectionManager;->useConnection(ZLkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Landroidx/room/RoomConnectionManager$SupportOpenHelperCallback;
 SPLandroidx/room/RoomConnectionManager$SupportOpenHelperCallback;-><init>(Landroidx/room/RoomConnectionManager;I)V
-SPLandroidx/room/RoomConnectionManager$SupportOpenHelperCallback;->onCreate(Landroidx/sqlite/db/SupportSQLiteDatabase;)V
 SPLandroidx/room/RoomConnectionManager$SupportOpenHelperCallback;->onOpen(Landroidx/sqlite/db/SupportSQLiteDatabase;)V
 Landroidx/room/RoomDatabase;
 SPLandroidx/room/RoomDatabase;-><clinit>()V
@@ -16471,10 +16448,6 @@ SPLandroidx/room/RoomDatabaseKt__RoomDatabase_androidKt;->compatTransactionCorou
 Landroidx/room/RoomExternalOperationElement;
 SPLandroidx/room/RoomExternalOperationElement;-><clinit>()V
 SPLandroidx/room/RoomExternalOperationElement;-><init>()V
-Landroidx/room/RoomMasterTable;
-SPLandroidx/room/RoomMasterTable;-><clinit>()V
-SPLandroidx/room/RoomMasterTable;-><init>()V
-SPLandroidx/room/RoomMasterTable;->createInsertQuery(Ljava/lang/String;)Ljava/lang/String;
 Landroidx/room/RoomOpenDelegate;
 SPLandroidx/room/RoomOpenDelegate;-><init>(ILjava/lang/String;Ljava/lang/String;)V
 SPLandroidx/room/RoomOpenDelegate;->getIdentityHash()Ljava/lang/String;
@@ -16854,7 +16827,6 @@ SPLandroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper;->getWrappe
 SPLandroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper;->getWritableOrReadableDatabase(Z)Landroid/database/sqlite/SQLiteDatabase;
 SPLandroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper;->innerGetDatabase(Z)Landroid/database/sqlite/SQLiteDatabase;
 SPLandroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper;->onConfigure(Landroid/database/sqlite/SQLiteDatabase;)V
-SPLandroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper;->onCreate(Landroid/database/sqlite/SQLiteDatabase;)V
 SPLandroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper;->onOpen(Landroid/database/sqlite/SQLiteDatabase;)V
 Landroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper$$ExternalSyntheticLambda0;
 SPLandroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$OpenHelper$$ExternalSyntheticLambda0;-><init>(Landroidx/sqlite/db/SupportSQLiteOpenHelper$Callback;Landroidx/sqlite/db/framework/FrameworkSQLiteOpenHelper$DBRefHolder;)V
@@ -17988,6 +17960,7 @@ SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$s
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4$1;
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4$1;-><init>(Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4;Lkotlin/coroutines/Continuation;)V
+PLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4$2;
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4$2;-><init>(Lkotlinx/coroutines/flow/FlowCollector;Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl;)V
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$4$2;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -17999,6 +17972,7 @@ SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$s
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5$1;
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5$1;-><init>(Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5;Lkotlin/coroutines/Continuation;)V
+PLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5$2;
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5$2;-><init>(Lkotlinx/coroutines/flow/FlowCollector;Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl;)V
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$5$2;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -18010,6 +17984,7 @@ SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$s
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6$1;
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6$1;-><init>(Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6;Lkotlin/coroutines/Continuation;)V
+PLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6$2;
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6$2;-><init>(Lkotlinx/coroutines/flow/FlowCollector;Lcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl;)V
 SPLcom/dustvalve/next/android/data/local/datastore/AppearanceSettingsStoreImpl$special$$inlined$map$6$2;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -18274,6 +18249,7 @@ SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStore
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16$1;
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16$1;-><init>(Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16;Lkotlin/coroutines/Continuation;)V
+PLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16$2;
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16$2;-><init>(Lkotlinx/coroutines/flow/FlowCollector;Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl;)V
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$16$2;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -18389,6 +18365,7 @@ SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStore
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6$1;
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6$1;-><init>(Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6;Lkotlin/coroutines/Continuation;)V
+PLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6$2;
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6$2;-><init>(Lkotlinx/coroutines/flow/FlowCollector;Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl;)V
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$6$2;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -18400,6 +18377,7 @@ SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStore
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7$1;
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7$1;-><init>(Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7;Lkotlin/coroutines/Continuation;)V
+PLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7$2;
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7$2;-><init>(Lkotlinx/coroutines/flow/FlowCollector;Lcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl;)V
 SPLcom/dustvalve/next/android/data/local/datastore/SourcesSearchPlayerPrefsStoreImpl$special$$inlined$map$7$2;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -18481,8 +18459,6 @@ Lcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl$$ExternalSy
 SPLcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl$$ExternalSyntheticLambda9;-><init>(Lcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl;)V
 Lcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl$createOpenDelegate$_openDelegate$1;
 SPLcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl$createOpenDelegate$_openDelegate$1;-><init>(Lcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl;)V
-SPLcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl$createOpenDelegate$_openDelegate$1;->createAllTables(Landroidx/sqlite/SQLiteConnection;)V
-SPLcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl$createOpenDelegate$_openDelegate$1;->onCreate(Landroidx/sqlite/SQLiteConnection;)V
 SPLcom/dustvalve/next/android/data/local/db/DustvalveNextDatabase_Impl$createOpenDelegate$_openDelegate$1;->onOpen(Landroidx/sqlite/SQLiteConnection;)V
 Lcom/dustvalve/next/android/data/local/db/MigrationsKt;
 SPLcom/dustvalve/next/android/data/local/db/MigrationsKt;-><clinit>()V
@@ -19684,6 +19660,7 @@ SPLcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined
 SPLcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1$1;
 SPLcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1$1;-><init>(Lcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1;Lkotlin/coroutines/Continuation;)V
+PLcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1$2;
 SPLcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1$2;-><init>(Lkotlinx/coroutines/flow/FlowCollector;)V
 SPLcom/dustvalve/next/android/ui/navigation/NavigationViewModel$special$$inlined$map$1$2;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -20887,7 +20864,6 @@ SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyInto$default([Ljava/lang/Obje
 SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyInto([B[BIII)[B
 SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyInto([F[FIII)[F
 SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyInto([I[IIII)[I
-SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyInto([J[JIII)[J
 SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyInto([Ljava/lang/Object;[Ljava/lang/Object;III)[Ljava/lang/Object;
 SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyOfRange([BII)[B
 SPLkotlin/collections/ArraysKt___ArraysJvmKt;->copyOfRange([Ljava/lang/Object;II)[Ljava/lang/Object;
@@ -21202,7 +21178,7 @@ SPLkotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsKt;->getCOROUTINE_SUSPEN
 Lkotlin/coroutines/jvm/internal/BaseContinuationImpl;
 SPLkotlin/coroutines/jvm/internal/BaseContinuationImpl;-><init>(Lkotlin/coroutines/Continuation;)V
 PLkotlin/coroutines/jvm/internal/BaseContinuationImpl;->releaseIntercepted()V
-SPLkotlin/coroutines/jvm/internal/BaseContinuationImpl;->resumeWith(Ljava/lang/Object;)V
+HSPLkotlin/coroutines/jvm/internal/BaseContinuationImpl;->resumeWith(Ljava/lang/Object;)V
 Lkotlin/coroutines/jvm/internal/Boxing;
 SPLkotlin/coroutines/jvm/internal/Boxing;->boxBoolean(Z)Ljava/lang/Boolean;
 SPLkotlin/coroutines/jvm/internal/Boxing;->boxFloat(F)Ljava/lang/Float;
@@ -21745,7 +21721,7 @@ SPLkotlinx/coroutines/CancellableContinuationImpl;->releaseClaimedReusableContin
 SPLkotlinx/coroutines/CancellableContinuationImpl;->resetStateReusable()Z
 SPLkotlinx/coroutines/CancellableContinuationImpl;->resumeImpl$kotlinx_coroutines_core$default(Lkotlinx/coroutines/CancellableContinuationImpl;Ljava/lang/Object;ILkotlin/jvm/functions/Function3;ILjava/lang/Object;)V
 SPLkotlinx/coroutines/CancellableContinuationImpl;->resumeImpl$kotlinx_coroutines_core(Ljava/lang/Object;ILkotlin/jvm/functions/Function3;)V
-SPLkotlinx/coroutines/CancellableContinuationImpl;->resumeUndispatched(Lkotlinx/coroutines/CoroutineDispatcher;Ljava/lang/Object;)V
+PLkotlinx/coroutines/CancellableContinuationImpl;->resumeUndispatched(Lkotlinx/coroutines/CoroutineDispatcher;Ljava/lang/Object;)V
 SPLkotlinx/coroutines/CancellableContinuationImpl;->resumeWith(Ljava/lang/Object;)V
 SPLkotlinx/coroutines/CancellableContinuationImpl;->resumedState(Lkotlinx/coroutines/NotCompleted;Ljava/lang/Object;ILkotlin/jvm/functions/Function3;Ljava/lang/Object;)Ljava/lang/Object;
 SPLkotlinx/coroutines/CancellableContinuationImpl;->takeState$kotlinx_coroutines_core()Ljava/lang/Object;
@@ -21865,7 +21841,7 @@ SPLkotlinx/coroutines/DebugStringsKt;->getClassSimpleName(Ljava/lang/Object;)Lja
 Lkotlinx/coroutines/DefaultExecutor;
 SPLkotlinx/coroutines/DefaultExecutor;-><clinit>()V
 SPLkotlinx/coroutines/DefaultExecutor;-><init>()V
-SPLkotlinx/coroutines/DefaultExecutor;->acknowledgeShutdownIfNeeded()V
+PLkotlinx/coroutines/DefaultExecutor;->acknowledgeShutdownIfNeeded()V
 SPLkotlinx/coroutines/DefaultExecutor;->createThreadSync()Ljava/lang/Thread;
 SPLkotlinx/coroutines/DefaultExecutor;->getThread()Ljava/lang/Thread;
 SPLkotlinx/coroutines/DefaultExecutor;->invokeOnTimeout(JLjava/lang/Runnable;Lkotlin/coroutines/CoroutineContext;)Lkotlinx/coroutines/DisposableHandle;
@@ -21879,8 +21855,6 @@ SPLkotlinx/coroutines/DefaultExecutorKt;->initializeDefaultDelay()Lkotlinx/corou
 Lkotlinx/coroutines/Deferred;
 Lkotlinx/coroutines/DeferredCoroutine;
 SPLkotlinx/coroutines/DeferredCoroutine;-><init>(Lkotlin/coroutines/CoroutineContext;Z)V
-SPLkotlinx/coroutines/DeferredCoroutine;->await$suspendImpl(Lkotlinx/coroutines/DeferredCoroutine;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-SPLkotlinx/coroutines/DeferredCoroutine;->await(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lkotlinx/coroutines/Delay;
 Lkotlinx/coroutines/DelayKt;
 SPLkotlinx/coroutines/DelayKt;->delay(JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -21929,7 +21903,7 @@ SPLkotlinx/coroutines/EventLoop;->getNextTime()J
 SPLkotlinx/coroutines/EventLoop;->incrementUseCount$default(Lkotlinx/coroutines/EventLoop;ZILjava/lang/Object;)V
 SPLkotlinx/coroutines/EventLoop;->incrementUseCount(Z)V
 SPLkotlinx/coroutines/EventLoop;->isUnconfinedLoopActive()Z
-SPLkotlinx/coroutines/EventLoop;->isUnconfinedQueueEmpty()Z
+PLkotlinx/coroutines/EventLoop;->isUnconfinedQueueEmpty()Z
 SPLkotlinx/coroutines/EventLoop;->processUnconfinedEvent()Z
 Lkotlinx/coroutines/EventLoopImplBase;
 SPLkotlinx/coroutines/EventLoopImplBase;-><clinit>()V
@@ -21943,7 +21917,7 @@ SPLkotlinx/coroutines/EventLoopImplBase;->get_delayed$volatile$FU()Ljava/util/co
 SPLkotlinx/coroutines/EventLoopImplBase;->get_isCompleted$volatile$FU()Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;
 SPLkotlinx/coroutines/EventLoopImplBase;->get_queue$volatile$FU()Ljava/util/concurrent/atomic/AtomicReferenceFieldUpdater;
 SPLkotlinx/coroutines/EventLoopImplBase;->isCompleted()Z
-SPLkotlinx/coroutines/EventLoopImplBase;->isEmpty()Z
+PLkotlinx/coroutines/EventLoopImplBase;->isEmpty()Z
 SPLkotlinx/coroutines/EventLoopImplBase;->processNextEvent()J
 SPLkotlinx/coroutines/EventLoopImplBase;->schedule(JLkotlinx/coroutines/EventLoopImplBase$DelayedTask;)V
 SPLkotlinx/coroutines/EventLoopImplBase;->scheduleImpl(JLkotlinx/coroutines/EventLoopImplBase$DelayedTask;)I
@@ -21952,14 +21926,12 @@ SPLkotlinx/coroutines/EventLoopImplBase;->scheduleResumeAfterDelay(JLkotlinx/cor
 SPLkotlinx/coroutines/EventLoopImplBase;->shouldUnpark(Lkotlinx/coroutines/EventLoopImplBase$DelayedTask;)Z
 Lkotlinx/coroutines/EventLoopImplBase$DelayedResumeTask;
 SPLkotlinx/coroutines/EventLoopImplBase$DelayedResumeTask;-><init>(Lkotlinx/coroutines/EventLoopImplBase;JLkotlinx/coroutines/CancellableContinuation;)V
-SPLkotlinx/coroutines/EventLoopImplBase$DelayedResumeTask;->run()V
+PLkotlinx/coroutines/EventLoopImplBase$DelayedResumeTask;->run()V
 Lkotlinx/coroutines/EventLoopImplBase$DelayedRunnableTask;
 SPLkotlinx/coroutines/EventLoopImplBase$DelayedRunnableTask;-><init>(JLjava/lang/Runnable;)V
 SPLkotlinx/coroutines/EventLoopImplBase$DelayedRunnableTask;->run()V
 Lkotlinx/coroutines/EventLoopImplBase$DelayedTask;
 SPLkotlinx/coroutines/EventLoopImplBase$DelayedTask;-><init>(J)V
-SPLkotlinx/coroutines/EventLoopImplBase$DelayedTask;->compareTo(Ljava/lang/Object;)I
-SPLkotlinx/coroutines/EventLoopImplBase$DelayedTask;->compareTo(Lkotlinx/coroutines/EventLoopImplBase$DelayedTask;)I
 SPLkotlinx/coroutines/EventLoopImplBase$DelayedTask;->dispose()V
 SPLkotlinx/coroutines/EventLoopImplBase$DelayedTask;->getHeap()Lkotlinx/coroutines/internal/ThreadSafeHeap;
 SPLkotlinx/coroutines/EventLoopImplBase$DelayedTask;->getIndex()I
@@ -22629,6 +22601,7 @@ SPLkotlinx/coroutines/flow/FlowKt__LimitKt$dropWhile$1$1;-><init>(Lkotlin/jvm/in
 SPLkotlinx/coroutines/flow/FlowKt__LimitKt$dropWhile$1$1;->emit(Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 Lkotlinx/coroutines/flow/FlowKt__LimitKt$dropWhile$1$1$emit$1;
 SPLkotlinx/coroutines/flow/FlowKt__LimitKt$dropWhile$1$1$emit$1;-><init>(Lkotlinx/coroutines/flow/FlowKt__LimitKt$dropWhile$1$1;Lkotlin/coroutines/Continuation;)V
+PLkotlinx/coroutines/flow/FlowKt__LimitKt$dropWhile$1$1$emit$1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;
 Lkotlinx/coroutines/flow/FlowKt__LimitKt$takeWhile$$inlined$unsafeFlow$1;
 SPLkotlinx/coroutines/flow/FlowKt__LimitKt$takeWhile$$inlined$unsafeFlow$1;-><init>(Lkotlinx/coroutines/flow/Flow;Lkotlin/jvm/functions/Function2;)V
 SPLkotlinx/coroutines/flow/FlowKt__LimitKt$takeWhile$$inlined$unsafeFlow$1;->collect(Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -23127,14 +23100,9 @@ Lkotlinx/coroutines/internal/LockFreeTaskQueueCore;
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;-><clinit>()V
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;-><init>(IZ)V
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->addLast(Ljava/lang/Object;)I
-SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->allocateNextCopy(J)Lkotlinx/coroutines/internal/LockFreeTaskQueueCore;
-SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->allocateOrGetNextCopy(J)Lkotlinx/coroutines/internal/LockFreeTaskQueueCore;
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->getArray()Ljava/util/concurrent/atomic/AtomicReferenceArray;
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->getSize()I
-SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->get_next$volatile$FU()Ljava/util/concurrent/atomic/AtomicReferenceFieldUpdater;
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->get_state$volatile$FU()Ljava/util/concurrent/atomic/AtomicLongFieldUpdater;
-SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->markFrozen()J
-SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->next()Lkotlinx/coroutines/internal/LockFreeTaskQueueCore;
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore;->removeFirstOrNull()Ljava/lang/Object;
 Lkotlinx/coroutines/internal/LockFreeTaskQueueCore$Companion;
 SPLkotlinx/coroutines/internal/LockFreeTaskQueueCore$Companion;-><init>()V
@@ -23159,6 +23127,7 @@ SPLkotlinx/coroutines/internal/ResizableAtomicArray;->get(I)Ljava/lang/Object;
 SPLkotlinx/coroutines/internal/ResizableAtomicArray;->setSynchronized(ILjava/lang/Object;)V
 Lkotlinx/coroutines/internal/ScopeCoroutine;
 SPLkotlinx/coroutines/internal/ScopeCoroutine;-><init>(Lkotlin/coroutines/CoroutineContext;Lkotlin/coroutines/Continuation;)V
+SPLkotlinx/coroutines/internal/ScopeCoroutine;->afterCompletion(Ljava/lang/Object;)V
 SPLkotlinx/coroutines/internal/ScopeCoroutine;->afterCompletionUndispatched()V
 SPLkotlinx/coroutines/internal/ScopeCoroutine;->afterResume(Ljava/lang/Object;)V
 SPLkotlinx/coroutines/internal/ScopeCoroutine;->isScopedCoroutine()Z
@@ -23218,9 +23187,7 @@ SPLkotlinx/coroutines/internal/ThreadSafeHeap;->realloc()[Lkotlinx/coroutines/in
 SPLkotlinx/coroutines/internal/ThreadSafeHeap;->remove(Lkotlinx/coroutines/internal/ThreadSafeHeapNode;)Z
 SPLkotlinx/coroutines/internal/ThreadSafeHeap;->removeAtImpl(I)Lkotlinx/coroutines/internal/ThreadSafeHeapNode;
 SPLkotlinx/coroutines/internal/ThreadSafeHeap;->setSize(I)V
-SPLkotlinx/coroutines/internal/ThreadSafeHeap;->siftDownFrom(I)V
 SPLkotlinx/coroutines/internal/ThreadSafeHeap;->siftUpFrom(I)V
-SPLkotlinx/coroutines/internal/ThreadSafeHeap;->swap(II)V
 Lkotlinx/coroutines/internal/ThreadSafeHeapNode;
 Lkotlinx/coroutines/intrinsics/CancellableKt;
 SPLkotlinx/coroutines/intrinsics/CancellableKt;->startCoroutineCancellable(Lkotlin/jvm/functions/Function2;Ljava/lang/Object;Lkotlin/coroutines/Continuation;)V

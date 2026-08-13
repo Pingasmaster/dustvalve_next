@@ -57,7 +57,7 @@ slack-compose-lints = "1.5.4"
 dependency-analysis = "3.18.0"
 
 [libraries]
-# Core library desugaring (compat flavor: minSdk 26 + JVM 25 bytecode)
+# Core library desugaring (compat flavor: minSdk 26 + JVM 26 bytecode)
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugar-jdk-libs" }
 # Compose
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
