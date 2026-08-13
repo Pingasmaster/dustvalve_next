@@ -57,3 +57,5 @@ ideas
 .jdk*-home/
 app-release-future-mapping.txt
 app-release-mapping.txt
+# Per-versionCode R8 mapping archive (build.sh); gitignored but NEVER deleted.
+/mappings/

@@ -1,32 +1,38 @@
 #!/usr/bin/env bash
 #
+# Shared Android-apps build.sh. Keep this file aligned across dustvalve_next,
+# calc, compass, STT_premium, and Token Maxer. Only the PROJECT CONFIG block
+# (and any extra flags/lanes it declares) may differ. When you change shared
+# behavior, port it to the other four the same day.
+#
 # Usage:
 #   ./build.sh                    # RELEASE path: regen baseline+startup profiles (GMD),
-#                                 # bump version, clean + ASCII + signing gate + ktlint +
-#                                 # detekt + lint + unit tests + assemble + smoke + e2e +
-#                                 # shippedsmoke, then one-shot NetBird APK HTTP serve
-#                                 # for all four APKs. Requires the production keystore.
+#                                 # bump version, clean + ASCII + ktlint + detekt + lint
+#                                 # + tests + assemble dual APKs, then GMD shippedsmoke
+#                                 # + smoke + e2e, then one-shot NetBird APK HTTP serve
+#                                 # for all four root APKs. Requires /dev/kvm.
 #   ./build.sh --debug            # DEV path: same static gates + unit tests + assemble,
 #                                 # but skip release-only steps (baseline regen, version
-#                                 # bump, GMD smoke/e2e/shippedsmoke), then copy the
-#                                 # debug APKs to the repo root and serve those
-#   ./build.sh --clean            # gradle clean + remove APKs + exit
+#                                 # bump, GMD device gates), then copy the debug APKs
+#                                 # to the repo root and serve those
+#   ./build.sh --clean            # gradle clean + remove root APKs + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
-#   ./build.sh --workflow-tests   # Tier 1 JVM workflow tests only (fast) + exit
-#   ./build.sh --smoke            # Tier 2 on-device smoke on GMD pixel7aApi37 + exit
-#   ./build.sh --smoke-release    # Tier 2 smoke against the MINIFIED release APK + exit
-#   ./build.sh --smoke-shipped    # Tier 4 smoke against the APK AS SHIPPED + exit
-#   ./build.sh --e2e              # Tier 3 hermetic E2E on GMD pixel7aApi37 + exit
-#   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
-#   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
-#   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks
+#   ./build.sh --smoke            # GMD Pixel 7a API 37 @SmokeTest (future flavor)
+#   ./build.sh --e2e              # GMD hermetic androidTest (see PROJECT CONFIG filter)
+#   ./build.sh --smoke-shipped    # :shippedsmoke release lane (future flavor)
+#   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks (future)
 #   ./build.sh --publish          # serve existing root release + debug APKs over
 #                                 # NetBird HTTP + exit
 #   ./build.sh --publish-debug    # serve existing root debug APKs over NetBird HTTP + exit
 #   ./build.sh --block-on-outdated
 #                                 # refuse to build when any catalog pin is behind
 #                                 # (default is to auto-bump pins, then continue)
+#   ./build.sh --workflow-tests   # Tier 1 JVM workflow tests only (fast) + exit
+#   ./build.sh --smoke-release    # Tier 2 smoke against the MINIFIED release APK + exit
+#   ./build.sh --e2e-live         # Tier 3 LIVE E2E (real Bandcamp/YouTube) + exit
+#   ./build.sh --live-net         # DUSTVALVE_LIVE_NET=1 gated JVM live smokes + exit
+
 #
 # Every build mode first runs scripts/check_latest_deps.py --apply, which bumps
 # any version in gradle/libs.versions.toml that is behind the newest release
@@ -44,15 +50,17 @@
 #
 # User-facing speed: default builds ALWAYS regenerate baseline-prof.txt +
 # startup-prof.txt (needs KVM) so release APKs ship fresh AOT hints. R8
-# minify + resource shrink already run on assemble*Release. Macrobenchmark
-# only measures - it does not speed up users, so it stays opt-in.
+# minify + resource shrink already run on assemble*Release. Default ./build.sh
+# always runs shippedsmoke + smoke + e2e on GMD (needs KVM). --debug skips
+# those device gates. Macrobenchmark only measures - it does not speed up
+# users, so it stays opt-in.
 #
 # IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
 # you have user approval and have confirmed no process is using it (check with
 # `fuser ~/.cache/android-apps/build.lock` or `lsof` on that path). The lock is
-# shared across dustvalve_next, calc, compass, STT_premium, and Token Maxer
-# so only one of those builds/cleans runs at a time. Deleting the file while
-# a holder is alive can break flock (new openers get a new inode).
+# shared across dustvalve_next, calc, compass, STT_premium, and Token Maxer so
+# only one of those builds/cleans runs at a time. Deleting the file while a
+# holder is alive can break flock (new openers get a new inode).
 #
 set -euo pipefail
 
@@ -89,18 +97,20 @@ export JAVA_TOOL_OPTIONS="${JAVA_TOOL_OPTIONS:+$JAVA_TOOL_OPTIONS }--sun-misc-un
 DO_CLEAN_ONLY=0
 DO_FORMAT=0
 DO_BUILD_HEALTH=0
-DO_WORKFLOW_TESTS=0
 DO_SMOKE=0
-DO_SMOKE_RELEASE=0
-DO_SMOKE_SHIPPED=0
 DO_E2E=0
-DO_E2E_LIVE=0
-DO_LIVE_NET=0
+DO_SMOKE_SHIPPED=0
 DO_MACROBENCHMARK=0
 DO_PUBLISH=0
 DO_PUBLISH_DEBUG=0
 DO_DEBUG=0
 BLOCK_ON_OUTDATED=0
+# Extra flags used only by some apps; stay 0 elsewhere so shared omit-logic
+# can test them without an "unbound variable" under set -u.
+DO_WORKFLOW_TESTS=0
+DO_SMOKE_RELEASE=0
+DO_E2E_LIVE=0
+DO_LIVE_NET=0
 
 ROOT_APK_COMPAT="app-release.apk"
 ROOT_MAPPING_COMPAT="app-release-mapping.txt"
@@ -120,29 +130,135 @@ DEBUG_APK_FUTURE="app/build/outputs/apk/future/debug/app-future-debug.apk"
 ROOT_APK_DEBUG_COMPAT="app-debug.apk"
 ROOT_APK_DEBUG_FUTURE="app-debug-future.apk"
 
+GRADLE_APK_COMPAT="app/build/outputs/apk/compat/release/app-compat-release.apk"
+GRADLE_MAPPING_COMPAT="app/build/outputs/mapping/compatRelease/mapping.txt"
+GRADLE_APK_FUTURE="app/build/outputs/apk/future/release/app-future-release.apk"
+GRADLE_MAPPING_FUTURE="app/build/outputs/mapping/futureRelease/mapping.txt"
+BUILD_GRADLE="app/build.gradle.kts"
+
+# Defaults; PROJECT CONFIG overrides.
+HAS_COMPAT_SMOKE=0
+HAS_ASR_FIXTURE=0
+ELF_CHECK_PASS_APKS=1
+E2E_NOT_ANNOTATION=""
+PROJECT_EXTRA_FLAGS_HELP=""
+BASELINE_ASSEMBLE_TASK=":baselineprofile:assembleFutureRelease"
+BASELINE_TEST_TASK=":baselineprofile:pixel7aApi37FutureReleaseAndroidTest"
+BASELINE_ASSERT_COUNT=1
+SMOKE_ASSERT_COUNT=1
+COMPAT_SMOKE_ASSERT_COUNT=1
+E2E_ASSERT_COUNT=1
+SHIPPED_SMOKE_ASSERT_COUNT=1
+MACROBENCHMARK_ASSERT_COUNT=1
+
+project_handle_arg() { return 1; }
+project_run_extra_standalone() { return 0; }
+
+# =============================================================================
+# PROJECT CONFIG - this block is the only part that should differ per app.
+# =============================================================================
+
+REQUIRE_RELEASE_SIGNING_FLAG=(-Pdustvalve.requireReleaseSigning=true)
+SMOKE_ANNOTATION="com.dustvalve.next.android.testing.SmokeTest"
+E2E_NOT_ANNOTATION="com.dustvalve.next.android.testing.LiveNetwork"
+HAS_COMPAT_SMOKE=0
+HAS_ASR_FIXTURE=0
+ELF_CHECK_PASS_APKS=0
+BASELINE_ASSEMBLE_TASK=":baselineprofile:assembleFutureNonMinifiedRelease"
+BASELINE_TEST_TASK=":baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest"
+BASELINE_ASSERT_COUNT=1
+SMOKE_ASSERT_COUNT=5
+E2E_ASSERT_COUNT=11
+SHIPPED_SMOKE_ASSERT_COUNT=1
+MACROBENCHMARK_ASSERT_COUNT=1
+PROJECT_EXTRA_FLAGS_HELP=", --workflow-tests, --smoke-release, --e2e-live, --live-net"
+
+project_handle_arg() {
+    case "$1" in
+        --workflow-tests) DO_WORKFLOW_TESTS=1 ;;
+        --smoke-release)  DO_SMOKE_RELEASE=1 ;;
+        --e2e-live)       DO_E2E_LIVE=1 ;;
+        --live-net)       DO_LIVE_NET=1 ;;
+        *) return 1 ;;
+    esac
+    return 0
+}
+
+project_run_extra_standalone() {
+    if [[ "$DO_WORKFLOW_TESTS" -eq 1 ]]; then
+        acquire_lock
+        gradle :app:testFutureDebugUnitTest --tests 'com.dustvalve.next.android.workflow.*'
+        echo "Workflow tests complete."
+        exit 0
+    fi
+    if [[ "$DO_LIVE_NET" -eq 1 ]]; then
+        acquire_lock
+        DUSTVALVE_LIVE_NET=1 gradle :app:testFutureDebugUnitTest --tests '*Live*'
+        echo "Live-network JVM smokes complete."
+        exit 0
+    fi
+    if [[ "$DO_SMOKE_RELEASE" -eq 1 ]]; then
+        acquire_lock
+        gradle :app:pixel7aApi37Setup -PtestReleaseBuild "${GMD_GPU[@]}"
+        gradle :app:pixel7aApi37FutureReleaseAndroidTest -PtestReleaseBuild "${GMD_GPU[@]}"
+        ./scripts/assert_tests_ran.sh 1 app
+        echo "Release smoke suite complete."
+        exit 0
+    fi
+    if [[ "$DO_E2E_LIVE" -eq 1 ]]; then
+        acquire_lock
+        echo "WARNING: this suite hits the real Bandcamp and YouTube services." >&2
+        gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}"
+        gradle :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
+            -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
+        ./scripts/assert_tests_ran.sh 1 app
+        echo "Live E2E suite complete."
+        exit 0
+    fi
+}
+
+# Libraries have no api flavors - their unit tests stay testDebugUnitTest.
+GRADLE_TASKS=(
+    ktlintCheck
+    detekt
+    lintCompatRelease
+    lintFutureRelease
+    testDebugUnitTest
+    testCompatDebugUnitTest
+    testFutureDebugUnitTest
+    :macrobenchmark:assembleFutureRelease
+    :baselineprofile:assembleFutureNonMinifiedRelease
+    :shippedsmoke:assembleFutureRelease
+    assembleCompatDebug
+    assembleFutureDebug
+    assembleCompatRelease
+    assembleFutureRelease
+)
+
+# =============================================================================
+# END PROJECT CONFIG
+# =============================================================================
+
 for arg in "$@"; do
     case "$arg" in
         --clean)             DO_CLEAN_ONLY=1 ;;
         --format)            DO_FORMAT=1 ;;
         --build-health)      DO_BUILD_HEALTH=1 ;;
-        --workflow-tests)    DO_WORKFLOW_TESTS=1 ;;
         --smoke)             DO_SMOKE=1 ;;
-        --smoke-release)     DO_SMOKE_RELEASE=1 ;;
-        --smoke-shipped)     DO_SMOKE_SHIPPED=1 ;;
         --e2e)               DO_E2E=1 ;;
-        --e2e-live)          DO_E2E_LIVE=1 ;;
-        --live-net)          DO_LIVE_NET=1 ;;
+        --smoke-shipped)     DO_SMOKE_SHIPPED=1 ;;
         --macrobenchmark)    DO_MACROBENCHMARK=1 ;;
         --publish)           DO_PUBLISH=1 ;;
         --publish-debug)     DO_PUBLISH_DEBUG=1 ;;
         --debug)             DO_DEBUG=1 ;;
         --block-on-outdated) BLOCK_ON_OUTDATED=1 ;;
         *)
-            echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
-                "--workflow-tests, --smoke, --smoke-release, --smoke-shipped," \
-                "--e2e, --e2e-live, --live-net, --macrobenchmark," \
-                "--publish, --publish-debug, --debug, --block-on-outdated)" >&2
-            exit 2
+            if ! project_handle_arg "$arg"; then
+                echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
+                    "--smoke, --e2e, --smoke-shipped, --macrobenchmark," \
+                    "--publish, --publish-debug, --debug, --block-on-outdated${PROJECT_EXTRA_FLAGS_HELP})" >&2
+                exit 2
+            fi
             ;;
     esac
 done
@@ -185,14 +301,50 @@ acquire_lock() {
     fi
 }
 
-
 GMD_GPU=(-Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect)
 
-# Route every Gradle invocation through a noise filter so the build transcript
-# stays free of known-non-actionable toolchain WARNING / tip / report-link lines.
-# Script form (not a shell function) so `timeout` can exec it.
+# Route Gradle through scripts/run_gradle.sh when the repo has a noise filter;
+# otherwise call ./gradlew directly. Keep this as an array so `timeout` can
+# exec it (timeout cannot invoke a shell function).
+GRADLE_CMD=(./gradlew)
+if [[ -x ./scripts/run_gradle.sh ]]; then
+    GRADLE_CMD=(./scripts/run_gradle.sh)
+fi
 gradle() {
-    ./scripts/run_gradle.sh "$@"
+    "${GRADLE_CMD[@]}" "$@"
+}
+
+require_kvm() {
+    if [[ ! -e /dev/kvm ]]; then
+        echo "ERROR: /dev/kvm missing; GMD instrumented tests need KVM." >&2
+        echo "Use ./build.sh --debug to skip GMD for a non-release build." >&2
+        return 1
+    fi
+}
+
+start_asr_fixture_push_waiter() {
+    local wait_secs="${1:-240}"
+    ./scripts/push_asr_android_test_fixture.sh --wait-secs "$wait_secs" &
+    ASR_FIXTURE_PUSH_PID=$!
+}
+
+await_asr_fixture_push_waiter() {
+    if [[ -n "${ASR_FIXTURE_PUSH_PID:-}" ]]; then
+        wait "$ASR_FIXTURE_PUSH_PID" || true
+        unset ASR_FIXTURE_PUSH_PID
+    fi
+}
+
+gmd_pre_android_test() {
+    if [[ "$HAS_ASR_FIXTURE" -eq 1 ]]; then
+        start_asr_fixture_push_waiter 240
+    fi
+}
+
+gmd_post_android_test() {
+    if [[ "$HAS_ASR_FIXTURE" -eq 1 ]]; then
+        await_asr_fixture_push_waiter
+    fi
 }
 
 # Production release path requires the real keystore. --debug omits this so
@@ -200,62 +352,86 @@ gradle() {
 # works (AGP debug signing fallback in app/build.gradle.kts). Standalone
 # --smoke / --e2e / --e2e-live use debug androidTest APKs and also omit it.
 # --smoke-shipped / --smoke-release / --macrobenchmark omit it so a missing
-# keystore can still drive a debug-signed release variant (same as STT);
-# default ./build.sh still fails assembleRelease.
+# keystore can still drive a debug-signed release variant; default ./build.sh
+# still fails assembleRelease.
 REQUIRE_RELEASE_SIGNING_ARGS=()
-if [[ "$DO_DEBUG" -eq 0 && "$DO_SMOKE" -eq 0 && "$DO_E2E" -eq 0 && "$DO_SMOKE_SHIPPED" -eq 0 && "$DO_SMOKE_RELEASE" -eq 0 && "$DO_E2E_LIVE" -eq 0 && "$DO_MACROBENCHMARK" -eq 0 ]]; then
-    REQUIRE_RELEASE_SIGNING_ARGS=(-Pdustvalve.requireReleaseSigning=true)
+if [[ "$DO_DEBUG" -eq 0 && "$DO_SMOKE" -eq 0 && "$DO_E2E" -eq 0 && "$DO_SMOKE_SHIPPED" -eq 0 && "$DO_PUBLISH" -eq 0 && "$DO_PUBLISH_DEBUG" -eq 0 && "$DO_MACROBENCHMARK" -eq 0 && "$DO_SMOKE_RELEASE" -eq 0 && "$DO_E2E_LIVE" -eq 0 ]]; then
+    REQUIRE_RELEASE_SIGNING_ARGS=("${REQUIRE_RELEASE_SIGNING_FLAG[@]}")
 fi
 
 # Device lanes used by the default release path and by the standalone --smoke /
 # --e2e / --smoke-shipped modes. Kept as functions so release and opt-in share
 # one assertion floor.
 run_smoke_tests() {
+    require_kvm || return 1
     gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
-    # Process-level ceiling: a Compose idle deadlock must not wedge ./build.sh
-    # for tens of minutes (override with APP_ANDROID_TEST_TIMEOUT_SEC).
+    gmd_pre_android_test
     local app_timeout_sec="${APP_ANDROID_TEST_TIMEOUT_SEC:-600}"
-    # Use `|| { rc=$?; ... }`, not `if ! cmd; then rc=$?`: the successful if
-    # condition resets $? to 0 and silently green-lights GMD failures.
+    local rc=0
     timeout --foreground "${app_timeout_sec}s" \
-        ./scripts/run_gradle.sh :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
-            -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.SmokeTest \
+        "${GRADLE_CMD[@]}" :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
+            -Pandroid.testInstrumentationRunnerArguments.annotation="$SMOKE_ANNOTATION" \
         || {
-            local rc=$?
+            rc=$?
             if [[ "$rc" -eq 124 ]]; then
                 echo "ERROR: :app smoke GMD androidTest exceeded ${app_timeout_sec}s" >&2
             fi
-            return "$rc"
         }
-    # AppSmokeTest is @SmokeTest with 5 @Test methods (2 also @LiveNetwork).
-    ./scripts/assert_tests_ran.sh 5 app || return 1
+    gmd_post_android_test
+    [[ "$rc" -eq 0 ]] || return "$rc"
+    ./scripts/assert_tests_ran.sh "$SMOKE_ASSERT_COUNT" app || return 1
+}
+
+run_compat_smoke_tests() {
+    require_kvm || return 1
+    gradle :app:pixel7aApi34Setup "${GMD_GPU[@]}" || return 1
+    gmd_pre_android_test
+    local app_timeout_sec="${APP_ANDROID_TEST_TIMEOUT_SEC:-600}"
+    local rc=0
+    timeout --foreground "${app_timeout_sec}s" \
+        "${GRADLE_CMD[@]}" :app:pixel7aApi34CompatDebugAndroidTest "${GMD_GPU[@]}" \
+            -Pandroid.testInstrumentationRunnerArguments.annotation="$SMOKE_ANNOTATION" \
+        || {
+            rc=$?
+            if [[ "$rc" -eq 124 ]]; then
+                echo "ERROR: :app compat smoke GMD androidTest exceeded ${app_timeout_sec}s" >&2
+            fi
+        }
+    gmd_post_android_test
+    [[ "$rc" -eq 0 ]] || return "$rc"
+    ./scripts/assert_tests_ran.sh "$COMPAT_SMOKE_ASSERT_COUNT" app || return 1
 }
 
 run_e2e_tests() {
+    require_kvm || return 1
     gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    gmd_pre_android_test
     local app_timeout_sec="${APP_ANDROID_TEST_TIMEOUT_SEC:-900}"
+    local -a e2e_args=()
+    if [[ -n "$E2E_NOT_ANNOTATION" ]]; then
+        e2e_args+=(-Pandroid.testInstrumentationRunnerArguments.notAnnotation="$E2E_NOT_ANNOTATION")
+    fi
+    local rc=0
     timeout --foreground "${app_timeout_sec}s" \
-        ./scripts/run_gradle.sh :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
-            -Pandroid.testInstrumentationRunnerArguments.notAnnotation=com.dustvalve.next.android.testing.LiveNetwork \
+        "${GRADLE_CMD[@]}" :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
+            "${e2e_args[@]}" \
         || {
-            local rc=$?
+            rc=$?
             if [[ "$rc" -eq 124 ]]; then
                 echo "ERROR: :app e2e GMD androidTest exceeded ${app_timeout_sec}s" >&2
             fi
-            return "$rc"
         }
-    # Hermetic e2e classes alone contribute 11 @Test methods; non-live smoke
-    # methods also match this filter, so the floor stays at the e2e count.
-    ./scripts/assert_tests_ran.sh 11 app || return 1
+    gmd_post_android_test
+    [[ "$rc" -eq 0 ]] || return "$rc"
+    ./scripts/assert_tests_ran.sh "$E2E_ASSERT_COUNT" app || return 1
 }
 
 run_shipped_smoke_tests() {
+    require_kvm || return 1
     gradle :shippedsmoke:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
-    # Hard ceiling on the instrumentation run so a residual UiAutomator hang
-    # still fails the gate in minutes (override with SHIPPED_SMOKE_TIMEOUT_SEC).
     local smoke_timeout_sec="${SHIPPED_SMOKE_TIMEOUT_SEC:-600}"
     timeout --foreground "${smoke_timeout_sec}s" \
-        ./scripts/run_gradle.sh :shippedsmoke:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
+        "${GRADLE_CMD[@]}" :shippedsmoke:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
         || {
             local rc=$?
             if [[ "$rc" -eq 124 ]]; then
@@ -263,7 +439,7 @@ run_shipped_smoke_tests() {
             fi
             return "$rc"
         }
-    ./scripts/assert_tests_ran.sh 1 shippedsmoke || return 1
+    ./scripts/assert_tests_ran.sh "$SHIPPED_SMOKE_ASSERT_COUNT" shippedsmoke || return 1
 }
 
 regenerate_baseline_profiles() {
@@ -272,22 +448,19 @@ regenerate_baseline_profiles() {
         echo "Use ./build.sh --debug to skip baselines for a non-release build." >&2
         exit 1
     fi
-    # :app + :baselineprofile apply androidx.baselineprofile (1.5+ / AGP 9).
-    # Regen still uses the GMD androidTest + install script so both api flavors
-    # share one SOURCE-name profile under app/src/release/. Plugin generate*
-    # tasks exist for a future cutover (automaticGenerationDuringBuild=false).
-    #
     # Retry: GMD LMK can kill the app mid-flush ("never flushed profiles").
     local attempt=1
     local max_attempts=3
-    gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
+    gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" \
+        :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
     while true; do
         local attempt_log
         attempt_log="$(mktemp)"
-        if gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
+        if gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" \
+            "$BASELINE_TEST_TASK" "${GMD_GPU[@]}" \
             -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile \
             >"$attempt_log" 2>&1 \
-            && ./scripts/assert_tests_ran.sh 1 baselineprofile; then
+            && ./scripts/assert_tests_ran.sh "$BASELINE_ASSERT_COUNT" baselineprofile; then
             cat "$attempt_log"
             rm -f "$attempt_log"
             break
@@ -359,58 +532,24 @@ if [[ "$DO_FORMAT" -eq 1 ]]; then
     exit 0
 fi
 
-if [[ "$DO_WORKFLOW_TESTS" -eq 1 ]]; then
-    acquire_lock
-    gradle :app:testFutureDebugUnitTest --tests 'com.dustvalve.next.android.workflow.*'
-    echo "Workflow tests complete."
-    exit 0
-fi
-
-if [[ "$DO_LIVE_NET" -eq 1 ]]; then
-    acquire_lock
-    DUSTVALVE_LIVE_NET=1 gradle :app:testFutureDebugUnitTest --tests '*Live*'
-    echo "Live-network JVM smokes complete."
-    exit 0
-fi
-
 if [[ "$DO_SMOKE" -eq 1 ]]; then
     acquire_lock
     run_smoke_tests || exit $?
-    echo "Smoke suite complete."
-    exit 0
-fi
-
-if [[ "$DO_SMOKE_RELEASE" -eq 1 ]]; then
-    acquire_lock
-    gradle :app:pixel7aApi37Setup -PtestReleaseBuild "${GMD_GPU[@]}"
-    gradle :app:pixel7aApi37FutureReleaseAndroidTest -PtestReleaseBuild "${GMD_GPU[@]}"
-    ./scripts/assert_tests_ran.sh 1 app
-    echo "Release smoke suite complete."
-    exit 0
-fi
-
-if [[ "$DO_SMOKE_SHIPPED" -eq 1 ]]; then
-    acquire_lock
-    run_shipped_smoke_tests || exit $?
-    echo "Shipped-config smoke complete."
+    echo "Smoke complete."
     exit 0
 fi
 
 if [[ "$DO_E2E" -eq 1 ]]; then
     acquire_lock
     run_e2e_tests || exit $?
-    echo "Hermetic E2E suite complete."
+    echo "E2E complete."
     exit 0
 fi
 
-if [[ "$DO_E2E_LIVE" -eq 1 ]]; then
+if [[ "$DO_SMOKE_SHIPPED" -eq 1 ]]; then
     acquire_lock
-    echo "WARNING: this suite hits the real Bandcamp and YouTube services." >&2
-    gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}"
-    gradle :app:pixel7aApi37FutureDebugAndroidTest "${GMD_GPU[@]}" \
-        -Pandroid.testInstrumentationRunnerArguments.annotation=com.dustvalve.next.android.testing.LiveNetwork
-    ./scripts/assert_tests_ran.sh 1 app
-    echo "Live E2E suite complete."
+    run_shipped_smoke_tests || exit $?
+    echo "Shipped smoke complete."
     exit 0
 fi
 
@@ -419,10 +558,12 @@ if [[ "$DO_MACROBENCHMARK" -eq 1 ]]; then
     gradle :macrobenchmark:pixel7aApi37Setup "${GMD_GPU[@]}"
     gradle :macrobenchmark:pixel7aApi37FutureReleaseAndroidTest "${GMD_GPU[@]}" \
         -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR
-    ./scripts/assert_tests_ran.sh 1 macrobenchmark
+    ./scripts/assert_tests_ran.sh "$MACROBENCHMARK_ASSERT_COUNT" macrobenchmark
     echo "Macrobenchmark complete (emulator numbers are advisory)."
     exit 0
 fi
+
+project_run_extra_standalone
 
 acquire_lock
 
@@ -430,12 +571,6 @@ acquire_lock
 chmod +x ./scripts/check_release_signing_gate.sh
 ./scripts/check_release_signing_gate.sh
 chmod +x ./scripts/check_elf_16k_alignment.sh
-
-GRADLE_APK_FUTURE="app/build/outputs/apk/future/release/app-future-release.apk"
-GRADLE_MAPPING_FUTURE="app/build/outputs/mapping/futureRelease/mapping.txt"
-GRADLE_APK_COMPAT="app/build/outputs/apk/compat/release/app-compat-release.apk"
-GRADLE_MAPPING_COMPAT="app/build/outputs/mapping/compatRelease/mapping.txt"
-BUILD_GRADLE="app/build.gradle.kts"
 
 VERSION_BUMPED=0
 CURRENT_CODE=""
@@ -484,30 +619,11 @@ fi
 # `clean` runs as its own invocation. Inside one task graph Gradle is free to
 # run it in parallel with ktlintCheck, and it does: ktlint's source walk then
 # trips over app/build/ intermediates that :app:clean is deleting underneath it
-# and fails with NoSuchFileException. Nothing declares an ordering between the
-# two, so the only reliable fix is to finish the delete first.
+# and fails with NoSuchFileException.
 if ! gradle clean; then
     revert_version_bump
     exit 1
 fi
-
-GRADLE_TASKS=(
-    ktlintCheck
-    detekt
-    lintCompatRelease
-    lintFutureRelease
-    # Libraries have no api flavors - their unit tests stay testDebugUnitTest.
-    testDebugUnitTest
-    testCompatDebugUnitTest
-    testFutureDebugUnitTest
-    :macrobenchmark:assembleFutureRelease
-    :baselineprofile:assembleFutureNonMinifiedRelease
-    :shippedsmoke:assembleFutureRelease
-    assembleCompatDebug
-    assembleFutureDebug
-    assembleCompatRelease
-    assembleFutureRelease
-)
 
 if ! gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" "${GRADLE_TASKS[@]}"; then
     revert_version_bump
@@ -515,11 +631,17 @@ if ! gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" "${GRADLE_TASKS[@]}"; then
 fi
 
 # Hard gate: every arm64 .so we ship must be 16 KB page-aligned (Android 15+
-# 16 KB page devices refuse under-aligned libs at load time). Runs after
-# Gradle so merged_native_libs includes our own JNI and dependency .so files.
-if ! ./scripts/check_elf_16k_alignment.sh; then
-    revert_version_bump
-    exit 1
+# 16 KB page devices refuse under-aligned libs at load time).
+if [[ "$ELF_CHECK_PASS_APKS" -eq 1 ]]; then
+    if ! ./scripts/check_elf_16k_alignment.sh "$GRADLE_APK_COMPAT" "$GRADLE_APK_FUTURE"; then
+        revert_version_bump
+        exit 1
+    fi
+else
+    if ! ./scripts/check_elf_16k_alignment.sh; then
+        revert_version_bump
+        exit 1
+    fi
 fi
 
 # Release path always runs the GMD device lanes. --debug skips them so a
@@ -536,6 +658,12 @@ if [[ "$DO_DEBUG" -eq 0 ]]; then
         revert_version_bump
         exit 1
     fi
+    if [[ "$HAS_COMPAT_SMOKE" -eq 1 ]]; then
+        if ! run_compat_smoke_tests; then
+            revert_version_bump
+            exit 1
+        fi
+    fi
     if ! run_e2e_tests; then
         revert_version_bump
         exit 1
@@ -547,6 +675,30 @@ if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
     gradle buildHealth || true
     REPORT="build/reports/dependency-analysis/build-health-report.txt"
     [[ -f "$REPORT" ]] && echo "Dependency-analysis report: $REPORT"
+fi
+
+# Archive R8 mappings keyed by flavor+versionCode BEFORE the root copies are
+# overwritten: devices in the field run historical versionCodes, and without
+# the archive their stack traces become permanently un-deobfuscatable after
+# the next build. mappings/ is gitignored but must never be deleted.
+MAPPINGS_DIR="mappings"
+if [[ ! -d "$MAPPINGS_DIR" ]]; then
+    mkdir -p "$MAPPINGS_DIR"
+    for prev in "$ROOT_MAPPING_COMPAT" "$ROOT_MAPPING_FUTURE"; do
+        if [[ -f "$prev" ]]; then
+            cp "$prev" "$MAPPINGS_DIR/unversioned-$(date +%Y%m%d%H%M%S)-$prev"
+        fi
+    done
+fi
+BUILT_CODE=$(sed -n 's/.*val baseVersionCode = \([0-9][0-9]*\).*/\1/p' "$BUILD_GRADLE" | head -1)
+if [[ -n "$BUILT_CODE" ]]; then
+    if [[ -f "$GRADLE_MAPPING_COMPAT" ]]; then
+        cp "$GRADLE_MAPPING_COMPAT" "$MAPPINGS_DIR/compat-${BUILT_CODE}-mapping.txt"
+    fi
+    if [[ -f "$GRADLE_MAPPING_FUTURE" ]]; then
+        cp "$GRADLE_MAPPING_FUTURE" "$MAPPINGS_DIR/future-$((1000000 + BUILT_CODE))-mapping.txt"
+    fi
+    echo "Archived R8 mappings for versionCode $BUILT_CODE under $MAPPINGS_DIR/."
 fi
 
 # A dev build exposes its own APKs and stops here: the release artifacts at the

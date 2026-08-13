@@ -33,6 +33,13 @@ Four automated tiers (see docs/testing/README.md):
 - Scenario backlog lives in docs/testing/catalog-*.md; new E2E tests must
   reference their catalog id.
 
+`build.sh` is the same script across dustvalve_next, calc, compass,
+STT_premium, and Token Maxer except the PROJECT CONFIG block (signing
+property, GMD annotations, Gradle tasks, extra flags). When you change
+shared behavior (publish, lock, JDK, version bump, serve helper), port it
+to the other four the same day. `./build.sh --publish` re-serves all four
+root APKs (compat/future x release/debug).
+
 E2E tests must not inherit provider state. The release lane runs the suite
 UNFILTERED in one pass, so DataStore flags leak between classes; declare what
 a class needs with `ProviderStateRule` rather than assuming a starting state.
