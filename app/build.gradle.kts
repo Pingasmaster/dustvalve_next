@@ -27,8 +27,8 @@ android {
     // Shared by defaultConfig + future flavor offset. build.sh bumps this
     // via sed on the defaultConfig assignment below; future re-reads it
     // on the next Gradle configure.
-    val baseVersionCode = 309
-    val baseVersionName = "0.5.31"
+    val baseVersionCode = 310
+    val baseVersionName = "0.5.32"
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
@@ -70,41 +70,53 @@ android {
 
     signingConfigs {
         create("release") {
+            // Production keystore at repo root (gitignored). Used ONLY by
+            // buildTypes.release (and any release-like variant, e.g.
+            // androidx.baselineprofile's nonMinifiedRelease). Full ./build.sh
+            // passes -Pdustvalve.requireReleaseSigning=true so a missing
+            // keystore hard-fails instead of silently shipping a debug-signed
+            // "release" APK. ./build.sh --debug omits that property so local
+            // assemble without secrets can still fall back to AGP debug signing.
             val keystoreFile = file("../release-keystore.jks")
             val passwordFile = rootProject.file(".password-signing-keys")
+            val requireReleaseSigning = providers
+                .gradleProperty("dustvalve.requireReleaseSigning")
+                .map { it.equals("true", ignoreCase = true) }
+                .orElse(false)
+                .get()
 
             if (keystoreFile.exists() && passwordFile.exists()) {
-                // Production signing: real keystore + password from local secrets.
                 storeFile = keystoreFile
                 storePassword = passwordFile.readText().trim()
                 keyAlias = "dustvalve"
                 keyPassword = storePassword
+            } else if (requireReleaseSigning) {
+                throw GradleException(
+                    "release-keystore.jks or .password-signing-keys missing, but " +
+                        "dustvalve.requireReleaseSigning=true (set by ./build.sh " +
+                        "release path). Refusing to sign release artifacts with " +
+                        "the debug key. Place both files at the repo root, or use " +
+                        "./build.sh --debug for a local unsigned-of-production build.",
+                )
             } else {
-                // Fallback to AGP's debug signing when the real keystore / password
-                // is not present. This keeps :app:assembleRelease unblocked in two
-                // scenarios that need a release-variant build without secrets:
-                //   - the baseline-profile regeneration workflow on every push/PR
-                //     (the macrobenchmark only needs an installable APK; the
-                //     deliverable is baseline-prof.txt, not the APK itself)
-                //   - local devs who haven't generated a keystore yet
-                // The resulting APK is debug-signed and NOT shippable. Production
-                // release builds decode release-keystore.jks from KEYSTORE_BASE64
-                // via .github/workflows/release.yml.
-                // Only warn when this build actually produces a release
-                // artifact; on test/lint-only invocations the fallback is
-                // irrelevant and the message is just configuration noise.
+                // Fallback keeps :app:assembleRelease unblocked for --debug
+                // and local builds without secrets. The resulting APK is
+                // debug-signed and NOT shippable.
                 val wantsReleaseArtifact = gradle.startParameter.taskNames.any { name ->
                     val task = name.substringAfterLast(':')
                     task.contains("Release") &&
                         (task.startsWith("assemble") || task.startsWith("bundle") || task.startsWith("install"))
                 }
                 val fallbackMessage = "release-keystore.jks or .password-signing-keys missing - " +
-                    "falling back to AGP debug signing for the release variant."
+                    "falling back to AGP debug signing for the release variant " +
+                    "(ok for --debug / local; production builds must set " +
+                    "dustvalve.requireReleaseSigning=true)."
                 // lifecycle (not warn): local/dev builds without the production
                 // keystore are expected; a WARNING line fails the "clean
                 // transcript" gate on ./build.sh even though the fallback is
-                // intentional. Production release CI still supplies the
-                // keystore so this branch is never taken there.
+                // intentional. Production release builds set
+                // dustvalve.requireReleaseSigning=true so this branch is
+                // never taken there.
                 if (wantsReleaseArtifact) {
                     rootProject.logger.lifecycle(fallbackMessage)
                 } else {
@@ -125,12 +137,21 @@ android {
                         System.getProperty("java.home") + "/bin/keytool",
                         "-genkey", "-noprompt",
                         "-keystore", debugStoreFile.absolutePath,
-                        "-alias", debug.keyAlias!!,
+                        "-alias",
+                        requireNotNull(debug.keyAlias) {
+                            "debug signingConfig.keyAlias is null"
+                        },
                         "-keyalg", "RSA", "-keysize", "2048",
                         "-validity", "10000",
                         "-dname", "CN=Android Debug,O=Android,C=US",
-                        "-storepass", debug.storePassword!!,
-                        "-keypass", debug.keyPassword!!,
+                        "-storepass",
+                        requireNotNull(debug.storePassword) {
+                            "debug signingConfig.storePassword is null"
+                        },
+                        "-keypass",
+                        requireNotNull(debug.keyPassword) {
+                            "debug signingConfig.keyPassword is null"
+                        },
                     ).redirectErrorStream(true).start()
                     val output = process.inputStream.bufferedReader().readText()
                     val exitCode = process.waitFor()

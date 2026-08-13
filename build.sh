@@ -2,9 +2,10 @@
 #
 # Usage:
 #   ./build.sh                    # RELEASE path: regen baseline+startup profiles (GMD),
-#                                 # bump version, clean + ASCII + ktlint + detekt + lint
-#                                 # + unit tests + assemble + smoke + e2e + shippedsmoke,
-#                                 # then one-shot NetBird APK HTTP serve for all four APKs
+#                                 # bump version, clean + ASCII + signing gate + ktlint +
+#                                 # detekt + lint + unit tests + assemble + smoke + e2e +
+#                                 # shippedsmoke, then one-shot NetBird APK HTTP serve
+#                                 # for all four APKs. Requires the production keystore.
 #   ./build.sh --debug            # DEV path: same static gates + unit tests + assemble,
 #                                 # but skip release-only steps (baseline regen, version
 #                                 # bump, GMD smoke/e2e/shippedsmoke), then copy the
@@ -49,9 +50,9 @@
 # IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
 # you have user approval and have confirmed no process is using it (check with
 # `fuser ~/.cache/android-apps/build.lock` or `lsof` on that path). The lock is
-# shared across dustvalve_next, calc, compass, and STT_premium so only one of
-# those builds/cleans runs at a time. Deleting the file while a holder is
-# alive can break flock (new openers get a new inode).
+# shared across dustvalve_next, calc, compass, STT_premium, and Token Maxer
+# so only one of those builds/cleans runs at a time. Deleting the file while
+# a holder is alive can break flock (new openers get a new inode).
 #
 set -euo pipefail
 
@@ -179,7 +180,7 @@ acquire_lock() {
     exec 9>"$LOCKFILE"
     if ! flock -n 9; then
         echo "Another Android app build/clean is already running" \
-            "(dustvalve_next/calc/compass/STT_premium share $LOCKFILE). Exiting."
+            "(dustvalve_next/calc/compass/STT_premium/Token Maxer share $LOCKFILE). Exiting."
         exit 1
     fi
 }
@@ -194,6 +195,17 @@ gradle() {
     ./scripts/run_gradle.sh "$@"
 }
 
+# Production release path requires the real keystore. --debug omits this so
+# local assemble without release-keystore.jks / .password-signing-keys still
+# works (AGP debug signing fallback in app/build.gradle.kts). Standalone
+# --smoke / --e2e / --e2e-live use debug androidTest APKs and also omit it.
+# --smoke-shipped / --smoke-release / --macrobenchmark omit it so a missing
+# keystore can still drive a debug-signed release variant (same as STT);
+# default ./build.sh still fails assembleRelease.
+REQUIRE_RELEASE_SIGNING_ARGS=()
+if [[ "$DO_DEBUG" -eq 0 && "$DO_SMOKE" -eq 0 && "$DO_E2E" -eq 0 && "$DO_SMOKE_SHIPPED" -eq 0 && "$DO_SMOKE_RELEASE" -eq 0 && "$DO_E2E_LIVE" -eq 0 && "$DO_MACROBENCHMARK" -eq 0 ]]; then
+    REQUIRE_RELEASE_SIGNING_ARGS=(-Pdustvalve.requireReleaseSigning=true)
+fi
 
 # Device lanes used by the default release path and by the standalone --smoke /
 # --e2e / --smoke-shipped modes. Kept as functions so release and opt-in share
@@ -268,11 +280,11 @@ regenerate_baseline_profiles() {
     # Retry: GMD LMK can kill the app mid-flush ("never flushed profiles").
     local attempt=1
     local max_attempts=3
-    gradle :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
+    gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
     while true; do
         local attempt_log
         attempt_log="$(mktemp)"
-        if gradle :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
+        if gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" :baselineprofile:pixel7aApi37FutureNonMinifiedReleaseAndroidTest "${GMD_GPU[@]}" \
             -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile \
             >"$attempt_log" 2>&1 \
             && ./scripts/assert_tests_ran.sh 1 baselineprofile; then
@@ -415,6 +427,9 @@ fi
 acquire_lock
 
 ./scripts/check_ascii.sh
+chmod +x ./scripts/check_release_signing_gate.sh
+./scripts/check_release_signing_gate.sh
+chmod +x ./scripts/check_elf_16k_alignment.sh
 
 GRADLE_APK_FUTURE="app/build/outputs/apk/future/release/app-future-release.apk"
 GRADLE_MAPPING_FUTURE="app/build/outputs/mapping/futureRelease/mapping.txt"
@@ -494,7 +509,15 @@ GRADLE_TASKS=(
     assembleFutureRelease
 )
 
-if ! gradle "${GRADLE_TASKS[@]}"; then
+if ! gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" "${GRADLE_TASKS[@]}"; then
+    revert_version_bump
+    exit 1
+fi
+
+# Hard gate: every arm64 .so we ship must be 16 KB page-aligned (Android 15+
+# 16 KB page devices refuse under-aligned libs at load time). Runs after
+# Gradle so merged_native_libs includes our own JNI and dependency .so files.
+if ! ./scripts/check_elf_16k_alignment.sh; then
     revert_version_bump
     exit 1
 fi
