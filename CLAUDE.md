@@ -34,7 +34,7 @@ Four automated tiers (see docs/testing/README.md):
   reference their catalog id.
 
 `build.sh` is the same script across dustvalve_next, calc, compass,
-STT_premium, and Token Maxer except the PROJECT CONFIG block (signing
+and core except the PROJECT CONFIG block (signing
 property, GMD annotations, Gradle tasks, extra flags). When you change
 shared behavior (publish, lock, JDK, version bump, serve helper), port it
 to the other four the same day. `./build.sh --publish` re-serves all four

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
 # Shared Android-apps build.sh. Keep this file aligned across dustvalve_next,
-# calc, compass, STT_premium, and Token Maxer. Only the PROJECT CONFIG block
+# calc, compass, and core. Only the PROJECT CONFIG block
 # (and any extra flags/lanes it declares) may differ. When you change shared
-# behavior, port it to the other four the same day.
+# behavior, port it to the other three the same day.
 #
 # Usage:
 #   ./build.sh                    # RELEASE path: regen baseline+startup profiles (GMD),
@@ -58,7 +58,7 @@
 # IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
 # you have user approval and have confirmed no process is using it (check with
 # `fuser ~/.cache/android-apps/build.lock` or `lsof` on that path). The lock is
-# shared across dustvalve_next, calc, compass, STT_premium, and Token Maxer so
+# shared across dustvalve_next, calc, compass, and core so
 # only one of those builds/cleans runs at a time. Deleting the file while a
 # holder is alive can break flock (new openers get a new inode).
 #
@@ -296,7 +296,7 @@ acquire_lock() {
     exec 9>"$LOCKFILE"
     if ! flock -n 9; then
         echo "Another Android app build/clean is already running" \
-            "(dustvalve_next/calc/compass/STT_premium/Token Maxer share $LOCKFILE). Exiting."
+            "(dustvalve_next/calc/compass/core share $LOCKFILE). Exiting."
         exit 1
     fi
 }
