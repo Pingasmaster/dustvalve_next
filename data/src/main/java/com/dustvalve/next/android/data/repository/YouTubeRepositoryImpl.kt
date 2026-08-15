@@ -5,6 +5,8 @@ import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubePlaylistCacheEntity
 import com.dustvalve.next.android.data.local.db.entity.YouTubeVideoCacheEntity
+import com.dustvalve.next.android.data.network.OpportunisticRefreshGate
+import com.dustvalve.next.android.data.network.UnmeteredRefreshGate
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeChannelParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
@@ -62,6 +64,7 @@ class YouTubeRepositoryImpl(
     private val ytmClient: YouTubeMusicInnertubeClient,
     private val ytmArtistParser: YouTubeMusicArtistParser,
     ioDispatcher: CoroutineDispatcher,
+    private val refreshGate: OpportunisticRefreshGate = OpportunisticRefreshGate.ALWAYS,
 ) : YouTubeRepository {
 
     @Inject constructor(
@@ -77,6 +80,7 @@ class YouTubeRepositoryImpl(
         ytmClient: YouTubeMusicInnertubeClient,
         ytmArtistParser: YouTubeMusicArtistParser,
         @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+        refreshGate: UnmeteredRefreshGate,
     ) : this(
         client,
         playerParser,
@@ -91,6 +95,7 @@ class YouTubeRepositoryImpl(
         ytmClient,
         ytmArtistParser,
         ioDispatcher,
+        refreshGate,
     )
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + ioDispatcher)
@@ -105,8 +110,8 @@ class YouTubeRepositoryImpl(
 
     private companion object {
         // Video metadata (title, duration, uploader) is immutable
-        // post-publish and cached forever. Playlists revalidate on every
-        // open (see getPlaylistTracks).
+        // post-publish and cached forever. Playlists revalidate in the
+        // background on unmetered networks only (see getPlaylistTracks).
 
         // Opaque YouTube `params` token selecting the channel "Videos" tab.
         // This is the same value Metrolist / NewPipe / yt-dlp use; YT has
@@ -327,17 +332,18 @@ class YouTubeRepositoryImpl(
         if (ids.isEmpty()) return null
         val cachedVideos = videoCache.getByIds(ids).associateBy { it.videoId }
         val tracks = ids.mapNotNull { id -> cachedVideos[id]?.let { cachedToTrack(it) } }
-        if (tracks.size != ids.size) return null
-        // Playlists grow (and shrink) like artist discographies:
-        // always return cache immediately, then silently revalidate
-        // so newly-added videos land on the next open without a
-        // hard TTL freeze.
-        backgroundScope.launch {
-            YouTubeRepositorySupport.bestEffort {
-                fetchAndCachePlaylist(
-                    playlistId = resolveBrowsablePlaylistId(playlistId),
-                    aliasId = extractedId,
-                )
+        if (tracks.isEmpty()) return null
+        // Playlists grow like artist discographies: return whatever we have
+        // immediately (including a partial join), then silently revalidate
+        // on unmetered so newly-added videos land on the next open.
+        if (refreshGate.allowRefresh()) {
+            backgroundScope.launch {
+                YouTubeRepositorySupport.bestEffort {
+                    fetchAndCachePlaylist(
+                        playlistId = resolveBrowsablePlaylistId(playlistId),
+                        aliasId = extractedId,
+                    )
+                }
             }
         }
         // Cache entity has no cover column yet; first-track art is
@@ -396,11 +402,18 @@ class YouTubeRepositoryImpl(
         // Persist video + playlist snapshots. Best-effort. Videos use the
         // non-destructive bulk insert: these entities carry default
         // albumUrl/albumLookupDone and must never clobber rows already
-        // upgraded by the single-video path.
+        // upgraded by the single-video path. An empty parse (deleted
+        // playlist / error page that slipped past the alert check) must
+        // not wipe a snapshot we already have.
         YouTubeRepositorySupport.bestEffort {
             val ids = all.map { it.id.removePrefix("yt_") }
             val videoEntities = all.zip(ids).map { (track, vid) -> track.toCacheEntity(vid) }
             videoCache.insertAllIgnore(videoEntities)
+            if (all.isEmpty()) {
+                val existing = playlistCache.getById(playlistId)
+                    ?: playlistCache.getById(aliasId)
+                if (existing != null) return@bestEffort
+            }
             val idsJson = json.encodeToString(stringListSerializer, ids)
             playlistCache.insert(
                 YouTubePlaylistCacheEntity(

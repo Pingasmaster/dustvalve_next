@@ -11,7 +11,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.cache.CacheDataSource
-import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.NoOpCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
@@ -22,6 +22,7 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.dustvalve.next.android.MainActivity
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.data.asset.StoragePaths
 import com.dustvalve.next.android.di.qualifiers.MediaHttp
 import com.dustvalve.next.android.domain.repository.LibraryRepository
 import com.dustvalve.next.android.player.AudioPowerPolicy
@@ -45,25 +46,33 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
-import java.io.File
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 object PlayerModule {
 
-    private const val MAX_CACHE_SIZE_BYTES = 512L * 1024L * 1024L // 512 MB
-
     @OptIn(UnstableApi::class)
     @Provides
     @Singleton
     fun provideSimpleCache(@ApplicationContext context: Context): SimpleCache {
-        val cacheDir = File(context.cacheDir, "media_cache")
+        val databaseProvider = androidx.media3.database.StandaloneDatabaseProvider(context)
+        val cacheDir = StoragePaths.mediaCacheDir(context)
+        val legacyDir = StoragePaths.legacyMediaCacheDir(context)
+        // URL-keyed spans in cacheDir are useless after the track-id cache
+        // key change, and the OS may reclaim cacheDir. Drop the legacy tree
+        // (and its index rows) so we do not keep a split-brain cache.
+        if (legacyDir.exists() && legacyDir.canonicalFile != cacheDir.canonicalFile) {
+            try {
+                SimpleCache.delete(legacyDir, databaseProvider)
+            } catch (_: Exception) {
+                legacyDir.deleteRecursively()
+            }
+        }
         if (!cacheDir.exists()) {
             cacheDir.mkdirs()
         }
-        val evictor = LeastRecentlyUsedCacheEvictor(MAX_CACHE_SIZE_BYTES)
-        return SimpleCache(cacheDir, evictor, androidx.media3.database.StandaloneDatabaseProvider(context))
+        return SimpleCache(cacheDir, NoOpCacheEvictor(), databaseProvider)
     }
 
     @OptIn(UnstableApi::class)
@@ -109,6 +118,10 @@ object PlayerModule {
         val cacheDataSourceFactory = CacheDataSource.Factory()
             .setCache(simpleCache)
             .setUpstreamDataSourceFactory(defaultDataSourceFactory)
+            // MediaItem.customCacheKey (track id) lands in DataSpec.key so a
+            // freshly resolved googlevideo URL hits spans from the last play
+            // instead of downloading the same bytes under a new URI key.
+            .setCacheKeyFactory { spec -> spec.key ?: spec.uri.toString() }
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
 
         // Defaults are video-tuned. For audio-only HTTP streaming, bigger min/max

@@ -62,6 +62,13 @@ class NetworkUtilsTest {
             .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
     }
 
+    @Test fun `upgradeBandcampArtUrl collapses host and query variants to one key`() {
+        assertThat(NetworkUtils.upgradeBandcampArtUrl("https://f1.bcbits.com/img/a99_2.jpg?cb=1"))
+            .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
+        assertThat(NetworkUtils.upgradeBandcampArtUrl("https://cdn.bcbits.com/img/a99_5.jpg"))
+            .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
+    }
+
     @Test fun `upgradeBandcampArtUrl leaves full-original alone and rewrites PNG _1 to JPEG _0`() {
         assertThat(NetworkUtils.upgradeBandcampArtUrl("https://f4.bcbits.com/img/a99_0.jpg"))
             .isEqualTo("https://f4.bcbits.com/img/a99_0.jpg")
@@ -84,6 +91,23 @@ class NetworkUtilsTest {
         val bcCanon = ThumbnailUrls.canonicalize(bc)
         assertThat(bcCanon).isEqualTo("https://f4.bcbits.com/img/a42_0.jpg")
         assertThat(ThumbnailUrls.canonicalize(bcCanon)).isEqualTo(bcCanon)
+
+        val ytQuery = "https://i.ytimg.com/vi/abc/sddefault.jpg?sqp=xx"
+        assertThat(ThumbnailUrls.canonicalize(ytQuery))
+            .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
+
+        val sc = "https://i1.sndcdn.com/artworks-xyz-large.jpg?t=1"
+        val scCanon = ThumbnailUrls.canonicalize(sc)
+        assertThat(scCanon).isEqualTo("https://i1.sndcdn.com/artworks-xyz-t500x500.jpg")
+        assertThat(ThumbnailUrls.canonicalize("https://i1.sndcdn.com/artworks-xyz-t67x67.jpg"))
+            .isEqualTo(scCanon)
+
+        val googleOrig = "https://yt3.googleusercontent.com/abc=s0-c-k-c0x00ffffff-no-rj"
+        assertThat(ThumbnailUrls.canonicalize(googleOrig))
+            .isEqualTo("https://yt3.googleusercontent.com/abc=s800-c-k-c0x00ffffff-no-rj")
+        val landscape = "https://lh3.googleusercontent.com/hero=w1440-h600"
+        assertThat(ThumbnailUrls.canonicalize(landscape))
+            .isEqualTo("https://lh3.googleusercontent.com/hero=w800-h333")
     }
 
     @Test fun `sanitizeFileName keeps safe chars`() {

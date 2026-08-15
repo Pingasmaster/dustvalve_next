@@ -130,6 +130,8 @@ class DownloadRepositoryImpl(
      *   is stable on the same endpoints (observed across yt-dlp, NewPipe,
      *   Metrolist issues).
      * - No cookie jar. A stale consent cookie can 403 the CDN.
+     * - No HTTP disk cache. Audio bodies must not compete with JSON in the
+     *   shared OkHttp Cache (Range requests through that cache stall).
      */
     private val downloadClient: OkHttpClient by lazy {
         client.newBuilder()
@@ -137,6 +139,7 @@ class DownloadRepositoryImpl(
             .callTimeout(0, TimeUnit.SECONDS)
             .protocols(listOf(Protocol.HTTP_1_1))
             .cookieJar(okhttp3.CookieJar.NO_COOKIES)
+            .cache(null)
             .build()
     }
 
@@ -423,6 +426,11 @@ class DownloadRepositoryImpl(
         }
         try {
             com.dustvalve.next.android.data.asset.StoragePaths.imagesDir(context).deleteRecursively()
+        } catch (_: IOException) {
+        } catch (_: SecurityException) {
+        }
+        try {
+            com.dustvalve.next.android.data.asset.StoragePaths.coversDir(context).deleteRecursively()
         } catch (_: IOException) {
         } catch (_: SecurityException) {
         }

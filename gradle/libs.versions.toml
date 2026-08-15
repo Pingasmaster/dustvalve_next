@@ -115,7 +115,6 @@ jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
 # Coil
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
-coil-network-cache-control = { group = "io.coil-kt.coil3", name = "coil-network-cache-control", version.ref = "coil" }
 
 # Theming / drag-and-drop
 palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "palette" }

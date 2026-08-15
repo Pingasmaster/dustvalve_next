@@ -27,8 +27,8 @@ android {
     // Shared by defaultConfig + future flavor offset. build.sh bumps this
     // via sed on the defaultConfig assignment below; future re-reads it
     // on the next Gradle configure.
-    val baseVersionCode = 311
-    val baseVersionName = "0.5.33"
+    val baseVersionCode = 312
+    val baseVersionName = "0.5.34"
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"
@@ -419,7 +419,6 @@ dependencies {
     // Coil 3
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
-    implementation(libs.coil.network.cache.control)
 
     // Palette (for extracting dominant colors from album art)
     implementation(libs.palette.ktx)

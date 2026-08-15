@@ -3,6 +3,7 @@ package com.dustvalve.next.android.ui.screens.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.data.network.OpportunisticRefreshGate
 import com.dustvalve.next.android.domain.model.Artist
 import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.model.Track
@@ -76,6 +77,7 @@ class ArtistDetailViewModel @Inject constructor(
     private val downloadAlbumUseCase: DownloadAlbumUseCase,
     private val downloadController: DownloadController,
     private val expandSourceTracks: ExpandSourceTracksUseCase,
+    private val refreshGate: OpportunisticRefreshGate = OpportunisticRefreshGate.ALWAYS,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArtistDetailUiState())
@@ -119,15 +121,16 @@ class ArtistDetailViewModel @Inject constructor(
      * SearchResult.
      *
      * Bandcamp uses [ArtistRepository.getArtistDetailFlow]: cache first,
-     * then opportunistic revalidate on every open so new releases appear
-     * as soon as the page is visited. Flat-feed sources (YouTube,
-     * SoundCloud) keep the suspend + paginated track path.
+     * then opportunistic revalidate on unmetered so new releases appear
+     * without blocking the UI. Flat-feed sources (YouTube, SoundCloud)
+     * keep the suspend + paginated track path.
      */
     fun load(sourceId: String, url: String, name: String? = null, imageUrl: String? = null) {
         val key = "$sourceId|$url"
         val sameLoaded = loadedKey == key && _uiState.value.artist != null
-        // Flat-feed artists are expensive to re-page; Bandcamp must always
-        // re-subscribe so the Flow revalidates discography on every visit.
+        // Flat-feed artists are expensive to re-page; Bandcamp re-subscribes
+        // so an unmetered visit can pick up new releases. Metered visits
+        // still hit the Flow, which returns cache and skips the scrape.
         if (sameLoaded && sourceId != "bandcamp") return
         nextPage = null
 
@@ -555,6 +558,7 @@ class ArtistDetailViewModel @Inject constructor(
      * database is the indefinite store - this cost is paid once per album.
      */
     private fun preloadMixPool() {
+        if (!refreshGate.allowRefresh()) return
         val state = _uiState.value
         if (state.artist?.albums.isNullOrEmpty()) return
         viewModelScope.launch {

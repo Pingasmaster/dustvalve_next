@@ -6,6 +6,7 @@ import com.dustvalve.next.android.data.local.db.dao.YouTubePlaylistCacheDao
 import com.dustvalve.next.android.data.local.db.dao.YouTubeVideoCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubePlaylistCacheEntity
 import com.dustvalve.next.android.data.local.db.entity.YouTubeVideoCacheEntity
+import com.dustvalve.next.android.data.network.OpportunisticRefreshGate
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeChannelParser
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeNextParser
@@ -33,7 +34,8 @@ import org.junit.Test
  *   network access.
  * - getTrackInfo persists fresh fetches into the video cache.
  * - getPlaylistTracks rebuilds from the cached snapshot when present and
- *   returns it immediately, then silently revalidates in the background.
+ *   returns it immediately, then silently revalidates in the background
+ *   when the refresh gate allows it (unmetered in production).
  * - Cache write failures never break the user-facing call (errors are
  *   silently swallowed).
  *
@@ -180,9 +182,44 @@ class YouTubeRepositoryCacheTest {
         coVerify(exactly = 1) { client.browse("VL$playlistId") }
     }
 
-    @Test fun `getPlaylistTracks falls through to network when cache is incomplete`() = runTest {
+    @Test fun `getPlaylistTracks cache hit skips revalidate when refresh is denied`() = runTest {
+        val playlistId = "PLmetered"
+        repo = YouTubeRepositoryImpl(
+            client, playerParser, searchParser, playlistParser, channelParser, nextParser,
+            videoCache, playlistCache, ytmRepo, albumResolver,
+            ytmClient = mockk(relaxed = true),
+            ytmArtistParser = mockk(relaxed = true),
+            ioDispatcher = UnconfinedTestDispatcher(),
+            refreshGate = OpportunisticRefreshGate.NEVER,
+        )
+        coEvery { playlistCache.getById(playlistId) } returns YouTubePlaylistCacheEntity(
+            playlistId = playlistId,
+            title = "My Playlist",
+            videoIdsJson = "[\"vid00000001\"]",
+            cachedAt = System.currentTimeMillis(),
+        )
+        coEvery { videoCache.getByIds(listOf("vid00000001")) } returns listOf(
+            YouTubeVideoCacheEntity(
+                videoId = "vid00000001",
+                title = "First",
+                artist = "A",
+                artistUrl = "",
+                durationSec = 60f,
+                artUrl = "",
+            ),
+        )
+
+        val (tracks, title) = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=$playlistId")
+
+        assertThat(title).isEqualTo("My Playlist")
+        assertThat(tracks.map { it.title }).containsExactly("First")
+        coVerify(exactly = 0) { client.browse(any()) }
+    }
+
+    @Test fun `getPlaylistTracks returns partial cache instead of blocking on a full refetch`() = runTest {
         val playlistId = "PLincomplete"
-        // Snapshot says 2 videos, but only 1 is in the video cache -> fall through.
+        // Snapshot says 2 videos, but only 1 is in the video cache -> still
+        // emit what we have; unmetered background refresh fills the rest.
         coEvery { playlistCache.getById(playlistId) } returns YouTubePlaylistCacheEntity(
             playlistId = playlistId,
             title = "Stale",
@@ -198,7 +235,6 @@ class YouTubeRepositoryCacheTest {
                 artUrl = "",
             ),
         )
-        // Network response for the fall-through.
         coEvery { client.browse("VL$playlistId") } returns JsonObject(emptyMap())
         every { playlistParser.parse(any(), playlistId) } returns
             com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlaylistParser.PlaylistPage(
@@ -209,8 +245,9 @@ class YouTubeRepositoryCacheTest {
 
         val (tracks, title) = repo.getPlaylistTracks("https://www.youtube.com/playlist?list=$playlistId")
 
-        assertThat(title).isEqualTo("Refreshed")
-        assertThat(tracks).hasSize(2)
+        assertThat(title).isEqualTo("Stale")
+        assertThat(tracks).hasSize(1)
+        assertThat(tracks[0].title).isEqualTo("Just one")
         coVerify { client.browse("VL$playlistId") }
     }
 

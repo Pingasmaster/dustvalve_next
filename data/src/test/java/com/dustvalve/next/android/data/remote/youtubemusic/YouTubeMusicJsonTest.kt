@@ -81,7 +81,7 @@ class YouTubeMusicJsonTest {
             """.trimIndent(),
         )
         // Largest by declared width, then canonical full-quality rewrite
-        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=w0-h0-l90-rj")
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=w800-h800-l90-rj")
     }
 
     @Test fun `extractMusicThumbnail uses thumbnailRenderer fallback`() {
@@ -100,7 +100,7 @@ class YouTubeMusicJsonTest {
             }
             """.trimIndent(),
         )
-        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img=w0-h0")
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://x.example/img=w800-h800")
     }
 
     @Test fun `extractMusicThumbnail uses bare thumbnail thumbnails fallback`() {
@@ -133,7 +133,7 @@ class YouTubeMusicJsonTest {
             .isEqualTo("https://i.ytimg.com/vi/abc/hq720.jpg")
     }
 
-    @Test fun `extractMusicThumbnail bumps s576 avatars to s0 without keeping s1200`() {
+    @Test fun `extractMusicThumbnail bumps s576 avatars to s800 without keeping s1200`() {
         val small = json.parseToJsonElement(
             """
             {
@@ -149,7 +149,7 @@ class YouTubeMusicJsonTest {
             }
             """.trimIndent(),
         )
-        assertThat(small.extractMusicThumbnail()).isEqualTo("https://yt3.ggpht.com/x=s0-c-k")
+        assertThat(small.extractMusicThumbnail()).isEqualTo("https://yt3.ggpht.com/x=s800-c-k")
 
         val large = json.parseToJsonElement(
             """
@@ -166,7 +166,7 @@ class YouTubeMusicJsonTest {
             }
             """.trimIndent(),
         )
-        assertThat(large.extractMusicThumbnail()).isEqualTo("https://yt3.ggpht.com/x=s0-c-k")
+        assertThat(large.extractMusicThumbnail()).isEqualTo("https://yt3.ggpht.com/x=s800-c-k")
     }
 
     @Test fun `extractMusicThumbnail uses thumbnail image sources fallback`() {
@@ -184,7 +184,7 @@ class YouTubeMusicJsonTest {
             }
             """.trimIndent(),
         )
-        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=s0")
+        assertThat(obj.extractMusicThumbnail()).isEqualTo("https://yt3.example/img=s800")
     }
 
     @Test fun `extractMusicThumbnail returns null when no thumbnails`() {

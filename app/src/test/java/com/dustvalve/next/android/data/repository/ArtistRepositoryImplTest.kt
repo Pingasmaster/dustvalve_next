@@ -7,6 +7,7 @@ import com.dustvalve.next.android.data.local.db.dao.ArtistDao
 import com.dustvalve.next.android.data.local.db.entity.AlbumEntity
 import com.dustvalve.next.android.data.local.db.entity.ArtistEntity
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
+import com.dustvalve.next.android.data.network.OpportunisticRefreshGate
 import com.dustvalve.next.android.data.remote.DustvalveArtistScraper
 import com.dustvalve.next.android.domain.model.Album
 import com.dustvalve.next.android.domain.model.Artist
@@ -25,7 +26,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Covers Bandcamp artist cache SWR (always revalidate on open) and the
+ * Covers Bandcamp artist cache SWR (unmetered revalidate on open) and the
  * remote-source paths (cacheRemoteArtist / favoriteRemoteArtist /
  * unfavoriteArtist) against real DAOs; scraper and cross-repo deps mocked.
  */
@@ -35,6 +36,7 @@ class ArtistRepositoryImplTest : DbTestBase() {
     private fun TestScope.repo(
         artistDao: ArtistDao = db.artistDao(),
         scraper: DustvalveArtistScraper = mockk(relaxed = true),
+        refreshGate: OpportunisticRefreshGate = OpportunisticRefreshGate.ALWAYS,
     ) = ArtistRepositoryImpl(
         database = db,
         artistDao = artistDao,
@@ -45,6 +47,7 @@ class ArtistRepositoryImplTest : DbTestBase() {
         downloadRepository = mockk<DownloadRepository>(relaxed = true),
         albumRepository = mockk<AlbumRepository>(relaxed = true),
         ioDispatcher = UnconfinedTestDispatcher(testScheduler),
+        refreshGate = refreshGate,
     )
 
     private fun remoteArtist(url: String) = Artist(
@@ -189,6 +192,93 @@ class ArtistRepositoryImplTest : DbTestBase() {
 
         assertThat(artist.albums.map { it.id }).containsExactly("a1", "a2").inOrder()
         coVerify(exactly = 1) { scraper.scrapeArtist(url) }
+    }
+
+    @Test fun `getArtistDetail skips revalidate on metered when cache exists`() = runTest {
+        val url = "https://artist.bandcamp.com"
+        val artistId = "bc_a"
+        db.artistDao().insert(
+            ArtistEntity(
+                id = artistId,
+                name = "A",
+                url = url,
+                imageUrl = "https://img",
+                bio = null,
+                location = null,
+                albumIdOrder = """["a1"]""",
+                cachedAt = System.currentTimeMillis(),
+            ),
+        )
+        db.albumDao().insert(albumEntity("a1", url))
+
+        val scraper = mockk<DustvalveArtistScraper>(relaxed = true)
+        val artist = repo(scraper = scraper, refreshGate = OpportunisticRefreshGate.NEVER)
+            .getArtistDetail(url)
+
+        assertThat(artist.albums.map { it.id }).containsExactly("a1")
+        coVerify(exactly = 0) { scraper.scrapeArtist(any()) }
+    }
+
+    @Test fun `getArtistDetailFlow skips scrape on metered after emitting cache`() = runTest {
+        val url = "https://artist.bandcamp.com"
+        val artistId = "bc_a"
+        db.artistDao().insert(
+            ArtistEntity(
+                id = artistId,
+                name = "A",
+                url = url,
+                imageUrl = "https://img",
+                bio = null,
+                location = null,
+                albumIdOrder = """["a1"]""",
+                cachedAt = System.currentTimeMillis(),
+            ),
+        )
+        db.albumDao().insert(albumEntity("a1", url))
+
+        val scraper = mockk<DustvalveArtistScraper>(relaxed = true)
+        val emissions = repo(scraper = scraper, refreshGate = OpportunisticRefreshGate.NEVER)
+            .getArtistDetailFlow(url)
+            .toList()
+
+        assertThat(emissions).hasSize(1)
+        assertThat(emissions[0].albums.map { it.id }).containsExactly("a1")
+        coVerify(exactly = 0) { scraper.scrapeArtist(any()) }
+    }
+
+    @Test fun `empty scrape does not wipe a cached discography`() = runTest {
+        val url = "https://artist.bandcamp.com"
+        val artistId = "bc_a"
+        db.artistDao().insert(
+            ArtistEntity(
+                id = artistId,
+                name = "A",
+                url = url,
+                imageUrl = "https://img",
+                bio = null,
+                location = null,
+                albumIdOrder = """["a1"]""",
+                cachedAt = System.currentTimeMillis(),
+            ),
+        )
+        db.albumDao().insert(albumEntity("a1", url))
+
+        val scraper = mockk<DustvalveArtistScraper>()
+        coEvery { scraper.scrapeArtist(url) } returns Artist(
+            id = artistId,
+            name = "A",
+            url = url,
+            imageUrl = "https://img",
+            bio = null,
+            location = null,
+            albums = emptyList(),
+        )
+
+        val artist = repo(scraper = scraper).getArtistDetail(url)
+
+        assertThat(artist.albums.map { it.id }).containsExactly("a1")
+        val row = db.artistDao().getByUrl(url)
+        assertThat(row?.albumIdOrder).isEqualTo("""["a1"]""")
     }
 
     @Test fun `cacheRemoteArtist refreshes the artist row without touching favorites`() = runTest {

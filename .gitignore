@@ -21,6 +21,8 @@ build/
 .build.lock
 .apk-http-serve.pid
 .apk-http-serve.log
+# Emulator cwd pollution when GMD is launched from the repo root.
+/modem_simulator/
 
 # Signing / secrets
 *.jks

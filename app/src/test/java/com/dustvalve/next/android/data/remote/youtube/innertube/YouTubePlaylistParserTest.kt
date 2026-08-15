@@ -76,7 +76,7 @@ class YouTubePlaylistParserTest {
         val page = parser.parse(root, "OLAK5uy_x")
         assertThat(page.title).isEqualTo("Album Title")
         assertThat(page.coverUrl).isEqualTo(
-            "https://i9.ytimg.com/s_p/OLAK5uy_x/maxresdefault.jpg?sqp=1",
+            "https://i9.ytimg.com/s_p/OLAK5uy_x/maxresdefault.jpg",
         )
     }
 

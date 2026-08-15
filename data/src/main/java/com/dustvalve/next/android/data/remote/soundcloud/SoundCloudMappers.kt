@@ -12,6 +12,7 @@ import com.dustvalve.next.android.domain.model.SoundCloudShelfKind
 import com.dustvalve.next.android.domain.model.StreamPolicy
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.util.ThumbnailUrls
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -39,12 +40,10 @@ internal fun JsonElement.int(key: String): Int? = path(key)?.str()?.toIntOrNull(
 
 internal fun JsonElement.bool(key: String): Boolean? = (path(key) as? JsonPrimitive)?.content?.toBooleanStrictOrNull()
 
-/** Upgrade SoundCloud `-large` artwork to `-t500x500`. */
+/** Canonical SoundCloud artwork URL (`-t500x500`). */
 internal fun upgradeArtworkUrl(url: String?): String? {
     if (url.isNullOrBlank()) return null
-    return url
-        .replace("-large.", "-t500x500.")
-        .replace("-large?", "-t500x500?")
+    return ThumbnailUrls.canonicalize(url)
 }
 
 internal fun trackIdFromNumeric(numericId: String): String = "sc_$numericId"

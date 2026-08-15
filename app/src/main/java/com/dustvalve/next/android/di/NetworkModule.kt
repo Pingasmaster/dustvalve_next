@@ -45,7 +45,7 @@ object NetworkModule {
     private val rateLimitLock = Any()
     private var lastRequestTime = 0L
 
-    private const val HTTP_CACHE_BYTES = 10L * 1024 * 1024 // 10 MB
+    private const val HTTP_CACHE_BYTES = 64L * 1024L * 1024L // 64 MB
     private const val CONNECTION_KEEPALIVE_MINUTES = 5L
 
     // OkHttp 5 Duration timeouts. callTimeout caps the whole call (incl.
@@ -63,14 +63,15 @@ object NetworkModule {
     @Provides
     @Singleton
     fun provideOkHttpClient(@ApplicationContext context: Context, cookieStore: CookieStore): OkHttpClient {
-        val cacheDir = File(context.cacheDir, "okhttp").apply { mkdirs() }
+        val cacheDir = File(context.filesDir, "http_cache").apply { mkdirs() }
         return OkHttpClient.Builder()
             .cookieJar(cookieStore)
             .cache(Cache(cacheDir, HTTP_CACHE_BYTES))
             // SSRF: manually follow redirects while re-validating public hosts
             // on every hop, and refuse DNS answers that land in private /
             // link-local / CGNAT / ULA. Shared by BandcampDomainSniffer,
-            // playlist fetchBytes, Coil (shared client), and all DI OkHttp.
+            // playlist fetchBytes, and all DI OkHttp. Coil uses a derived
+            // client with cache(null) so image bodies do not fight this LRU.
             .followRedirects(false)
             .followSslRedirects(false)
             .dns(PublicHostGuard.dns())
@@ -96,8 +97,11 @@ object NetworkModule {
     }
 
     /**
-     * Media-transfer client: shares the base client's pool, cache, cookies and
-     * interceptors (newBuilder copies them) but drops the 30s callTimeout.
+     * Media-transfer client: shares the base client's pool, cookies and
+     * interceptors (newBuilder copies them) but drops the 30s callTimeout
+     * and the HTTP disk cache. Stream bodies belong in ExoPlayer SimpleCache,
+     * not the JSON HTTP cache - writing multi-MB googlevideo responses
+     * through OkHttp Cache is a known Range/throughput footgun.
      *
      * callTimeout caps the WHOLE call, from newCall() until the response body
      * is closed. ExoPlayer's OkHttpDataSource keeps the body open for the life
@@ -112,15 +116,23 @@ object NetworkModule {
      * that resurfaces as periodic rebuffer hiccups under high-bitrate / LDAC
      * load. Progressive downloads already forced HTTP/1.1; the player path must
      * too or it remains the fragile half of the pair.
+     *
+     * Brotli is dropped: `Accept-Encoding: br` on a multi-MB googlevideo /
+     * bcbits body is wasted work (the CDN serves identity audio) and has been
+     * observed to stall Range transfers when the HTTP cache was also in play.
      */
     @Provides
     @Singleton
     @MediaHttp
-    fun provideMediaOkHttpClient(base: OkHttpClient): OkHttpClient = base.newBuilder()
-        .callTimeout(Duration.ZERO)
-        .readTimeout(MEDIA_READ_TIMEOUT)
-        .protocols(listOf(Protocol.HTTP_1_1))
-        .build()
+    fun provideMediaOkHttpClient(base: OkHttpClient): OkHttpClient {
+        val builder = base.newBuilder()
+            .callTimeout(Duration.ZERO)
+            .readTimeout(MEDIA_READ_TIMEOUT)
+            .protocols(listOf(Protocol.HTTP_1_1))
+            .cache(null)
+        builder.interceptors().remove(BrotliInterceptor)
+        return builder.build()
+    }
 
     /**
      * Sets the User-Agent only when the caller hasn't supplied one

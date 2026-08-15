@@ -61,7 +61,7 @@ class YouTubeMusicParserTest {
         assertThat(tiles.items.first().title).isEqualTo("Album Title")
         assertThat(tiles.items.first().subtitle).isEqualTo("Artist X")
         assertThat(tiles.items.first().thumbnailUrl).isEqualTo(
-            "https://yt3.example/img=w0-h0-l90-rj",
+            "https://yt3.example/img=w800-h800-l90-rj",
         )
     }
 

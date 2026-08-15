@@ -9,7 +9,8 @@ import com.dustvalve.next.android.util.ThumbnailUrls
  * Rewrites remote artwork URLs to their canonical full-quality form before
  * Coil keys / fetches them. Search rows, queue tiles, album heroes, and the
  * player therefore share one disk-cache entry and never re-download the same
- * cover at a different size token.
+ * cover at a different size token (Bandcamp `_N`, YouTube ladders / query
+ * strings, SoundCloud `-large` vs `-t500x500`).
  */
 class ThumbnailCanonicalInterceptor : Interceptor {
     override suspend fun intercept(chain: Interceptor.Chain): ImageResult {

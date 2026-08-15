@@ -180,6 +180,7 @@ internal class PlaybackMediaPreparer(
         val mediaItem = MediaItem.Builder()
             .setUri(resolvedUri)
             .setMediaId(track.id)
+            .setPlaybackCacheKey(track.id, resolvedUri)
             .setMediaMetadata(metadataBuilder.build())
             .build()
 
@@ -192,4 +193,19 @@ internal class PlaybackMediaPreparer(
         }
         player.play()
     }
+}
+
+/**
+ * Stable SimpleCache key for remote streams. YouTube/Bandcamp/SoundCloud
+ * CDN URLs rotate host/expiry/signature on every resolve; keying by track
+ * id means the second play hits bytes already on disk. Local file:// and
+ * content:// URIs skip this so we do not re-cache a file the downloads
+ * tree already holds.
+ */
+@OptIn(UnstableApi::class)
+internal fun MediaItem.Builder.setPlaybackCacheKey(trackId: String, uri: String): MediaItem.Builder {
+    if (uri.startsWith("https://") || uri.startsWith("http://")) {
+        setCustomCacheKey(trackId)
+    }
+    return this
 }

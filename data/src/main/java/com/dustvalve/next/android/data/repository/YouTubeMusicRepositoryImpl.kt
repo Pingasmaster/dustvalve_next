@@ -3,6 +3,8 @@ package com.dustvalve.next.android.data.repository
 import com.dustvalve.next.android.data.local.DatabaseGateway
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubeMusicHomeCacheEntity
+import com.dustvalve.next.android.data.network.OpportunisticRefreshGate
+import com.dustvalve.next.android.data.network.UnmeteredRefreshGate
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicAlbumResolver
@@ -37,6 +39,7 @@ class YouTubeMusicRepositoryImpl(
     private val albumResolver: YouTubeMusicAlbumResolver,
     private val homeCache: YouTubeMusicHomeCacheDao,
     ioDispatcher: CoroutineDispatcher,
+    private val refreshGate: OpportunisticRefreshGate = OpportunisticRefreshGate.ALWAYS,
 ) : YouTubeMusicRepository {
 
     @Inject constructor(
@@ -48,6 +51,7 @@ class YouTubeMusicRepositoryImpl(
         albumResolver: YouTubeMusicAlbumResolver,
         gateway: DatabaseGateway,
         @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+        refreshGate: UnmeteredRefreshGate,
     ) : this(
         client,
         parser,
@@ -57,6 +61,7 @@ class YouTubeMusicRepositoryImpl(
         albumResolver,
         gateway.youtubeMusicHomeCacheDao,
         ioDispatcher,
+        refreshGate,
     )
 
     private val backgroundScope = CoroutineScope(SupervisorJob() + ioDispatcher)
@@ -65,8 +70,8 @@ class YouTubeMusicRepositoryImpl(
     private companion object {
         const val HOME_BROWSE_ID = "FEmusic_home"
 
-        // YT Music home is editorial; every open returns cache first and
-        // revalidates in the background (see getHomeCached).
+        // YT Music home is editorial; cache first, then revalidate in the
+        // background on unmetered networks only (see getHomeCached).
         const val SONGS_PARAMS = "EgWKAQIIAWoMEA4QChADEAQQCRAF"
         const val VIDEOS_PARAMS = "EgWKAQIQAWoMEA4QChADEAQQCRAF"
         const val ALBUMS_PARAMS = "EgWKAQIYAWoMEA4QChADEAQQCRAF"
@@ -86,8 +91,9 @@ class YouTubeMusicRepositoryImpl(
     /**
      * Cache-first home/mood loader. The YT Music browse response (raw
      * Innertube JSON) is persisted under [key] and re-parsed on hit so the
-     * UI never blocks. Every open silently revalidates in the background
-     * (editorial shelves change frequently); refresh errors are swallowed.
+     * UI never blocks. Unmetered opens silently revalidate in the
+     * background; metered visits keep the snapshot. Refresh errors are
+     * swallowed.
      */
     private suspend fun getHomeCached(key: String, params: String?): YouTubeMusicHomeFeed {
         val cached = homeCache.getByKey(key)
@@ -100,12 +106,14 @@ class YouTubeMusicRepositoryImpl(
                 null
             }
             if (parsed != null) {
-                backgroundScope.launch {
-                    try {
-                        fetchAndCacheHome(key, params)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (_: Throwable) {}
+                if (refreshGate.allowRefresh()) {
+                    backgroundScope.launch {
+                        try {
+                            fetchAndCacheHome(key, params)
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (_: Throwable) {}
+                    }
                 }
                 return parsed
             }

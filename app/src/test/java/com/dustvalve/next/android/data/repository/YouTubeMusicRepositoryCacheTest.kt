@@ -4,6 +4,7 @@ package com.dustvalve.next.android.data.repository
 
 import com.dustvalve.next.android.data.local.db.dao.YouTubeMusicHomeCacheDao
 import com.dustvalve.next.android.data.local.db.entity.YouTubeMusicHomeCacheEntity
+import com.dustvalve.next.android.data.network.OpportunisticRefreshGate
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubeInnertubeClient
 import com.dustvalve.next.android.data.remote.youtube.innertube.YouTubePlayerParser
 import com.dustvalve.next.android.data.remote.youtubemusic.YouTubeMusicInnertubeClient
@@ -73,6 +74,33 @@ class YouTubeMusicRepositoryCacheTest {
 
         assertThat(feed).isSameInstanceAs(cachedFeed)
         coVerify(exactly = 1) { client.browse(browseId = "FEmusic_home") }
+    }
+
+    @Test fun `getHome cache hit skips revalidate when refresh is denied`() = runTest {
+        repo = YouTubeMusicRepositoryImpl(
+            client,
+            parser,
+            searchParser,
+            ytClient,
+            ytPlayerParser,
+            mockk(relaxed = true),
+            homeCache,
+            ioDispatcher = UnconfinedTestDispatcher(),
+            refreshGate = OpportunisticRefreshGate.NEVER,
+        )
+        coEvery { homeCache.getByKey("home") } returns YouTubeMusicHomeCacheEntity(
+            key = "home",
+            feedJson = "{}",
+            cachedAt = System.currentTimeMillis(),
+        )
+        val cachedFeed = YouTubeMusicHomeFeed(chips = emptyList(), shelves = emptyList())
+        every { parser.parseHome(any()) } returns cachedFeed
+
+        val feed = repo.getHome()
+
+        assertThat(feed).isSameInstanceAs(cachedFeed)
+        coVerify(exactly = 0) { client.browse(any(), any()) }
+        coVerify(exactly = 0) { client.browse(any()) }
     }
 
     @Test fun `getHome cache miss fetches and persists`() = runTest {

@@ -260,19 +260,25 @@ object NetworkUtils {
     }
 
     /**
-     * Rewrites a Bandcamp CDN image URL to the full-original `_0` size.
-     * Leaves non-bcbits URLs and already-`_0` URLs unchanged. The `_1` PNG
-     * sibling can be tens of MB; rewrite it to the JPEG `_0` instead.
+     * Rewrites a Bandcamp CDN image URL to the full-original `_0` size on
+     * `f4.bcbits.com`. Leaves non-bcbits URLs unchanged. The `_1` PNG sibling
+     * can be tens of MB; rewrite it to the JPEG `_0` instead. Host and query
+     * variants of the same `art_id` collapse to one Coil disk-cache key.
      */
     fun upgradeBandcampArtUrl(url: String): String {
         if (!url.contains("bcbits.com/img/")) return url
-        val match = Regex("""_(\d+)\.(jpg|png|webp)""", RegexOption.IGNORE_CASE).find(url)
-            ?: return url
-        val size = match.groupValues[1].toIntOrNull() ?: return url
-        if (size == 0) return url
+        var out = url.substringBefore('?')
+        out = out.replace(
+            Regex("""https://(?:f\d+|s\d+|cdn)\.bcbits\.com"""),
+            "https://f4.bcbits.com",
+        )
+        val match = Regex("""_(\d+)\.(jpg|png|webp)""", RegexOption.IGNORE_CASE).find(out)
+            ?: return out
+        val size = match.groupValues[1].toIntOrNull() ?: return out
+        if (size == 0) return out
         // Prefer the JPEG full-original over the giant PNG `_1` sibling.
         val ext = if (size == 1) "jpg" else match.groupValues[2]
-        return url.replaceRange(match.range, "_0.$ext")
+        return out.replaceRange(match.range, "_0.$ext")
     }
 
     /**
@@ -284,11 +290,13 @@ object NetworkUtils {
     }
 
     /**
-     * Returns true if the active network connection is metered (e.g. mobile data).
+     * Returns true if the active network connection is metered (e.g. mobile
+     * data). A missing ConnectivityManager is treated as metered so
+     * opportunistic revalidation never fires on an unknown radio.
      */
     fun isMeteredConnection(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return false
+            ?: return true
         return cm.isActiveNetworkMetered
     }
 }

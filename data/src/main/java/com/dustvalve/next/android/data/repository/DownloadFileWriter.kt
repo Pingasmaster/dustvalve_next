@@ -8,6 +8,7 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -44,24 +45,26 @@ internal class DownloadFileWriter(
 
         suspend fun transfer(offset: Long, expectedTotal: Long?) {
             var metaPersisted = false
-            FileOutputStream(tempFile, offset > 0L).use { out ->
-                val result = RangeResumeDownloader.stream(
-                    client = downloadClient,
-                    url = downloadUrl,
-                    sink = out,
-                    trackId = trackId,
-                    startOffset = offset,
-                    expectedTotalBytes = expectedTotal,
-                    onProgress = { written, total ->
-                        if (!metaPersisted && total != null && total > 0L) {
-                            metaPersisted = true
-                            writeResumeMeta(metaFile, DownloadRepositoryImpl.ResumeMeta(total, identity))
-                        }
-                        notificationCenter.trackProgress(trackId, written, total)
-                    },
-                )
-                if (result.suggestedExtension != null) {
-                    suggestedExtension = result.suggestedExtension
+            FileOutputStream(tempFile, offset > 0L).use { raw ->
+                BufferedOutputStream(raw, COPY_BUFFER_BYTES).use { out ->
+                    val result = RangeResumeDownloader.stream(
+                        client = downloadClient,
+                        url = downloadUrl,
+                        sink = out,
+                        trackId = trackId,
+                        startOffset = offset,
+                        expectedTotalBytes = expectedTotal,
+                        onProgress = { written, total ->
+                            if (!metaPersisted && total != null && total > 0L) {
+                                metaPersisted = true
+                                writeResumeMeta(metaFile, DownloadRepositoryImpl.ResumeMeta(total, identity))
+                            }
+                            notificationCenter.trackProgress(trackId, written, total)
+                        },
+                    )
+                    if (result.suggestedExtension != null) {
+                        suggestedExtension = result.suggestedExtension
+                    }
                 }
             }
         }
@@ -218,5 +221,6 @@ internal class DownloadFileWriter(
 
     private companion object {
         const val SNIFF_HEADER_BYTES = 64
+        const val COPY_BUFFER_BYTES = 64 * 1024
     }
 }

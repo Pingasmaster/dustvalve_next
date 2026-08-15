@@ -13,6 +13,8 @@ import com.dustvalve.next.android.data.local.db.entity.ArtistEntity
 import com.dustvalve.next.android.data.local.db.entity.FavoriteEntity
 import com.dustvalve.next.android.data.mapper.toDomain
 import com.dustvalve.next.android.data.mapper.toEntity
+import com.dustvalve.next.android.data.network.OpportunisticRefreshGate
+import com.dustvalve.next.android.data.network.UnmeteredRefreshGate
 import com.dustvalve.next.android.data.remote.DustvalveArtistScraper
 import com.dustvalve.next.android.data.util.orOnRemoteFailure
 import com.dustvalve.next.android.di.qualifiers.AppDispatchers
@@ -48,6 +50,7 @@ class ArtistRepositoryImpl(
     private val downloadRepository: DownloadRepository,
     private val albumRepository: AlbumRepository,
     private val ioDispatcher: CoroutineDispatcher,
+    private val refreshGate: OpportunisticRefreshGate = OpportunisticRefreshGate.ALWAYS,
 ) : ArtistRepository {
 
     @Inject constructor(
@@ -56,6 +59,7 @@ class ArtistRepositoryImpl(
         downloadRepository: DownloadRepository,
         albumRepository: AlbumRepository,
         @Dispatcher(AppDispatchers.IO) ioDispatcher: CoroutineDispatcher,
+        refreshGate: UnmeteredRefreshGate,
     ) : this(
         gateway.database,
         gateway.artistDao,
@@ -66,22 +70,27 @@ class ArtistRepositoryImpl(
         downloadRepository,
         albumRepository,
         ioDispatcher,
+        refreshGate,
     )
 
-    // Artists may grow (or shrink) their discography at any time, so unlike
-    // fully-immutable album metadata every open revalidates. The cached copy
-    // is always emitted FIRST so the UI never blocks on the network; a fresh
-    // scrape that changes albumIdOrder or imageUrl rewrites the row and
-    // re-emits. The artist-photo URL is content-addressed by Bandcamp (the
-    // image id changes on re-upload), so a different imageUrl is treated as
-    // a content change.
+    // Artists may grow their discography, so unlike fully-immutable album
+    // metadata we emit cache first and revalidate in the background when
+    // the network is unmetered. The cached copy is always shown immediately;
+    // a fresh scrape that changes albumIdOrder or imageUrl rewrites the row
+    // and re-emits. Empty scrapes (bot challenge / truncated HTML) never
+    // wipe a populated cache. The artist-photo URL is content-addressed by
+    // Bandcamp (the image id changes on re-upload), so a different imageUrl
+    // is treated as a content change.
 
     override suspend fun getArtistDetail(url: String): Artist {
         val cleanUrl = url.substringBefore('?').substringBefore('#').trimEnd('/')
 
         val cachedArtist = artistDao.getByUrl(cleanUrl) ?: artistDao.getByUrl(url)
         if (cachedArtist != null) {
-            // Always revalidate; fall back to cache offline.
+            if (!refreshGate.allowRefresh()) {
+                return buildCachedArtist(cachedArtist, cleanUrl, url)
+            }
+            // Revalidate on unmetered; fall back to cache offline.
             return orOnRemoteFailure(buildCachedArtist(cachedArtist, cleanUrl, url)) {
                 scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
             }
@@ -96,10 +105,12 @@ class ArtistRepositoryImpl(
         val cachedArtist = artistDao.getByUrl(cleanUrl) ?: artistDao.getByUrl(url)
         if (cachedArtist != null) {
             emit(buildCachedArtist(cachedArtist, cleanUrl, url))
+            if (!refreshGate.allowRefresh()) return@flow
         }
 
-        // Always scrape on open so newly published (or removed) releases
-        // rewrite the cache as soon as the user visits the page.
+        // Unmetered (or cache miss): scrape so newly published releases
+        // rewrite the cache. Metered visits keep the snapshot they already
+        // paid to download.
         try {
             val fresh = scrapeAndPersistArtist(cleanUrl, url, cachedArtist)
             if (cachedArtist == null || didArtistChange(cachedArtist, fresh)) {
@@ -150,6 +161,12 @@ class ArtistRepositoryImpl(
         cachedArtist: com.dustvalve.next.android.data.local.db.entity.ArtistEntity?,
     ): Artist {
         val artist = artistScraper.scrapeArtist(cleanUrl)
+
+        // A zero-album scrape is almost always a bot wall or truncated HTML.
+        // Never let that wipe a discography we already paid to download.
+        if (artist.albums.isEmpty() && cachedArtist != null) {
+            return buildCachedArtist(cachedArtist, cleanUrl, originalUrl)
+        }
 
         val previousAutoDownload = cachedArtist?.autoDownload ?: false
         val previousAlbumUrls = if (previousAutoDownload) {

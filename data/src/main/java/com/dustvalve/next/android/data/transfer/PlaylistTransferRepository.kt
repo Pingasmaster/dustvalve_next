@@ -483,7 +483,7 @@ class PlaylistTransferRepository(
         // Persist the cover locally and point artUrl at it so covers show offline.
         val coverBytes = bundleEntry.coverFile?.let { smallFiles[it] }
         if (coverBytes != null) {
-            val cover = File(StoragePaths.imagesDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
+            val cover = File(StoragePaths.coversDir(context), "${NetworkUtils.sanitizeFileName(snap.albumId)}.jpg")
             cover.writeBytes(coverBytes)
             writtenFiles.add(cover)
             snap = snap.copy(artUrl = Uri.fromFile(cover).toString())
@@ -545,9 +545,11 @@ class PlaylistTransferRepository(
             val file = File(requireNotNull(uri.path) { "Bad file URI: $url" }).canonicalFile
             val downloadsRoot = StoragePaths.downloadsDir(context).canonicalFile
             val localArtRoot = File(context.filesDir, "local_art").canonicalFile
+            val coversRoot = StoragePaths.coversDir(context).canonicalFile
             val underDownloads = file.path.startsWith(downloadsRoot.path + File.separator)
             val underLocalArt = file.path.startsWith(localArtRoot.path + File.separator)
-            require(underDownloads || underLocalArt) {
+            val underCovers = file.path.startsWith(coversRoot.path + File.separator)
+            require(underDownloads || underLocalArt || underCovers) {
                 "Refusing to embed $url: outside allowed app storage"
             }
             file.inputStream()

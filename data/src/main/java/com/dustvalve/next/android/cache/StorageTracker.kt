@@ -57,7 +57,8 @@ class StorageTracker(
     fun getCacheInfo(): Flow<CacheInfo> = combine(_sizeUpdateTrigger, settingsDataStore.storageLimit) { _, limitBytes ->
         val (totalDownloads, pinnedSize) = measureOnDiskDownloads(downloadDao.getAllSync())
         val unpinnedAudioSize = (totalDownloads - pinnedSize).coerceAtLeast(0L)
-        val imagesSize = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
+        val imagesSize = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context)) +
+            StoragePaths.calculateDirSize(StoragePaths.coversDir(context))
         val mediaCacheSize = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
 
         val totalSize = totalDownloads + imagesSize + mediaCacheSize
@@ -87,7 +88,8 @@ class StorageTracker(
 
     private suspend fun getEffectiveTotalSize(): Long {
         val downloads = measureOnDiskDownloads(downloadDao.getAllSync()).first
-        val images = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context))
+        val images = StoragePaths.calculateDirSize(StoragePaths.imagesDir(context)) +
+            StoragePaths.calculateDirSize(StoragePaths.coversDir(context))
         val media = StoragePaths.calculateDirSize(StoragePaths.mediaCacheDir(context))
         return downloads + images + media
     }

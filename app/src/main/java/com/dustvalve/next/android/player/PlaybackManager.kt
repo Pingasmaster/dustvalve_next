@@ -428,6 +428,7 @@ class PlaybackManager @Inject constructor(
         val mediaItem = MediaItem.Builder()
             .setUri(resolvedUri)
             .setMediaId(trackId)
+            .setPlaybackCacheKey(trackId, resolvedUri)
             .setMediaMetadata(currentMetadata)
             .build()
 

@@ -6,12 +6,9 @@ import androidx.room.PrimaryKey
 /**
  * Single-row snapshot cache for the YouTube Music home feed. The feed is
  * editorial (changes daily) so we always emit the cached copy first and
- * silently revalidate in the background once per hour.
+ * silently revalidate in the background on unmetered networks.
  *
- * The serialized form is the JSON of the parsed home feed (see
- * [com.dustvalve.next.android.domain.model.YouTubeMusicHomeFeed]); we keep
- * the raw model JSON instead of re-rendering Innertube responses so cache
- * reads avoid re-running the parser.
+ * The serialized form is the raw Innertube JSON; cache reads re-parse it.
  */
 @Entity(tableName = "youtube_music_home")
 data class YouTubeMusicHomeCacheEntity(

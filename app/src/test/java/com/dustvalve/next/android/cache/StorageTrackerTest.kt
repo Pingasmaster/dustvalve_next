@@ -38,6 +38,7 @@ class StorageTrackerTest {
         settings = mockk()
         // Start from clean cache dirs so directory sizes are deterministic.
         StoragePaths.imagesDir(context).listFiles()?.forEach { it.deleteRecursively() }
+        StoragePaths.coversDir(context).listFiles()?.forEach { it.deleteRecursively() }
         StoragePaths.mediaCacheDir(context).deleteRecursively()
     }
 

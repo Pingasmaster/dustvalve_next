@@ -55,8 +55,13 @@ class NetworkModuleMediaClientTest {
         assertThat(media.readTimeoutMillis).isEqualTo(90_000)
         // googlevideo / OkHttp+ExoPlayer mid-body resets on HTTP/2; force 1.1.
         assertThat(media.protocols).containsExactly(okhttp3.Protocol.HTTP_1_1)
-        // Shared infrastructure survives the derivation (same pool + cache).
+        // Shared pool; media bodies skip the JSON HTTP cache (SimpleCache
+        // is the audio store; Range through OkHttp Cache stalls long songs).
         assertThat(media.connectionPool).isSameInstanceAs(base.connectionPool)
-        assertThat(media.cache).isSameInstanceAs(base.cache)
+        assertThat(media.cache).isNull()
+        // Media bodies are already compressed audio; Brotli's Accept-Encoding
+        // on Range GETs is wasted and can stall googlevideo transfers.
+        assertThat(media.interceptors).doesNotContain(okhttp3.brotli.BrotliInterceptor)
+        assertThat(base.interceptors).contains(okhttp3.brotli.BrotliInterceptor)
     }
 }

@@ -41,6 +41,9 @@ object RangeResumeDownloader {
     private const val MIN_BYTES_WITHOUT_CONTENT_LENGTH = 1024L
     private const val SNIFF_BYTES = 64
 
+    /** 64 KiB matches typical OkHttp/okio segment size; 8 KiB syscall-starves long YouTube transfers. */
+    private const val COPY_BUFFER_BYTES = 64 * 1024
+
     /**
      * The server's 206 response no longer lines up with the partial content
      * already written: the Content-Range start offset differs from the bytes
@@ -279,7 +282,7 @@ object RangeResumeDownloader {
         var written = startBytes
         var sniffed = !sniffPayload
         response.body.byteStream().use { input ->
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(COPY_BUFFER_BYTES)
             while (true) {
                 val read = input.read(buffer)
                 if (read == -1) break

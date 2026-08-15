@@ -8,11 +8,9 @@ import androidx.work.Configuration
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
-import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import com.dustvalve.next.android.crash.CrashReportManager
 import com.dustvalve.next.android.data.asset.StoragePaths
@@ -99,10 +97,11 @@ class DustvalveNextApplication :
      * TRIM_MEMORY_BACKGROUND. We drop Coil's in-memory bitmap cache (the
      * biggest ephemeral allocation, bounded to 25 % of available memory in
      * [newImageLoader]) and the in-memory "update available" snapshot held
-     * by [appUpdateController]. The Coil disk cache, the OkHttp HTTP cache,
-     * and the download controller's queue are intentionally untouched -
-     * they're either persistent (disk cache) or resumable across the next
-     * foreground (downloads, which run under a foreground service).
+     * by [appUpdateController]. The Coil disk cache (covers persist forever),
+     * the OkHttp HTTP cache, and the download controller's queue are
+     * intentionally untouched - they're either persistent (disk cache) or
+     * resumable across the next foreground (downloads, which run under a
+     * foreground service).
      */
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
@@ -174,29 +173,30 @@ class DustvalveNextApplication :
         fun okHttpClient(): OkHttpClient
     }
 
-    @OptIn(ExperimentalCoilApi::class)
     override fun newImageLoader(context: PlatformContext): ImageLoader {
         val entryPoint = EntryPointAccessors.fromApplication(
             context,
             CoilEntryPoint::class.java,
         )
+        // Coil's default CacheStrategy always serves a disk hit and always
+        // writes 2xx. CDN Cache-Control (ytimg max-age=30, no-store HTML
+        // art) must not force a re-fetch of a cover we already stored.
+        // Image GETs skip the shared OkHttp HTTP cache so covers do not
+        // fight JSON for that tiny LRU; PublicHostGuard still applies.
+        val imageHttp = entryPoint.okHttpClient().newBuilder().cache(null).build()
         return ImageLoader.Builder(context)
             .components {
-                // Honor server Cache-Control on image responses so the OkHttp
-                // disk Cache (NetworkModule) and Coil's own disk cache both
-                // see consistent freshness rather than diverging.
                 add(
                     OkHttpNetworkFetcherFactory(
-                        // Shared OkHttp carries PublicHostGuard (redirect
-                        // interceptor + DNS) so art URLs cannot redirect /
-                        // resolve into private or link-local targets.
-                        callFactory = { entryPoint.okHttpClient() },
-                        cacheStrategy = { CacheControlCacheStrategy() },
+                        // PublicHostGuard (redirect interceptor + DNS) so
+                        // art URLs cannot redirect / resolve into private
+                        // or link-local targets.
+                        callFactory = { imageHttp },
                     ),
                 )
-                // Canonicalize Bandcamp / YouTube art URLs so every surface
-                // (search, queue, detail, player) hits one full-quality
-                // disk-cache key and never re-downloads the same cover.
+                // Canonicalize Bandcamp / YouTube / SoundCloud art URLs so
+                // every surface (search, queue, detail, player) hits one
+                // full-quality disk-cache key and never re-downloads.
                 add(ThumbnailCanonicalInterceptor())
             }
             .memoryCache {
@@ -205,13 +205,10 @@ class DustvalveNextApplication :
                     .build()
             }
             .diskCache {
-                // Coil's image cache lives inside the unified downloads pool
-                // (filesDir/downloads/images) so its size shows up in the
-                // single storage indicator and "Remove all downloads" wipes
-                // it alongside audio. Coil manages its own LRU within the
-                // configured maxSizeBytes; pinned audio downloads are
-                // tracked in Room and not affected by Coil.
-                // Sized for full-original Bandcamp `_0` covers (~1-10 MB).
+                // filesDir/downloads/images: OS cannot reclaim this tree.
+                // maxSizeBytes is effectively unbounded so Coil never
+                // LRU-evicts a cover the user has already seen. User
+                // "Remove all downloads" still wipes the directory.
                 DiskCache.Builder()
                     .directory(StoragePaths.imagesDir(this))
                     .maxSizeBytes(COIL_DISK_CACHE_BYTES)
@@ -224,7 +221,11 @@ class DustvalveNextApplication :
         /** Fraction of available memory for Coil's in-memory bitmap cache. */
         private const val COIL_MEMORY_CACHE_PERCENT = 0.25
 
-        /** Coil disk cache budget for full-original covers (~1-10 MB each). */
-        private const val COIL_DISK_CACHE_BYTES = 512L * 1024L * 1024L
+        /**
+         * Coil has no NoEvictor; 1 TiB is "never evict in practice" while
+         * staying inside maxSizeBytes > 0. Covers persist until the user
+         * clears downloads.
+         */
+        private const val COIL_DISK_CACHE_BYTES = 1L shl 40
     }
 }

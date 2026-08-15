@@ -4,10 +4,9 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Persistent cache for YouTube playlist metadata + ordered videoIds. Per the
- * unified caching policy we always emit the cached snapshot first, then
- * silently re-fetch in the background if older than the TTL - playlists CAN
- * grow new entries (the user explicitly called this out).
+ * Persistent cache for YouTube playlist metadata + ordered videoIds. We
+ * always emit the cached snapshot first, then silently re-fetch in the
+ * background on unmetered networks - playlists CAN grow new entries.
  *
  * Individual video metadata lives in [YouTubeVideoCacheEntity]; this row
  * just records the playlist's identity + ordering, joined back at read time.
