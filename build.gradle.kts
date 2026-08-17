@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.JavaExec
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 
@@ -71,6 +72,19 @@ tasks.register<JavaExec>("ktlintCheck") {
     group = "verification"
     description = "Check Kotlin sources with ktlint on JDK 26"
     configureKtlint(emptyList())
+    inputs.files(
+        layout.projectDirectory.asFileTree.matching {
+            include("**/src/**/*.kt", "**/src/**/*.kts", "**/*.gradle.kts", "*.kts")
+            exclude("**/build/**", "**/.gradle/**", "**/.jdk26-home/**")
+        },
+    ).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.file(layout.buildDirectory.file("ktlint/check.stamp"))
+    outputs.cacheIf { true }
+    doLast {
+        val stamp = outputs.files.singleFile
+        stamp.parentFile.mkdirs()
+        stamp.writeText("ok\n")
+    }
 }
 
 tasks.register<JavaExec>("ktlintFormat") {

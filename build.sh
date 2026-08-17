@@ -6,16 +6,17 @@
 # behavior, port it to the other three the same day.
 #
 # Usage:
-#   ./build.sh                    # RELEASE path: assemble debug APKs first, then
-#                                 # regen baseline+startup profiles (GMD),
-#                                 # bump version, clean + ASCII + ktlint + detekt + lint
-#                                 # + tests + assemble dual APKs, then GMD shippedsmoke
-#                                 # + smoke + e2e, then one-shot NetBird APK HTTP serve
-#                                 # for all four root APKs. Requires /dev/kvm.
-#   ./build.sh --debug            # DEV path: same static gates + unit tests + assemble,
-#                                 # but skip release-only steps (baseline regen, version
-#                                 # bump, GMD device gates), then copy the debug APKs
-#                                 # to the repo root and serve those
+#   ./build.sh                    # RELEASE path: bump deps, bump version, then debug
+#                                 # lints/tests + debug APKs, maybe regen baseline+startup
+#                                 # profiles (GMD, only when UI/startup sources changed
+#                                 # or --force-baseline), then release lint + assemble,
+#                                 # then GMD shippedsmoke + smoke + e2e (one API 37 Setup
+#                                 # for smoke+e2e). No gradle clean. Requires /dev/kvm.
+#   ./build.sh --debug            # DEV path: bump deps, then debug lints/tests + debug
+#                                 # APKs only. Skip version bump, baseline, release
+#                                 # assemble, and GMD. Copy debug APKs to the repo root
+#                                 # and serve those
+#   ./build.sh --force-baseline   # with the release path: always regen AOT profiles
 #   ./build.sh --clean            # gradle clean + remove root APKs + exit
 #   ./build.sh --format           # ktlintFormat + exit (no build)
 #   ./build.sh --build-health     # full build + dependency-analysis buildHealth report
@@ -42,10 +43,13 @@
 # all valid "latest" targets. Pass --block-on-outdated to keep the old
 # refuse-to-build behavior instead of rewriting the catalog.
 #
-# After the lock and ASCII/signing gates, debug APKs assemble before baseline
-# regen, version bump, clean, and the rest of the Gradle graph so a compile
-# failure fails fast and root app-debug*.apk exist while the release path
-# continues.
+# Dep bumps and (on the release path) the version bump finish before any
+# Gradle work so catalog/version edits cannot invalidate a half-finished
+# graph. After the lock and ASCII/signing gates, debug lints/tests run,
+# then debug APKs assemble. --debug stops there. The release path may regen
+# baselines, then runs release lint + assemble without gradle clean (so
+# UP-TO-DATE and the build cache can hit). A lint/test/compile failure
+# fails fast and root app-debug*.apk exist while the release path continues.
 #
 # After a successful full build, scripts/apk_http_serve.sh publishes all four
 # root APKs until each is downloaded once, 10 minutes, or the next ./build.sh
@@ -54,12 +58,13 @@
 # build serves only the debug pair so it never clobbers release root artifacts.
 # --publish re-serves the same four root files from the last full build.
 #
-# User-facing speed: default builds ALWAYS regenerate baseline-prof.txt +
-# startup-prof.txt (needs KVM) so release APKs ship fresh AOT hints. R8
-# minify + resource shrink already run on assemble*Release. Default ./build.sh
-# always runs shippedsmoke + smoke + e2e on GMD (needs KVM). --debug skips
-# those device gates. Macrobenchmark only measures - it does not speed up
-# users, so it stays opt-in.
+# User-facing speed: default builds regenerate baseline-prof.txt +
+# startup-prof.txt only when UI/startup sources are newer than the committed
+# profiles, or when --force-baseline is passed (needs KVM). R8 minify +
+# resource shrink already run on assemble*Release. Default ./build.sh always
+# runs shippedsmoke + smoke + e2e on GMD (needs KVM); smoke and e2e share
+# one API 37 Setup. --debug skips those device gates. Macrobenchmark only
+# measures - it does not speed up users, so it stays opt-in.
 #
 # IMPORTANT: Do NOT manually remove the global Android-apps build lock unless
 # you have user approval and have confirmed no process is using it (check with
@@ -111,6 +116,7 @@ DO_MACROBENCHMARK=0
 DO_PUBLISH=0
 DO_PUBLISH_DEBUG=0
 DO_DEBUG=0
+DO_FORCE_BASELINE=0
 BLOCK_ON_OUTDATED=0
 # Extra flags used only by some apps; stay 0 elsewhere so shared omit-logic
 # can test them without an "unbound variable" under set -u.
@@ -158,6 +164,14 @@ E2E_ASSERT_COUNT=1
 SHIPPED_SMOKE_ASSERT_COUNT=1
 MACROBENCHMARK_ASSERT_COUNT=1
 DEBUG_ASSEMBLE_TASKS=(assembleCompatDebug assembleFutureDebug)
+DEBUG_GATE_TASKS=(
+    ktlintCheck
+    detekt
+    lintCompatDebug
+    lintFutureDebug
+    testCompatDebugUnitTest
+    testFutureDebugUnitTest
+)
 
 project_handle_arg() { return 1; }
 project_run_extra_standalone() { return 0; }
@@ -226,19 +240,20 @@ project_run_extra_standalone() {
 }
 
 # Libraries have no api flavors - their unit tests stay testDebugUnitTest.
-GRADLE_TASKS=(
+DEBUG_GATE_TASKS=(
     ktlintCheck
     detekt
-    lintCompatRelease
-    lintFutureRelease
+    lintCompatDebug
+    lintFutureDebug
     testDebugUnitTest
     testCompatDebugUnitTest
     testFutureDebugUnitTest
+)
+GRADLE_TASKS=(
+    lintCompatRelease
+    lintFutureRelease
     :macrobenchmark:assembleFutureRelease
-    :baselineprofile:assembleFutureNonMinifiedRelease
     :shippedsmoke:assembleFutureRelease
-    assembleCompatDebug
-    assembleFutureDebug
     assembleCompatRelease
     assembleFutureRelease
 )
@@ -259,12 +274,14 @@ for arg in "$@"; do
         --publish)           DO_PUBLISH=1 ;;
         --publish-debug)     DO_PUBLISH_DEBUG=1 ;;
         --debug)             DO_DEBUG=1 ;;
+        --force-baseline)    DO_FORCE_BASELINE=1 ;;
         --block-on-outdated) BLOCK_ON_OUTDATED=1 ;;
         *)
             if ! project_handle_arg "$arg"; then
                 echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
                     "--smoke, --e2e, --smoke-shipped, --macrobenchmark," \
-                    "--publish, --publish-debug, --debug, --block-on-outdated${PROJECT_EXTRA_FLAGS_HELP})" >&2
+                    "--publish, --publish-debug, --debug, --force-baseline," \
+                    "--block-on-outdated${PROJECT_EXTRA_FLAGS_HELP})" >&2
                 exit 2
             fi
             ;;
@@ -292,7 +309,8 @@ check_dependency_freshness() {
 }
 
 # Mandatory on every mode except serve-only publish flags (must not rewrite the
-# catalog while handing out already-built APKs).
+# catalog while handing out already-built APKs). Runs before the lock and
+# before any Gradle work so a catalog rewrite cannot land mid-graph.
 if [[ "$DO_PUBLISH" -eq 0 && "$DO_PUBLISH_DEBUG" -eq 0 ]]; then
     check_dependency_freshness
 fi
@@ -331,7 +349,12 @@ copy_debug_apks_to_root() {
 }
 
 assemble_debug_first() {
-    echo "Assembling debug APKs first..."
+    echo "Running debug lints and tests..."
+    if ! gradle "${DEBUG_GATE_TASKS[@]}"; then
+        echo "ERROR: debug lints/tests failed." >&2
+        return 1
+    fi
+    echo "Assembling debug APKs..."
     if ! gradle "${DEBUG_ASSEMBLE_TASKS[@]}"; then
         echo "ERROR: debug assemble failed." >&2
         return 1
@@ -389,7 +412,9 @@ fi
 # one assertion floor.
 run_smoke_tests() {
     require_kvm || return 1
-    gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    if [[ "${GMD_SKIP_APP_API37_SETUP:-0}" -ne 1 ]]; then
+        gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    fi
     gmd_pre_android_test
     local app_timeout_sec="${APP_ANDROID_TEST_TIMEOUT_SEC:-600}"
     local rc=0
@@ -429,7 +454,9 @@ run_compat_smoke_tests() {
 
 run_e2e_tests() {
     require_kvm || return 1
-    gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    if [[ "${GMD_SKIP_APP_API37_SETUP:-0}" -ne 1 ]]; then
+        gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}" || return 1
+    fi
     gmd_pre_android_test
     local app_timeout_sec="${APP_ANDROID_TEST_TIMEOUT_SEC:-900}"
     local -a e2e_args=()
@@ -593,25 +620,13 @@ revert_version_bump() {
     echo "Build failed: reverted version to $CURRENT_NAME ($CURRENT_CODE)." >&2
 }
 
-if ! assemble_debug_first; then
-    exit 1
-fi
-
-if [[ "$DO_DEBUG" -eq 1 ]]; then
-    echo "Debug build: skipping baseline profile regeneration and version bump."
-else
-    echo "Release build: regenerating baseline + startup profiles..."
-    if ! regenerate_baseline_profiles; then
-        exit 1
-    fi
-    echo "Baseline profiles installed under app/src/release/."
-
+bump_release_version() {
     CURRENT_CODE=$(sed -n 's/.*val baseVersionCode = \([0-9][0-9]*\).*/\1/p' "$BUILD_GRADLE" | head -1)
     CURRENT_NAME=$(sed -n 's/.*val baseVersionName = "\([^"]*\)".*/\1/p' "$BUILD_GRADLE" | head -1)
 
     if [[ -z "$CURRENT_CODE" || -z "$CURRENT_NAME" ]]; then
         echo "ERROR: could not parse baseVersionCode/baseVersionName from $BUILD_GRADLE" >&2
-        exit 1
+        return 1
     fi
 
     NEW_CODE=$((CURRENT_CODE + 1))
@@ -623,17 +638,82 @@ else
     VERSION_BUMPED=1
 
     echo "Bumped version: $CURRENT_NAME ($CURRENT_CODE) -> $NEW_NAME ($NEW_CODE)"
+}
+
+# Regen AOT profiles when startup/UI sources are newer than the installed
+# profiles (or the files are missing). Version bumps and catalog bumps do
+# not count. --force-baseline always regenerates.
+should_regenerate_baseline_profiles() {
+    if [[ "$DO_FORCE_BASELINE" -eq 1 ]]; then
+        echo "Baseline regen: --force-baseline"
+        return 0
+    fi
+    local prof="app/src/release/baseline-prof.txt"
+    local startp="app/src/release/startup-prof.txt"
+    if [[ ! -s "$prof" || ! -s "$startp" ]]; then
+        echo "Baseline regen: missing $prof or $startp"
+        return 0
+    fi
+    local -a roots=()
+    [[ -d app/src/main ]] && roots+=(app/src/main)
+    [[ -d app/src/compat ]] && roots+=(app/src/compat)
+    [[ -d app/src/future ]] && roots+=(app/src/future)
+    [[ -d app/src/release ]] && roots+=(app/src/release)
+    [[ -d baselineprofile/src ]] && roots+=(baselineprofile/src)
+    if [[ ${#roots[@]} -eq 0 ]]; then
+        echo "Baseline skip: no UI/startup source roots"
+        return 1
+    fi
+    local newest
+    newest=$(find "${roots[@]}" -type f \
+        \( -name '*.kt' -o -name '*.kts' -o -name '*.java' -o -name '*.xml' \) \
+        ! -name 'baseline-prof.txt' ! -name 'startup-prof.txt' \
+        ! -path '*/build/*' \
+        -printf '%T@\n' 2>/dev/null | sort -n | tail -1)
+    if [[ -z "$newest" ]]; then
+        echo "Baseline skip: no matching UI/startup sources"
+        return 1
+    fi
+    local prof_m
+    prof_m=$(stat -c '%Y' "$prof")
+    if awk -v n="$newest" -v p="$prof_m" 'BEGIN { exit !(n > p) }'; then
+        echo "Baseline regen: UI/startup sources newer than $prof"
+        return 0
+    fi
+    echo "Baseline skip: profiles newer than UI/startup sources (pass --force-baseline to regen)."
+    return 1
+}
+
+# Version bump before any Gradle work so debug + release APKs share one
+# version and the second graph is not invalidated mid-build.
+if [[ "$DO_DEBUG" -eq 0 ]]; then
+    if ! bump_release_version; then
+        exit 1
+    fi
 fi
 
-# `clean` runs as its own invocation. Inside one task graph Gradle is free to
-# run it in parallel with ktlintCheck, and it does: ktlint's source walk then
-# trips over app/build/ intermediates that :app:clean is deleting underneath it
-# and fails with NoSuchFileException.
-if ! gradle clean; then
+if ! assemble_debug_first; then
     revert_version_bump
     exit 1
 fi
 
+if [[ "$DO_DEBUG" -eq 1 ]]; then
+    echo "Debug build: skipping baseline regen, release assemble, and GMD."
+    ./scripts/apk_http_serve.sh start --optional "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
+    exit 0
+fi
+
+if should_regenerate_baseline_profiles; then
+    echo "Release build: regenerating baseline + startup profiles..."
+    if ! regenerate_baseline_profiles; then
+        revert_version_bump
+        exit 1
+    fi
+    echo "Baseline profiles installed under app/src/release/."
+fi
+
+# No gradle clean: keep UP-TO-DATE outputs and the build cache. ktlint/detekt/
+# debug tests/debug assemble already ran in assemble_debug_first.
 if ! gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" "${GRADLE_TASKS[@]}"; then
     revert_version_bump
     exit 1
@@ -653,32 +733,33 @@ else
     fi
 fi
 
-# Release path always runs the GMD device lanes. --debug skips them so a
-# compile/unit-test loop stays fast and KVM-free after assemble.
-# Shippedsmoke first: release APK on a clean GMD before debug androidTests
-# replace the install.
-if [[ "$DO_DEBUG" -eq 0 ]]; then
-    echo "Release build: running shippedsmoke + smoke + e2e on GMD..."
-    if ! run_shipped_smoke_tests; then
-        revert_version_bump
-        exit 1
-    fi
-    if ! run_smoke_tests; then
-        revert_version_bump
-        exit 1
-    fi
-    if [[ "$HAS_COMPAT_SMOKE" -eq 1 ]]; then
-        if ! run_compat_smoke_tests; then
-            revert_version_bump
-            exit 1
-        fi
-    fi
-    if ! run_e2e_tests; then
-        revert_version_bump
-        exit 1
-    fi
-    echo "Device gates complete."
+# Shippedsmoke first: release APK on a GMD before debug androidTests replace
+# the install. Smoke + e2e then share one :app pixel7aApi37 Setup.
+echo "Release build: running shippedsmoke, then smoke + e2e on one API 37 GMD..."
+if ! run_shipped_smoke_tests; then
+    revert_version_bump
+    exit 1
 fi
+if ! gradle :app:pixel7aApi37Setup "${GMD_GPU[@]}"; then
+    revert_version_bump
+    exit 1
+fi
+GMD_SKIP_APP_API37_SETUP=1
+if ! run_smoke_tests; then
+    revert_version_bump
+    exit 1
+fi
+if [[ "$HAS_COMPAT_SMOKE" -eq 1 ]]; then
+    if ! run_compat_smoke_tests; then
+        revert_version_bump
+        exit 1
+    fi
+fi
+if ! run_e2e_tests; then
+    revert_version_bump
+    exit 1
+fi
+echo "Device gates complete."
 
 if [[ "$DO_BUILD_HEALTH" -eq 1 ]]; then
     gradle buildHealth || true
@@ -710,18 +791,7 @@ if [[ -n "$BUILT_CODE" ]]; then
     echo "Archived R8 mappings for versionCode $BUILT_CODE under $MAPPINGS_DIR/."
 fi
 
-# A dev build exposes its own APKs and stops here: the release artifacts at the
-# root belong to the last release build, and its version bump, so overwriting
-# them with an unbumped dev build is how you end up serving the wrong APK.
-if [[ "$DO_DEBUG" -eq 1 ]]; then
-    rm -f "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
-    cp "$DEBUG_APK_COMPAT" "$ROOT_APK_DEBUG_COMPAT"
-    echo "Copied compat debug APK to $ROOT_APK_DEBUG_COMPAT"
-    cp "$DEBUG_APK_FUTURE" "$ROOT_APK_DEBUG_FUTURE"
-    echo "Copied future debug APK to $ROOT_APK_DEBUG_FUTURE"
-    ./scripts/apk_http_serve.sh start --optional "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
-    exit 0
-fi
+# Release artifacts at the root belong to this release build's version bump.
 
 rm -f "$ROOT_APK_COMPAT" "$ROOT_MAPPING_COMPAT" "$ROOT_APK_FUTURE" "$ROOT_MAPPING_FUTURE"
 rm -f "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
