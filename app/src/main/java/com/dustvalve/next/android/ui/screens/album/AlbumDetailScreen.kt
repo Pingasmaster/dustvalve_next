@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -254,6 +255,15 @@ fun AlbumDetailScreen(
             }
 
             album != null -> {
+                // Shared by the hero double-tap and the favorite button so
+                // both play the same square-to-heart morph on the cover.
+                val isFavoriteState = rememberUpdatedState(album.isFavorite)
+                val favoriteWithHeart: () -> Unit = {
+                    hapticFeedback.toggle(!isFavoriteState.value)
+                    viewModel.toggleFavorite()
+                    heartScope.launch { heartMorph.play() }
+                }
+                val favoriteWithHeartState = rememberUpdatedState(favoriteWithHeart)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -296,11 +306,7 @@ fun AlbumDetailScreen(
                                             // morph as the player's album art.
                                             .pointerInput(album.id) {
                                                 detectTapGestures(
-                                                    onDoubleTap = {
-                                                        hapticFeedback.toggle(!album.isFavorite)
-                                                        viewModel.toggleFavorite()
-                                                        heartScope.launch { heartMorph.play() }
-                                                    },
+                                                    onDoubleTap = { favoriteWithHeartState.value() },
                                                 )
                                             },
                                         contentScale = ContentScale.Crop,
@@ -356,7 +362,7 @@ fun AlbumDetailScreen(
                                             viewModel.notifyPreviewUnavailable()
                                         }
                                     },
-                                    onToggleFavorite = { viewModel.toggleFavorite() },
+                                    onToggleFavorite = favoriteWithHeart,
                                     onDownload = {
                                         if (allTracksDownloaded) {
                                             showDeleteAlbumDialog = true

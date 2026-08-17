@@ -84,6 +84,7 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.ui.adaptive.AdaptiveLayoutInfo
 import com.dustvalve.next.android.ui.adaptive.adaptiveHeroSize
 import com.dustvalve.next.android.ui.components.AlbumCard
+import com.dustvalve.next.android.ui.components.HeartMorphState
 import com.dustvalve.next.android.ui.components.detail.ExpandableText
 import com.dustvalve.next.android.ui.components.heartMorphClip
 import com.dustvalve.next.android.ui.components.lists.MusicRow
@@ -332,6 +333,18 @@ private fun AlbumGridLayout(
     val artist = state.artist ?: return
     val allAlbumsDownloaded = artist.albums.isNotEmpty() &&
         artist.albums.all { it.id in state.downloadedAlbumIds }
+    val heartMorph = rememberHeartMorphState()
+    val heartScope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    val onToggleFavoriteState = rememberUpdatedState(onToggleFavorite)
+    val isFavoriteState = rememberUpdatedState(state.isFavorite)
+    // Shared by the hero double-tap and the favorite button so both play
+    // the same square-to-heart morph on the artist image.
+    val favoriteWithHeart: () -> Unit = {
+        hapticFeedback.toggle(!isFavoriteState.value)
+        onToggleFavoriteState.value()
+        heartScope.launch { heartMorph.play() }
+    }
 
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = adaptiveInfo.gridMinSize),
@@ -343,8 +356,8 @@ private fun AlbumGridLayout(
                 heroMaxSize = adaptiveInfo.heroMaxSize,
                 imageUrl = artist.imageUrl,
                 name = artist.name,
-                isFavorite = artist.isFavorite,
-                onDoubleTap = onToggleFavorite,
+                heartMorph = heartMorph,
+                onDoubleTap = favoriteWithHeart,
             )
         }
         item(key = "actions", span = { GridItemSpan(maxLineSpan) }) {
@@ -363,7 +376,7 @@ private fun AlbumGridLayout(
                     downloadEnabled = !state.isDownloading && artist.albums.isNotEmpty(),
                 ),
                 extras = DetailActionBarExtras(
-                    onToggleFavorite = onToggleFavorite,
+                    onToggleFavorite = favoriteWithHeart,
                     onDownload = onDownload,
                 ),
                 modifier = Modifier
@@ -436,6 +449,18 @@ private fun FlatTracksLayout(
     val allDownloaded = state.tracks.isNotEmpty() &&
         state.tracks.all { it.id in state.downloadedTrackIds }
     val loadMore by rememberUpdatedState(onLoadMore)
+    val heartMorph = rememberHeartMorphState()
+    val heartScope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    val onToggleFavoriteState = rememberUpdatedState(onToggleFavorite)
+    val isFavoriteState = rememberUpdatedState(state.isFavorite)
+    // Shared by the hero double-tap and the favorite button so both play
+    // the same square-to-heart morph on the artist image.
+    val favoriteWithHeart: () -> Unit = {
+        hapticFeedback.toggle(!isFavoriteState.value)
+        onToggleFavoriteState.value()
+        heartScope.launch { heartMorph.play() }
+    }
 
     // Trigger pagination when we're near the bottom.
     LaunchedEffect(listState, state.tracks.size, state.hasMore) {
@@ -460,8 +485,8 @@ private fun FlatTracksLayout(
                 heroMaxSize = adaptiveInfo.heroMaxSize,
                 imageUrl = artist.imageUrl,
                 name = artist.name,
-                isFavorite = artist.isFavorite,
-                onDoubleTap = onToggleFavorite,
+                heartMorph = heartMorph,
+                onDoubleTap = favoriteWithHeart,
             )
         }
         item(key = "actions") {
@@ -480,7 +505,7 @@ private fun FlatTracksLayout(
                     downloadEnabled = !state.isDownloading && state.tracks.isNotEmpty(),
                 ),
                 extras = DetailActionBarExtras(
-                    onToggleFavorite = onToggleFavorite,
+                    onToggleFavorite = favoriteWithHeart,
                     onDownload = onDownload,
                     onShuffle = onShuffle,
                     shuffleEnabled = !state.isLoadingMix && state.tracks.isNotEmpty(),
@@ -584,21 +609,15 @@ private fun LazyListScope.artistTracksSection(state: ArtistDetailUiState, onTrac
 }
 
 @Composable
-private fun ArtistHero(heroMaxSize: Dp, imageUrl: String?, name: String, isFavorite: Boolean, onDoubleTap: (() -> Unit)? = null) {
-    val hapticFeedback = LocalHapticFeedback.current
-    val heartMorph = rememberHeartMorphState()
-    val heartScope = rememberCoroutineScope()
+private fun ArtistHero(heroMaxSize: Dp, imageUrl: String?, name: String, heartMorph: HeartMorphState, onDoubleTap: (() -> Unit)? = null) {
+    val onDoubleTapState = rememberUpdatedState(onDoubleTap)
     // Double-tap the hero to toggle the artist favorite; single tap stays a
     // no-op, so the gesture detector adds no latency to anything else. The
     // artwork morphs into a heart - same animation as the player's album art.
     val doubleTapModifier = if (onDoubleTap != null) {
         Modifier.pointerInput(imageUrl) {
             detectTapGestures(
-                onDoubleTap = {
-                    hapticFeedback.toggle(!isFavorite)
-                    onDoubleTap()
-                    heartScope.launch { heartMorph.play() }
-                },
+                onDoubleTap = { onDoubleTapState.value?.invoke() },
             )
         }
     } else {

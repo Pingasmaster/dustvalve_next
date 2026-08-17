@@ -26,7 +26,7 @@ import kotlinx.coroutines.delay
  *
  * Single shared implementation for the player art (FullPlayer's
  * square-to-heart double-tap morph, MiniPlayer's square-to-cookie playback
- * morph) and the detail-screen hero double-tap heart.
+ * morph) and the detail-screen hero heart (double-tap or favorite button).
  *
  * Implements structural equality so that recompositions passing an
  * unchanged (morph, progress) pair don't force Compose to re-run
@@ -66,13 +66,14 @@ class MorphShape(private val morph: Morph, private val progress: Float) : Shape 
 }
 
 /**
- * State holder for the double-tap "art turns into a heart" animation.
+ * State holder for the "art turns into a heart" favorite animation.
  *
  * This is the exact motion the full player uses on its album art: the
  * artwork's clip morphs Square -> Heart with the default spatial spring,
  * holds the heart for [HOLD_MILLIS], then morphs back with the slow
  * spatial spring. Detail-screen heroes (album / artist / playlist /
- * collection) share it so a double-tap heart feels identical everywhere.
+ * collection) share it so a favorite heart feels identical everywhere,
+ * whether the user double-taps the artwork or taps the favorite button.
  */
 @Stable
 class HeartMorphState internal constructor(

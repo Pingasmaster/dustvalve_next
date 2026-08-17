@@ -48,6 +48,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -229,6 +230,18 @@ fun CollectionDetailScreen(
             else -> {
                 val heroUrl = state.coverUrl ?: state.tracks.firstOrNull()?.artUrl
                 val listState = rememberLazyListState()
+                val heartMorph = rememberHeartMorphState()
+                val heartScope = rememberCoroutineScope()
+                val hapticFeedback = LocalHapticFeedback.current
+                val isFavoriteState = rememberUpdatedState(state.isFavorite)
+                // Shared by the hero double-tap and the favorite button so
+                // both play the same square-to-heart morph on the cover.
+                val favoriteWithHeart: () -> Unit = {
+                    hapticFeedback.toggle(!isFavoriteState.value)
+                    viewModel.toggleFavorite()
+                    heartScope.launch { heartMorph.play() }
+                }
+                val favoriteWithHeartState = rememberUpdatedState(favoriteWithHeart)
 
                 // Infinite scroll: when within 3 items of the bottom and the
                 // collection reports hasMore (e.g. a YouTube Mix), fetch the
@@ -262,9 +275,6 @@ fun CollectionDetailScreen(
                         // Hero cover. Name + track count live in the top-bar, so
                         // the hero is the bare artwork - matches AlbumDetailScreen.
                         item(key = "hero") {
-                            val heartMorph = rememberHeartMorphState()
-                            val heartScope = rememberCoroutineScope()
-                            val hapticFeedback = LocalHapticFeedback.current
                             // Clips only while the morph is animating (resting
                             // hero stays full-bleed); progress is read in the
                             // layer block, so animation frames don't recompose
@@ -279,11 +289,7 @@ fun CollectionDetailScreen(
                                     // album art (and the other detail heroes).
                                     .pointerInput(collectionUrl) {
                                         detectTapGestures(
-                                            onDoubleTap = {
-                                                hapticFeedback.toggle(!state.isFavorite)
-                                                viewModel.toggleFavorite()
-                                                heartScope.launch { heartMorph.play() }
-                                            },
+                                            onDoubleTap = { favoriteWithHeartState.value() },
                                         )
                                     },
                                 contentAlignment = Alignment.Center,
@@ -334,7 +340,7 @@ fun CollectionDetailScreen(
                                             playerViewModel.playAlbum(tracks, index)
                                         }
                                     },
-                                    onToggleFavorite = { viewModel.toggleFavorite() },
+                                    onToggleFavorite = favoriteWithHeart,
                                     onDownload = {
                                         if (allDownloaded) {
                                             showDeleteDialog = true
