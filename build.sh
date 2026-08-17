@@ -26,7 +26,6 @@
 #   ./build.sh --macrobenchmark   # advisory emulator macrobenchmarks (future)
 #   ./build.sh --publish          # serve existing root release + debug APKs over
 #                                 # NetBird HTTP + exit
-#   ./build.sh --publish-debug    # serve existing root debug APKs over NetBird HTTP + exit
 #   ./build.sh --block-on-outdated
 #                                 # refuse to build when any catalog pin is behind
 #                                 # (default is to auto-bump pins, then continue)
@@ -114,7 +113,6 @@ DO_E2E=0
 DO_SMOKE_SHIPPED=0
 DO_MACROBENCHMARK=0
 DO_PUBLISH=0
-DO_PUBLISH_DEBUG=0
 DO_DEBUG=0
 DO_FORCE_BASELINE=0
 BLOCK_ON_OUTDATED=0
@@ -272,7 +270,6 @@ for arg in "$@"; do
         --smoke-shipped)     DO_SMOKE_SHIPPED=1 ;;
         --macrobenchmark)    DO_MACROBENCHMARK=1 ;;
         --publish)           DO_PUBLISH=1 ;;
-        --publish-debug)     DO_PUBLISH_DEBUG=1 ;;
         --debug)             DO_DEBUG=1 ;;
         --force-baseline)    DO_FORCE_BASELINE=1 ;;
         --block-on-outdated) BLOCK_ON_OUTDATED=1 ;;
@@ -280,7 +277,7 @@ for arg in "$@"; do
             if ! project_handle_arg "$arg"; then
                 echo "Unknown arg: $arg (accepted: --clean, --format, --build-health," \
                     "--smoke, --e2e, --smoke-shipped, --macrobenchmark," \
-                    "--publish, --publish-debug, --debug, --force-baseline," \
+                    "--publish, --debug, --force-baseline," \
                     "--block-on-outdated${PROJECT_EXTRA_FLAGS_HELP})" >&2
                 exit 2
             fi
@@ -311,7 +308,7 @@ check_dependency_freshness() {
 # Mandatory on every mode except serve-only publish flags (must not rewrite the
 # catalog while handing out already-built APKs). Runs before the lock and
 # before any Gradle work so a catalog rewrite cannot land mid-graph.
-if [[ "$DO_PUBLISH" -eq 0 && "$DO_PUBLISH_DEBUG" -eq 0 ]]; then
+if [[ "$DO_PUBLISH" -eq 0 ]]; then
     check_dependency_freshness
 fi
 
@@ -403,7 +400,7 @@ gmd_post_android_test() {
 # keystore can still drive a debug-signed release variant; default ./build.sh
 # still fails assembleRelease.
 REQUIRE_RELEASE_SIGNING_ARGS=()
-if [[ "$DO_DEBUG" -eq 0 && "$DO_SMOKE" -eq 0 && "$DO_E2E" -eq 0 && "$DO_SMOKE_SHIPPED" -eq 0 && "$DO_PUBLISH" -eq 0 && "$DO_PUBLISH_DEBUG" -eq 0 && "$DO_MACROBENCHMARK" -eq 0 && "$DO_SMOKE_RELEASE" -eq 0 && "$DO_E2E_LIVE" -eq 0 ]]; then
+if [[ "$DO_DEBUG" -eq 0 && "$DO_SMOKE" -eq 0 && "$DO_E2E" -eq 0 && "$DO_SMOKE_SHIPPED" -eq 0 && "$DO_PUBLISH" -eq 0 && "$DO_MACROBENCHMARK" -eq 0 && "$DO_SMOKE_RELEASE" -eq 0 && "$DO_E2E_LIVE" -eq 0 ]]; then
     REQUIRE_RELEASE_SIGNING_ARGS=("${REQUIRE_RELEASE_SIGNING_FLAG[@]}")
 fi
 
@@ -529,22 +526,6 @@ if [[ "$DO_PUBLISH" -eq 1 ]]; then
     ./scripts/apk_http_serve.sh start \
         "$ROOT_APK_COMPAT" "$ROOT_APK_FUTURE" \
         "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
-    exit 0
-fi
-
-if [[ "$DO_PUBLISH_DEBUG" -eq 1 ]]; then
-    missing=0
-    for apk in "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"; do
-        if [[ ! -f "$apk" ]]; then
-            echo "ERROR: missing $apk." >&2
-            missing=1
-        fi
-    done
-    if [[ "$missing" -ne 0 ]]; then
-        echo "Run ./build.sh --debug (or a full release build) first." >&2
-        exit 1
-    fi
-    ./scripts/apk_http_serve.sh start "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
     exit 0
 fi
 
