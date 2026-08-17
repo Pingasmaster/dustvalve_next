@@ -448,34 +448,14 @@ regenerate_baseline_profiles() {
         echo "Use ./build.sh --debug to skip baselines for a non-release build." >&2
         exit 1
     fi
-    # Retry: GMD LMK can kill the app mid-flush ("never flushed profiles").
-    local attempt=1
-    local max_attempts=3
     gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" \
-        :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}"
-    while true; do
-        local attempt_log
-        attempt_log="$(mktemp)"
-        if gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" \
-            "$BASELINE_TEST_TASK" "${GMD_GPU[@]}" \
-            -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile \
-            >"$attempt_log" 2>&1 \
-            && ./scripts/assert_tests_ran.sh "$BASELINE_ASSERT_COUNT" baselineprofile; then
-            cat "$attempt_log"
-            rm -f "$attempt_log"
-            break
-        fi
-        if [[ "$attempt" -ge "$max_attempts" ]]; then
-            cat "$attempt_log" >&2 || true
-            rm -f "$attempt_log"
-            echo "ERROR: baseline profile generation failed after ${max_attempts} attempts." >&2
-            return 1
-        fi
-        rm -f "$attempt_log"
-        echo "Baseline profile attempt ${attempt}/${max_attempts} failed; retrying..." >&2
-        attempt=$((attempt + 1))
-        sleep 5
-    done
+        :baselineprofile:pixel7aApi37Setup "${GMD_GPU[@]}" \
+        || return 1
+    gradle "${REQUIRE_RELEASE_SIGNING_ARGS[@]}" \
+        "$BASELINE_TEST_TASK" "${GMD_GPU[@]}" \
+        -Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=baselineprofile \
+        || return 1
+    ./scripts/assert_tests_ran.sh "$BASELINE_ASSERT_COUNT" baselineprofile || return 1
     chmod +x ./scripts/install_baseline_profiles.sh
     ./scripts/install_baseline_profiles.sh
 }
