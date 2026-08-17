@@ -6,7 +6,8 @@
 # behavior, port it to the other three the same day.
 #
 # Usage:
-#   ./build.sh                    # RELEASE path: regen baseline+startup profiles (GMD),
+#   ./build.sh                    # RELEASE path: assemble debug APKs first, then
+#                                 # regen baseline+startup profiles (GMD),
 #                                 # bump version, clean + ASCII + ktlint + detekt + lint
 #                                 # + tests + assemble dual APKs, then GMD shippedsmoke
 #                                 # + smoke + e2e, then one-shot NetBird APK HTTP serve
@@ -41,6 +42,11 @@
 # all valid "latest" targets. Pass --block-on-outdated to keep the old
 # refuse-to-build behavior instead of rewriting the catalog.
 #
+# After the lock and ASCII/signing gates, debug APKs assemble before baseline
+# regen, version bump, clean, and the rest of the Gradle graph so a compile
+# failure fails fast and root app-debug*.apk exist while the release path
+# continues.
+#
 # After a successful full build, scripts/apk_http_serve.sh publishes all four
 # root APKs until each is downloaded once, 10 minutes, or the next ./build.sh
 # invocation: app-release.apk / app-release-future.apk (compat + future release)
@@ -59,7 +65,8 @@
 # you have user approval and have confirmed no process is using it (check with
 # `fuser ~/.cache/android-apps/build.lock` or `lsof` on that path). The lock is
 # shared across dustvalve_next, calc, compass, and core so
-# only one of those builds/cleans runs at a time. Deleting the file while a
+# only one of those builds/cleans runs at a time. A second ./build.sh waits
+# until the holder finishes. Deleting the file while a
 # holder is alive can break flock (new openers get a new inode).
 #
 set -euo pipefail
@@ -150,6 +157,7 @@ COMPAT_SMOKE_ASSERT_COUNT=1
 E2E_ASSERT_COUNT=1
 SHIPPED_SMOKE_ASSERT_COUNT=1
 MACROBENCHMARK_ASSERT_COUNT=1
+DEBUG_ASSEMBLE_TASKS=(assembleCompatDebug assembleFutureDebug)
 
 project_handle_arg() { return 1; }
 project_run_extra_standalone() { return 0; }
@@ -296,8 +304,8 @@ acquire_lock() {
     exec 9>"$LOCKFILE"
     if ! flock -n 9; then
         echo "Another Android app build/clean is already running" \
-            "(dustvalve_next/calc/compass/core share $LOCKFILE). Exiting."
-        exit 1
+            "(dustvalve_next/calc/compass/core share $LOCKFILE). Waiting..."
+        flock 9
     fi
 }
 
@@ -312,6 +320,23 @@ if [[ -x ./scripts/run_gradle.sh ]]; then
 fi
 gradle() {
     "${GRADLE_CMD[@]}" "$@"
+}
+
+copy_debug_apks_to_root() {
+    rm -f "$ROOT_APK_DEBUG_COMPAT" "$ROOT_APK_DEBUG_FUTURE"
+    cp "$DEBUG_APK_COMPAT" "$ROOT_APK_DEBUG_COMPAT"
+    echo "Copied compat debug APK to $ROOT_APK_DEBUG_COMPAT"
+    cp "$DEBUG_APK_FUTURE" "$ROOT_APK_DEBUG_FUTURE"
+    echo "Copied future debug APK to $ROOT_APK_DEBUG_FUTURE"
+}
+
+assemble_debug_first() {
+    echo "Assembling debug APKs first..."
+    if ! gradle "${DEBUG_ASSEMBLE_TASKS[@]}"; then
+        echo "ERROR: debug assemble failed." >&2
+        return 1
+    fi
+    copy_debug_apks_to_root
 }
 
 require_kvm() {
@@ -567,6 +592,10 @@ revert_version_bump() {
     sed -i -E "s/^([[:space:]]*val baseVersionName = \")${NEW_NAME}(\")$/\1${CURRENT_NAME}\2/" "$BUILD_GRADLE"
     echo "Build failed: reverted version to $CURRENT_NAME ($CURRENT_CODE)." >&2
 }
+
+if ! assemble_debug_first; then
+    exit 1
+fi
 
 if [[ "$DO_DEBUG" -eq 1 ]]; then
     echo "Debug build: skipping baseline profile regeneration and version bump."
