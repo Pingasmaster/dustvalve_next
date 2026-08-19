@@ -29,6 +29,7 @@ internal class SettingsUiCollectors(
         collect(settingsDataStore.downloadFormat) { copy(downloadFormat = it) }
         collect(settingsDataStore.saveDataOnMetered) { copy(saveDataOnMetered = it) }
         collect(settingsDataStore.progressiveDownload) { copy(progressiveDownload = it) }
+        collect(settingsDataStore.backgroundAutoDownload) { copy(backgroundAutoDownload = it) }
         collect(settingsDataStore.seamlessQualityUpgrade) { copy(seamlessQualityUpgrade = it) }
         collect(settingsDataStore.downloadNotificationsEnabled) { copy(downloadNotificationsEnabled = it) }
         collect(settingsDataStore.oledBlack) { copy(oledBlack = it) }

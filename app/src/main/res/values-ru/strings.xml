@@ -17,6 +17,7 @@
     <string name="notification_download_resume">Продолжить</string>
     <string name="notification_download_cancel">Отмена</string>
     <string name="common_action_cancel">Отмена</string>
+    <string name="common_action_ok">ОК</string>
     <string name="common_action_enable">Включить</string>
     <string name="common_action_delete">Удалить</string>
     <string name="common_action_retry">Повторить</string>
@@ -183,15 +184,15 @@
     <string name="settings_auto_download_future">Автозагрузка новинок</string>
     <string name="settings_auto_download_future_desc">Автоматически скачивать новые треки для загруженных плейлистов, альбомов и исполнителей</string>
     <string name="settings_progressive_download">Прогрессивная загрузка</string>
-    <string name="settings_progressive_download_desc">Сначала стрим в качестве превью, затем плавный переход на полное качество</string>
+    <string name="settings_progressive_download_desc">Стримит трек во время воспроизведения. Если выключено, воспроизведение ждёт полной загрузки файла.</string>
+    <string name="settings_background_auto_download">Фоновая автозагрузка</string>
+    <string name="settings_background_auto_download_desc">Сохраняет копию играющего трека во время стрима. Работает на Bandcamp, YouTube и SoundCloud.</string>
     <string name="settings_seamless_upgrade">Бесшовное повышение качества</string>
     <string name="settings_seamless_upgrade_desc">Сначала стрим, затем фоновая загрузка и подмена. В момент подмены возможна одна короткая запинка.</string>
     <string name="settings_bt_stability">Режим стабильности Bluetooth</string>
     <string name="settings_bt_stability_desc">Снижает обрывы Bluetooth-звука, когда Wi‑Fi и высококачественные кодеки конкурируют за радио</string>
     <string name="settings_bt_stability_enable_title">Включить стабильность Bluetooth?</string>
     <string name="settings_bt_stability_enable_text">Режим стабильности только настраивает буферы воспроизведения и не снижает качество звука.\n\nЭкстремальный режим может снижать качество. Параметры, ухудшающие качество, остаются выключенными, пока вы их не включите — каждый запрашивает подтверждение.</string>
-    <string name="settings_bt_stability_enable_normal">Режим стабильности</string>
-    <string name="settings_bt_stability_enable_extreme">Экстремальная стабильность</string>
     <string name="settings_bt_stability_enable_anyway">Всё равно включить</string>
     <string name="settings_bt_stability_profile">Профиль</string>
     <string name="settings_bt_stability_profile_normal">Стабильность</string>

@@ -128,6 +128,7 @@ fun SettingsScreen(adaptiveInfo: AdaptiveLayoutInfo, modifier: Modifier = Modifi
                     ),
                     toggles = SettingsListToggleActions(
                         onSetProgressiveDownload = viewModel.storageSources::setProgressiveDownload,
+                        onSetBackgroundAutoDownload = viewModel.storageSources::setBackgroundAutoDownload,
                         onSetSeamlessQualityUpgrade = viewModel.storageSources::setSeamlessQualityUpgrade,
                         onSetShowInlineVolumeSlider = viewModel.appearance::setShowInlineVolumeSlider,
                         onSetShowVolumeButton = viewModel.appearance::setShowVolumeButton,
@@ -224,6 +225,7 @@ private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActi
     val onStorageAction = actions.dialogs.onStorageAction
     val onAppearanceAction = actions.dialogs.onAppearanceAction
     val onSetProgressiveDownload = actions.toggles.onSetProgressiveDownload
+    val onSetBackgroundAutoDownload = actions.toggles.onSetBackgroundAutoDownload
     val onSetSeamlessQualityUpgrade = actions.toggles.onSetSeamlessQualityUpgrade
     val onSetShowInlineVolumeSlider = actions.toggles.onSetShowInlineVolumeSlider
     val onSetShowVolumeButton = actions.toggles.onSetShowVolumeButton
@@ -271,6 +273,7 @@ private fun SettingsScreenList(host: SettingsListHost, actions: SettingsListActi
             SettingsAudioQualitySection(
                 state = state,
                 onSetProgressiveDownload = onSetProgressiveDownload,
+                onSetBackgroundAutoDownload = onSetBackgroundAutoDownload,
                 onSetSeamlessQualityUpgrade = onSetSeamlessQualityUpgrade,
             )
         }

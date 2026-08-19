@@ -201,11 +201,15 @@ internal fun FullPlayerSeekBar(
     progressBarSizeDp: Int,
     onSeek: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    downloadProgressFraction: Float? = null,
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     var isSeeking by remember(trackId) { mutableStateOf(false) }
     var seekPosition by remember(trackId) { mutableFloatStateOf(0f) }
     var lastSeekStep by remember(trackId) { mutableIntStateOf(-1) }
+    val downloadFraction = downloadProgressFraction
+    val waitingForDownload = downloadFraction != null
+    val hidePlaybackTimes = isLoadingTrack || waitingForDownload
 
     SideEffect {
         if (isSeeking && duration > 0L) {
@@ -216,12 +220,11 @@ internal fun FullPlayerSeekBar(
         }
     }
 
-    val sliderPosition = if (isSeeking) {
-        seekPosition
-    } else if (duration > 0L) {
-        currentPosition.toFloat() / duration.toFloat()
-    } else {
-        0f
+    val sliderPosition = when {
+        downloadFraction != null -> downloadFraction.coerceIn(0f, 1f)
+        isSeeking -> seekPosition
+        duration > 0L -> currentPosition.toFloat() / duration.toFloat()
+        else -> 0f
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -230,7 +233,7 @@ internal fun FullPlayerSeekBar(
                 .fillMaxWidth()
                 .height(40.dp)
                 .then(
-                    if (isLoadingTrack) {
+                    if (hidePlaybackTimes) {
                         Modifier
                     } else {
                         Modifier.seekGesture(
@@ -251,14 +254,14 @@ internal fun FullPlayerSeekBar(
             contentAlignment = Alignment.Center,
         ) {
             FullPlayerSeekProgressIndicator(
-                isLoadingTrack = isLoadingTrack,
+                isIndeterminate = isLoadingTrack && !waitingForDownload,
                 isWavy = progressBarStyle == "wavy",
                 barHeightDp = progressBarSizeDp,
                 sliderPosition = sliderPosition,
             )
         }
         FullPlayerSeekTimeLabels(
-            isLoadingTrack = isLoadingTrack,
+            isLoadingTrack = hidePlaybackTimes,
             isSeeking = isSeeking,
             seekPosition = seekPosition,
             currentPosition = currentPosition,
@@ -313,16 +316,16 @@ private class SeekGestureCallbacks(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FullPlayerSeekProgressIndicator(isLoadingTrack: Boolean, isWavy: Boolean, barHeightDp: Int, sliderPosition: Float) {
+private fun FullPlayerSeekProgressIndicator(isIndeterminate: Boolean, isWavy: Boolean, barHeightDp: Int, sliderPosition: Float) {
     val barHeight = barHeightDp.dp
     when {
-        isLoadingTrack && isWavy -> LinearWavyProgressIndicator(
+        isIndeterminate && isWavy -> LinearWavyProgressIndicator(
             modifier = Modifier.fillMaxWidth().height(barHeight),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
         )
 
-        isLoadingTrack -> LinearProgressIndicator(
+        isIndeterminate -> LinearProgressIndicator(
             modifier = Modifier.fillMaxWidth().height(barHeight),
             color = MaterialTheme.colorScheme.primary,
             trackColor = MaterialTheme.colorScheme.surfaceVariant,

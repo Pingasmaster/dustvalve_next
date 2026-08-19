@@ -29,6 +29,7 @@ data class PlayerUiState(
     val isLoadingTrack: Boolean = false,
     val downloadedTrackIds: Set<String> = emptySet(),
     val downloadingTrackId: String? = null,
+    val downloadProgressFraction: Float? = null,
     val playlists: List<Playlist> = emptyList(),
     val snackbarMessage: UiText? = null,
     val isSnackbarError: Boolean = false,
@@ -86,6 +87,7 @@ class PlayerViewModel @Inject constructor(core: PlayerCoreDeps, libraryDeps: Pla
             playbackManager = playbackManager,
             queueManager = queueManager,
             downloadRepository = core.downloadRepository,
+            downloadNotificationCenter = core.downloadNotificationCenter,
             playlistRepository = libraryDeps.playlistRepository,
             favoriteRepository = libraryDeps.favoriteRepository,
             playbackStreamResolver = core.playbackStreamResolver,
@@ -131,6 +133,7 @@ class PlayerViewModel @Inject constructor(core: PlayerCoreDeps, libraryDeps: Pla
         state.copy(
             downloadedTrackIds = extra.downloadedTrackIds,
             downloadingTrackId = extra.downloadingTrackId,
+            downloadProgressFraction = extra.downloadProgressFraction,
             playlists = extra.playlists,
             snackbarMessage = extra.snackbarMessage,
             isSnackbarError = extra.isSnackbarError,

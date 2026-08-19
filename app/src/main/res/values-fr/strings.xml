@@ -17,6 +17,7 @@
     <string name="notification_download_resume">Reprendre</string>
     <string name="notification_download_cancel">Annuler</string>
     <string name="common_action_cancel">Annuler</string>
+    <string name="common_action_ok">OK</string>
     <string name="common_action_enable">Activer</string>
     <string name="common_action_delete">Supprimer</string>
     <string name="common_action_retry">Réessayer</string>
@@ -183,15 +184,15 @@
     <string name="settings_auto_download_future">Téléchargement auto des nouveautés</string>
     <string name="settings_auto_download_future_desc">Télécharge automatiquement les nouveaux contenus des playlists, albums et artistes téléchargés</string>
     <string name="settings_progressive_download">Téléchargement progressif</string>
-    <string name="settings_progressive_download_desc">Streame en qualité aperçu, puis passe sans coupure à la qualité maximale</string>
+    <string name="settings_progressive_download_desc">Streame le morceau pendant la lecture. Désactivé, la lecture attend que le fichier soit entièrement téléchargé.</string>
+    <string name="settings_background_auto_download">Téléchargement auto en arrière-plan</string>
+    <string name="settings_background_auto_download_desc">Enregistre une copie du morceau en cours pendant le stream. S’applique à Bandcamp, YouTube et SoundCloud.</string>
     <string name="settings_seamless_upgrade">Montée en qualité sans coupure</string>
     <string name="settings_seamless_upgrade_desc">Streame d’abord, télécharge en arrière-plan, puis bascule. Peut causer un unique bref accroc au moment de la bascule.</string>
     <string name="settings_bt_stability">Mode de stabilité Bluetooth</string>
     <string name="settings_bt_stability_desc">Réduit les coupures audio Bluetooth quand le Wi‑Fi et les codecs haute qualité se disputent la radio</string>
     <string name="settings_bt_stability_enable_title">Activer la stabilité Bluetooth ?</string>
     <string name="settings_bt_stability_enable_text">Le mode de stabilité ne règle que les tampons de lecture et ne dégrade pas la qualité audio.\n\nLe mode de stabilité extrême peut dégrader la qualité. Les options qui dégradent la qualité restent désactivées jusqu’à ce que vous les activiez, et chacune demande confirmation.</string>
-    <string name="settings_bt_stability_enable_normal">Mode de stabilité</string>
-    <string name="settings_bt_stability_enable_extreme">Stabilité extrême</string>
     <string name="settings_bt_stability_enable_anyway">Activer quand même</string>
     <string name="settings_bt_stability_profile">Profil</string>
     <string name="settings_bt_stability_profile_normal">Stabilité</string>

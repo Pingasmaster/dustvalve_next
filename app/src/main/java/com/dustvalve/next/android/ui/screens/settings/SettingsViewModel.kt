@@ -37,6 +37,7 @@ data class SettingsUiState(
     val downloadFormat: String = "flac",
     val saveDataOnMetered: Boolean = true,
     val progressiveDownload: Boolean = true,
+    val backgroundAutoDownload: Boolean = true,
     val seamlessQualityUpgrade: Boolean = false,
     val oledBlack: Boolean = false,
     val albumArtTheme: Boolean = false,

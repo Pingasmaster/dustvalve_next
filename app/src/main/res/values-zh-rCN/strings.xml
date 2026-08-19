@@ -17,6 +17,7 @@
     <string name="notification_download_resume">继续</string>
     <string name="notification_download_cancel">取消</string>
     <string name="common_action_cancel">取消</string>
+    <string name="common_action_ok">确定</string>
     <string name="common_action_enable">启用</string>
     <string name="common_action_delete">删除</string>
     <string name="common_action_retry">重试</string>
@@ -183,15 +184,15 @@
     <string name="settings_auto_download_future">自动下载新内容</string>
     <string name="settings_auto_download_future_desc">为已下载的播放列表、专辑和艺人自动下载新内容</string>
     <string name="settings_progressive_download">渐进式下载</string>
-    <string name="settings_progressive_download_desc">先以预览音质播放，再无缝升级到完整音质</string>
+    <string name="settings_progressive_download_desc">播放时进行流式传输。关闭后，会等文件全部下载完再播放。</string>
+    <string name="settings_background_auto_download">后台自动下载</string>
+    <string name="settings_background_auto_download_desc">在流式播放时保存当前曲目的副本。适用于 Bandcamp、YouTube 和 SoundCloud。</string>
     <string name="settings_seamless_upgrade">无缝音质升级</string>
     <string name="settings_seamless_upgrade_desc">先流式播放，在后台下载完成后切换。切换的瞬间可能出现一次短暂卡顿。</string>
     <string name="settings_bt_stability">蓝牙稳定模式</string>
     <string name="settings_bt_stability_desc">在 Wi‑Fi 与高质量编解码器争用同一射频时，减少蓝牙音频卡顿</string>
     <string name="settings_bt_stability_enable_title">启用蓝牙稳定模式？</string>
     <string name="settings_bt_stability_enable_text">稳定模式仅调整播放缓冲，不会降低音质。\n\n极限稳定模式可能会降低音质。会影响音质的选项默认关闭，启用时都会再次确认。</string>
-    <string name="settings_bt_stability_enable_normal">稳定模式</string>
-    <string name="settings_bt_stability_enable_extreme">极限稳定</string>
     <string name="settings_bt_stability_enable_anyway">仍然启用</string>
     <string name="settings_bt_stability_profile">配置</string>
     <string name="settings_bt_stability_profile_normal">稳定</string>

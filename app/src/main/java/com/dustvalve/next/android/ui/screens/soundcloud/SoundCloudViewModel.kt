@@ -27,6 +27,7 @@ import kotlin.coroutines.cancellation.CancellationException
 data class SoundCloudUiState(
     val query: String = "",
     val results: List<SearchResult> = emptyList(),
+    val selectedFilter: String? = null,
     val isSearching: Boolean = false,
     val searchError: UiText? = null,
     val feed: SoundCloudHomeFeed? = null,
@@ -88,7 +89,7 @@ class SoundCloudViewModel @Inject constructor(
                     // history: it never trimmed old entries (no deleteOld call).
                     recentSearchRepository.add(query, "soundcloud", trim = false)
                 }
-                val results = soundCloudRepository.search(query)
+                val results = soundCloudRepository.search(query, _uiState.value.selectedFilter)
                 _uiState.update { it.copy(results = results, isSearching = false) }
             } catch (e: CancellationException) {
                 throw e
@@ -99,6 +100,14 @@ class SoundCloudViewModel @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 setSearchFailed(e.message)
             }
+        }
+    }
+
+    fun onFilterSelected(filter: String?) {
+        if (filter == _uiState.value.selectedFilter) return
+        _uiState.update { it.copy(selectedFilter = filter, results = emptyList(), searchError = null) }
+        if (_uiState.value.query.isNotBlank()) {
+            onSearch()
         }
     }
 

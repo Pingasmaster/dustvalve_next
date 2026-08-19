@@ -76,6 +76,10 @@ internal class SettingsStorageSourcesPrefsCoordinator(
         settingsDataStore.setProgressiveDownload(enabled)
     }
 
+    fun setBackgroundAutoDownload(enabled: Boolean) = scope.launchSettingsPref {
+        settingsDataStore.setBackgroundAutoDownload(enabled)
+    }
+
     fun setSeamlessQualityUpgrade(enabled: Boolean) = scope.launchSettingsPref {
         settingsDataStore.setSeamlessQualityUpgrade(enabled)
     }

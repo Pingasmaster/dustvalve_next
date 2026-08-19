@@ -22,6 +22,9 @@ internal class DownloadStorageSettingsStoreImpl(private val prefs: SettingsPrefe
     override val progressiveDownload: Flow<Boolean> = prefs.guardedPreferences.map {
         it[keys.PROGRESSIVE_DOWNLOAD] ?: true
     }
+    override val backgroundAutoDownload: Flow<Boolean> = prefs.guardedPreferences.map {
+        it[keys.BACKGROUND_AUTO_DOWNLOAD] ?: true
+    }
     override val seamlessQualityUpgrade: Flow<Boolean> = prefs.guardedPreferences.map {
         it[keys.SEAMLESS_QUALITY_UPGRADE] ?: false
     }
@@ -58,6 +61,10 @@ internal class DownloadStorageSettingsStoreImpl(private val prefs: SettingsPrefe
         prefs.edit { it[keys.PROGRESSIVE_DOWNLOAD] = enabled }
     }
 
+    override suspend fun setBackgroundAutoDownload(enabled: Boolean) {
+        prefs.edit { it[keys.BACKGROUND_AUTO_DOWNLOAD] = enabled }
+    }
+
     override suspend fun setSeamlessQualityUpgrade(enabled: Boolean) {
         prefs.edit { it[keys.SEAMLESS_QUALITY_UPGRADE] = enabled }
     }
@@ -74,6 +81,9 @@ internal class DownloadStorageSettingsStoreImpl(private val prefs: SettingsPrefe
 
     override suspend fun getProgressiveDownloadSync(): Boolean =
         prefs.guardedPreferences.firstOrNull()?.get(keys.PROGRESSIVE_DOWNLOAD) ?: true
+
+    override suspend fun getBackgroundAutoDownloadSync(): Boolean =
+        prefs.guardedPreferences.firstOrNull()?.get(keys.BACKGROUND_AUTO_DOWNLOAD) ?: true
 
     override suspend fun getSeamlessQualityUpgradeSync(): Boolean =
         prefs.guardedPreferences.firstOrNull()?.get(keys.SEAMLESS_QUALITY_UPGRADE) ?: false

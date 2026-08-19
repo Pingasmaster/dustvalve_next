@@ -27,8 +27,8 @@ android {
     // Shared by defaultConfig + future flavor offset. build.sh bumps this
     // via sed on the defaultConfig assignment below; future re-reads it
     // on the next Gradle configure.
-    val baseVersionCode = 312
-    val baseVersionName = "0.5.34"
+    val baseVersionCode = 314
+    val baseVersionName = "0.5.36"
 
     defaultConfig {
         applicationId = "com.dustvalve.next.android"

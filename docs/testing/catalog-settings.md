@@ -12,13 +12,14 @@ the post-crash sheet only). SettingsDataStore.kt holds all keys + defaults.
 
 Group 1: Appearance (14) [all JVM, none]
 - set-theme-light / -dark / -system / -default-value: theme_mode writes;
-  dark shows OLED sub-toggle (isDarkEffective); system follows
-  isSystemInDarkTheme() without restart; default "system".
+  picker order is System, Light, Dark; dark shows OLED as a peer toggle
+  between Dynamic color and Album art colors (isDarkEffective); system
+  follows isSystemInDarkTheme() without restart; default "system".
 - set-dynamic-color-off/-on: Material You vs app palette (API 31+).
 - [ ] set-album-art-theme-on [smoke]: AlbumThemeManager.albumSeedColor recolors
   theme from cover.
 - set-oled-black-visibility / -on (#000000 surfaces) / -ignored-in-light
-  (value retained, not consumed).
+  (value retained, not consumed). Not a sub-option of Album art colors.
 - set-progress-bar-style-linear / -wavy-default (default wavy).
 - set-progress-bar-size-slider (8 steps 4..32dp, write on
   onValueChangeFinished) / -default (24, index 5).
@@ -79,8 +80,12 @@ Group 6: Downloads / audio quality / notifications (13) [JVM unless noted]
   reads getDownloadFormatSync.
 - set-audio-format-unknown-key-fallback: bogus key -> FLAC label, no crash.
 - set-audio-metered-mp3: metered -> mp3 variant, unmetered -> chosen format.
-- set-audio-progressive-download: off hides seamless sub-toggle; playback
-  waits for full file.
+- [x] set-audio-progressive-download [JVM]: off = no streaming, download
+  first (player bar tracks download progress); on + background
+  auto-download off = stream only. PlayerViewModelResolveTest.
+- [x] set-audio-background-auto-download [JVM]: peer of progressive;
+  default on; seamless sub-toggle only when both on.
+  SettingsDataStoreTest + PlayerViewModelResolveTest.
 - [ ] set-audio-seamless-upgrade [E2E]: mid-playback swap preserves position.
 - set-dl-notifications-off: combine() cancels/never posts (unless
   foreground-owned); shadow NotificationManager assert.

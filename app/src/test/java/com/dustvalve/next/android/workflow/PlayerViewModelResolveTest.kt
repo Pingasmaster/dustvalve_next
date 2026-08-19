@@ -7,6 +7,7 @@ import androidx.media3.test.utils.TestExoPlayerBuilder
 import androidx.media3.test.utils.robolectric.RobolectricUtil
 import androidx.media3.test.utils.robolectric.TestPlayerRunHelper
 import androidx.test.core.app.ApplicationProvider
+import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.SettingsDataStore
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.FavoriteType
@@ -21,6 +22,7 @@ import com.dustvalve.next.android.domain.repository.YouTubeRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.ui.screens.player.PlaybackStreamResolver
@@ -82,7 +84,8 @@ class PlayerViewModelResolveTest {
         coEvery { resolveStreamUrl(any()) } returns null
     }
     private val settingsDataStore = mockk<SettingsDataStore>(relaxed = true) {
-        coEvery { getProgressiveDownloadSync() } returns false
+        coEvery { getProgressiveDownloadSync() } returns true
+        coEvery { getBackgroundAutoDownloadSync() } returns false
         // uiState combines these flows; they must emit or uiState stays at
         // its initial value forever.
         every { progressBarStyle } returns flowOf("wavy")
@@ -90,6 +93,13 @@ class PlayerViewModelResolveTest {
         every { showInlineVolumeSlider } returns flowOf(false)
         every { showVolumeButton } returns flowOf(false)
         every { playerDebugOverlay } returns flowOf(false)
+    }
+    private val downloadController = mockk<DownloadController>(relaxed = true)
+    private val downloadProgress = kotlinx.coroutines.flow.MutableStateFlow(
+        DownloadNotificationCenter.State(),
+    )
+    private val downloadNotificationCenter = mockk<DownloadNotificationCenter> {
+        every { progressState } returns downloadProgress
     }
 
     private lateinit var viewModel: PlayerViewModel
@@ -125,7 +135,8 @@ class PlayerViewModelResolveTest {
                 queueManager = queueManager,
                 libraryRepository = libraryRepository,
                 downloadRepository = downloadRepository,
-                downloadController = mockk<DownloadController>(relaxed = true),
+                downloadController = downloadController,
+                downloadNotificationCenter = downloadNotificationCenter,
                 settingsDataStore = settingsDataStore,
                 playbackAudioTuning = mockk(relaxed = true),
                 resolveTrackForPlaybackUseCase = resolveUseCase,
@@ -134,7 +145,7 @@ class PlayerViewModelResolveTest {
             ),
             libraryDeps = PlayerLibraryDeps(
                 downloadAlbumUseCase = mockk<DownloadAlbumUseCase>(relaxed = true),
-                downloadController = mockk<DownloadController>(relaxed = true),
+                downloadController = downloadController,
                 playlistRepository = playlistRepository,
                 favoriteRepository = favoriteRepository,
             ),
@@ -430,7 +441,7 @@ class PlayerViewModelResolveTest {
         val message = collected.last().snackbarMessage
         assertThat(message).isInstanceOf(com.dustvalve.next.android.util.UiText.StringResource::class.java)
         assertThat((message as com.dustvalve.next.android.util.UiText.StringResource).resId)
-            .isEqualTo(com.dustvalve.next.android.R.string.snackbar_youtube_login_required)
+            .isEqualTo(R.string.snackbar_youtube_login_required)
         job.cancel()
     }
 
@@ -498,6 +509,88 @@ class PlayerViewModelResolveTest {
 
         assertThat(collected.last().isLoadingTrack).isFalse()
         assertThat(queueManager.currentTrack.value?.id).isEqualTo("yt_bbbbbbbbbbb")
+        job.cancel()
+    }
+
+    // Catalog: set-audio-progressive-download + set-audio-background-auto-download.
+    // Progressive off means download-first (no stream). Progressive on +
+    // background auto-download off means stream only.
+
+    @Test
+    fun youtubeTrack_progressiveOff_downloadsThenPlaysFile_notStream() {
+        coEvery { settingsDataStore.getProgressiveDownloadSync() } returns false
+        val wav = AudioFixture.toneWavFile()
+        coEvery { downloadController.downloadTrackBlocking(any(), any()) } coAnswers {
+            val track = firstArg<com.dustvalve.next.android.domain.model.Track>()
+            coEvery { downloadRepository.getDownloadInfo(track.id) } returns
+                DownloadInfo(filePath = wav.absolutePath, format = AudioFormat.MP3_320)
+        }
+
+        viewModel.playTrack(FixtureTracks.youtubeTrack())
+        idle()
+
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+        assertThat(player.currentMediaItem?.localConfiguration?.uri?.scheme).isEqualTo("file")
+        coVerify { downloadController.downloadTrackBlocking(any(), any()) }
+        coVerify(exactly = 0) { youtubeRepository.getStreamUrl(any()) }
+    }
+
+    @Test
+    fun youtubeTrack_progressiveOnBackgroundOff_streamsWithoutDownload() {
+        val resolved = AudioFixture.toneWavUri()
+        coEvery { youtubeRepository.getStreamUrl(any()) } returns resolved
+
+        viewModel.playTrack(FixtureTracks.youtubeTrack())
+        idle()
+
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+        coVerify(exactly = 0) { downloadController.downloadTrackBlocking(any(), any()) }
+        coVerify(exactly = 1) { youtubeRepository.getStreamUrl(any()) }
+    }
+
+    @Test
+    fun youtubeTrack_downloadOnly_seekBarTracksDownloadProgressThenClears() {
+        coEvery { settingsDataStore.getProgressiveDownloadSync() } returns false
+        val gate = CompletableDeferred<Unit>()
+        val wav = AudioFixture.toneWavFile()
+        coEvery { downloadController.downloadTrackBlocking(any(), any()) } coAnswers {
+            gate.await()
+            val track = firstArg<com.dustvalve.next.android.domain.model.Track>()
+            coEvery { downloadRepository.getDownloadInfo(track.id) } returns
+                DownloadInfo(filePath = wav.absolutePath, format = AudioFormat.MP3_320)
+        }
+
+        val collected = mutableListOf<com.dustvalve.next.android.ui.screens.player.PlayerUiState>()
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main.immediate)
+        val job = scope.launch { viewModel.uiState.collect { collected.add(it) } }
+
+        val yt = FixtureTracks.youtubeTrack()
+        viewModel.playTrack(yt)
+        idle()
+
+        assertThat(collected.last().isLoadingTrack).isTrue()
+        assertThat(collected.last().downloadProgressFraction).isEqualTo(0f)
+
+        downloadProgress.value = downloadProgress.value.copy(
+            activeTracks = mapOf(
+                yt.id to DownloadNotificationCenter.TrackProgress(
+                    trackId = yt.id,
+                    title = yt.title,
+                    bytesWritten = 50L,
+                    expectedTotal = 100L,
+                ),
+            ),
+        )
+        idle()
+
+        assertThat(collected.last().downloadProgressFraction).isEqualTo(0.5f)
+
+        gate.complete(Unit)
+        idle()
+        TestPlayerRunHelper.runUntilPlaybackState(player, Player.STATE_READY)
+
+        assertThat(collected.last().isLoadingTrack).isFalse()
+        assertThat(collected.last().downloadProgressFraction).isNull()
         job.cancel()
     }
 }

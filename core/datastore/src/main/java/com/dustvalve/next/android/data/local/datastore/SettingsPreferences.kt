@@ -62,6 +62,7 @@ internal class SettingsPreferences(context: Context) {
         val DOWNLOAD_FORMAT = stringPreferencesKey("download_format")
         val SAVE_DATA_ON_METERED = booleanPreferencesKey("save_data_on_metered")
         val PROGRESSIVE_DOWNLOAD = booleanPreferencesKey("progressive_download")
+        val BACKGROUND_AUTO_DOWNLOAD = booleanPreferencesKey("background_auto_download")
         val SEAMLESS_QUALITY_UPGRADE = booleanPreferencesKey("seamless_quality_upgrade")
         val DOWNLOAD_NOTIFICATIONS_ENABLED = booleanPreferencesKey("download_notifications_enabled")
         val OLED_BLACK = booleanPreferencesKey("oled_black")

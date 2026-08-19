@@ -7,6 +7,7 @@ import com.dustvalve.next.android.domain.model.FavoriteType
 import com.dustvalve.next.android.domain.repository.DownloadRepository
 import com.dustvalve.next.android.domain.repository.FavoriteRepository
 import com.dustvalve.next.android.domain.repository.PlaylistRepository
+import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
 import com.dustvalve.next.android.util.UiText
@@ -24,12 +25,14 @@ internal class PlayerStateCollectors(
     private val playbackManager: PlaybackManager,
     private val queueManager: QueueManager,
     private val downloadRepository: DownloadRepository,
+    private val downloadNotificationCenter: DownloadNotificationCenter,
     private val playlistRepository: PlaylistRepository,
     private val favoriteRepository: FavoriteRepository,
     private val playbackStreamResolver: PlaybackStreamResolver,
 ) {
     fun start() {
         collectDownloadedTrackIds()
+        collectBlockingDownloadProgress()
         collectPlaylists()
         collectUserPlaylistTrackIds()
         collectFavoriteTrackIds()
@@ -95,6 +98,24 @@ internal class PlayerStateCollectors(
         playbackManager.playTrack(fresh)
         if (resumeAt > 0L) playbackManager.seekTo(resumeAt)
         return true
+    }
+
+    private fun collectBlockingDownloadProgress() {
+        scope.launch {
+            downloadNotificationCenter.progressState.collect { snapshot ->
+                val id = extraState.value.blockingDownloadTrackId ?: return@collect
+                val track = snapshot.activeTracks[id]
+                val fraction = track?.let { progress ->
+                    val total = progress.expectedTotal
+                    if (total == null || total <= 0L) {
+                        0f
+                    } else {
+                        (progress.bytesWritten.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                    }
+                }
+                extraState.update { it.copy(downloadProgressFraction = fraction ?: it.downloadProgressFraction) }
+            }
+        }
     }
 
     private fun collectFavoriteTrackIds() {

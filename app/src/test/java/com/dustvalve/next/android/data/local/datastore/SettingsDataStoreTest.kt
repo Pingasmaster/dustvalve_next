@@ -116,6 +116,8 @@ class SettingsDataStoreTest {
         assertThat(store.getAutoDownloadFutureContentSync()).isTrue()
         store.setProgressiveDownload(false)
         assertThat(store.getProgressiveDownloadSync()).isFalse()
+        store.setBackgroundAutoDownload(false)
+        assertThat(store.getBackgroundAutoDownloadSync()).isFalse()
         store.setSeamlessQualityUpgrade(false)
         assertThat(store.getSeamlessQualityUpgradeSync()).isFalse()
         store.setSaveDataOnMetered(false)

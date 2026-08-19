@@ -21,6 +21,7 @@
 
     <!-- Common actions (used across 3+ screens) -->
     <string name="common_action_cancel">Cancel</string>
+    <string name="common_action_ok">OK</string>
     <string name="common_action_enable">Enable</string>
     <string name="common_action_delete">Delete</string>
     <string name="common_action_retry">Retry</string>
@@ -219,15 +220,15 @@
     <string name="settings_auto_download_future">Auto-download future content</string>
     <string name="settings_auto_download_future_desc">Automatically download new content for downloaded playlists, albums, and artists</string>
     <string name="settings_progressive_download">Progressive download</string>
-    <string name="settings_progressive_download_desc">Stream preview quality, then seamlessly upgrade to full quality</string>
+    <string name="settings_progressive_download_desc">Stream the track while it plays. When off, playback waits until the full file is downloaded.</string>
+    <string name="settings_background_auto_download">Background auto-download</string>
+    <string name="settings_background_auto_download_desc">Save a copy of the playing track while it streams. Applies on Bandcamp, YouTube, and SoundCloud.</string>
     <string name="settings_seamless_upgrade">Seamless quality upgrade</string>
     <string name="settings_seamless_upgrade_desc">Stream first, download in the background, then swap in. May cause a single brief stutter the moment the swap happens.</string>
     <string name="settings_bt_stability">Bluetooth stability mode</string>
     <string name="settings_bt_stability_desc">Reduces Bluetooth audio dropouts when Wi‑Fi and high‑quality codecs compete for the radio</string>
     <string name="settings_bt_stability_enable_title">Enable Bluetooth stability?</string>
     <string name="settings_bt_stability_enable_text">Stability mode tunes playback buffers only and does not reduce audio quality.\n\nExtreme stability mode can reduce quality. Quality tradeoffs stay off until you enable them, and each one asks for confirmation.</string>
-    <string name="settings_bt_stability_enable_normal">Stability mode</string>
-    <string name="settings_bt_stability_enable_extreme">Extreme stability</string>
     <string name="settings_bt_stability_enable_anyway">Enable anyway</string>
     <string name="settings_bt_stability_profile">Profile</string>
     <string name="settings_bt_stability_profile_normal">Stability</string>

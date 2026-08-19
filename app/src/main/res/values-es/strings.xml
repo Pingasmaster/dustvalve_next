@@ -17,6 +17,7 @@
     <string name="notification_download_resume">Reanudar</string>
     <string name="notification_download_cancel">Cancelar</string>
     <string name="common_action_cancel">Cancelar</string>
+    <string name="common_action_ok">Aceptar</string>
     <string name="common_action_enable">Activar</string>
     <string name="common_action_delete">Eliminar</string>
     <string name="common_action_retry">Reintentar</string>
@@ -183,15 +184,15 @@
     <string name="settings_auto_download_future">Descargar contenido futuro automáticamente</string>
     <string name="settings_auto_download_future_desc">Descarga automáticamente el contenido nuevo de las playlists, álbumes y artistas descargados</string>
     <string name="settings_progressive_download">Descarga progresiva</string>
-    <string name="settings_progressive_download_desc">Transmite en calidad de vista previa y luego pasa a calidad completa sin cortes</string>
+    <string name="settings_progressive_download_desc">Transmite el tema mientras se reproduce. Si está desactivada, la reproducción espera a que el archivo se descargue por completo.</string>
+    <string name="settings_background_auto_download">Descarga automática en segundo plano</string>
+    <string name="settings_background_auto_download_desc">Guarda una copia del tema en reproducción mientras se transmite. Se aplica en Bandcamp, YouTube y SoundCloud.</string>
     <string name="settings_seamless_upgrade">Mejora de calidad sin cortes</string>
     <string name="settings_seamless_upgrade_desc">Transmite primero, descarga en segundo plano y luego hace el cambio. Puede causar un único corte breve justo en el momento del cambio.</string>
     <string name="settings_bt_stability">Modo de estabilidad Bluetooth</string>
     <string name="settings_bt_stability_desc">Reduce cortes de audio Bluetooth cuando el Wi‑Fi y códecs de alta calidad compiten por la radio</string>
     <string name="settings_bt_stability_enable_title">¿Activar estabilidad Bluetooth?</string>
     <string name="settings_bt_stability_enable_text">El modo de estabilidad solo ajusta búferes de reproducción y no reduce la calidad de audio.\n\nEl modo de estabilidad extrema puede reducir la calidad. Las opciones que afectan la calidad permanecen desactivadas hasta que las actives, y cada una pide confirmación.</string>
-    <string name="settings_bt_stability_enable_normal">Modo de estabilidad</string>
-    <string name="settings_bt_stability_enable_extreme">Estabilidad extrema</string>
     <string name="settings_bt_stability_enable_anyway">Activar de todos modos</string>
     <string name="settings_bt_stability_profile">Perfil</string>
     <string name="settings_bt_stability_profile_normal">Estabilidad</string>

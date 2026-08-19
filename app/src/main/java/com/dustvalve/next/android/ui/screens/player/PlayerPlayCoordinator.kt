@@ -4,6 +4,7 @@ import com.dustvalve.next.android.R
 import com.dustvalve.next.android.domain.model.AudioFormat
 import com.dustvalve.next.android.domain.model.Track
 import com.dustvalve.next.android.domain.model.TrackSource
+import com.dustvalve.next.android.domain.repository.DownloadInfo
 import com.dustvalve.next.android.domain.usecase.PlaybackResolveResult
 import com.dustvalve.next.android.util.UiText
 import kotlinx.coroutines.CompletableDeferred
@@ -14,6 +15,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 import kotlin.coroutines.cancellation.CancellationException
 
 /** Play / resolve / progressive-download orchestration for the player. */
@@ -67,8 +69,8 @@ internal class PlayerPlayCoordinator(
         progressiveDownloadJob?.cancel()
         progressiveDownloadJob = scope.launch {
             runPlayerUiAction {
-                val progressiveEnabled = settingsDataStore.getProgressiveDownloadSync()
-                if (!progressiveEnabled) return@runPlayerUiAction
+                if (!settingsDataStore.getProgressiveDownloadSync()) return@runPlayerUiAction
+                if (!settingsDataStore.getBackgroundAutoDownloadSync()) return@runPlayerUiAction
                 // Bluetooth stability: keep the radio free for A2DP/LDAC.
                 if (playbackAudioTuning.shouldPauseDownloadsWhilePlaying()) return@runPlayerUiAction
 
@@ -155,13 +157,21 @@ internal class PlayerPlayCoordinator(
     }
 
     private suspend fun playResolvedTrack(track: Track, generation: Int): Boolean {
+        if (!track.isLocal && !settingsDataStore.getProgressiveDownloadSync()) {
+            return playViaDownload(track, generation)
+        }
+
         val isYouTubeStream = track.source == TrackSource.YOUTUBE &&
             downloadRepository.getDownloadInfo(track.id) == null
 
         // C1: do not pause current playback until resolve succeeds. A failed
         // YouTube tap must leave the previous track playing.
-        if (isYouTubeStream) {
-            extraState.update { it.copy(isLoadingTrack = true) }
+        extraState.update {
+            it.copy(
+                isLoadingTrack = isYouTubeStream,
+                blockingDownloadTrackId = null,
+                downloadProgressFraction = null,
+            )
         }
 
         val result = try {
@@ -249,10 +259,18 @@ internal class PlayerPlayCoordinator(
      */
     private suspend fun playListFromIndex(tracks: List<Track>, startIndex: Int, generation: Int): Boolean {
         val first = tracks[startIndex]
+        if (!first.isLocal && !settingsDataStore.getProgressiveDownloadSync()) {
+            return playListViaDownload(tracks, startIndex, generation)
+        }
+
         val showYtLoading = first.source == TrackSource.YOUTUBE &&
             downloadRepository.getDownloadInfo(first.id) == null
-        if (showYtLoading) {
-            extraState.update { it.copy(isLoadingTrack = true) }
+        extraState.update {
+            it.copy(
+                isLoadingTrack = showYtLoading,
+                blockingDownloadTrackId = null,
+                downloadProgressFraction = null,
+            )
         }
 
         try {
@@ -311,6 +329,126 @@ internal class PlayerPlayCoordinator(
             if (resolved != original) {
                 queueManager.applyResolvedTracks(mapOf(resolved.id to resolved))
             }
+        }
+    }
+
+    private suspend fun playViaDownload(track: Track, generation: Int): Boolean {
+        queueManager.setQueue(listOf(track), 0)
+        val info = ensureDownloadedForPlayback(track, generation)
+        if (info == null) {
+            if (generation == loadingGeneration) {
+                failBlockingDownload()
+            }
+            return false
+        }
+        return startDownloadedTrack(track, info, listOf(track), 0, generation)
+    }
+
+    private suspend fun playListViaDownload(tracks: List<Track>, startIndex: Int, generation: Int): Boolean {
+        for (i in startIndex until tracks.size) {
+            currentCoroutineContext().ensureActive()
+            val candidate = tracks[i]
+            if (candidate.isLocal) {
+                return startLocalTrackInList(tracks, i, generation)
+            }
+            queueManager.setQueue(tracks, i)
+            val info = ensureDownloadedForPlayback(candidate, generation)
+            if (info == null) continue
+            return startDownloadedTrack(candidate, info, tracks, i, generation)
+        }
+        if (generation == loadingGeneration) {
+            failBlockingDownload()
+        }
+        return false
+    }
+
+    private suspend fun ensureDownloadedForPlayback(track: Track, generation: Int): DownloadInfo? {
+        downloadRepository.getDownloadInfo(track.id)?.let { return it }
+        // Stop the previous track so the player can show this download.
+        playbackManager.pause()
+        extraState.update {
+            it.copy(
+                isLoadingTrack = true,
+                blockingDownloadTrackId = track.id,
+                downloadProgressFraction = 0f,
+            )
+        }
+        val failed = try {
+            downloadController.downloadTrackBlocking(track)
+            false
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: IOException) {
+            true
+        } catch (_: SecurityException) {
+            true
+        } catch (_: IllegalStateException) {
+            true
+        } catch (_: IllegalArgumentException) {
+            true
+        } catch (_: android.database.SQLException) {
+            true
+        } catch (_: kotlinx.serialization.SerializationException) {
+            true
+        }
+        if (failed || generation != loadingGeneration) return null
+        return downloadRepository.getDownloadInfo(track.id)
+    }
+
+    private suspend fun startLocalTrackInList(tracks: List<Track>, index: Int, generation: Int): Boolean {
+        if (generation != loadingGeneration) return false
+        extraState.update {
+            it.copy(
+                isLoadingTrack = false,
+                blockingDownloadTrackId = null,
+                downloadProgressFraction = null,
+            )
+        }
+        playbackManager.playQueue(tracks, index)
+        runPlayerUiAction {
+            libraryRepository.addToRecent(tracks[index])
+        }
+        if (settingsDataStore.getBackgroundAutoDownloadSync()) {
+            precacheNextTrack()
+        }
+        return true
+    }
+
+    private suspend fun startDownloadedTrack(track: Track, info: DownloadInfo, tracks: List<Track>, index: Int, generation: Int): Boolean {
+        if (generation != loadingGeneration) return false
+        val resolved = track.copy(streamUrl = info.streamUri)
+        val queueTracks = tracks.toMutableList().also { it[index] = resolved }
+        playbackManager.playQueue(queueTracks, index)
+        extraState.update {
+            it.copy(
+                isLoadingTrack = false,
+                blockingDownloadTrackId = null,
+                downloadProgressFraction = null,
+                currentPlaybackFormat = info.format,
+                currentSourcePath = info.filePath,
+            )
+        }
+        runPlayerUiAction {
+            libraryRepository.addToRecent(track)
+            if (track.source == TrackSource.YOUTUBE) {
+                settingsDataStore.setLastYoutubeVideoId(track.id.removePrefix("yt_"))
+            }
+        }
+        if (settingsDataStore.getBackgroundAutoDownloadSync()) {
+            precacheNextTrack()
+        }
+        return true
+    }
+
+    private fun failBlockingDownload() {
+        extraState.update {
+            it.copy(
+                isLoadingTrack = false,
+                blockingDownloadTrackId = null,
+                downloadProgressFraction = null,
+                snackbarMessage = UiText.StringResource(R.string.common_failed_to_play),
+                isSnackbarError = true,
+            )
         }
     }
 

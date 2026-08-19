@@ -17,6 +17,7 @@
     <string name="notification_download_resume">再開</string>
     <string name="notification_download_cancel">キャンセル</string>
     <string name="common_action_cancel">キャンセル</string>
+    <string name="common_action_ok">OK</string>
     <string name="common_action_enable">有効にする</string>
     <string name="common_action_delete">削除</string>
     <string name="common_action_retry">再試行</string>
@@ -183,15 +184,15 @@
     <string name="settings_auto_download_future">今後のコンテンツを自動ダウンロード</string>
     <string name="settings_auto_download_future_desc">ダウンロード済みのプレイリスト、アルバム、アーティストの新しいコンテンツを自動的にダウンロード</string>
     <string name="settings_progressive_download">プログレッシブダウンロード</string>
-    <string name="settings_progressive_download_desc">プレビュー品質でストリーミングし、シームレスにフル品質へ切り替え</string>
+    <string name="settings_progressive_download_desc">再生中にストリーミングします。オフにすると、ファイルのダウンロードが終わるまで再生を待ちます。</string>
+    <string name="settings_background_auto_download">バックグラウンド自動ダウンロード</string>
+    <string name="settings_background_auto_download_desc">ストリーミング中に再生中の曲のコピーを保存します。Bandcamp、YouTube、SoundCloudで有効です。</string>
     <string name="settings_seamless_upgrade">シームレスな品質アップグレード</string>
     <string name="settings_seamless_upgrade_desc">まずストリーミングし、バックグラウンドでダウンロードしてから差し替えます。差し替えの瞬間に一度だけ短い途切れが生じることがあります。</string>
     <string name="settings_bt_stability">Bluetooth安定モード</string>
     <string name="settings_bt_stability_desc">Wi‑Fiと高音質コーデックが同じ無線を奪い合うときのBluetooth音声の途切れを減らします</string>
     <string name="settings_bt_stability_enable_title">Bluetooth安定モードを有効にしますか？</string>
     <string name="settings_bt_stability_enable_text">安定モードは再生バッファだけを調整し、音質は下げません。\n\n極度の安定モードは音質を下げることがあります。音質を下げるオプションはオフのままで、有効にするたびに確認があります。</string>
-    <string name="settings_bt_stability_enable_normal">安定モード</string>
-    <string name="settings_bt_stability_enable_extreme">極度の安定</string>
     <string name="settings_bt_stability_enable_anyway">それでも有効にする</string>
     <string name="settings_bt_stability_profile">プロファイル</string>
     <string name="settings_bt_stability_profile_normal">安定</string>

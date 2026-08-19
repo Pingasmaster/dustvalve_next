@@ -17,6 +17,7 @@
     <string name="notification_download_resume">Fortsetzen</string>
     <string name="notification_download_cancel">Abbrechen</string>
     <string name="common_action_cancel">Abbrechen</string>
+    <string name="common_action_ok">OK</string>
     <string name="common_action_enable">Aktivieren</string>
     <string name="common_action_delete">Löschen</string>
     <string name="common_action_retry">Erneut versuchen</string>
@@ -183,15 +184,15 @@
     <string name="settings_auto_download_future">Neue Inhalte automatisch herunterladen</string>
     <string name="settings_auto_download_future_desc">Neue Inhalte heruntergeladener Playlists, Alben und Künstler automatisch herunterladen</string>
     <string name="settings_progressive_download">Progressiver Download</string>
-    <string name="settings_progressive_download_desc">In Vorschauqualität streamen, dann nahtlos auf volle Qualität wechseln</string>
+    <string name="settings_progressive_download_desc">Streame den Titel während der Wiedergabe. Ausgeschaltet wartet die Wiedergabe, bis die Datei vollständig heruntergeladen ist.</string>
+    <string name="settings_background_auto_download">Hintergrund-Auto-Download</string>
+    <string name="settings_background_auto_download_desc">Speichert eine Kopie des laufenden Titels während des Streamens. Gilt für Bandcamp, YouTube und SoundCloud.</string>
     <string name="settings_seamless_upgrade">Nahtloses Qualitäts-Upgrade</string>
     <string name="settings_seamless_upgrade_desc">Erst streamen, im Hintergrund herunterladen, dann austauschen. Beim Wechsel kann es einmal kurz stocken.</string>
     <string name="settings_bt_stability">Bluetooth-Stabilitätsmodus</string>
     <string name="settings_bt_stability_desc">Verringert Bluetooth-Aussetzer, wenn WLAN und hochwertige Codecs um das Funkmodul konkurrieren</string>
     <string name="settings_bt_stability_enable_title">Bluetooth-Stabilität aktivieren?</string>
     <string name="settings_bt_stability_enable_text">Der Stabilitätsmodus stellt nur Wiedergabepuffer ein und mindert die Audioqualität nicht.\n\nDer extreme Stabilitätsmodus kann die Qualität mindern. Qualitätskompromisse bleiben aus, bis du sie einschaltest – und jeder verlangt eine Bestätigung.</string>
-    <string name="settings_bt_stability_enable_normal">Stabilitätsmodus</string>
-    <string name="settings_bt_stability_enable_extreme">Extreme Stabilität</string>
     <string name="settings_bt_stability_enable_anyway">Trotzdem aktivieren</string>
     <string name="settings_bt_stability_profile">Profil</string>
     <string name="settings_bt_stability_profile_normal">Stabilität</string>

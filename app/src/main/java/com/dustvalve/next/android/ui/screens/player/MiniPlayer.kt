@@ -342,40 +342,66 @@ fun MiniPlayer(
                 }
             }
 
-            // Mini-player uses the same wavy/linear style preference as the full
-            // player but stays slim - the user-configurable height applies only
-            // to the seek bar in the full player.
-            val miniIsWavy = state.progressBarStyle == "wavy"
-            val miniMod = Modifier.fillMaxWidth().height(2.dp)
-            if (state.isLoadingTrack) {
-                if (miniIsWavy) {
-                    LinearWavyProgressIndicator(
-                        modifier = miniMod,
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    )
-                } else {
-                    LinearProgressIndicator(
-                        modifier = miniMod,
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    )
-                }
-            } else if (miniIsWavy) {
+            MiniPlayerProgressBar(
+                isWavy = state.progressBarStyle == "wavy",
+                downloadFraction = state.downloadProgressFraction,
+                isLoadingTrack = state.isLoadingTrack,
+                playbackProgress = animatedProgress,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun MiniPlayerProgressBar(isWavy: Boolean, downloadFraction: Float?, isLoadingTrack: Boolean, playbackProgress: Float) {
+    val miniMod = Modifier.fillMaxWidth().height(2.dp)
+    val color = MaterialTheme.colorScheme.primary
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    when {
+        downloadFraction != null -> {
+            val fraction = downloadFraction.coerceIn(0f, 1f)
+            if (isWavy) {
                 LinearWavyProgressIndicator(
-                    progress = { animatedProgress },
+                    progress = { fraction },
                     modifier = miniMod,
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    color = color,
+                    trackColor = trackColor,
                 )
             } else {
                 LinearProgressIndicator(
-                    progress = { animatedProgress },
+                    progress = { fraction },
                     modifier = miniMod,
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    color = color,
+                    trackColor = trackColor,
                 )
             }
         }
+
+        isLoadingTrack && isWavy -> LinearWavyProgressIndicator(
+            modifier = miniMod,
+            color = color,
+            trackColor = trackColor,
+        )
+
+        isLoadingTrack -> LinearProgressIndicator(
+            modifier = miniMod,
+            color = color,
+            trackColor = trackColor,
+        )
+
+        isWavy -> LinearWavyProgressIndicator(
+            progress = { playbackProgress },
+            modifier = miniMod,
+            color = color,
+            trackColor = trackColor,
+        )
+
+        else -> LinearProgressIndicator(
+            progress = { playbackProgress },
+            modifier = miniMod,
+            color = color,
+            trackColor = trackColor,
+        )
     }
 }

@@ -197,6 +197,7 @@ private fun FullPlayerMainColumn(adaptiveInfo: AdaptiveLayoutInfo, track: Track,
                 progressBarStyle = state.progressBarStyle,
                 progressBarSizeDp = state.progressBarSizeDp,
                 onSeek = transport.onSeek,
+                downloadProgressFraction = state.downloadProgressFraction,
             )
             FullPlayerTransportControls(
                 isPlaying = state.isPlaying,

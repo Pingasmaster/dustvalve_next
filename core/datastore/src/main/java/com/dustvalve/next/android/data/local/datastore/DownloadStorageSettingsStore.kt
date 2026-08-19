@@ -11,6 +11,7 @@ interface DownloadStorageSettingsStore {
     val downloadFormat: Flow<String>
     val saveDataOnMetered: Flow<Boolean>
     val progressiveDownload: Flow<Boolean>
+    val backgroundAutoDownload: Flow<Boolean>
     val seamlessQualityUpgrade: Flow<Boolean>
     val downloadNotificationsEnabled: Flow<Boolean>
 
@@ -28,11 +29,13 @@ interface DownloadStorageSettingsStore {
     suspend fun setDownloadFormat(formatKey: String)
     suspend fun setSaveDataOnMetered(enabled: Boolean)
     suspend fun setProgressiveDownload(enabled: Boolean)
+    suspend fun setBackgroundAutoDownload(enabled: Boolean)
     suspend fun setSeamlessQualityUpgrade(enabled: Boolean)
     suspend fun setDownloadNotificationsEnabled(enabled: Boolean)
     suspend fun setAutoDownloadFavorites(enabled: Boolean)
     suspend fun getDownloadFormatSync(): String
     suspend fun getProgressiveDownloadSync(): Boolean
+    suspend fun getBackgroundAutoDownloadSync(): Boolean
     suspend fun getSeamlessQualityUpgradeSync(): Boolean
     suspend fun getSaveDataOnMeteredSync(): Boolean
 }

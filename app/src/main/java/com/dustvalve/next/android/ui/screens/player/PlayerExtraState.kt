@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 internal data class PlayerExtraState(
     val downloadedTrackIds: Set<String> = emptySet(),
     val downloadingTrackId: String? = null,
+    val blockingDownloadTrackId: String? = null,
+    val downloadProgressFraction: Float? = null,
     val playlists: List<Playlist> = emptyList(),
     val snackbarMessage: UiText? = null,
     val isSnackbarError: Boolean = false,

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
@@ -107,12 +108,8 @@ private fun BluetoothStabilityDialogs(
     Column {
         if (showEnableDialog) {
             BluetoothStabilityEnableDialog(
-                onPickNormal = {
+                onConfirm = {
                     onAction(SettingsBluetoothStabilityAction.Enable(BluetoothStabilityMode.NORMAL))
-                    onDismissEnable()
-                },
-                onPickExtreme = {
-                    onAction(SettingsBluetoothStabilityAction.Enable(BluetoothStabilityMode.EXTREME))
                     onDismissEnable()
                 },
                 onDismiss = onDismissEnable,
@@ -295,25 +292,14 @@ private fun BluetoothStabilityPcmSlider(pcmBufferMs: Int, onAction: (SettingsBlu
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun BluetoothStabilityEnableDialog(onPickNormal: () -> Unit, onPickExtreme: () -> Unit, onDismiss: () -> Unit) {
+private fun BluetoothStabilityEnableDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_bt_stability_enable_title)) },
         text = { Text(stringResource(R.string.settings_bt_stability_enable_text)) },
         confirmButton = {
-            Column {
-                TextButton(
-                    onClick = onPickNormal,
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(stringResource(R.string.settings_bt_stability_enable_normal))
-                }
-                TextButton(
-                    onClick = onPickExtreme,
-                    shapes = ButtonDefaults.shapes(),
-                ) {
-                    Text(stringResource(R.string.settings_bt_stability_enable_extreme))
-                }
+            Button(onClick = onConfirm, shapes = ButtonDefaults.shapes()) {
+                Text(stringResource(R.string.common_action_ok))
             }
         },
         dismissButton = {

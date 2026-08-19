@@ -77,6 +77,31 @@ internal fun SettingsAppearanceSection(state: SettingsUiState, onAction: (Settin
                     ),
                 )
 
+                val isDarkEffective = when (state.themeMode) {
+                    "dark" -> true
+                    "light" -> false
+                    else -> isSystemInDarkTheme()
+                }
+                AnimatedVisibility(
+                    visible = isDarkEffective,
+                    enter = fadeIn() + expandVertically(),
+                    exit = fadeOut() + shrinkVertically(),
+                ) {
+                    Column {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SettingsToggleRow(
+                            title = stringResource(R.string.settings_oled_black),
+                            checked = state.oledBlack,
+                            onCheckedChange = {
+                                onAction(SettingsAppearanceAction.SetOledBlack(it))
+                            },
+                            extras = SettingsToggleExtras(
+                                description = stringResource(R.string.settings_oled_black_desc),
+                            ),
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SettingsToggleRow(
@@ -88,22 +113,6 @@ internal fun SettingsAppearanceSection(state: SettingsUiState, onAction: (Settin
                     extras = SettingsToggleExtras(
                         description = stringResource(R.string.settings_album_art_colors_desc),
                     ),
-                )
-
-                val isDarkEffective = when (state.themeMode) {
-                    "dark" -> true
-                    "light" -> false
-                    else -> isSystemInDarkTheme()
-                }
-
-                SettingsSubToggle(
-                    visible = isDarkEffective,
-                    title = stringResource(R.string.settings_oled_black),
-                    description = stringResource(R.string.settings_oled_black_desc),
-                    checked = state.oledBlack,
-                    onCheckedChange = {
-                        onAction(SettingsAppearanceAction.SetOledBlack(it))
-                    },
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -124,11 +133,11 @@ private fun ThemeModePicker(themeMode: String, onAction: (SettingsAppearanceActi
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        val themeOptions = listOf("light", "dark", "system")
+        val themeOptions = listOf("system", "light", "dark")
         val themeLabels = listOf(
+            stringResource(R.string.settings_theme_system),
             stringResource(R.string.settings_theme_light),
             stringResource(R.string.settings_theme_dark),
-            stringResource(R.string.settings_theme_system),
         )
         val selectedIndex = themeOptions.indexOf(themeMode).coerceAtLeast(0)
 
@@ -246,6 +255,7 @@ private fun ProgressBarAppearanceControls(state: SettingsUiState, onAction: (Set
 internal fun SettingsAudioQualitySection(
     state: SettingsUiState,
     onSetProgressiveDownload: (Boolean) -> Unit,
+    onSetBackgroundAutoDownload: (Boolean) -> Unit,
     onSetSeamlessQualityUpgrade: (Boolean) -> Unit,
 ) {
     SettingsSection(
@@ -273,10 +283,21 @@ internal fun SettingsAudioQualitySection(
                     ),
                 )
 
-                // Dependent on progressive download - indented sub-toggle
-                // like every other dependent setting.
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SettingsToggleRow(
+                    title = stringResource(R.string.settings_background_auto_download),
+                    checked = state.backgroundAutoDownload,
+                    onCheckedChange = onSetBackgroundAutoDownload,
+                    extras = SettingsToggleExtras(
+                        description = stringResource(R.string.settings_background_auto_download_desc),
+                    ),
+                )
+
+                // Only meaningful while streaming AND saving a copy in the
+                // background: swap the playing URL for the finished file.
                 SettingsSubToggle(
-                    visible = state.progressiveDownload,
+                    visible = state.progressiveDownload && state.backgroundAutoDownload,
                     title = stringResource(R.string.settings_seamless_upgrade),
                     description = stringResource(R.string.settings_seamless_upgrade_desc),
                     checked = state.seamlessQualityUpgrade,

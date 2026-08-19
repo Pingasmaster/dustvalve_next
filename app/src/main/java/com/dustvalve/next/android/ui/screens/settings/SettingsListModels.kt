@@ -27,6 +27,7 @@ internal data class SettingsListDialogActions(
 @Immutable
 internal data class SettingsListToggleActions(
     val onSetProgressiveDownload: (Boolean) -> Unit,
+    val onSetBackgroundAutoDownload: (Boolean) -> Unit,
     val onSetSeamlessQualityUpgrade: (Boolean) -> Unit,
     val onSetShowInlineVolumeSlider: (Boolean) -> Unit,
     val onSetShowVolumeButton: (Boolean) -> Unit,

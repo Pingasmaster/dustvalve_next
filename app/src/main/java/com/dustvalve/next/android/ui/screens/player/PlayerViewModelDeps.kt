@@ -9,6 +9,7 @@ import com.dustvalve.next.android.domain.repository.PlaylistRepository
 import com.dustvalve.next.android.domain.usecase.DownloadAlbumUseCase
 import com.dustvalve.next.android.domain.usecase.ResolveTrackForPlaybackUseCase
 import com.dustvalve.next.android.download.DownloadController
+import com.dustvalve.next.android.download.DownloadNotificationCenter
 import com.dustvalve.next.android.player.PlaybackAudioTuning
 import com.dustvalve.next.android.player.PlaybackManager
 import com.dustvalve.next.android.player.QueueManager
@@ -22,6 +23,7 @@ class PlayerCoreDeps @Inject constructor(
     val libraryRepository: LibraryRepository,
     val downloadRepository: DownloadRepository,
     val downloadController: DownloadController,
+    val downloadNotificationCenter: DownloadNotificationCenter,
     val settingsDataStore: SettingsDataStore,
     val playbackAudioTuning: PlaybackAudioTuning,
     val resolveTrackForPlaybackUseCase: ResolveTrackForPlaybackUseCase,

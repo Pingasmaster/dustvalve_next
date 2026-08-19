@@ -3,12 +3,14 @@ package com.dustvalve.next.android.ui.screens.soundcloud
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -27,6 +30,7 @@ import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExpandedFullScreenSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -108,6 +112,7 @@ private class SoundCloudSearchHandlers(
     val onRecentSearchClick: (String) -> Unit,
     val onRemoveRecent: (String) -> Unit,
     val onClearRecent: () -> Unit,
+    val onFilterSelected: (String?) -> Unit,
     val onResultClick: (SearchResult) -> Unit,
     val onResultLongClick: (SearchResult) -> Unit,
 )
@@ -209,6 +214,7 @@ fun SoundCloudScreen(
         },
         onRemoveRecent = viewModel::removeRecentSearch,
         onClearRecent = viewModel::clearRecentSearches,
+        onFilterSelected = viewModel::onFilterSelected,
         onResultClick = { result ->
             scope.playSearchResult(
                 result = result,
@@ -411,6 +417,35 @@ private fun ColumnScope.SoundCloudSearchOverlay(
     detectedLink: DetectedLink?,
     handlers: SoundCloudSearchHandlers,
 ) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = state.selectedFilter == null,
+            onClick = { handlers.onFilterSelected(null) },
+            label = { Text(stringResource(R.string.local_tab_all)) },
+        )
+        FilterChip(
+            selected = state.selectedFilter == "users",
+            onClick = { handlers.onFilterSelected("users") },
+            label = { Text(stringResource(R.string.local_tab_artists)) },
+        )
+        FilterChip(
+            selected = state.selectedFilter == "albums",
+            onClick = { handlers.onFilterSelected("albums") },
+            label = { Text(stringResource(R.string.local_tab_albums)) },
+        )
+        FilterChip(
+            selected = state.selectedFilter == "tracks",
+            onClick = { handlers.onFilterSelected("tracks") },
+            label = { Text(stringResource(R.string.local_tab_tracks)) },
+        )
+    }
+
     PastedLinkChip(detected = detectedLink, onClick = handlers.onOpenPastedLink)
 
     Box(

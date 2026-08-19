@@ -84,6 +84,9 @@ class DownloadNotificationCenter @Inject constructor(
     private val mutex = Mutex()
     private val state = MutableStateFlow(State())
 
+    /** Live per-track byte progress; the player maps this onto the seek bar. */
+    internal val progressState: kotlinx.coroutines.flow.StateFlow<State> = state
+
     /** Platform manager for the API 36.1 promotion-diagnostics calls. */
     private val platformNotificationManager =
         context.getSystemService(NotificationManager::class.java)

@@ -35,7 +35,7 @@ fun AlbumCard(album: Album, onClick: () -> Unit, modifier: Modifier = Modifier) 
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .padding(6.dp)
-                    .clip(AppShapes.AlbumArt),
+                    .clip(AppShapes.MediaRectangle),
                 contentScale = ContentScale.Crop,
             )
             Column(

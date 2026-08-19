@@ -114,12 +114,13 @@ class HeartMorphState internal constructor(
  * [HeartMorphState.progress]/[HeartMorphState.shape] in composition: the morph
  * progress is read inside the graphicsLayer block (layout phase), so the whole
  * in -> hold -> out animation runs without recomposing the caller's scope.
- * Clips only while animating so the resting hero stays full-bleed.
+ * Always clips: at rest this is MaterialShapes.Square, the same M3
+ * Expressive rectangle the player uses for track art.
  */
 fun Modifier.heartMorphClip(state: HeartMorphState): Modifier = graphicsLayer {
     val p = state.progress
     shape = state.shapeAt(p)
-    clip = p > 0f
+    clip = true
 }
 
 /** Remember a [HeartMorphState] wired to the M3 expressive motion scheme. */

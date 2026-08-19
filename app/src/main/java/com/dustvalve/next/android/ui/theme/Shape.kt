@@ -56,15 +56,23 @@ object AppShapes {
         @Composable
         get() = MaterialShapes.Arch.toShape()
 
-    /** Sunny shape for album search result thumbnails */
+    /**
+     * M3 Expressive rectangle used by player track art. Albums, playlists,
+     * and other collection covers share this so media art is one shape.
+     */
+    val MediaRectangle: Shape
+        @Composable
+        get() = MaterialShapes.Square.toShape()
+
+    /** Same rectangle as player track art - albums are collections, not sunbursts. */
     val SearchResultAlbum: Shape
         @Composable
-        get() = MaterialShapes.Sunny.toShape()
+        get() = MediaRectangle
 
     /** Square shape for track search result thumbnails */
     val SearchResultTrack: Shape
         @Composable
-        get() = MaterialShapes.Square.toShape()
+        get() = MediaRectangle
 
     /** Soft petal shape for empty state icons */
     val EmptyStateIcon: Shape
@@ -131,10 +139,10 @@ object AppShapes {
         @Composable
         get() = MaterialShapes.Clover4Leaf.toShape()
 
-    /** Default Sunny shape for albums in Library */
+    /** Same M3 rectangle as player track art. */
     val LibraryAlbum: Shape
         @Composable
-        get() = MaterialShapes.Sunny.toShape()
+        get() = MediaRectangle
 
     /** Default Arch shape for artists in Library */
     val LibraryArtist: Shape
