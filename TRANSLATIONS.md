@@ -6,7 +6,8 @@ Brazilian Portuguese, Japanese, Simplified Chinese, and Russian**.
 ## State of the translations
 
 All non-English strings are **machine-translated** (by Claude, reviewed for
-placeholder/plural correctness by lint and CI, but not by native speakers).
+placeholder/plural correctness by lint via `./build.sh --debug`, but not by
+native speakers).
 Corrections from native speakers are very welcome — send a PR touching the
 relevant `app/src/main/res/values-<lang>/strings.xml` / `plurals.xml`.
 
@@ -43,7 +44,7 @@ directories plus `res/resources.properties`).
 2. Add the qualifier to `localeFilters` in `app/build.gradle.kts`.
 3. Add the locale to `LocaleScreenshotTest` and run
    `./gradlew :app:recordRoborazziDebug` to record baselines.
-4. Run `./gradlew lintRelease testDebugUnitTest` — lint validates the file.
+4. Run `./build.sh --debug` — lint validates the file.
 
 ## Testing
 

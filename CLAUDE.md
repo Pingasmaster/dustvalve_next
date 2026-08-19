@@ -15,8 +15,9 @@ Four automated tiers (see docs/testing/README.md):
   lints/tests + debug APKs, regenerates baseline+startup profiles only when
   UI/startup sources are newer than the committed profiles (or
   `--force-baseline`), then release lint/assemble (no gradle clean), then GMD
-  shippedsmoke + smoke + hermetic e2e. Use `./build.sh --debug` for day-to-day
-  builds (debug gates + debug APKs only).
+  shippedsmoke + smoke + hermetic e2e (one API 37 Setup for smoke+e2e).
+  Use `./build.sh --debug` for day-to-day builds (debug gates + debug APKs
+  only).
 - `./build.sh --workflow-tests` - fast JVM regression net (real ExoPlayer +
   real MainActivity under Robolectric). Run this after ANY change touching
   playback, navigation, or the provider screens.
@@ -40,11 +41,19 @@ Four automated tiers (see docs/testing/README.md):
 and core except the PROJECT CONFIG block (signing
 property, GMD annotations, Gradle tasks, extra flags). When you change
 shared behavior (publish, lock, JDK, version bump, serve helper), port it
-to the other four the same day. `./build.sh --publish` re-serves all four
-root APKs (compat/future x release/debug).
+to the other three the same day. `./build.sh --publish` re-serves all four
+root APKs: `app-release.apk`, `app-release-future.apk`, `app-debug.apk`,
+`app-debug-future.apk`. There is no `--publish-debug`.
+
+Dep catalog bump (`scripts/check_latest_deps.py --apply`) and, on the
+release path, the version bump finish before any Gradle work.
 
 Gradle: `org.gradle.caching=true` is on. Leave
 `org.gradle.configuration-cache` off (AGP alpha + KSP + Hilt).
+`org.gradle.workers.max=8`. Kotlin daemon `-Xmx3g`.
+
+Shared flock: `~/.cache/android-apps/build.lock` (with calc, compass,
+core). A second `./build.sh` waits. Do not delete the lock file.
 
 E2E tests must not inherit provider state. The release lane runs the suite
 UNFILTERED in one pass, so DataStore flags leak between classes; declare what

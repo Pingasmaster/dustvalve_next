@@ -6,7 +6,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,9 +52,12 @@ class ShippedReleaseSmokeTest {
 
         device.pressHome()
         val context = InstrumentationRegistry.getInstrumentation().context
-        val intent = context.packageManager.getLaunchIntentForPackage(PACKAGE)
-        assertNotNull("no launch intent for $PACKAGE - is the release APK installed?", intent)
-        context.startActivity(intent!!.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        val intent = requireNotNull(
+            context.packageManager.getLaunchIntentForPackage(PACKAGE),
+        ) {
+            "no launch intent for $PACKAGE - is the release APK installed?"
+        }
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
 
         assertTrue(
             "$PACKAGE never reached the foreground - the shipped APK most likely crashed on launch",

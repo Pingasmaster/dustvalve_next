@@ -152,6 +152,8 @@ HAS_COMPAT_SMOKE=0
 HAS_ASR_FIXTURE=0
 ELF_CHECK_PASS_APKS=1
 E2E_NOT_ANNOTATION=""
+E2E_NOT_CLASS=""
+E2E_NOT_PACKAGE=""
 PROJECT_EXTRA_FLAGS_HELP=""
 BASELINE_ASSEMBLE_TASK=":baselineprofile:assembleFutureRelease"
 BASELINE_TEST_TASK=":baselineprofile:pixel7aApi37FutureReleaseAndroidTest"
@@ -459,6 +461,12 @@ run_e2e_tests() {
     local -a e2e_args=()
     if [[ -n "$E2E_NOT_ANNOTATION" ]]; then
         e2e_args+=(-Pandroid.testInstrumentationRunnerArguments.notAnnotation="$E2E_NOT_ANNOTATION")
+    fi
+    if [[ -n "$E2E_NOT_CLASS" ]]; then
+        e2e_args+=(-Pandroid.testInstrumentationRunnerArguments.notClass="$E2E_NOT_CLASS")
+    fi
+    if [[ -n "$E2E_NOT_PACKAGE" ]]; then
+        e2e_args+=(-Pandroid.testInstrumentationRunnerArguments.notPackage="$E2E_NOT_PACKAGE")
     fi
     local rc=0
     timeout --foreground "${app_timeout_sec}s" \

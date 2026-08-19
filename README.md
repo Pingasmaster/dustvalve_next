@@ -86,52 +86,32 @@ We heavily follow all Material you 3 Expressive guidelines and recommendations w
 
 ## Building from source
 
-**Requirements:** Java 26, Android SDK 37
+**Requirements:** Java 26, Android SDK 37. The default `./build.sh` release path also needs KVM (`/dev/kvm`) for Gradle Managed Devices.
 
-If you just want an apk to install to your device:
+`./build.sh` is shared with calc, compass, and core; only the PROJECT CONFIG block differs. It does **not** run `gradle clean` on the default path (use `./build.sh --clean` for that). Dep catalog bump and (on release) version bump happen before any Gradle work.
+
+Generate a signing keystore for release builds (skip for `--debug`):
 
 ```bash
 git clone https://github.com/Pingasmaster/dustvalve_next.git
 cd dustvalve_next
-# Generate a signing keystore (skip for debug builds, but release builds require it)
 keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias dustvalve
-# Store the password so the build can find it
 echo "your-password-here" > .password-signing-keys
-./gradlew assembleRelease
 ```
-
-For devs who want to modify, fork and test the app, we have a build script which runs lint, assembles debug and release APKs, copies both release APKs to the project root as `app-release.apk` (compat) and `app-release-future.apk` (future), and auto-increments the version.
 
 ```bash
-./build.sh
+./build.sh              # release path: debug gates + debug APKs, maybe baseline regen, release assemble, GMD
+./build.sh --debug      # debug lints/tests + debug APKs only (no version bump, baseline, release, or GMD)
+./build.sh --publish    # serve existing root release + debug APKs
 ```
 
-## Automated releases (for forks)
+Root artifacts: `app-release.apk`, `app-release-future.apk`, `app-debug.apk`, `app-debug-future.apk`. `--publish` serves all four. There is no `--publish-debug`. `--debug` serves only the debug pair so it never clobbers release artifacts.
 
-This repository includes a GitHub Actions workflow that builds a signed release APK and attaches it to GitHub Releases automatically. To set it up on your fork:
+Builds wait on the shared lock `~/.cache/android-apps/build.lock`. Do not delete that file.
 
-### 1. Generate a signing keystore
+## Releases
 
-If you don't already have one:
-
-```bash
-keytool -genkey -v -keystore release-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias dustvalve
-```
-
-### 2. Add repository secrets
-
-Go to your fork on GitHub: **Settings > Secrets and variables > Actions > New repository secret**, and add:
-
-| Secret | Value |
-|---|---|
-| `KEYSTORE_BASE64` | Base64-encoded keystore. Generate with: `base64 -w 0 release-keystore.jks` |
-| `KEYSTORE_PASSWORD` | The password you used when creating the keystore |
-
-### 3. Publish a release
-
-Go to **Releases > Draft a new release**, create a tag (e.g. `v1.0.0`), write release notes, and click **Publish release**. The workflow will build the release APK and attach it as a downloadable asset.
-
-> **Note:** The workflow only triggers on published releases, not on pushes or pull requests. You can monitor builds in the **Actions** tab.
+There is no GitHub Actions workflow; all gates run locally via `./build.sh`. Attach the signed root APKs to a GitHub Release. See `docs/RELEASE_CHECKLIST.md`.
 
 ## Contributing
 

@@ -14,35 +14,39 @@ exercised.
    through every screen. Pinned regressions: playback position must advance
    past 0:00; a failed YouTube stream resolve must skip playback with a
    snackbar (never crash); every provider tab and detail screen must compose
-   without crashing. Runs in `testDebugUnitTest` (CI: check job).
-   Local run: `./build.sh --workflow-tests`
+   without crashing. Runs in flavor unit-test tasks
+   (`testCompatDebugUnitTest` / `testFutureDebugUnitTest`; libraries use
+   `testDebugUnitTest`) as part of `./build.sh` and `./build.sh --debug`.
+   Fast subset: `./build.sh --workflow-tests`
 
 2. **Tier 2 - emulator smoke** (`app/src/androidTest/.../smoke/`):
    Gradle Managed Device `pixel7aApi37` (16 KB page-size Google APIs image -
    the only published API 37 phone image). Installs the real APK, seeds
    MediaStore with bundled tones, taps a track, and asserts the elapsed
    label leaves 0:00 AND a real MediaController reports progress; opens
-   Bandcamp / YouTube Music without crashing. CI: emulator-smoke job.
-   Local run: `./build.sh --smoke`
+   Bandcamp / YouTube Music without crashing.
+   Local: `./build.sh --smoke`. Also on the default release path, sharing
+   one API 37 GMD Setup with hermetic e2e. `./build.sh --debug` skips GMD.
+   Opt-in minified-release smoke: `./build.sh --smoke-release`
+   (`-PtestReleaseBuild`).
 
 3. **Tier 3 - emulator E2E** (`app/src/androidTest/.../e2e/`):
    Full user workflows: playback controls, playlists per provider,
    mini/full player, settings persistence, deep links, downloads. Hermetic
-   and `@LiveNetwork` (real Bandcamp/YouTube - a deliberate decision so
-   scraper breakage is caught) run as separate CI invocations so a service
-   outage never masks a hermetic regression. CI: emulator-e2e job.
-   Local run: `./build.sh --e2e` / `./build.sh --e2e-live`
+   (`./build.sh --e2e`, also on the default release path) and `@LiveNetwork`
+   (`./build.sh --e2e-live`, real Bandcamp/YouTube - a deliberate decision so
+   scraper breakage is caught) stay separate so a service outage never
+   masks a hermetic regression. `./build.sh --debug` skips GMD.
 
 4. **Tier 4 - shipped-config smoke** (`shippedsmoke/`):
    The other three tiers all instrument an APK that is not the one users
-   install. Tiers 1-2 use debug builds; the release lane
-   (`-PtestReleaseBuild`, CI: emulator-smoke-release) must apply
-   `app/proguard-test-support.pro` so the instrumentation APK can link
-   against app-provided classes, and that keeps every non-app class - so it
-   proves app-code minification works but says nothing about library
-   minification in the shipped APK. Since Hilt, Room and
-   kotlinx-serialization are reflection- and codegen-heavy, that is exactly
-   where a missing keep rule hides.
+   install. Tiers 1-2 use debug builds; `--smoke-release`
+   (`-PtestReleaseBuild`) must apply `app/proguard-test-support.pro` so the
+   instrumentation APK can link against app-provided classes, and that
+   keeps every non-app class - so it proves app-code minification works but
+   says nothing about library minification in the shipped APK. Since Hilt,
+   Room and kotlinx-serialization are reflection- and codegen-heavy, that
+   is exactly where a missing keep rule hides.
    `:shippedsmoke` is a SELF-INSTRUMENTING `com.android.test` module: it
    carries its own dependencies, runs in its OWN process, and reaches the app
    only through UiAutomator by resource id, so `:app`'s release variant can be
@@ -57,12 +61,14 @@ exercised.
    composed nav bar, and Settings opens (Hilt graph + DataStore +
    serialization) - because its job is only to catch an APK that dies on
    launch or on first touching a reflective subsystem.
-   CI: emulator-smoke-shipped job. Never pass `-PtestReleaseBuild` to it;
+   Release-path only: default `./build.sh` and `./build.sh --smoke-shipped`.
+   `./build.sh --debug` skips it. Never pass `-PtestReleaseBuild` to it;
    that re-introduces the test-support keeps and defeats the point.
 
 Plus the opt-in JVM live smokes gated on `DUSTVALVE_LIVE_NET=1`
 (`LiveYtcfgFetcherSmokeTest` / `LiveProviderMetadataIntegrityTest` via
 `./build.sh --live-net`) and the manual `docs/RELEASE_CHECKLIST.md`.
+No GitHub Actions: every tier runs locally via `./build.sh`.
 
 ## Scenario catalogs (the backlog)
 
@@ -82,12 +88,14 @@ catalog id, and unimplemented ids are the prioritized backlog:
 - Known-flaky live tests go in `app/src/androidTest/resources/quarantine.txt`
   (failures become skips, passes still pass). Quarantining REQUIRES a filed
   issue; review the list before every release.
-- During a documented service incident, dispatch check.yml manually with
-  `live_soft_fail: true`.
+- During a documented service incident, skip or quarantine live tests
+  rather than treating a service outage as an app regression. There is no
+  remote CI dispatch.
 
 ## Notes
 
-- The GMD needs an emulator able to boot API 36+ images; some bleeding-edge
-  host distros segfault QEMU - use the CI jobs in that case.
+- GMD is Pixel 7a API 37 and needs `/dev/kvm`. Smoke + hermetic e2e share
+  one API 37 Setup on the default release path. `./build.sh --debug` skips
+  all device gates.
 - Instrumentation runs against the REAL app object graph (no
   HiltTestApplication): what the tests exercise is what users run.

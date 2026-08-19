@@ -1,17 +1,18 @@
 # Release checklist
 
 Manual gate before publishing any GitHub release. Automated tiers must be
-green first; this list covers what CI cannot exercise.
+green first; this list covers what `./build.sh` cannot exercise.
 
 ## Preflight
 
-- [ ] master CI fully green, INCLUDING emulator-smoke and emulator-e2e jobs
-      (both hermetic and live passes).
+- [ ] Local `./build.sh` fully green (debug gates, release assemble,
+      shippedsmoke, smoke, hermetic e2e). Also `./build.sh --e2e-live`.
+      There is no GitHub Actions CI.
 - [ ] `app/src/androidTest/resources/quarantine.txt` reviewed: every entry
       has an open issue; delist anything that passed 3 consecutive runs.
-- [ ] Version bumped (baseVersionCode + baseVersionName) on master; both
-      flavor APKs produced by `./build.sh` (app-release.apk +
-      app-release-future.apk).
+- [ ] Version bumped (baseVersionCode + baseVersionName) on master by the
+      release path; both flavor APKs produced by `./build.sh`
+      (app-release.apk + app-release-future.apk).
 
 ## Install matrix (real device)
 
