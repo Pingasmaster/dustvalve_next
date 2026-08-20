@@ -73,10 +73,34 @@
 # until the holder finishes. Deleting the file while a
 # holder is alive can break flock (new openers get a new inode).
 #
+# Builds other than --publish re-exec inside a shared KVM guest (12 GiB RAM,
+# 16 vCPUs, virtio-blk/net/rng/fs, nested KVM for GMD) so Gradle leaks are
+# freed when QEMU exits. The host wrapper holds the same flock for the VM
+# lifetime. ANDROID_BUILD_ON_HOST=1 skips the VM.
+#
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
+
+# Gradle/GMD leak host RAM into swap. Re-exec inside the shared KVM build
+# VM unless we are already the guest, the caller opted out, or this is a
+# serve-only --publish (no Gradle). The host wrapper holds the shared
+# ~/.cache/android-apps/build.lock so only one VM runs at a time.
+if [[ "${ANDROID_BUILD_IN_VM:-}" != "1" && "${ANDROID_BUILD_ON_HOST:-}" != "1" ]]; then
+    _want_vm=1
+    for _arg in "$@"; do
+        if [[ "$_arg" == "--publish" ]]; then
+            _want_vm=0
+            break
+        fi
+    done
+    if [[ "$_want_vm" -eq 1 ]]; then
+        unset _want_vm _arg
+        exec "$SCRIPT_DIR/scripts/run_in_build_vm.sh" "$@"
+    fi
+    unset _want_vm _arg
+fi
 
 ./scripts/apk_http_serve.sh stop || true
 
@@ -315,6 +339,9 @@ if [[ "$DO_PUBLISH" -eq 0 ]]; then
 fi
 
 acquire_lock() {
+    if [[ "${ANDROID_BUILD_LOCK_HELD:-}" == "1" ]]; then
+        return 0
+    fi
     local lock_dir="${XDG_CACHE_HOME:-$HOME/.cache}/android-apps"
     mkdir -p "$lock_dir"
     LOCKFILE="$lock_dir/build.lock"

@@ -17,6 +17,11 @@
 #
 set -euo pipefail
 
+# Guest builds have no NetBird; the host wrapper publishes APKs after QEMU exits.
+if [[ "${ANDROID_BUILD_IN_VM:-}" == "1" ]]; then
+    exit 0
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PIDFILE="$ROOT_DIR/.apk-http-serve.pid"
