@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
 import com.dustvalve.next.android.data.local.datastore.ColorSource
@@ -196,7 +197,8 @@ private fun ColorSourcePicker(
                         ) {
                             Text(
                                 text = labels[index],
-                                maxLines = 2,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                                 textAlign = TextAlign.Center,
                             )
                         }

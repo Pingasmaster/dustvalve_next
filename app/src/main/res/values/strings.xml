@@ -250,11 +250,11 @@
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_color_source">Colors</string>
-    <string name="settings_dynamic_color">Dynamic colors</string>
+    <string name="settings_dynamic_color">Dynamic</string>
     <string name="settings_dynamic_color_desc">Use colors from your wallpaper</string>
-    <string name="settings_album_art_colors">Album art colors</string>
+    <string name="settings_album_art_colors">Album art</string>
     <string name="settings_album_art_colors_desc">Theme the app using colors from the playing track’s album art</string>
-    <string name="settings_app_colors">App colors</string>
+    <string name="settings_app_colors">Fixed</string>
     <string name="settings_app_colors_desc">Use the app’s built-in color palette</string>
     <string name="settings_oled_black"><xliff:g id="tech">OLED</xliff:g> Black</string>
     <string name="settings_oled_black_desc">Use pure black backgrounds for <xliff:g id="tech">OLED</xliff:g> screens</string>

@@ -16,12 +16,12 @@ Group 1: Appearance (14) [all JVM, none]
   source picker (isDarkEffective); system
   follows isSystemInDarkTheme() without restart; default "system".
 - set-color-source-dynamic / -album-art / -app: three-choice picker
-  (Dynamic colors default, Album art colors, App colors) below OLED;
+  (Dynamic (default), Album art, Fixed) below OLED;
   writes dynamic_color + album_art_theme as a mutually exclusive pair.
 - [ ] set-album-art-theme-on [smoke]: AlbumThemeManager.albumSeedColor recolors
   theme from cover.
 - set-oled-black-visibility / -on (#000000 surfaces) / -ignored-in-light
-  (value retained, not consumed). Not a sub-option of Album art colors.
+  (value retained, not consumed). Not a sub-option of Album art.
 - set-progress-bar-style-linear / -wavy-default (default wavy).
 - set-progress-bar-size-slider (8 steps 4..32dp, write on
   onValueChangeFinished) / -default (24, index 5).

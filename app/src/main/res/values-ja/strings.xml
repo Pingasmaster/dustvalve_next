@@ -214,11 +214,11 @@
     <string name="settings_theme_dark">ダーク</string>
     <string name="settings_theme_system">システム</string>
     <string name="settings_color_source">カラー</string>
-    <string name="settings_dynamic_color">ダイナミックカラー</string>
+    <string name="settings_dynamic_color">ダイナミック</string>
     <string name="settings_dynamic_color_desc">壁紙の色を使用</string>
-    <string name="settings_album_art_colors">アルバムアートの色</string>
+    <string name="settings_album_art_colors">アルバムアート</string>
     <string name="settings_album_art_colors_desc">再生中のトラックのアルバムアートの色をアプリのテーマに使用</string>
-    <string name="settings_app_colors">アプリの色</string>
+    <string name="settings_app_colors">固定</string>
     <string name="settings_app_colors_desc">アプリ内蔵のカラーパレットを使用</string>
     <string name="settings_oled_black"><xliff:g id="tech">OLED</xliff:g>ブラック</string>
     <string name="settings_oled_black_desc"><xliff:g id="tech">OLED</xliff:g>画面向けに純粋な黒の背景を使用</string>

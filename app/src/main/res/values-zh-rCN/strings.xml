@@ -214,11 +214,11 @@
     <string name="settings_theme_dark">深色</string>
     <string name="settings_theme_system">跟随系统</string>
     <string name="settings_color_source">配色</string>
-    <string name="settings_dynamic_color">动态取色</string>
+    <string name="settings_dynamic_color">动态</string>
     <string name="settings_dynamic_color_desc">使用来自壁纸的颜色</string>
-    <string name="settings_album_art_colors">专辑封面配色</string>
+    <string name="settings_album_art_colors">封面</string>
     <string name="settings_album_art_colors_desc">根据当前播放曲目的专辑封面为应用配色</string>
-    <string name="settings_app_colors">应用配色</string>
+    <string name="settings_app_colors">固定</string>
     <string name="settings_app_colors_desc">使用应用内置配色</string>
     <string name="settings_oled_black"><xliff:g id="tech">OLED</xliff:g>纯黑</string>
     <string name="settings_oled_black_desc">为<xliff:g id="tech">OLED</xliff:g>屏幕使用纯黑背景</string>
