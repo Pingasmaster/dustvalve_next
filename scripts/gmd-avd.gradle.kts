@@ -4,17 +4,21 @@
 // foreground wait, so SAVE_PROFILE sees processCount=0 and the collector
 // throws "never flushed profiles". See scripts/gmd_ensure_avd.sh.
 // Identical copy lives in dustvalve_next, calc, compass, and core.
-
-val gmdAvdScript = rootDir.resolve("scripts/gmd_ensure_avd.sh").absolutePath
+//
+// Configuration-cache: do not capture this script object from doLast. Store
+// the shell path as a String input instead.
 
 val gmdEnsureAvd =
     tasks.register("gmdEnsureAvd") {
         group = "verification"
         description =
             "Patch Gradle-managed AVD RAM/CPU so ART profile flush is not LMK'd"
+        val scriptPath =
+            layout.projectDirectory.file("scripts/gmd_ensure_avd.sh").asFile.absolutePath
+        inputs.file(scriptPath)
         doLast {
             val proc =
-                ProcessBuilder("bash", gmdAvdScript)
+                ProcessBuilder("bash", scriptPath)
                     .inheritIO()
                     .start()
             val code = proc.waitFor()
