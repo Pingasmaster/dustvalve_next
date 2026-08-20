@@ -12,10 +12,12 @@ the post-crash sheet only). SettingsDataStore.kt holds all keys + defaults.
 
 Group 1: Appearance (14) [all JVM, none]
 - set-theme-light / -dark / -system / -default-value: theme_mode writes;
-  picker order is System, Light, Dark; dark shows OLED as a peer toggle
-  between Dynamic color and Album art colors (isDarkEffective); system
+  picker order is System, Light, Dark; dark shows OLED above the color
+  source picker (isDarkEffective); system
   follows isSystemInDarkTheme() without restart; default "system".
-- set-dynamic-color-off/-on: Material You vs app palette (API 31+).
+- set-color-source-dynamic / -album-art / -app: three-choice picker
+  (Dynamic colors default, Album art colors, App colors) below OLED;
+  writes dynamic_color + album_art_theme as a mutually exclusive pair.
 - [ ] set-album-art-theme-on [smoke]: AlbumThemeManager.albumSeedColor recolors
   theme from cover.
 - set-oled-black-visibility / -on (#000000 surfaces) / -ignored-in-light

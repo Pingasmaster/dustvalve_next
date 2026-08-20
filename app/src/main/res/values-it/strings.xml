@@ -213,10 +213,13 @@
     <string name="settings_theme_light">Chiaro</string>
     <string name="settings_theme_dark">Scuro</string>
     <string name="settings_theme_system">Sistema</string>
+    <string name="settings_color_source">Colori</string>
     <string name="settings_dynamic_color">Colori dinamici</string>
     <string name="settings_dynamic_color_desc">Usa i colori del tuo sfondo</string>
     <string name="settings_album_art_colors">Colori dalla copertina</string>
     <string name="settings_album_art_colors_desc">Applica all’app i colori della copertina del brano in riproduzione</string>
+    <string name="settings_app_colors">Colori dell’app</string>
+    <string name="settings_app_colors_desc">Usa la palette di colori integrata dell’app</string>
     <string name="settings_oled_black">Nero <xliff:g id="tech">OLED</xliff:g></string>
     <string name="settings_oled_black_desc">Usa sfondi nero puro per gli schermi <xliff:g id="tech">OLED</xliff:g></string>
     <string name="settings_progress_bar_style">Barra di avanzamento del player</string>

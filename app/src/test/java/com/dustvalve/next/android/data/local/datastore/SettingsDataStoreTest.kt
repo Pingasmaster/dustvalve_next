@@ -124,6 +124,31 @@ class SettingsDataStoreTest {
         assertThat(store.getSaveDataOnMeteredSync()).isFalse()
     }
 
+    @Test fun `color source writes are mutually exclusive`() = runTest {
+        store.setColorSource(ColorSource.ALBUM_ART)
+        assertThat(store.albumArtTheme.first()).isTrue()
+        assertThat(store.dynamicColor.first()).isFalse()
+        assertThat(ColorSource.fromPrefs(store.dynamicColor.first(), store.albumArtTheme.first()))
+            .isEqualTo(ColorSource.ALBUM_ART)
+
+        store.setColorSource(ColorSource.APP)
+        assertThat(store.albumArtTheme.first()).isFalse()
+        assertThat(store.dynamicColor.first()).isFalse()
+        assertThat(ColorSource.fromPrefs(false, false)).isEqualTo(ColorSource.APP)
+
+        store.setColorSource(ColorSource.DYNAMIC)
+        assertThat(store.dynamicColor.first()).isTrue()
+        assertThat(store.albumArtTheme.first()).isFalse()
+
+        store.setAlbumArtTheme(true)
+        assertThat(store.albumArtTheme.first()).isTrue()
+        assertThat(store.dynamicColor.first()).isFalse()
+
+        store.setDynamicColor(true)
+        assertThat(store.dynamicColor.first()).isTrue()
+        assertThat(store.albumArtTheme.first()).isFalse()
+    }
+
     @Test fun `download format roundtrip`() = runTest {
         store.setDownloadFormat("mp3-320")
         assertThat(store.getDownloadFormatSync()).isEqualTo("mp3-320")

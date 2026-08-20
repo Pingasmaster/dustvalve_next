@@ -1,7 +1,6 @@
 package com.dustvalve.next.android.data.local.datastore
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 
 /** Theme / OLED / album-art / progress-bar preference surface. */
 interface AppearanceSettingsStore {
@@ -20,6 +19,9 @@ interface AppearanceSettingsStore {
     suspend fun setDynamicColor(enabled: Boolean)
     suspend fun setOledBlack(enabled: Boolean)
     suspend fun setAlbumArtTheme(enabled: Boolean)
+
+    /** Writes both color flags in one edit so the three choices stay exclusive. */
+    suspend fun setColorSource(source: String)
     suspend fun setProgressBarStyle(style: String)
     suspend fun setProgressBarSizeDp(sizeDp: Int)
 }

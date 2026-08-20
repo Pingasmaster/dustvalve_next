@@ -213,10 +213,13 @@
     <string name="settings_theme_light">Hell</string>
     <string name="settings_theme_dark">Dunkel</string>
     <string name="settings_theme_system">System</string>
+    <string name="settings_color_source">Farben</string>
     <string name="settings_dynamic_color">Dynamische Farben</string>
     <string name="settings_dynamic_color_desc">Farben aus deinem Hintergrundbild verwenden</string>
     <string name="settings_album_art_colors">Albumcover-Farben</string>
     <string name="settings_album_art_colors_desc">App-Design an die Farben des Albumcovers des laufenden Titels anpassen</string>
+    <string name="settings_app_colors">App-Farben</string>
+    <string name="settings_app_colors_desc">Die integrierte Farbpalette der App verwenden</string>
     <string name="settings_oled_black"><xliff:g id="tech">OLED</xliff:g>-Schwarz</string>
     <string name="settings_oled_black_desc">Reines Schwarz als Hintergrund für <xliff:g id="tech">OLED</xliff:g>-Displays verwenden</string>
     <string name="settings_progress_bar_style">Fortschrittsbalken im Player</string>

@@ -19,31 +19,26 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.dustvalve.next.android.R
+import com.dustvalve.next.android.data.local.datastore.ColorSource
 import com.dustvalve.next.android.ui.components.AppButtonGroup
 import com.dustvalve.next.android.update.UpdateUiState
 import kotlin.math.roundToInt
@@ -63,19 +58,6 @@ internal fun SettingsAppearanceSection(state: SettingsUiState, onAction: (Settin
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 ThemeModePicker(themeMode = state.themeMode, onAction = onAction)
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                SettingsToggleRow(
-                    title = stringResource(R.string.settings_dynamic_color),
-                    checked = state.dynamicColor,
-                    onCheckedChange = {
-                        onAction(SettingsAppearanceAction.SetDynamicColor(it))
-                    },
-                    extras = SettingsToggleExtras(
-                        description = stringResource(R.string.settings_dynamic_color_desc),
-                    ),
-                )
 
                 val isDarkEffective = when (state.themeMode) {
                     "dark" -> true
@@ -104,15 +86,10 @@ internal fun SettingsAppearanceSection(state: SettingsUiState, onAction: (Settin
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                SettingsToggleRow(
-                    title = stringResource(R.string.settings_album_art_colors),
-                    checked = state.albumArtTheme,
-                    onCheckedChange = {
-                        onAction(SettingsAppearanceAction.SetAlbumArtTheme(it))
-                    },
-                    extras = SettingsToggleExtras(
-                        description = stringResource(R.string.settings_album_art_colors_desc),
-                    ),
+                ColorSourcePicker(
+                    dynamicColor = state.dynamicColor,
+                    albumArtTheme = state.albumArtTheme,
+                    onAction = onAction,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -169,6 +146,76 @@ private fun ThemeModePicker(themeMode: String, onAction: (SettingsAppearanceActi
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ColorSourcePicker(
+    dynamicColor: Boolean,
+    albumArtTheme: Boolean,
+    onAction: (SettingsAppearanceAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.settings_color_source),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val options = listOf(ColorSource.DYNAMIC, ColorSource.ALBUM_ART, ColorSource.APP)
+        val labels = listOf(
+            stringResource(R.string.settings_dynamic_color),
+            stringResource(R.string.settings_album_art_colors),
+            stringResource(R.string.settings_app_colors),
+        )
+        val selected = ColorSource.fromPrefs(dynamicColor, albumArtTheme)
+        val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
+
+        AppButtonGroup(
+            overflowIndicator = { _ -> },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            options.forEachIndexed { index, source ->
+                customItem(
+                    buttonGroupContent = {
+                        ToggleButton(
+                            checked = index == selectedIndex,
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    onAction(SettingsAppearanceAction.SetColorSource(source))
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shapes = when (index) {
+                                0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                                options.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                                else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                            },
+                        ) {
+                            Text(
+                                text = labels[index],
+                                maxLines = 2,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    },
+                    menuContent = {},
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = when (selected) {
+                ColorSource.ALBUM_ART -> stringResource(R.string.settings_album_art_colors_desc)
+                ColorSource.APP -> stringResource(R.string.settings_app_colors_desc)
+                else -> stringResource(R.string.settings_dynamic_color_desc)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

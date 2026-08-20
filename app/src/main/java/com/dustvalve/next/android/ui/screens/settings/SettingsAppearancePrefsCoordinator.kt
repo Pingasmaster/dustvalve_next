@@ -15,16 +15,12 @@ internal fun CoroutineScope.launchSettingsPref(block: suspend () -> Unit) {
 internal class SettingsAppearancePrefsCoordinator(private val scope: CoroutineScope, private val settingsDataStore: SettingsDataStore) {
     fun setThemeMode(mode: String) = scope.launchSettingsPref { settingsDataStore.setThemeMode(mode) }
 
-    fun setDynamicColor(enabled: Boolean) = scope.launchSettingsPref {
-        settingsDataStore.setDynamicColor(enabled)
+    fun setColorSource(source: String) = scope.launchSettingsPref {
+        settingsDataStore.setColorSource(source)
     }
 
     fun setOledBlack(enabled: Boolean) = scope.launchSettingsPref {
         settingsDataStore.setOledBlack(enabled)
-    }
-
-    fun setAlbumArtTheme(enabled: Boolean) = scope.launchSettingsPref {
-        settingsDataStore.setAlbumArtTheme(enabled)
     }
 
     fun setProgressBarStyle(style: String) = scope.launchSettingsPref {
