@@ -92,3 +92,5 @@ tasks.register<JavaExec>("ktlintFormat") {
     description = "Format Kotlin sources with ktlint on JDK 26"
     configureKtlint(listOf("-F"))
 }
+
+apply(from = "scripts/gmd-avd.gradle.kts")

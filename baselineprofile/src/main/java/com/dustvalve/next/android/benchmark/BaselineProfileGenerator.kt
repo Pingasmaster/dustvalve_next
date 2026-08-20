@@ -47,17 +47,20 @@ class BaselineProfileGenerator {
      * - cold_start_mainactivity
      * - scroll_library_tab
      *
-     * Kept to one iteration so the GMD can flush profiles before LMK; heavier
-     * playback / Settings CUJs belong on a real device / macrobenchmark.
+     * Leave the app in the foreground when this block returns.
+     * MacrobenchmarkScope sleeps 5s then broadcasts SAVE_PROFILE; ART
+     * requires a live foreground process. pressHome() at the end backgrounds
+     * the app so LMK can kill it and the collector throws
+     * "never flushed profiles". Guest RAM/CPU is raised in
+     * scripts/gmd_ensure_avd.sh. Heavier playback / Settings CUJs belong on
+     * a real device / macrobenchmark.
      */
     @Test
     fun generateBaselineProfile() {
-        // Single iteration: GMD (x86_64 + LMK) often kills the app mid-flush
-        // when maxIterations>1 piles RSS across cold starts.
         rule.collect(
             packageName = PACKAGE_NAME,
-            maxIterations = 1,
-            stableIterations = 1,
+            maxIterations = 5,
+            stableIterations = 3,
             includeInStartupProfile = true,
         ) {
             // 1. Cold start the main activity.
@@ -76,9 +79,6 @@ class BaselineProfileGenerator {
                     device.waitForIdle()
                 }
             }
-
-            // Return to home for a clean end state before profile flush.
-            pressHome()
         }
     }
 }
