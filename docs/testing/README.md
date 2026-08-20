@@ -75,7 +75,7 @@ No GitHub Actions: every tier runs locally via `./build.sh`.
 Hyper-exhaustive per-area scenario lists; every automated test cites its
 catalog id, and unimplemented ids are the prioritized backlog:
 
-- catalog-local.md (130) - local library, playback, queue, player shell
+- catalog-local.md (131) - local library, playback, queue, player shell
 - catalog-bandcamp.md (148) - discover, search, album/artist, downloads,
   account
 - catalog-youtube.md (78) - deep links, search/discover, streams, mixes

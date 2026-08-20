@@ -113,6 +113,7 @@ import com.dustvalve.next.android.ui.screens.player.playNext
 import com.dustvalve.next.android.ui.screens.player.playTrackAwaiting
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
+import com.dustvalve.next.android.ui.util.shouldLoadMoreSearchPage
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.onFailure
 import com.dustvalve.next.android.util.openInBrowser
@@ -166,14 +167,23 @@ fun YouTubeScreen(
             .collect { viewModel.onQueryChange(it) }
     }
 
-    // Search pagination
+    // Search pagination. Read the ViewModel each emission -- capturing [state]
+    // from the first composition would freeze hasMore/results and skip later pages.
     LaunchedEffect(searchListState) {
         snapshotFlow {
-            val last = searchListState.layoutInfo.visibleItemsInfo.lastOrNull()
+            val last = searchListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
             val totalCount = searchListState.layoutInfo.totalItemsCount
-            last != null && totalCount > 0 && last.index >= totalCount - 3
-        }.collect { nearEnd ->
-            if (nearEnd && state.hasMore && !state.isLoading && state.results.isNotEmpty()) {
+            last to totalCount
+        }.collect { (last, totalCount) ->
+            val currentState = viewModel.uiState.value
+            if (shouldLoadMoreSearchPage(
+                    lastVisibleIndex = last,
+                    totalItemsCount = totalCount,
+                    hasMore = currentState.hasMore,
+                    isLoading = currentState.isLoading,
+                    resultCount = currentState.results.size,
+                )
+            ) {
                 viewModel.loadMore()
             }
         }

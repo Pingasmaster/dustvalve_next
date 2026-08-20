@@ -50,8 +50,10 @@ class ProviderScreensCrashRegressionTest {
     @Test
     fun appLaunches_defaultTabsRender() {
         waitForText(string(R.string.nav_label_library))
-        composeRule.onNodeWithText(string(R.string.nav_label_library)).assertIsDisplayed()
-        composeRule.onNodeWithText(string(R.string.nav_label_settings)).assertIsDisplayed()
+        // Future/wide layout can show the label on the nav item and again as
+        // the library screen title; assert the first match rather than unique.
+        composeRule.onAllNodesWithText(string(R.string.nav_label_library))[0].assertIsDisplayed()
+        composeRule.onAllNodesWithText(string(R.string.nav_label_settings))[0].assertIsDisplayed()
     }
 
     @Test

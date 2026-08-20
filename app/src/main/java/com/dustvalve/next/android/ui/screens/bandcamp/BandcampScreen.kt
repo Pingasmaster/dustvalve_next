@@ -119,6 +119,7 @@ import com.dustvalve.next.android.ui.screens.search.SearchViewModel
 import com.dustvalve.next.android.ui.theme.AppMotion
 import com.dustvalve.next.android.ui.theme.AppShapes
 import com.dustvalve.next.android.ui.theme.segmentedItemShape
+import com.dustvalve.next.android.ui.util.shouldLoadMoreSearchPage
 import com.dustvalve.next.android.util.DeepLinkRouter
 import com.dustvalve.next.android.util.onFailure
 import com.dustvalve.next.android.util.openInBrowser
@@ -249,11 +250,17 @@ fun BandcampScreen(
         snapshotFlow {
             val last = searchListState.layoutInfo.visibleItemsInfo.lastOrNull()
             val totalCount = searchListState.layoutInfo.totalItemsCount
-            val nearEnd = last != null && totalCount > 0 && last.index >= totalCount - 3
-            nearEnd to totalCount
-        }.collect { (nearEnd, _) ->
+            last?.index to totalCount
+        }.collect { (last, totalCount) ->
             val currentState = searchViewModel.uiState.value
-            if (nearEnd && currentState.hasMore && !currentState.isLoading && currentState.results.isNotEmpty()) {
+            if (shouldLoadMoreSearchPage(
+                    lastVisibleIndex = last,
+                    totalItemsCount = totalCount,
+                    hasMore = currentState.hasMore,
+                    isLoading = currentState.isLoading,
+                    resultCount = currentState.results.size,
+                )
+            ) {
                 searchViewModel.loadMore()
             }
         }

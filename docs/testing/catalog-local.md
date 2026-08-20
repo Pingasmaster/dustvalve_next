@@ -1,4 +1,4 @@
-# Local music + shared player - E2E test scenario catalog (130 scenarios)
+# Local music + shared player - E2E test scenario catalog (131 scenarios)
 
 Backlog + traceability for the workflow test suites. Each implemented
 test references its id here; mark ids [x] with the test class as waves
@@ -150,10 +150,14 @@ Group F - Shuffle and repeat (9)
 - [ ] local-shuffle-favorite-patch [JVM]: favorite during shuffle; unshuffle
   works and restored entries carry updated isFavorite.
 
-Group G - Queue management (13)
+Group G - Queue management (14)
 - [ ] local-queue-sheet-open [smoke/JVM]: "Up next (N)" = queue.size - index - 1.
 - [ ] local-queue-skip-to-index [JVM + E2E]: skipToQueueIndex both directions,
   addToRecent.
+- [x] local-queue-window-load-more-after-click [JVM]: Up Next windows 25 rows;
+  clicking/skipping a later row resets to page 1; near-end scroll still grows
+  the same window instance (UpNextQueueWindowTest,
+  UpNextQueueWindowRememberTest).
 - [ ] local-queue-remove-after-current [JVM]: index unchanged, uninterrupted.
 - [ ] local-queue-remove-before-current [JVM]: index decremented.
 - [ ] local-queue-remove-current-last [JVM]: index clamps, no crash, behavior

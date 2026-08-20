@@ -25,10 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -73,22 +70,19 @@ internal fun UpNextQueuePane(
         emptyList()
     }
 
-    var displayCount by remember(currentQueueIndex) { mutableIntStateOf(25) }
-    val displayedEntries = allUpNextEntries.take(displayCount)
-    val hasMore = displayCount < allUpNextEntries.size
+    val window = rememberUpNextQueueWindow(currentQueueIndex)
+    val displayedEntries = allUpNextEntries.take(window.displayCount)
+    val hasMore = window.hasMore(allUpNextEntries.size)
     val queueListState = rememberLazyListState()
 
-    val currentHasMore by rememberUpdatedState(hasMore)
-    val currentDisplayedCount by rememberUpdatedState(displayedEntries.size)
-    LaunchedEffect(queueListState) {
+    val remainingCount by rememberUpdatedState(allUpNextEntries.size)
+    LaunchedEffect(queueListState, currentQueueIndex) {
         snapshotFlow {
-            val last = queueListState.layoutInfo.visibleItemsInfo.lastOrNull()
+            val last = queueListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
             val totalCount = queueListState.layoutInfo.totalItemsCount
-            last != null && totalCount > 0 && last.index >= totalCount - 3
-        }.collect { nearEnd ->
-            if (nearEnd && currentHasMore && currentDisplayedCount > 0) {
-                displayCount += 25
-            }
+            last to totalCount
+        }.collect { (last, totalCount) ->
+            window.expandIfNearEnd(last, totalCount, remainingCount)
         }
     }
 
